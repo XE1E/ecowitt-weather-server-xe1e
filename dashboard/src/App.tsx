@@ -6,7 +6,6 @@ import {
   Gauge,
   Sun,
   CloudRain,
-  Compass,
   RefreshCw
 } from 'lucide-react'
 import { WeatherCard } from './components/WeatherCard'
