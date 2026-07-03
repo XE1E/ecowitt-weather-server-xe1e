@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply bg-slate-800 rounded-xl p-6 shadow-lg;
+  }
+
+  .card-title {
+    @apply text-sm font-medium text-slate-400 uppercase tracking-wide mb-2;
+  }
+
+  .card-value {
+    @apply text-4xl font-bold;
+  }
+
+  .card-unit {
+    @apply text-xl text-slate-400 ml-1;
+  }
+}
