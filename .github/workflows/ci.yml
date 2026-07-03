@@ -74,14 +74,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: dashboard/package-lock.json
+          node-version: '22'
 
       - name: Install dependencies
         run: |
           cd dashboard
-          npm ci
+          npm install
 
       - name: Build
         run: |

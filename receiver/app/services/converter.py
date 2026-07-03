@@ -7,12 +7,30 @@ Converts Ecowitt data from imperial to metric units.
 from typing import Dict, Any
 import math
 
-# Conversion factors
-FAHRENHEIT_TO_CELSIUS = lambda f: (f - 32) * 5 / 9
-INHG_TO_HPA = lambda inhg: inhg * 33.8639
-INCHES_TO_MM = lambda inches: inches * 25.4
-MPH_TO_KMH = lambda mph: mph * 1.60934
-MPH_TO_MS = lambda mph: mph * 0.44704
+# Conversion functions
+def fahrenheit_to_celsius(f: float) -> float:
+    """Convert Fahrenheit to Celsius."""
+    return (f - 32) * 5 / 9
+
+
+def inhg_to_hpa(inhg: float) -> float:
+    """Convert inches of mercury to hectopascals."""
+    return inhg * 33.8639
+
+
+def inches_to_mm(inches: float) -> float:
+    """Convert inches to millimeters."""
+    return inches * 25.4
+
+
+def mph_to_kmh(mph: float) -> float:
+    """Convert miles per hour to kilometers per hour."""
+    return mph * 1.60934
+
+
+def mph_to_ms(mph: float) -> float:
+    """Convert miles per hour to meters per second."""
+    return mph * 0.44704
 
 
 def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,7 +63,7 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
 
     for imperial_key, metric_key in temp_fields:
         if imperial_key in result and result[imperial_key] is not None:
-            result[metric_key] = round(FAHRENHEIT_TO_CELSIUS(result[imperial_key]), 1)
+            result[metric_key] = round(fahrenheit_to_celsius(result[imperial_key]), 1)
             del result[imperial_key]
 
     # Pressure conversions (inHg → hPa)
@@ -56,7 +74,7 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
 
     for imperial_key, metric_key in pressure_fields:
         if imperial_key in result and result[imperial_key] is not None:
-            result[metric_key] = round(INHG_TO_HPA(result[imperial_key]), 1)
+            result[metric_key] = round(inhg_to_hpa(result[imperial_key]), 1)
             del result[imperial_key]
 
     # Rain conversions (inches → mm)
@@ -73,7 +91,7 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
 
     for imperial_key, metric_key in rain_fields:
         if imperial_key in result and result[imperial_key] is not None:
-            result[metric_key] = round(INCHES_TO_MM(result[imperial_key]), 1)
+            result[metric_key] = round(inches_to_mm(result[imperial_key]), 1)
             del result[imperial_key]
 
     # Wind conversions (mph → km/h)
@@ -85,7 +103,7 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
 
     for imperial_key, metric_key in wind_fields:
         if imperial_key in result and result[imperial_key] is not None:
-            result[metric_key] = round(MPH_TO_KMH(result[imperial_key]), 1)
+            result[metric_key] = round(mph_to_kmh(result[imperial_key]), 1)
             del result[imperial_key]
 
     # Calculate derived values
