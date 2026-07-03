@@ -1,0 +1,188 @@
+# Home Assistant - Automatizaciones para Ecowitt Weather Station
+#
+# Copia estas automatizaciones a tu archivo automations.yaml
+# o agrégalas desde la UI de Home Assistant
+
+# ============================================
+# ALERTAS DE CLIMA
+# ============================================
+
+# Alerta de lluvia
+- id: ecowitt_rain_alert
+  alias: "Ecowitt - Alerta de Lluvia"
+  description: "Notifica cuando comienza a llover"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_rain_rate
+      above: 0
+  condition:
+    - condition: state
+      entity_id: input_boolean.weather_alerts_enabled
+      state: "on"
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "Lluvia Detectada"
+        message: "Está lloviendo ({{ states('sensor.ecowitt_rain_rate') }} mm/h)"
+        data:
+          tag: "weather-rain"
+          icon_url: "/local/icons/rain.png"
+
+# Alerta de viento fuerte
+- id: ecowitt_wind_alert
+  alias: "Ecowitt - Alerta de Viento Fuerte"
+  description: "Notifica cuando hay ráfagas de viento superiores a 50 km/h"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_wind_gust
+      above: 50
+  condition:
+    - condition: state
+      entity_id: input_boolean.weather_alerts_enabled
+      state: "on"
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "Viento Fuerte"
+        message: "Ráfaga de {{ states('sensor.ecowitt_wind_gust') }} km/h del {{ states('sensor.ecowitt_wind_direction_cardinal') }}"
+        data:
+          tag: "weather-wind"
+          priority: high
+
+# Alerta de temperatura alta
+- id: ecowitt_heat_alert
+  alias: "Ecowitt - Alerta de Calor"
+  description: "Notifica cuando la temperatura supera 35°C"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_temperature_outdoor
+      above: 35
+  condition:
+    - condition: state
+      entity_id: input_boolean.weather_alerts_enabled
+      state: "on"
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "Alerta de Calor"
+        message: "Temperatura exterior: {{ states('sensor.ecowitt_temperature_outdoor') }}°C"
+        data:
+          tag: "weather-heat"
+          priority: high
+
+# Alerta de temperatura baja (helada)
+- id: ecowitt_frost_alert
+  alias: "Ecowitt - Alerta de Helada"
+  description: "Notifica cuando la temperatura baja de 3°C"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_temperature_outdoor
+      below: 3
+  condition:
+    - condition: state
+      entity_id: input_boolean.weather_alerts_enabled
+      state: "on"
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "Alerta de Helada"
+        message: "Temperatura exterior: {{ states('sensor.ecowitt_temperature_outdoor') }}°C - Posible helada"
+        data:
+          tag: "weather-frost"
+          priority: high
+
+# Alerta UV alto
+- id: ecowitt_uv_alert
+  alias: "Ecowitt - Alerta UV Alto"
+  description: "Notifica cuando el índice UV es muy alto"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_uv_index
+      above: 8
+  condition:
+    - condition: state
+      entity_id: input_boolean.weather_alerts_enabled
+      state: "on"
+    - condition: sun
+      after: sunrise
+      before: sunset
+  action:
+    - service: notify.mobile_app
+      data:
+        title: "UV Muy Alto"
+        message: "Índice UV: {{ states('sensor.ecowitt_uv_index') }} - Evitar exposición solar"
+        data:
+          tag: "weather-uv"
+
+# ============================================
+# AUTOMATIZACIONES INTELIGENTES
+# ============================================
+
+# Cerrar persianas cuando hace mucho sol
+- id: ecowitt_close_blinds_sun
+  alias: "Ecowitt - Cerrar Persianas por Sol"
+  description: "Cierra las persianas cuando la radiación solar es alta"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_solar_radiation
+      above: 600
+  condition:
+    - condition: time
+      after: "10:00:00"
+      before: "18:00:00"
+    - condition: state
+      entity_id: input_boolean.smart_blinds_enabled
+      state: "on"
+  action:
+    - service: cover.close_cover
+      target:
+        entity_id: cover.persianas_sala
+
+# Abrir persianas cuando baja el sol
+- id: ecowitt_open_blinds_sunset
+  alias: "Ecowitt - Abrir Persianas al Atardecer"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.ecowitt_solar_radiation
+      below: 200
+  condition:
+    - condition: sun
+      after: sunrise
+      before: sunset
+    - condition: state
+      entity_id: input_boolean.smart_blinds_enabled
+      state: "on"
+  action:
+    - service: cover.open_cover
+      target:
+        entity_id: cover.persianas_sala
+
+# Encender riego cuando no llueve
+- id: ecowitt_irrigation_check
+  alias: "Ecowitt - Verificar Riego"
+  description: "Cancela riego si llueve o va a llover"
+  trigger:
+    - platform: time
+      at: "06:00:00"
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.ecowitt_rain_daily
+      above: 5  # Si ya llovió más de 5mm, no regar
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.riego_jardin
+    - service: notify.mobile_app
+      data:
+        message: "Riego cancelado - Ya llovió {{ states('sensor.ecowitt_rain_daily') }}mm hoy"
+
+# ============================================
+# HELPERS (agregar en configuration.yaml)
+# ============================================
+# input_boolean:
+#   weather_alerts_enabled:
+#     name: "Alertas de Clima"
+#     icon: mdi:weather-cloudy-alert
+#   smart_blinds_enabled:
+#     name: "Persianas Inteligentes"
+#     icon: mdi:blinds

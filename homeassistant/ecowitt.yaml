@@ -1,0 +1,161 @@
+# Home Assistant - Ecowitt Weather Station Configuration
+#
+# Hay dos formas de integrar Ecowitt con Home Assistant:
+#
+# OPCIÓN 1: Integración Oficial (Recomendada)
+# - Ir a Configuración → Dispositivos y Servicios → Agregar integración → Ecowitt
+# - Detecta automáticamente el gateway GW3000 en la red local
+#
+# OPCIÓN 2: REST Sensors (usando este servidor)
+# - Copia este archivo a tu directorio de configuración de HA
+# - Incluye en configuration.yaml: sensor: !include ecowitt.yaml
+
+# ============================================
+# REST Sensor - Datos del servidor Ecowitt
+# ============================================
+
+- platform: rest
+  name: "Ecowitt Weather"
+  resource: http://192.168.1.X:8080/api/current  # Cambiar IP
+  scan_interval: 60
+  json_attributes:
+    - temperature_outdoor
+    - temperature_indoor
+    - humidity_outdoor
+    - humidity_indoor
+    - pressure_relative
+    - wind_speed
+    - wind_gust
+    - wind_direction
+    - rain_rate
+    - rain_daily
+    - rain_weekly
+    - rain_monthly
+    - solar_radiation
+    - uv_index
+    - dew_point
+    - feels_like
+  value_template: "OK"
+
+# ============================================
+# Template Sensors - Extraer valores individuales
+# ============================================
+
+- platform: template
+  sensors:
+    ecowitt_temperature_outdoor:
+      friendly_name: "Temperatura Exterior"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_outdoor') }}"
+      icon_template: mdi:thermometer
+
+    ecowitt_temperature_indoor:
+      friendly_name: "Temperatura Interior"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_indoor') }}"
+      icon_template: mdi:home-thermometer
+
+    ecowitt_humidity_outdoor:
+      friendly_name: "Humedad Exterior"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_outdoor') }}"
+      icon_template: mdi:water-percent
+
+    ecowitt_humidity_indoor:
+      friendly_name: "Humedad Interior"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_indoor') }}"
+      icon_template: mdi:water-percent
+
+    ecowitt_pressure:
+      friendly_name: "Presión Atmosférica"
+      unit_of_measurement: "hPa"
+      device_class: pressure
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'pressure_relative') }}"
+      icon_template: mdi:gauge
+
+    ecowitt_wind_speed:
+      friendly_name: "Velocidad del Viento"
+      unit_of_measurement: "km/h"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_speed') }}"
+      icon_template: mdi:weather-windy
+
+    ecowitt_wind_gust:
+      friendly_name: "Ráfaga de Viento"
+      unit_of_measurement: "km/h"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_gust') }}"
+      icon_template: mdi:weather-windy-variant
+
+    ecowitt_wind_direction:
+      friendly_name: "Dirección del Viento"
+      unit_of_measurement: "°"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_direction') }}"
+      icon_template: mdi:compass
+
+    ecowitt_wind_direction_cardinal:
+      friendly_name: "Dirección del Viento (Cardinal)"
+      value_template: >
+        {% set direction = state_attr('sensor.ecowitt_weather', 'wind_direction') | float %}
+        {% if direction >= 337.5 or direction < 22.5 %}N
+        {% elif direction >= 22.5 and direction < 67.5 %}NE
+        {% elif direction >= 67.5 and direction < 112.5 %}E
+        {% elif direction >= 112.5 and direction < 157.5 %}SE
+        {% elif direction >= 157.5 and direction < 202.5 %}S
+        {% elif direction >= 202.5 and direction < 247.5 %}SW
+        {% elif direction >= 247.5 and direction < 292.5 %}W
+        {% elif direction >= 292.5 and direction < 337.5 %}NW
+        {% endif %}
+      icon_template: mdi:compass-outline
+
+    ecowitt_rain_rate:
+      friendly_name: "Tasa de Lluvia"
+      unit_of_measurement: "mm/h"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_rate') }}"
+      icon_template: mdi:weather-rainy
+
+    ecowitt_rain_daily:
+      friendly_name: "Lluvia Diaria"
+      unit_of_measurement: "mm"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_daily') }}"
+      icon_template: mdi:weather-pouring
+
+    ecowitt_rain_weekly:
+      friendly_name: "Lluvia Semanal"
+      unit_of_measurement: "mm"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_weekly') }}"
+      icon_template: mdi:calendar-week
+
+    ecowitt_rain_monthly:
+      friendly_name: "Lluvia Mensual"
+      unit_of_measurement: "mm"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_monthly') }}"
+      icon_template: mdi:calendar-month
+
+    ecowitt_solar_radiation:
+      friendly_name: "Radiación Solar"
+      unit_of_measurement: "W/m²"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'solar_radiation') }}"
+      icon_template: mdi:white-balance-sunny
+
+    ecowitt_uv_index:
+      friendly_name: "Índice UV"
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'uv_index') }}"
+      icon_template: mdi:sun-wireless
+
+    ecowitt_dew_point:
+      friendly_name: "Punto de Rocío"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'dew_point') }}"
+      icon_template: mdi:water
+
+    ecowitt_feels_like:
+      friendly_name: "Sensación Térmica"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'feels_like') }}"
+      icon_template: mdi:thermometer-lines
