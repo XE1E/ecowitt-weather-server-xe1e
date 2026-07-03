@@ -138,16 +138,17 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 
 ### 2.8 Mi Recomendación para Tu Proyecto
 
-#### ⭐ CONFIGURACIÓN RECOMENDADA (Gateway + Pantalla + Sensor Mecánico)
+#### ⭐ CONFIGURACIÓN RECOMENDADA (Gateway + Pantalla + Sensores)
 
-**Presupuesto: ~$200 | Requiere: 915 MHz | Prioridad: Home Assistant + Servidor propio**
+**Presupuesto: ~$205 | Requiere: 915 MHz | Prioridad: Home Assistant + Servidor propio**
 
 | Componente | Precio | Descripción |
 |------------|--------|-------------|
-| **GW3002** | $119 | Bundle: GW3000 gateway + WS69 sensor mecánico |
-| **WS2910_C** | $68 | Pantalla LCD 6.8" color con WiFi |
+| **GW3000** | $60 | Gateway WiFi/Ethernet con API local y SD |
+| **WS69** | $65 | Sensor exterior 7-en-1 (temp, hum, viento, lluvia, UV, solar) |
+| **WS2910** | $68 | Pantalla LCD 6.8" color con WiFi |
 | **WN31** | $11 | Sensor temperatura/humedad adicional (CH1) |
-| **TOTAL** | **$198** | ✅ Bajo presupuesto de $200 |
+| **TOTAL** | **~$204** | ✅ Dentro de presupuesto |
 
 **¿Por qué esta combinación?**
 
@@ -163,7 +164,7 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
                        │
                ┌───────┴───────┐
                ▼               ▼
-            GW3000          WS2910_C
+            GW3000          WS2910
            (gateway)       (pantalla)
                │
                │ API Local HTTP
@@ -181,8 +182,8 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 - ✅ **Almacenamiento SD** - Backup local de datos
 - ✅ **Ethernet + WiFi** - Conexión más estable
 - ✅ **Pantalla física 6.8"** - Ver datos sin computadora
-- ✅ **Sensor mecánico WS69** - Económico, funcional
-- ✅ **Sensor extra WN31** - Temp/humedad adicional (expandible hasta 8)
+- ✅ **Sensor mecánico WS69** - Económico, funcional, 7 mediciones
+- ✅ **Sensor extra WN31** - Temp/humedad interior (expandible hasta 8)
 - ✅ **Compatible 915 MHz** - Sin interferencias
 - ✅ **Integración Home Assistant** - Nativa
 
@@ -207,10 +208,11 @@ Los sensores envían campos `temp1f`-`temp8f` y `humidity1`-`humidity8` según e
 
 | Producto | Ecowitt Shop | AliExpress (est.) | Notas |
 |----------|-------------|-------------------|-------|
-| [GW3002](https://shop.ecowitt.com/products/gw3002) (GW3000+WS69) | $118.99 | ~$100-110 | Bundle gateway + sensor |
-| [WS2910_C](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 | Solo consola/pantalla |
-| [WN31](https://shop.ecowitt.com/products/wn31) (temp/hum) | $10.99 | ~$9-12 | Sensor adicional CH1 |
-| **Subtotal equipos** | **$197.97** | **~$165-185** | |
+| [GW3000](https://shop.ecowitt.com/products/gw3000-gw3010) | $59.99 | ~$50-55 | Gateway WiFi/Ethernet + SD |
+| [WS69](https://shop.ecowitt.com/products/ws69) | $64.99 | ~$55-60 | Sensor exterior 7-en-1 |
+| [WS2910](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 | Consola/pantalla LCD 6.8" |
+| [WN31](https://shop.ecowitt.com/products/wn31) | $10.99 | ~$9-12 | Sensor temp/hum adicional |
+| **Subtotal equipos** | **$203.96** | **~$170-190** | |
 
 **Accesorios recomendados:**
 
@@ -221,8 +223,8 @@ Los sensores envían campos `temp1f`-`temp8f` y `humidity1`-`humidity8` según e
 | MicroSD card (para GW3000) | ~$5-10 | Almacenamiento local (no incluida) |
 
 **Total estimado con accesorios:**
-- Ecowitt Shop: ~$223 (equipos + WN31 + bird spikes + battery pack)
-- AliExpress: ~$190-210 (estimado con accesorios)
+- Ecowitt Shop: ~$229 (equipos + bird spikes + battery pack)
+- AliExpress: ~$195-215 (estimado con accesorios)
 
 **Tienda Oficial Ecowitt en AliExpress:**
 - [ecowitt.aliexpress.com/store/1102641321](https://ecowitt.aliexpress.com/store/1102641321)
@@ -235,10 +237,11 @@ Los sensores envían campos `temp1f`-`temp8f` y `humidity1`-`humidity8` según e
 
 | Opción | Componentes | Precio | API Local | Pantalla |
 |--------|-------------|--------|-----------|----------|
-| **A: Recomendada** | GW3002 + WS2910_C + WN31 | $198 | ✅ Sí | ✅ 6.8" LCD |
-| B: Sin pantalla | GW3002 + WN31 | $130 | ✅ Sí | ❌ No |
-| C: Todo en uno | HP2551 | $199 | ❌ No | ✅ 7" TFT |
-| D: Premium | HP2560 (Wittboy Pro) + WN31 | $311 | ✅ Sí | ✅ 7" TFT |
+| **A: Recomendada** | GW3000 + WS69 + WS2910 + WN31 | ~$204 | ✅ Sí | ✅ 6.8" LCD |
+| B: Sin sensor extra | GW3000 + WS69 + WS2910 | ~$193 | ✅ Sí | ✅ 6.8" LCD |
+| C: Sin pantalla | GW3000 + WS69 + WN31 | ~$136 | ✅ Sí | ❌ No |
+| D: Todo en uno | HP2551 | $199 | ❌ No | ✅ 7" TFT |
+| E: Premium | HP2560 (Wittboy Pro) | ~$300 | ✅ Sí | ✅ 7" TFT |
 
 ---
 
@@ -618,10 +621,275 @@ if __name__ == '__main__':
 - **Costo mensual**: $0 (electricidad ~$3/año)
 
 ### Opción Cloud: VPS
-- **Proveedores**: DigitalOcean, Vultr, Hetzner, Oracle Free Tier
+
+#### ⭐ Oracle Cloud Free Tier (GRATIS de por vida)
+
+Oracle ofrece un VPS **Always Free** que es más que suficiente para este proyecto:
+
+| Recurso | Especificación |
+|---------|----------------|
+| **Procesador** | ARM Ampere A1 (2 OCPUs) |
+| **Memoria** | 12 GB RAM |
+| **Almacenamiento** | 200 GB Block Volume |
+| **Ancho de banda** | 10 TB/mes saliente |
+| **Costo** | **$0/mes** (siempre gratis) |
+
+**Cómo obtener Oracle Cloud Free Tier:**
+
+1. **Crear cuenta**: [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
+   - Requiere tarjeta de crédito (solo verificación, no cobran)
+   - Seleccionar región cercana (ej: São Paulo, Phoenix)
+   
+2. **Crear instancia ARM**:
+   - Ir a Compute → Instances → Create Instance
+   - Shape: **VM.Standard.A1.Flex**
+   - OCPUs: 2, Memory: 12 GB
+   - Image: Ubuntu 22.04 o Oracle Linux 8
+   - Agregar SSH key pública
+   
+3. **Configurar red**:
+   - Abrir puerto 8080 en Security List (para receptor Ecowitt)
+   - Asignar IP pública reservada (gratis)
+   
+4. **Instalar stack**:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install docker.io docker-compose -y
+   git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
+   cd ecowitt-weather-server-xe1e
+   docker-compose up -d
+   ```
+
+**Notas importantes:**
+- La instancia ARM es **Always Free** (no expira)
+- Si no usas la instancia por 7 días, Oracle puede reclamarla
+- Configura un cron job simple para mantenerla activa
+- Disponible en la mayoría de regiones (excepto Corea del Sur)
+
+**Referencia**: [Oracle Cloud Free Tier Docs](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
+
+---
+
+### Guía Completa: Configurar VPS Oracle (Mientras Llega el Equipo)
+
+Esta guía te permite tener el servidor listo antes de que llegue el hardware.
+
+#### Paso 1: Crear Cuenta Oracle Cloud
+
+1. Ir a [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
+2. Click en "Start for free"
+3. Llenar formulario:
+   - Email válido
+   - País/Región
+   - Nombre completo
+4. Verificar email
+5. Agregar tarjeta de crédito (solo verificación, **no cobran**)
+6. Seleccionar **Home Region** (no se puede cambiar después):
+   - **Recomendadas**: Phoenix, Ashburn, São Paulo
+   - Evitar regiones con alta demanda (pueden no tener ARM disponible)
+
+#### Paso 2: Crear Instancia ARM
+
+1. Ir a **Compute → Instances → Create Instance**
+
+2. **Name**: `ecowitt-server`
+
+3. **Image and Shape**:
+   - Click "Edit"
+   - Image: **Ubuntu 22.04** (Canonical)
+   - Shape: Click "Change Shape"
+     - Instance type: **Virtual machine**
+     - Shape series: **Ampere** (ARM)
+     - Shape: **VM.Standard.A1.Flex**
+     - OCPUs: **2**
+     - Memory: **12 GB**
+
+4. **Networking**:
+   - Crear nueva VCN o usar existente
+   - Subnet: pública
+   - ✅ Assign public IPv4 address
+
+5. **SSH Keys**:
+   - Generar par de llaves o subir tu clave pública
+   - **¡GUARDAR LA LLAVE PRIVADA!** (solo se descarga una vez)
+
+6. Click **Create**
+
+#### Paso 3: Configurar Firewall (Security List)
+
+1. Ir a **Networking → Virtual Cloud Networks**
+2. Click en tu VCN → **Security Lists** → Default Security List
+3. **Add Ingress Rules**:
+
+| Source CIDR | Protocol | Dest Port | Descripción |
+|-------------|----------|-----------|-------------|
+| 0.0.0.0/0 | TCP | 8080 | Receptor Ecowitt |
+| 0.0.0.0/0 | TCP | 80 | HTTP (dashboard) |
+| 0.0.0.0/0 | TCP | 443 | HTTPS |
+| 0.0.0.0/0 | TCP | 3000 | Grafana (opcional) |
+
+#### Paso 4: Conectar por SSH
+
+```bash
+# Linux/Mac
+chmod 400 ~/Downloads/ssh-key.key
+ssh -i ~/Downloads/ssh-key.key ubuntu@<IP_PUBLICA>
+
+# Windows (PowerShell)
+ssh -i C:\Users\TU_USER\Downloads\ssh-key.key ubuntu@<IP_PUBLICA>
+```
+
+#### Paso 5: Configuración Inicial del Servidor
+
+```bash
+# Actualizar sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Docker
+sudo apt install -y docker.io docker-compose git curl
+
+# Agregar usuario al grupo docker (evita usar sudo)
+sudo usermod -aG docker $USER
+
+# Aplicar cambios de grupo (o reconectar SSH)
+newgrp docker
+
+# Verificar Docker
+docker --version
+docker-compose --version
+```
+
+#### Paso 6: Configurar Firewall del SO (iptables)
+
+Oracle Ubuntu tiene iptables bloqueando puertos por defecto:
+
+```bash
+# Abrir puertos necesarios
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8080 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 3000 -j ACCEPT
+
+# Guardar reglas permanentemente
+sudo netfilter-persistent save
+```
+
+#### Paso 7: Clonar y Levantar el Proyecto
+
+```bash
+# Clonar repositorio
+cd ~
+git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
+cd ecowitt-weather-server-xe1e
+
+# Crear archivo de configuración
+cp .env.example .env
+nano .env  # Ajustar variables si necesario
+
+# Levantar contenedores
+docker-compose up -d
+
+# Verificar que están corriendo
+docker-compose ps
+
+# Ver logs
+docker-compose logs -f
+```
+
+#### Paso 8: Probar con Datos Simulados
+
+Mientras esperas el equipo, prueba que el servidor funciona:
+
+```bash
+# Simular envío de datos Ecowitt
+curl -X POST http://localhost:8080/data/report/ \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "PASSKEY=test123&stationtype=GW3000&dateutc=2026-07-03+12:00:00&tempf=77.0&humidity=55&baromrelin=29.92&windspeedmph=5.5&winddir=180&dailyrainin=0.1&uv=3&solarradiation=250"
+
+# Verificar respuesta
+curl http://localhost:8080/api/current
+```
+
+#### Paso 9: Mantener Instancia Activa (Evitar Reclamación)
+
+Oracle puede reclamar instancias inactivas después de 7 días. Crea un cron job simple:
+
+```bash
+# Editar crontab
+crontab -e
+
+# Agregar esta línea (ping cada 6 horas)
+0 */6 * * * curl -s http://localhost:8080/api/current > /dev/null
+```
+
+#### Paso 10: Servicios Adicionales (Opcional)
+
+Mientras llega el equipo, puedes instalar otros servicios útiles:
+
+**Uptime Kuma (monitoreo de sitios):**
+```bash
+docker run -d \
+  --name uptime-kuma \
+  -p 3001:3001 \
+  -v uptime-kuma:/app/data \
+  --restart unless-stopped \
+  louislam/uptime-kuma:1
+```
+
+**Nginx Proxy Manager (reverse proxy + SSL):**
+```bash
+mkdir ~/nginx-proxy && cd ~/nginx-proxy
+cat > docker-compose.yml << 'EOF'
+version: '3'
+services:
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    ports:
+      - '80:80'
+      - '443:443'
+      - '81:81'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+EOF
+docker-compose up -d
+# Acceder: http://<IP>:81 (admin@example.com / changeme)
+```
+
+**WireGuard VPN (acceso seguro):**
+```bash
+docker run -d \
+  --name=wireguard \
+  --cap-add=NET_ADMIN \
+  -e PUID=1000 -e PGID=1000 \
+  -e TZ=America/Mexico_City \
+  -e SERVERURL=<TU_IP_PUBLICA> \
+  -e PEERS=3 \
+  -p 51820:51820/udp \
+  -v ~/wireguard:/config \
+  --restart unless-stopped \
+  lscr.io/linuxserver/wireguard
+# Configs en ~/wireguard/peer*/peer*.conf
+```
+
+#### Verificación Final
+
+| Servicio | URL | Estado Esperado |
+|----------|-----|-----------------|
+| Receptor Ecowitt | `http://<IP>:8080/data/report/` | Acepta POST |
+| API Current | `http://<IP>:8080/api/current` | JSON con datos |
+| Dashboard | `http://<IP>:80` | Página web |
+| Uptime Kuma | `http://<IP>:3001` | Panel monitoreo |
+| Nginx Proxy | `http://<IP>:81` | Panel admin |
+
+---
+
+#### Alternativas de pago (si Oracle no está disponible)
+- **Proveedores**: DigitalOcean, Vultr, Hetzner
 - **Specs mínimos**: 1 vCPU, 1GB RAM, 25GB SSD
-- **Costo**: $4-6/mes (o gratis con Oracle)
-- **Ventaja**: Accesible desde cualquier lugar
+- **Costo**: $4-6/mes
+- **Ventaja**: Más regiones disponibles, soporte dedicado
 
 ### Consideraciones de Red
 ```
@@ -700,18 +968,19 @@ ecowitt-weather-station/
 ## 12. Próximos Pasos
 
 ### Fase 0: Compra del Hardware (Todo 915MHz)
-- [ ] Comprar **GW3002** (GW3000 + WS69) - ~$119
-- [ ] Comprar **WS2910_C** (pantalla) - ~$68
+- [ ] Comprar **GW3000** (gateway) - ~$60
+- [ ] Comprar **WS69** (sensor exterior 7-en-1) - ~$65
+- [ ] Comprar **WS2910** (pantalla LCD) - ~$68
 - [ ] Comprar **WN31** (sensor temp/hum extra) - ~$11
 - [ ] Comprar **Bird Spikes** + **Battery Pack 10m** - ~$25
 - [ ] Verificar envío a tu ubicación (AliExpress o Ecowitt directo)
-- [ ] **Total estimado: ~$223**
+- [ ] **Total estimado: ~$229**
 
 ### Fase 1: Instalación Física
 - [ ] Montar sensor WS69 en exterior (poste, techo, etc.)
 - [ ] Instalar Bird Spikes en WS69
 - [ ] Ubicar GW3000 en interior con buena señal WiFi
-- [ ] Ubicar WS2910_C donde puedas ver la pantalla
+- [ ] Ubicar WS2910 donde puedas ver la pantalla
 - [ ] Ubicar WN31 en habitación deseada (configurar canal CH1)
 - [ ] Conectar equipos a la red eléctrica
 
