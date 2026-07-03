@@ -146,33 +146,34 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 |------------|--------|-------------|
 | **GW3002** | $119 | Bundle: GW3000 gateway + WS69 sensor mecánico |
 | **WS2910_C** | $68 | Pantalla LCD 6.8" color con WiFi |
-| **TOTAL** | **$187** | ✅ Bajo presupuesto de $200 |
+| **WN31** | $11 | Sensor temperatura/humedad adicional (CH1) |
+| **TOTAL** | **$198** | ✅ Bajo presupuesto de $200 |
 
 **¿Por qué esta combinación?**
 
 ```
-         WS69 (sensor exterior 7-en-1)
-              │
-              │ RF 915MHz broadcast
-              ▼
-    ┌─────────────────────────┐
-    │  Ambos receptores       │
-    │  captan la misma señal  │
-    └──────────┬──────────────┘
+    WS69 (sensor exterior 7-en-1)      WN31 (temp/hum CH1)
+              │                              │
+              │ RF 915MHz broadcast          │
+              ▼                              ▼
+    ┌─────────────────────────────────────────┐
+    │     Ambos receptores captan todas       │
+    │     las señales de sensores 915MHz      │
+    └──────────────────┬──────────────────────┘
+                       │
+               ┌───────┴───────┐
+               ▼               ▼
+            GW3000          WS2910_C
+           (gateway)       (pantalla)
                │
-       ┌───────┴───────┐
-       ▼               ▼
-    GW3000          WS2910_C
-   (gateway)       (pantalla)
-       │
-       │ API Local HTTP
-       │ Almacenamiento SD
-       ▼
-┌──────────────────┐
-│  Home Assistant  │
-│  Servidor propio │
-│  Dashboard web   │
-└──────────────────┘
+               │ API Local HTTP
+               │ Almacenamiento SD
+               ▼
+        ┌──────────────────┐
+        │  Home Assistant  │
+        │  Servidor propio │
+        │  Dashboard web   │
+        └──────────────────┘
 ```
 
 **Lo que obtienes:**
@@ -181,8 +182,26 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 - ✅ **Ethernet + WiFi** - Conexión más estable
 - ✅ **Pantalla física 6.8"** - Ver datos sin computadora
 - ✅ **Sensor mecánico WS69** - Económico, funcional
+- ✅ **Sensor extra WN31** - Temp/humedad adicional (expandible hasta 8)
 - ✅ **Compatible 915 MHz** - Sin interferencias
 - ✅ **Integración Home Assistant** - Nativa
+
+### 2.9 Sensores Adicionales Compatibles
+
+El GW3000 soporta hasta **8 sensores WN31** simultáneamente (canales CH1-CH8).
+
+| Sensor | Precio | Canales | Uso Típico |
+|--------|--------|---------|------------|
+| **WN31** | $11 | Hasta 8 | Interior, habitaciones, bodega |
+| **WN32** | $14 | 1 | Exterior (reemplazo) |
+| **WN32P** | $16 | 1 | Interior con presión |
+| **WN31EP** | $69 | Hasta 8 | Alta precisión, sonda para piscina/suelo |
+| **WH51** | $15 | Hasta 8 | Humedad de suelo |
+| **WH57** | $25 | 1 | Detector de rayos |
+| **WH45** | $80 | 1 | Calidad del aire (PM2.5/CO2) |
+
+**Protocolo de datos WN31:**
+Los sensores envían campos `temp1f`-`temp8f` y `humidity1`-`humidity8` según el canal configurado.
 
 **Dónde comprar (915 MHz):**
 
@@ -190,7 +209,8 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 |----------|-------------|-------------------|-------|
 | [GW3002](https://shop.ecowitt.com/products/gw3002) (GW3000+WS69) | $118.99 | ~$100-110 | Bundle gateway + sensor |
 | [WS2910_C](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 | Solo consola/pantalla |
-| **Subtotal equipos** | **$186.98** | **~$155-175** | |
+| [WN31](https://shop.ecowitt.com/products/wn31) (temp/hum) | $10.99 | ~$9-12 | Sensor adicional CH1 |
+| **Subtotal equipos** | **$197.97** | **~$165-185** | |
 
 **Accesorios recomendados:**
 
@@ -198,12 +218,11 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 |-----------|--------|-------------|
 | [Bird Spikes](https://shop.ecowitt.com/products/bird-spikes-1) | $9.99 | Protección anti-pájaros para WS69 |
 | [Battery Pack 10m](https://shop.ecowitt.com/products/battery-pack) | $14.99 | Cable extensión 10m para cambiar baterías fácil |
-| [Funnel WS69](https://shop.ecowitt.com/collections/accessory) | $4.99 | Embudo repuesto pluviómetro |
 | MicroSD card (para GW3000) | ~$5-10 | Almacenamiento local (no incluida) |
 
 **Total estimado con accesorios:**
-- Ecowitt Shop: ~$217 (equipos + bird spikes + battery pack)
-- AliExpress: ~$180-195 (estimado con accesorios)
+- Ecowitt Shop: ~$223 (equipos + WN31 + bird spikes + battery pack)
+- AliExpress: ~$190-210 (estimado con accesorios)
 
 **Tienda Oficial Ecowitt en AliExpress:**
 - [ecowitt.aliexpress.com/store/1102641321](https://ecowitt.aliexpress.com/store/1102641321)
@@ -216,10 +235,10 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
 
 | Opción | Componentes | Precio | API Local | Pantalla |
 |--------|-------------|--------|-----------|----------|
-| **A: Recomendada** | GW3002 + WS2910_C | $187 | ✅ Sí | ✅ 6.8" LCD |
-| B: Sin pantalla | GW3002 solo | $119 | ✅ Sí | ❌ No |
+| **A: Recomendada** | GW3002 + WS2910_C + WN31 | $198 | ✅ Sí | ✅ 6.8" LCD |
+| B: Sin pantalla | GW3002 + WN31 | $130 | ✅ Sí | ❌ No |
 | C: Todo en uno | HP2551 | $199 | ❌ No | ✅ 7" TFT |
-| D: Premium | HP2560 (Wittboy Pro) | $300 | ✅ Sí | ✅ 7" TFT |
+| D: Premium | HP2560 (Wittboy Pro) + WN31 | $311 | ✅ Sí | ✅ 7" TFT |
 
 ---
 
@@ -680,16 +699,21 @@ ecowitt-weather-station/
 
 ## 12. Próximos Pasos
 
-### Fase 0: Compra del Hardware
-- [ ] Comprar **GW3002** (GW3000 + WS69) - 915MHz - ~$119
-- [ ] Comprar **WS2910_C** - 915MHz - ~$68
+### Fase 0: Compra del Hardware (Todo 915MHz)
+- [ ] Comprar **GW3002** (GW3000 + WS69) - ~$119
+- [ ] Comprar **WS2910_C** (pantalla) - ~$68
+- [ ] Comprar **WN31** (sensor temp/hum extra) - ~$11
+- [ ] Comprar **Bird Spikes** + **Battery Pack 10m** - ~$25
 - [ ] Verificar envío a tu ubicación (AliExpress o Ecowitt directo)
+- [ ] **Total estimado: ~$223**
 
 ### Fase 1: Instalación Física
 - [ ] Montar sensor WS69 en exterior (poste, techo, etc.)
+- [ ] Instalar Bird Spikes en WS69
 - [ ] Ubicar GW3000 en interior con buena señal WiFi
 - [ ] Ubicar WS2910_C donde puedas ver la pantalla
-- [ ] Conectar ambos a la red eléctrica
+- [ ] Ubicar WN31 en habitación deseada (configurar canal CH1)
+- [ ] Conectar equipos a la red eléctrica
 
 ### Fase 2: Configuración Básica
 - [ ] Configurar GW3000 vía app WSView o WS Tool

@@ -55,10 +55,15 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
     temp_fields = [
         ("temperature_outdoor_f", "temperature_outdoor"),
         ("temperature_indoor_f", "temperature_indoor"),
-        ("temperature_1_f", "temperature_1"),
-        ("temperature_2_f", "temperature_2"),
-        ("temperature_3_f", "temperature_3"),
-        ("temperature_4_f", "temperature_4"),
+        # WN31 sensors (up to 8 channels)
+        ("temperature_ch1_f", "temperature_ch1"),
+        ("temperature_ch2_f", "temperature_ch2"),
+        ("temperature_ch3_f", "temperature_ch3"),
+        ("temperature_ch4_f", "temperature_ch4"),
+        ("temperature_ch5_f", "temperature_ch5"),
+        ("temperature_ch6_f", "temperature_ch6"),
+        ("temperature_ch7_f", "temperature_ch7"),
+        ("temperature_ch8_f", "temperature_ch8"),
     ]
 
     for imperial_key, metric_key in temp_fields:

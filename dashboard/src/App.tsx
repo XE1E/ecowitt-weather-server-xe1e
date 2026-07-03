@@ -190,6 +190,55 @@ function App() {
           />
         </div>
 
+        {/* WN31 Extra Sensors - Only show if data exists */}
+        {(data.temperature_ch1 !== undefined || data.temperature_ch2 !== undefined) && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-slate-300 mb-4">Sensores Adicionales (WN31)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {data.temperature_ch1 !== undefined && (
+                <WeatherCard
+                  title="Canal 1"
+                  value={data.temperature_ch1}
+                  unit="°C"
+                  icon={<Thermometer className="w-6 h-6" />}
+                  color="text-amber-400"
+                  subtitle={data.humidity_ch1 !== undefined ? `Humedad: ${data.humidity_ch1}%` : undefined}
+                />
+              )}
+              {data.temperature_ch2 !== undefined && (
+                <WeatherCard
+                  title="Canal 2"
+                  value={data.temperature_ch2}
+                  unit="°C"
+                  icon={<Thermometer className="w-6 h-6" />}
+                  color="text-lime-400"
+                  subtitle={data.humidity_ch2 !== undefined ? `Humedad: ${data.humidity_ch2}%` : undefined}
+                />
+              )}
+              {data.temperature_ch3 !== undefined && (
+                <WeatherCard
+                  title="Canal 3"
+                  value={data.temperature_ch3}
+                  unit="°C"
+                  icon={<Thermometer className="w-6 h-6" />}
+                  color="text-teal-400"
+                  subtitle={data.humidity_ch3 !== undefined ? `Humedad: ${data.humidity_ch3}%` : undefined}
+                />
+              )}
+              {data.temperature_ch4 !== undefined && (
+                <WeatherCard
+                  title="Canal 4"
+                  value={data.temperature_ch4}
+                  unit="°C"
+                  icon={<Thermometer className="w-6 h-6" />}
+                  color="text-indigo-400"
+                  subtitle={data.humidity_ch4 !== undefined ? `Humedad: ${data.humidity_ch4}%` : undefined}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Chart placeholder */}
         <div className="card">
           <p className="card-title">Histórico 24h</p>

@@ -35,6 +35,15 @@
     - uv_index
     - dew_point
     - feels_like
+    # WN31 Extra sensors (up to 8 channels)
+    - temperature_ch1
+    - temperature_ch2
+    - temperature_ch3
+    - temperature_ch4
+    - humidity_ch1
+    - humidity_ch2
+    - humidity_ch3
+    - humidity_ch4
   value_template: "OK"
 
 # ============================================
@@ -159,3 +168,71 @@
       device_class: temperature
       value_template: "{{ state_attr('sensor.ecowitt_weather', 'feels_like') }}"
       icon_template: mdi:thermometer-lines
+
+    # ============================================
+    # WN31 Extra Sensors (Channels 1-4)
+    # ============================================
+
+    ecowitt_temperature_ch1:
+      friendly_name: "Temperatura Canal 1"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch1') }}"
+      icon_template: mdi:thermometer
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch1') is not none }}"
+
+    ecowitt_humidity_ch1:
+      friendly_name: "Humedad Canal 1"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch1') }}"
+      icon_template: mdi:water-percent
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch1') is not none }}"
+
+    ecowitt_temperature_ch2:
+      friendly_name: "Temperatura Canal 2"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch2') }}"
+      icon_template: mdi:thermometer
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch2') is not none }}"
+
+    ecowitt_humidity_ch2:
+      friendly_name: "Humedad Canal 2"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch2') }}"
+      icon_template: mdi:water-percent
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch2') is not none }}"
+
+    ecowitt_temperature_ch3:
+      friendly_name: "Temperatura Canal 3"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch3') }}"
+      icon_template: mdi:thermometer
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch3') is not none }}"
+
+    ecowitt_humidity_ch3:
+      friendly_name: "Humedad Canal 3"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch3') }}"
+      icon_template: mdi:water-percent
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch3') is not none }}"
+
+    ecowitt_temperature_ch4:
+      friendly_name: "Temperatura Canal 4"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch4') }}"
+      icon_template: mdi:thermometer
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch4') is not none }}"
+
+    ecowitt_humidity_ch4:
+      friendly_name: "Humedad Canal 4"
+      unit_of_measurement: "%"
+      device_class: humidity
+      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch4') }}"
+      icon_template: mdi:water-percent
+      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch4') is not none }}"

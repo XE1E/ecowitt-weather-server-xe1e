@@ -68,15 +68,33 @@ FIELD_MAPPING = {
     "soilmoisture3": "soil_moisture_3",
     "soilmoisture4": "soil_moisture_4",
 
-    # Extra temperature sensors (up to 8)
-    "temp1f": "temperature_1_f",
-    "temp2f": "temperature_2_f",
-    "temp3f": "temperature_3_f",
-    "temp4f": "temperature_4_f",
-    "humidity1": "humidity_1",
-    "humidity2": "humidity_2",
-    "humidity3": "humidity_3",
-    "humidity4": "humidity_4",
+    # Extra temperature/humidity sensors WN31 (up to 8 channels)
+    "temp1f": "temperature_ch1_f",
+    "temp2f": "temperature_ch2_f",
+    "temp3f": "temperature_ch3_f",
+    "temp4f": "temperature_ch4_f",
+    "temp5f": "temperature_ch5_f",
+    "temp6f": "temperature_ch6_f",
+    "temp7f": "temperature_ch7_f",
+    "temp8f": "temperature_ch8_f",
+    "humidity1": "humidity_ch1",
+    "humidity2": "humidity_ch2",
+    "humidity3": "humidity_ch3",
+    "humidity4": "humidity_ch4",
+    "humidity5": "humidity_ch5",
+    "humidity6": "humidity_ch6",
+    "humidity7": "humidity_ch7",
+    "humidity8": "humidity_ch8",
+
+    # WN31 battery status (up to 8 channels)
+    "batt1": "battery_ch1",
+    "batt2": "battery_ch2",
+    "batt3": "battery_ch3",
+    "batt4": "battery_ch4",
+    "batt5": "battery_ch5",
+    "batt6": "battery_ch6",
+    "batt7": "battery_ch7",
+    "batt8": "battery_ch8",
 
     # Lightning
     "lightning_num": "lightning_count",

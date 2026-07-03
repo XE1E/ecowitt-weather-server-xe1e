@@ -11,6 +11,24 @@ export interface WeatherData {
   humidity_outdoor: number
   humidity_indoor: number
 
+  // WN31 Extra sensors (up to 8 channels)
+  temperature_ch1?: number
+  temperature_ch2?: number
+  temperature_ch3?: number
+  temperature_ch4?: number
+  temperature_ch5?: number
+  temperature_ch6?: number
+  temperature_ch7?: number
+  temperature_ch8?: number
+  humidity_ch1?: number
+  humidity_ch2?: number
+  humidity_ch3?: number
+  humidity_ch4?: number
+  humidity_ch5?: number
+  humidity_ch6?: number
+  humidity_ch7?: number
+  humidity_ch8?: number
+
   // Pressure
   pressure_relative: number
   pressure_absolute: number
