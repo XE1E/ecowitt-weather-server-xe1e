@@ -1,45 +1,62 @@
-# Estudio de Viabilidad: Ecowitt HP2551 Weather Station
+# Estudio de Viabilidad: Estación Meteorológica Ecowitt
 ## Servidor Local + Dashboard Web Personal
 
 ---
 
-## 1. Resumen Ejecutivo
+## 1. Objetivo del Estudio
 
-**Veredicto: ✅ VIABLE** - El proyecto es totalmente factible con múltiples opciones de implementación, desde soluciones listas para usar hasta desarrollo personalizado.
+Evaluar la viabilidad técnica y económica de implementar una estación meteorológica personal con las siguientes características:
 
-La estación HP2551 soporta envío de datos HTTP a servidores personalizados usando el protocolo Ecowitt, lo que permite captura local sin depender de la nube de Ecowitt.
+- **Monitoreo local**: Captura de datos sin depender de servicios cloud
+- **Dashboard web**: Visualización de datos en tiempo real
+- **Integración**: Compatible con Home Assistant
+- **Presupuesto**: ~$200-250 USD para hardware
+
+Este documento analiza las opciones disponibles en hardware, software e infraestructura, presentando el análisis comparativo y las conclusiones para cada área de decisión.
 
 ---
 
-## 2. Comparativa de Estaciones Meteorológicas
+## 2. Resumen de Conclusiones
 
-### 2.1 Ecowitt - Línea Completa
+**Veredicto General: VIABLE**
 
-| Modelo | Precio USD | Sensor | Pantalla | API Local | Ideal Para |
-|--------|-----------|--------|----------|-----------|------------|
-| **HP2551** | $199 | WS69 (mecánico) | 7" TFT | ❌ No | Principiantes, presupuesto ajustado |
-| **HP2553** | ~$280 | WS90 (ultrasónico) | 7" TFT | ❌ No | Mejor precisión viento, sin mantenimiento |
-| **Wittboy GW2001** | $180-230 | WS90 (ultrasónico) | Sin pantalla (gateway) | ✅ Sí | Integración Home Assistant |
-| **Wittboy GW3001** | $205-215 | WS90 (ultrasónico) | Sin pantalla (gateway) | ✅ Sí + SD | **⭐ RECOMENDADO** para este proyecto |
-| **HP2560 (Wittboy Pro)** | ~$300 | WS90 (ultrasónico) | 7" TFT | ✅ Sí | Lo mejor de ambos mundos |
+| Área | Decisión | Justificación |
+|------|----------|---------------|
+| **Hardware** | WS2910 + GW3000 + WS69 + WN31 | API local + pantalla + modularidad por ~$204 |
+| **Infraestructura** | Oracle Cloud Free Tier (ARM) | $0/mes permanente, 12GB RAM, IP pública |
+| **Software** | WeatherNode (PHP nativo) | Dashboard completo, open source, compatible ARM |
 
-### 2.2 Diferencias Clave entre Sensores
+**Costo total estimado:**
+- Hardware: ~$229 (con accesorios)
+- Infraestructura: $0/mes
+- Software: $0 (open source)
 
-#### WS69 (Mecánico) - Incluido en HP2551
-- Anemómetro de copas giratorias + veleta
-- **Pros**: Económico, probado
-- **Contras**: Partes móviles que se desgastan, puede atascarse con hielo/nieve
-- Precisión viento: ±1 m/s (<10 m/s), ±10% (≥10 m/s)
+**Consideraciones técnicas verificadas:**
+- ✅ GW3000 soporta envío a servidor custom via protocolo Ecowitt
+- ✅ WeatherNode soporta protocolo Ecowitt nativamente
+- ✅ PHP 8.2 instalado en Ubuntu ARM64
+- ✅ VPS Oracle operativo: http://163.192.147.208:8080
+- ⚠️ Ecowitt solo soporta HTTP (no HTTPS) - el servidor usa puerto 8080
 
-#### WS90 (Ultrasónico) - Incluido en modelos superiores
-- Sin partes móviles, medición por ultrasonido
-- Pluviómetro piezoeléctrico (no de cangilones)
-- **Pros**: Sin mantenimiento, más preciso, más duradero
-- **Contras**: Más caro (~$150 solo el sensor)
-- Precisión viento: ±0.5 m/s (<10 m/s), ±5% (≥10 m/s)
-- **Nota**: Para lluvia muy precisa, recomiendan agregar WH40 tradicional
+**Estado actual:** Servidor listo, esperando hardware Ecowitt.
 
-### 2.3 Gateways vs Consolas (¡IMPORTANTE para tu proyecto!)
+---
+
+---
+
+# PARTE I: ANÁLISIS DE HARDWARE
+
+---
+
+## 3. Opciones de Hardware
+
+### 3.1 Enfoque A: Consolas Todo-en-Uno
+
+Las consolas como HP2551 y HP2553 integran sensor, receptor y pantalla en un solo paquete.
+
+#### El Problema con las Consolas Todo-en-Uno
+
+Las consolas como HP2551 y HP2553 son atractivas porque incluyen todo en un paquete, pero tienen una **limitación crítica para integración**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -48,11 +65,12 @@ La estación HP2551 soporta envío de datos HTTP a servidores personalizados usa
 │  ✅ Todo en uno                                                  │
 │  ❌ SIN API LOCAL - Solo puede ENVIAR datos (push)              │
 │  → Tu servidor debe ESCUCHAR conexiones entrantes               │
+│  → No puedes consultar datos cuando quieras                     │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │              GATEWAYS (GW2000, GW3000, Wittboy)                 │
-│  ❌ Sin pantalla (usas app móvil o web)                         │
+│  ❌ Sin pantalla (pero puedes agregar WS2910)                   │
 │  ✅ API LOCAL HTTP - Puedes CONSULTAR datos cuando quieras      │
 │  ✅ Más flexible para integración                                │
 │  ✅ Almacenamiento SD (GW3000)                                   │
@@ -60,97 +78,9 @@ La estación HP2551 soporta envío de datos HTTP a servidores personalizados usa
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**⚠️ RECOMENDACIÓN**: Si la integración con servidor es tu prioridad principal, **un gateway (GW2000/GW3000/Wittboy) es mejor opción que una consola HP2551**, aunque pierdas la pantalla física.
+### 3.2 Enfoque B: Arquitectura Modular (Gateway + Pantalla Separados)
 
-### 2.4 Comparativa Gateways Ecowitt
-
-| Gateway | Precio | WiFi | Ethernet | API Local | SD Card | PoE | Antena |
-|---------|--------|------|----------|-----------|---------|-----|--------|
-| GW1100 | ~$30 | ✅ | ❌ | ✅ | ❌ | ❌ | Interna |
-| GW1200 | ~$40 | ✅ | ❌ | ✅ | ❌ | ❌ | Interna |
-| GW2000 | ~$50 | ✅ | ✅ | ✅ | ❌ | ✅ | Interna |
-| **GW3000** | ~$60 | ✅ | ✅ | ✅ | ✅ | ✅ | Externa (mejor alcance) |
-
-### 2.5 Alternativas de Otras Marcas
-
-#### Ambient Weather (Diseños licenciados de Ecowitt)
-| Modelo | Precio USD | Notas |
-|--------|-----------|-------|
-| WS-2902C Osprey | $189 | Equivalente a HP2551, muy popular en USA |
-| WS-5000 | ~$400 | Gama alta, ultrasónico, mejor soporte USA |
-
-**Nota**: Ambient Weather licencia diseños de Ecowitt. El WS-4000 es idéntico al Wittboy Pro. Los Ambient cuestan más pero tienen mejor soporte en Norteamérica.
-
-#### WeatherFlow Tempest
-| Aspecto | Detalle |
-|---------|---------|
-| Precio | ~$329 |
-| Sensor | Todo en uno, sin partes móviles |
-| API | ✅ Local (UDP) + Cloud REST |
-| Ventaja | Detección de rayos, haptic rain gauge |
-| Desventaja | Más caro, menos expandible |
-
-**API Local**: Usa UDP en red local, perfecto para Home Assistant sin depender de cloud.
-
-#### Davis Instruments (Grado Profesional)
-| Modelo | Precio USD | Notas |
-|--------|-----------|-------|
-| Vantage Vue | ~$695 | Requiere WeatherLink Hub ($395 extra) |
-| Vantage Pro2 | ~$900+ | Usado por National Weather Service |
-
-**Nota**: Davis es el estándar profesional pero el costo es 3-5x mayor. La precisión es superior (±0.3°F vs ±1°F), pero para uso personal Ecowitt es suficiente.
-
-### 2.6 Tabla Resumen - Mejor Opción por Caso de Uso
-
-| Caso de Uso | Recomendación | Precio Aprox |
-|-------------|---------------|--------------|
-| **Presupuesto mínimo + pantalla** | HP2551 | $199 |
-| **Mejor calidad sin pantalla** | Wittboy GW3001 | $205-215 |
-| **API local + pantalla** | HP2560 (Wittboy Pro) | ~$300 |
-| **Sin mantenimiento (nieve/hielo)** | Cualquiera con WS90 | $180+ |
-| **Home Assistant prioritario** | GW3001 o GW2000 + WS90 | $200-260 |
-| **Máxima precisión** | Davis Vantage Pro2 | $900+ |
-| **Todo en uno sin complicaciones** | WeatherFlow Tempest | $329 |
-
-### 2.7 Frecuencias RF - ¡IMPORTANTE!
-
-```
-⚠️ REQUISITO: 915 MHz (América) - NO 433 MHz (Europa)
-```
-
-Las estaciones Ecowitt vienen en dos variantes de frecuencia:
-
-| Frecuencia | Región | Interferencia | Disponibilidad |
-|------------|--------|---------------|----------------|
-| **915 MHz** | América (Norte/Sur) | Baja | Amazon US, Ecowitt directo |
-| **868 MHz** | Europa | Media | Amazon EU |
-| **433 MHz** | Asia/algunos EU | **ALTA** ⚠️ | Evitar si hay interferencia |
-
-**¿Por qué importa?**
-- 433 MHz es una banda muy congestionada (controles remotos, sensores baratos, IoT genérico)
-- 915 MHz tiene menos dispositivos compitiendo, mejor alcance y confiabilidad
-- **Al comprar, verificar que diga "915 MHz" o "US Version"**
-
-**Dónde comprar versión 915 MHz:**
-- [Ecowitt Shop directo](https://shop.ecowitt.com) - Seleccionar "915M" en las opciones
-- Amazon US (envío internacional disponible)
-- Verificar en la descripción del producto la frecuencia
-
-### 2.8 Mi Recomendación para Tu Proyecto
-
-#### ⭐ CONFIGURACIÓN RECOMENDADA (Gateway + Pantalla + Sensores)
-
-**Presupuesto: ~$205 | Requiere: 915 MHz | Prioridad: Home Assistant + Servidor propio**
-
-| Componente | Precio | Descripción |
-|------------|--------|-------------|
-| **GW3000** | $60 | Gateway WiFi/Ethernet con API local y SD |
-| **WS69** | $65 | Sensor exterior 7-en-1 (temp, hum, viento, lluvia, UV, solar) |
-| **WS2910** | $68 | Pantalla LCD 6.8" color con WiFi |
-| **WN31** | $11 | Sensor temperatura/humedad adicional (CH1) |
-| **TOTAL** | **~$204** | ✅ Dentro de presupuesto |
-
-**¿Por qué esta combinación?**
+Con componentes separados (WS2910 + GW3000) se obtiene **lo mejor de ambos mundos**:
 
 ```
     WS69 (sensor exterior 7-en-1)      WN31 (temp/hum CH1)
@@ -177,104 +107,246 @@ Las estaciones Ecowitt vienen en dos variantes de frecuencia:
         └──────────────────┘
 ```
 
-**Lo que obtienes:**
-- ✅ **API local HTTP** - Consulta datos cuando quieras (no solo push)
-- ✅ **Almacenamiento SD** - Backup local de datos
-- ✅ **Ethernet + WiFi** - Conexión más estable
-- ✅ **Pantalla física 6.8"** - Ver datos sin computadora
-- ✅ **Sensor mecánico WS69** - Económico, funcional, 7 mediciones
-- ✅ **Sensor extra WN31** - Temp/humedad interior (expandible hasta 8)
-- ✅ **Compatible 915 MHz** - Sin interferencias
-- ✅ **Integración Home Assistant** - Nativa
+### 3.3 Análisis Comparativo: Modular vs Todo-en-Uno
 
-### 2.9 Sensores Adicionales Compatibles
+| Aspecto | HP2551 (Todo-en-uno) | WS2910 + GW3000 (Modular) |
+|---------|---------------------|---------------------------|
+| **Precio** | $199 | ~$204 |
+| **Pantalla** | 7" TFT | 6.8" LCD |
+| **API Local** | ❌ No | ✅ Sí |
+| **Almacenamiento SD** | ❌ No | ✅ Sí |
+| **Ethernet** | ❌ Solo WiFi | ✅ WiFi + Ethernet |
+| **Integración HA** | Push only | Push + Pull |
+| **Sensor incluido** | WS69 (mecánico) | WS69 (mecánico) |
+| **Expandibilidad** | Limitada | Alta |
 
-El GW3000 soporta hasta **8 sensores WN31** simultáneamente (canales CH1-CH8).
+**Análisis**: La diferencia de precio es mínima (~$5), pero las ventajas técnicas de la arquitectura modular son significativas:
+- API local permite consultar datos en cualquier momento (no solo esperar push)
+- Almacenamiento SD proporciona backup local
+- Ethernet ofrece conexión más estable que solo WiFi
 
-| Sensor | Precio | Canales | Uso Típico |
-|--------|--------|---------|------------|
-| **WN31** | $11 | Hasta 8 | Interior, habitaciones, bodega |
-| **WN32** | $14 | 1 | Exterior (reemplazo) |
-| **WN32P** | $16 | 1 | Interior con presión |
-| **WN31EP** | $69 | Hasta 8 | Alta precisión, sonda para piscina/suelo |
-| **WH51** | $15 | Hasta 8 | Humedad de suelo |
-| **WH57** | $25 | 1 | Detector de rayos |
-| **WH45** | $80 | 1 | Calidad del aire (PM2.5/CO2) |
+---
 
-**Protocolo de datos WN31:**
-Los sensores envían campos `temp1f`-`temp8f` y `humidity1`-`humidity8` según el canal configurado.
+## 4. Análisis de Componentes Seleccionados
 
-**Dónde comprar (915 MHz):**
+### 4.1 GW3000 - El Corazón del Sistema
 
-| Producto | Ecowitt Shop | AliExpress (est.) | Notas |
-|----------|-------------|-------------------|-------|
-| [GW3000](https://shop.ecowitt.com/products/gw3000-gw3010) | $59.99 | ~$50-55 | Gateway WiFi/Ethernet + SD |
-| [WS69](https://shop.ecowitt.com/products/ws69) | $64.99 | ~$55-60 | Sensor exterior 7-en-1 |
-| [WS2910](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 | Consola/pantalla LCD 6.8" |
-| [WN31](https://shop.ecowitt.com/products/wn31) | $10.99 | ~$9-12 | Sensor temp/hum adicional |
-| **Subtotal equipos** | **$203.96** | **~$170-190** | |
+| Especificación | Detalle |
+|----------------|---------|
+| **Precio** | ~$60 |
+| **Conectividad** | WiFi 2.4GHz + Ethernet |
+| **Alimentación** | USB 5V o PoE (GW3010) |
+| **Almacenamiento** | Ranura microSD |
+| **Antena** | Externa (mejor alcance RF) |
+| **API Local** | ✅ HTTP GET/POST |
+| **Sensores soportados** | Hasta 8 canales WN31 + múltiples tipos |
 
-**Accesorios recomendados:**
+**Endpoint API Local:**
+```
+GET http://[IP_GW3000]/get_livedata_info
+```
+
+Devuelve JSON con todos los datos de sensores en tiempo real.
+
+### 4.2 WS2910 - Pantalla de Visualización
+
+| Especificación | Detalle |
+|----------------|---------|
+| **Precio** | ~$68 |
+| **Pantalla** | 6.8" LCD color |
+| **Conectividad** | WiFi 2.4GHz |
+| **Función** | Receptor RF + display |
+| **Alimentación** | USB 5V |
+
+La WS2910 actúa como receptor RF independiente, captando las señales de todos los sensores 915MHz en el área. No requiere conexión con el GW3000 - ambos reciben los datos directamente de los sensores.
+
+### 4.3 WS69 - Sensor Exterior 7-en-1
+
+| Medición | Rango | Precisión |
+|----------|-------|-----------|
+| Temperatura | -40°C a 60°C | ±1°C |
+| Humedad | 1% - 99% | ±5% |
+| Velocidad viento | 0 - 50 m/s | ±1 m/s (<10), ±10% (≥10) |
+| Dirección viento | 0° - 360° | ±10° |
+| Lluvia | 0 - 9999 mm | ±10% |
+| UV | 0 - 16+ | - |
+| Radiación solar | 0 - 200k lux | - |
+
+**Tipo**: Anemómetro mecánico (copas + veleta)
+**Alimentación**: Panel solar + baterías AA
+**Frecuencia RF**: 915 MHz (América)
+
+### 4.4 WN31 - Sensor Temperatura/Humedad Adicional
+
+| Especificación | Detalle |
+|----------------|---------|
+| **Precio** | ~$11 |
+| **Canales** | Configurables CH1-CH8 |
+| **Rango temp** | -40°C a 60°C |
+| **Rango hum** | 1% - 99% |
+| **Alimentación** | 2x AA |
+| **Transmisión** | 915 MHz, cada ~60s |
+
+El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `temp1f`-`temp8f` y `humidity1`-`humidity8`.
+
+---
+
+## 5. Comparativa de Gateways Ecowitt
+
+| Gateway | Precio | WiFi | Ethernet | API Local | SD Card | PoE | Antena |
+|---------|--------|------|----------|-----------|---------|-----|--------|
+| GW1100 | ~$30 | ✅ | ❌ | ✅ | ❌ | ❌ | Interna |
+| GW1200 | ~$40 | ✅ | ❌ | ✅ | ❌ | ❌ | Interna |
+| GW2000 | ~$50 | ✅ | ✅ | ✅ | ❌ | ✅ | Interna |
+| **GW3000** | ~$60 | ✅ | ✅ | ✅ | ✅ | ✅ | Externa |
+
+**¿Por qué GW3000?**
+- **Almacenamiento SD**: Backup local de datos (crucial si el servidor falla)
+- **Antena externa**: Mejor alcance RF para sensores distantes
+- **PoE opcional**: GW3010 incluye PoE, simplifica cableado
+- **Diferencia de $10**: Vale la pena por las funciones adicionales
+
+---
+
+## 6. Otras Alternativas de Hardware Analizadas
+
+### 6.1 Consolas Todo-en-Uno Ecowitt
+
+| Modelo | Precio | Sensor | Pantalla | API Local | Veredicto |
+|--------|--------|--------|----------|-----------|-----------|
+| **HP2551** | $199 | WS69 | 7" TFT | ❌ | Limitada para integración |
+| **HP2553** | ~$280 | WS90 | 7" TFT | ❌ | Mejor sensor, misma limitación |
+| **HP2560 (Wittboy Pro)** | ~$300 | WS90 | 7" TFT | ✅ | Excelente pero costosa |
+
+### 6.2 Kits Wittboy (Gateway + Sensor)
+
+| Modelo | Precio | Sensor | Pantalla | API Local | Veredicto |
+|--------|--------|--------|----------|-----------|-----------|
+| **GW2001** | $180-230 | WS90 | ❌ | ✅ | Sin pantalla |
+| **GW3001** | $205-215 | WS90 | ❌ | ✅ + SD | Sin pantalla |
+
+### 6.3 Otras Marcas
+
+| Marca/Modelo | Precio | Ventajas | Desventajas |
+|--------------|--------|----------|-------------|
+| **Ambient Weather WS-2902** | $189 | Popular en USA | Mismo HW que Ecowitt, más caro |
+| **WeatherFlow Tempest** | ~$329 | Sin partes móviles, API UDP | Más caro, menos expandible |
+| **Davis Vantage Pro2** | $900+ | Grado profesional | 3-5x más caro |
+
+### 6.4 Sensor Ultrasónico vs Mecánico
+
+| Aspecto | WS69 (Mecánico) | WS90 (Ultrasónico) |
+|---------|-----------------|-------------------|
+| **Precio** | ~$65 | ~$150 |
+| **Partes móviles** | Sí (copas + veleta) | No |
+| **Mantenimiento** | Puede atascarse | Sin mantenimiento |
+| **Precisión viento** | ±1 m/s | ±0.5 m/s |
+| **Lluvia** | Cangilones | Piezoeléctrico |
+| **Ideal para** | Presupuesto, clima moderado | Nieve/hielo, máxima precisión |
+
+**Análisis**: WS69 es suficiente para este proyecto. El WS90 (+$85) no justifica el costo adicional salvo en climas extremos con nieve/hielo frecuente.
+
+---
+
+## 7. Frecuencias RF - Requisito Crítico
+
+```
+⚠️ REQUISITO: 915 MHz (América) - NO 433 MHz (Europa/Asia)
+```
+
+| Frecuencia | Región | Interferencia | Recomendación |
+|------------|--------|---------------|---------------|
+| **915 MHz** | América | Baja | ✅ Comprar esta |
+| **868 MHz** | Europa | Media | Solo si estás en EU |
+| **433 MHz** | Asia | **ALTA** | ❌ Evitar |
+
+**Al comprar, verificar que diga "915 MHz" o "US Version".**
+
+**Dónde comprar versión 915 MHz:**
+- [Ecowitt Shop directo](https://shop.ecowitt.com) - Seleccionar "915M"
+- [Ecowitt AliExpress](https://ecowitt.aliexpress.com/store/1102641321) - ~15-20% más barato
+
+---
+
+## 8. Precios y Proveedores
+
+### 8.1 Configuración Seleccionada
+
+| Producto | Ecowitt Shop | AliExpress (est.) |
+|----------|-------------|-------------------|
+| [GW3000](https://shop.ecowitt.com/products/gw3000-gw3010) | $59.99 | ~$50-55 |
+| [WS69](https://shop.ecowitt.com/products/ws69) | $64.99 | ~$55-60 |
+| [WS2910](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 |
+| [WN31](https://shop.ecowitt.com/products/wn31) | $10.99 | ~$9-12 |
+| **Subtotal equipos** | **$203.96** | **~$170-190** |
+
+### 8.2 Accesorios Recomendados
 
 | Accesorio | Precio | Descripción |
 |-----------|--------|-------------|
 | [Bird Spikes](https://shop.ecowitt.com/products/bird-spikes-1) | $9.99 | Protección anti-pájaros para WS69 |
-| [Battery Pack 10m](https://shop.ecowitt.com/products/battery-pack) | $14.99 | Cable extensión 10m para cambiar baterías fácil |
-| MicroSD card (para GW3000) | ~$5-10 | Almacenamiento local (no incluida) |
+| [Battery Pack 10m](https://shop.ecowitt.com/products/battery-pack) | $14.99 | Cable extensión para cambiar baterías fácil |
+| MicroSD card | ~$5-10 | Almacenamiento local (no incluida) |
 
-**Total estimado con accesorios:**
-- Ecowitt Shop: ~$229 (equipos + bird spikes + battery pack)
-- AliExpress: ~$195-215 (estimado con accesorios)
+**Total estimado con accesorios: ~$229** (Ecowitt Shop)
 
-**Tienda Oficial Ecowitt en AliExpress:**
-- [ecowitt.aliexpress.com/store/1102641321](https://ecowitt.aliexpress.com/store/1102641321)
-- Envío mundial, precios ~15-20% menores que tienda oficial
-- Verificar siempre opción **915MHz** al seleccionar variante
+### 8.3 Sensores Adicionales Compatibles
+
+| Sensor | Precio | Canales | Uso Típico |
+|--------|--------|---------|------------|
+| **WN31** | $11 | Hasta 8 | Interior, habitaciones |
+| **WN32P** | $16 | 1 | Interior con presión |
+| **WH51** | $15 | Hasta 8 | Humedad de suelo |
+| **WH57** | $25 | 1 | Detector de rayos |
+| **WH45** | $80 | 1 | Calidad del aire (PM2.5/CO2) |
 
 ---
 
-#### Alternativas según prioridad:
+## 9. Resumen de Configuraciones de Hardware
 
 | Opción | Componentes | Precio | API Local | Pantalla |
 |--------|-------------|--------|-----------|----------|
-| **A: Recomendada** | GW3000 + WS69 + WS2910 + WN31 | ~$204 | ✅ Sí | ✅ 6.8" LCD |
+| **A: Seleccionada** | GW3000 + WS69 + WS2910 + WN31 | ~$204 | ✅ Sí | ✅ 6.8" LCD |
 | B: Sin sensor extra | GW3000 + WS69 + WS2910 | ~$193 | ✅ Sí | ✅ 6.8" LCD |
 | C: Sin pantalla | GW3000 + WS69 + WN31 | ~$136 | ✅ Sí | ❌ No |
 | D: Todo en uno | HP2551 | $199 | ❌ No | ✅ 7" TFT |
 | E: Premium | HP2560 (Wittboy Pro) | ~$300 | ✅ Sí | ✅ 7" TFT |
 
----
+### Conclusión Hardware
 
-## 3. Especificaciones Técnicas del HP2551
+**Configuración seleccionada: Opción A (GW3000 + WS69 + WS2910 + WN31)**
 
-### Conectividad
-- **WiFi**: 2.4GHz 802.11 b/g/n
-- **Protocolo de datos**: HTTP POST (Ecowitt Protocol o Weather Underground)
-- **Servidor personalizado**: Sí, configurable vía app WSView o WS Tool
-
-### Configuración de Servidor Personalizado
-```
-Tipo: HTTP (Ecowitt)
-IP/Host: [tu servidor]
-Puerto: 8080 (o el que elijas)
-Path: /data/report/
-Intervalo: 20-300 segundos
-```
-
-### Limitación Importante
-⚠️ El HP2551 **NO tiene API local** como los gateways GW1000/GW2000. Solo puede **enviar** datos (push), no recibirlos (pull). Esto significa que tu servidor debe **escuchar** las conexiones entrantes.
+**Justificación:**
+- Proporciona API local HTTP (requisito clave para integración)
+- Incluye pantalla física para visualización sin computadora
+- Precio similar a consola todo-en-uno ($204 vs $199)
+- Permite expansión futura con más sensores
+- Almacenamiento SD como backup de datos
 
 ---
 
-## 4. Protocolo Ecowitt - Formato de Datos
+# PARTE II: ANÁLISIS DE SOFTWARE
 
-El HP2551 envía datos via **HTTP POST** con `Content-Type: application/x-www-form-urlencoded`.
+---
 
-### Campos Típicos Recibidos
+## 10. Protocolo Ecowitt - Formato de Datos
+
+### 10.1 Datos vía API Local (GW3000)
+
+```
+GET http://[IP_GW3000]/get_livedata_info
+```
+
+Respuesta JSON con datos estructurados de todos los sensores.
+
+### 10.2 Datos vía HTTP POST (Push)
+
+El GW3000 puede enviar datos via **HTTP POST** con `Content-Type: application/x-www-form-urlencoded`:
+
 ```
 PASSKEY=MD5(MAC_ADDRESS)
-stationtype=HP2551_V1.6.8
-dateutc=2024-01-15+14:30:00
+stationtype=GW3000_V1.x.x
+dateutc=2026-07-04+14:30:00
 tempinf=72.5          # Temperatura interior (°F)
 humidityin=45         # Humedad interior (%)
 baromrelin=29.92      # Presión relativa (inHg)
@@ -286,39 +358,37 @@ windspeedmph=5.6      # Velocidad viento (mph)
 windgustmph=8.2       # Ráfaga máxima (mph)
 rainratein=0.00       # Tasa lluvia (in/hr)
 dailyrainin=0.12      # Lluvia diaria (in)
-weeklyrainin=0.45     # Lluvia semanal (in)
-monthlyrainin=2.34    # Lluvia mensual (in)
-yearlyrainin=15.67    # Lluvia anual (in)
 solarradiation=245.6  # Radiación solar (W/m²)
 uv=3                  # Índice UV
-wh26batt=0            # Estado batería (0=OK)
-freq=868M             # Frecuencia RF
-model=HP2551          # Modelo
+temp1f=70.2           # Sensor WN31 CH1 (°F)
+humidity1=48          # Sensor WN31 CH1 (%)
 ```
 
-### Notas sobre Unidades
-- **Temperatura**: Fahrenheit (convertir a Celsius: `(F-32)*5/9`)
-- **Presión**: Pulgadas de Hg (convertir a hPa: `inHg * 33.8639`)
-- **Lluvia**: Pulgadas (convertir a mm: `in * 25.4`)
-- **Viento**: Millas/hora (convertir a km/h: `mph * 1.60934`)
+### 10.3 Conversión de Unidades
+
+| Campo | Unidad Original | Conversión a Métrico |
+|-------|-----------------|----------------------|
+| Temperatura | °F | `(F-32)*5/9` → °C |
+| Presión | inHg | `inHg * 33.8639` → hPa |
+| Lluvia | in | `in * 25.4` → mm |
+| Viento | mph | `mph * 1.60934` → km/h |
 
 ---
 
-## 5. Integración con Home Assistant
+## 11. Integración con Home Assistant
 
-Dado que ya tienes Home Assistant funcionando, la integración es directa.
+### 11.1 Integración Nativa
 
-### 5.1 Con Gateway GW3000/GW2000 (Recomendado)
+El GW3000 tiene **API local**, lo que permite integración nativa:
 
-El gateway tiene **API local**, lo que permite integración nativa sin cloud.
-
-**Opción A: Integración oficial Ecowitt (más fácil)**
-```yaml
-# Home Assistant detecta automáticamente el gateway
-# Ir a: Configuración → Dispositivos y Servicios → Agregar integración → Ecowitt
+```
+Configuración → Dispositivos y Servicios → Agregar integración → Ecowitt
 ```
 
-**Opción B: ecowitt2mqtt (más flexible)**
+Home Assistant detecta automáticamente el gateway en la red local.
+
+### 11.2 Alternativa: ecowitt2mqtt
+
 ```yaml
 # docker-compose.yml
 version: '3'
@@ -328,18 +398,14 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ECOWITT2MQTT_MQTT_BROKER=192.168.1.X  # Tu broker MQTT
+      - ECOWITT2MQTT_MQTT_BROKER=192.168.1.X
       - ECOWITT2MQTT_MQTT_TOPIC=weather/ecowitt
       - ECOWITT2MQTT_HASS_DISCOVERY=true
       - ECOWITT2MQTT_OUTPUT_UNIT_SYSTEM=metric
     restart: unless-stopped
 ```
 
-Configura el GW3000 para enviar a `http://[IP_HA]:8080/data/report/`
-
-### 5.2 Sensores Disponibles en Home Assistant
-
-Una vez integrado, tendrás estas entidades:
+### 11.3 Sensores Disponibles en Home Assistant
 
 | Sensor | Entidad | Unidad |
 |--------|---------|--------|
@@ -347,44 +413,16 @@ Una vez integrado, tendrás estas entidades:
 | Humedad exterior | `sensor.ecowitt_outdoor_humidity` | % |
 | Velocidad viento | `sensor.ecowitt_wind_speed` | km/h |
 | Dirección viento | `sensor.ecowitt_wind_direction` | ° |
-| Ráfaga máxima | `sensor.ecowitt_wind_gust` | km/h |
 | Lluvia diaria | `sensor.ecowitt_daily_rain` | mm |
-| Lluvia rate | `sensor.ecowitt_rain_rate` | mm/h |
 | Presión | `sensor.ecowitt_pressure` | hPa |
 | UV Index | `sensor.ecowitt_uv_index` | - |
 | Radiación solar | `sensor.ecowitt_solar_radiation` | W/m² |
-| Punto de rocío | `sensor.ecowitt_dew_point` | °C |
-| Sensación térmica | `sensor.ecowitt_feels_like` | °C |
+| Temp CH1 (WN31) | `sensor.ecowitt_temp_1` | °C |
+| Humedad CH1 (WN31) | `sensor.ecowitt_humidity_1` | % |
 
-### 5.3 Ejemplo de Dashboard Lovelace
-
-```yaml
-type: vertical-stack
-cards:
-  - type: weather-forecast
-    entity: weather.ecowitt
-    
-  - type: horizontal-stack
-    cards:
-      - type: sensor
-        entity: sensor.ecowitt_outdoor_temperature
-        name: Temperatura
-        
-      - type: sensor
-        entity: sensor.ecowitt_outdoor_humidity
-        name: Humedad
-        
-  - type: history-graph
-    entities:
-      - sensor.ecowitt_outdoor_temperature
-      - sensor.ecowitt_outdoor_humidity
-    hours_to_show: 24
-```
-
-### 5.4 Automatizaciones Útiles
+### 11.4 Automatizaciones Útiles
 
 ```yaml
-# Alerta de lluvia
 automation:
   - alias: "Alerta Lluvia"
     trigger:
@@ -396,7 +434,6 @@ automation:
         data:
           message: "¡Está lloviendo! {{ states('sensor.ecowitt_rain_rate') }} mm/h"
 
-  # Alerta viento fuerte
   - alias: "Alerta Viento Fuerte"
     trigger:
       - platform: numeric_state
@@ -410,25 +447,27 @@ automation:
 
 ---
 
-## 6. Opciones de Implementación (Servidor Propio)
+## 12. Opciones de Software para Servidor
 
-### Opción A: WeatherNode (Recomendada para Simplicidad)
-**⭐ Mejor opción si quieres algo funcionando rápido**
+### 12.1 Opciones Analizadas
+
+#### Opción A: WeatherNode
 
 | Aspecto | Detalle |
 |---------|---------|
-| URL | https://www.weathernode.dev/ |
-| Licencia | GNU GPL v3 (Open Source) |
-| Requisitos | PHP 8.2+, SQLite/MySQL |
-| Despliegue | Docker, VPS, Shared Hosting |
+| **URL** | https://www.weathernode.dev/ |
+| **Licencia** | GNU GPL v3 (Open Source) |
+| **Requisitos** | PHP 8.2+, SQLite/MySQL |
+| **Despliegue** | Docker, VPS, Shared Hosting |
 
 **Características:**
 - Dashboard listo para usar con widgets drag-and-drop
-- Soporte nativo para Ecowitt
+- Soporte nativo para protocolo Ecowitt
 - API REST JSON incluida
 - Integración con pronósticos (Yr.no), calidad del aire, alertas
 - Temas claro/oscuro
 - Cache-first (~10ms response)
+- Responsive (móvil/desktop)
 
 **Instalación Docker:**
 ```bash
@@ -436,21 +475,17 @@ docker pull ghcr.io/weathernode/weathernode:latest
 docker run -d -p 80:80 weathernode
 ```
 
----
-
-### Opción B: ecowitt2mqtt + Home Assistant
-**⭐ Mejor para domótica e integración IoT**
+#### Opción B: ecowitt2mqtt + Home Assistant
 
 | Aspecto | Detalle |
 |---------|---------|
-| Repo | https://github.com/bachya/ecowitt2mqtt |
-| Estrellas | 294+ ⭐ |
-| Lenguaje | Python |
-| Despliegue | pip, Docker |
+| **Repo** | https://github.com/bachya/ecowitt2mqtt |
+| **Lenguaje** | Python |
+| **Requisitos** | MQTT Broker, Home Assistant |
 
 **Arquitectura:**
 ```
-HP2551 → [HTTP POST] → ecowitt2mqtt → [MQTT] → Home Assistant/Grafana/etc
+GW3000 → [HTTP POST] → ecowitt2mqtt → [MQTT] → Home Assistant/Grafana
 ```
 
 **Docker Compose:**
@@ -468,20 +503,14 @@ services:
       - ECOWITT2MQTT_OUTPUT_UNIT_SYSTEM=metric
 ```
 
-**Ventajas:**
-- Conversión automática de unidades
-- Sensores calculados (punto de rocío, sensación térmica, etc.)
-- MQTT Discovery para Home Assistant
-- Soporte multi-gateway
+**Ventajas:** Conversión automática de unidades, sensores calculados, MQTT Discovery
+**Desventajas:** Requiere MQTT broker adicional, más componentes
 
----
-
-### Opción C: Stack Personalizado (Python + InfluxDB + Grafana)
-**⭐ Mejor para control total y aprendizaje**
+#### Opción C: Stack Personalizado (Python + InfluxDB + Grafana)
 
 **Arquitectura:**
 ```
-HP2551 → [HTTP POST] → Flask/FastAPI → InfluxDB → Grafana
+GW3000 → [HTTP POST] → Flask/FastAPI → InfluxDB → Grafana
                               ↓
                         PostgreSQL (histórico)
                               ↓
@@ -531,16 +560,16 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
 ```
 
----
+**Ventajas:** Control total, aprendizaje, personalización ilimitada
+**Desventajas:** Tiempo de desarrollo, mantenimiento continuo
 
-### Opción D: WeeWX con Interceptor Driver
-**⭐ Mejor para meteorólogos aficionados serios**
+#### Opción D: WeeWX con Interceptor Driver
 
 | Aspecto | Detalle |
 |---------|---------|
-| URL | https://weewx.com |
-| Driver | weewx-interceptor |
-| Skins | Múltiples (Belchertown, Seasons, etc.) |
+| **URL** | https://weewx.com |
+| **Driver** | weewx-interceptor |
+| **Skins** | Belchertown, Seasons, etc. |
 
 **Configuración en weewx.conf:**
 ```ini
@@ -553,78 +582,140 @@ if __name__ == '__main__':
     port = 8080
 ```
 
+**Ventajas:** Muy completo, comunidad activa, múltiples skins
+**Desventajas:** Curva de aprendizaje alta, orientado a meteorólogos avanzados
+
+### 12.2 Análisis Comparativo de Software
+
+| Criterio | WeatherNode | ecowitt2mqtt | Stack Custom | WeeWX |
+|----------|-------------|--------------|--------------|-------|
+| Tiempo setup | 5 min | 15 min | Días/semanas | 1-2 horas |
+| Complejidad | Baja | Media | Alta | Media-Alta |
+| Personalización | Media | Media | Total | Alta |
+| Mantenimiento | Bajo | Bajo | Alto | Medio |
+| Dashboard incluido | ✅ Sí | ❌ No | ❌ Desarrollar | ✅ Skins |
+| API REST | ✅ Sí | Via HA | ✅ Desarrollar | ❌ No |
+
+**Análisis:**
+- **WeatherNode**: Solución más rápida y completa para el caso de uso
+- **ecowitt2mqtt**: Buena opción si ya tienes infraestructura MQTT
+- **Stack Custom**: Excesivo para las necesidades actuales, alto costo de mantenimiento
+- **WeeWX**: Orientado a meteorólogos avanzados, curva de aprendizaje alta
+
+### 12.3 Conclusión Software
+
+**Software seleccionado: WeatherNode**
+
+**Justificación:**
+- Dashboard completo incluido (no requiere desarrollo)
+- Soporte nativo para protocolo Ecowitt
+- API REST disponible para integraciones futuras
+- Open source (GNU GPL v3)
+- Bajo mantenimiento
+
+**Método de instalación: PHP nativo (sin Docker)**
+
+La imagen Docker oficial de WeatherNode no tiene soporte ARM64 confirmado. Para Oracle Cloud ARM VPS, se instalará directamente con PHP:
+
+```bash
+# Ubuntu ARM64 en Oracle Cloud
+sudo apt update
+sudo apt install -y apache2 php8.2 php8.2-sqlite3 php8.2-curl php8.2-xml php8.2-mbstring
+sudo systemctl enable apache2
+
+# Descargar e instalar WeatherNode
+cd /var/www/html
+sudo wget https://github.com/centauri/WeatherNode/releases/latest/download/weathernode.zip
+sudo unzip weathernode.zip
+sudo chown -R www-data:www-data /var/www/html/weathernode
+```
+
+### 12.4 Configuración del GW3000 para WeatherNode
+
+**Importante: Ecowitt NO soporta HTTPS, solo HTTP**
+
+```
+Protocolo: Ecowitt
+Servidor: [IP_VPS_ORACLE]
+Puerto: 8080
+Path: /data/report/
+Intervalo: 60 segundos
+```
+
+**Configuración en el GW3000:**
+1. Acceder al Web UI del GW3000: `http://[IP_LOCAL_GW3000]`
+2. Ir a Weather Services → Customized
+3. Enable: ✅
+4. Protocol Type: Ecowitt
+5. Server IP: [IP pública del VPS Oracle]
+6. Path: /data/report/
+7. Port: 8080
+8. Upload Interval: 60 seconds
+
 ---
 
-## 7. Proyectos Open Source Relevantes
-
-| Proyecto | Estrellas | Lenguaje | Descripción |
-|----------|-----------|----------|-------------|
-| [ecowitt2mqtt](https://github.com/bachya/ecowitt2mqtt) | 294 | Python | Bridge MQTT con sensores calculados |
-| [homeassistant_ecowitt](https://github.com/garbled1/homeassistant_ecowitt) | 157 | Python | Integración Home Assistant |
-| [WundergroundStationForwarder](https://github.com/leoherzog/WundergroundStationForwarder) | 114 | JS | Reenvío a múltiples plataformas |
-| [ha-ecowitt-iot](https://github.com/Ecowitt/ha-ecowitt-iot) | 90 | Python | Oficial Ecowitt para HA |
-| [ecowitt_http_gateway](https://github.com/iz0qwm/ecowitt_http_gateway) | 65 | PHP | Gateway HTTP simple |
-| [offgrid-weather-station](https://github.com/vinthewrench/offgrid-weather-station) | 53 | C++ | Raspberry Pi + RTL-SDR |
-| [WeatherNode](https://weathernode.dev) | - | PHP | Dashboard completo |
-
----
-
-## 8. Arquitectura Propuesta para tu Proyecto
-
-### Stack Recomendado (Balance costo/funcionalidad)
+## 13. Arquitectura del Sistema
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     ECOWITT HP2551                          │
-│                    (WiFi 2.4GHz)                            │
+│                  SENSORES RF 915MHz                         │
+│         WS69 (exterior)      WN31 (interior CH1)            │
 └─────────────────────┬───────────────────────────────────────┘
-                      │ HTTP POST cada 60s
-                      ▼
+                      │ RF broadcast
+          ┌───────────┴───────────┐
+          ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│    GW3000       │     │    WS2910       │
+│   (gateway)     │     │   (pantalla)    │
+│                 │     │                 │
+│ ✅ API Local    │     │ ✅ Display LCD  │
+│ ✅ SD Card      │     │   6.8" color    │
+│ ✅ Ethernet     │     └─────────────────┘
+└────────┬────────┘
+         │ HTTP POST (Ecowitt Protocol)
+         │ ⚠️ Solo HTTP, no HTTPS
+         │ Internet
+         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              SERVIDOR (VPS/Raspberry Pi/NAS)                │
+│           ORACLE CLOUD VPS (Always Free)                    │
+│           ARM Ampere A1 | 12GB RAM | Ubuntu 22.04           │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  Receptor HTTP (Python/Node.js)                       │  │
-│  │  - Puerto 8080                                        │  │
-│  │  - Validación/Conversión unidades                     │  │
-│  └───────────────────────────┬───────────────────────────┘  │
-│                              │                               │
-│  ┌───────────────────────────▼───────────────────────────┐  │
-│  │  Base de Datos                                        │  │
-│  │  - InfluxDB (series temporales) ← Recomendado         │  │
-│  │  - PostgreSQL (alternativa relacional)                │  │
-│  │  - SQLite (simple, sin servidor)                      │  │
-│  └───────────────────────────┬───────────────────────────┘  │
-│                              │                               │
-│  ┌───────────────────────────▼───────────────────────────┐  │
-│  │  API REST                                             │  │
-│  │  - FastAPI/Express                                    │  │
-│  │  - Endpoints: /current, /history, /stats              │  │
-│  └───────────────────────────┬───────────────────────────┘  │
-│                              │                               │
-│  ┌───────────────────────────▼───────────────────────────┐  │
-│  │  Dashboard Web                                        │  │
-│  │  - React/Vue/Vanilla JS                               │  │
-│  │  - Gráficos: Chart.js, Recharts, D3                   │  │
-│  │  - Actualización: WebSocket o polling                 │  │
+│  │              Apache 2.4 + PHP 8.2                     │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │              WeatherNode                        │  │  │
+│  │  │  ┌───────────────────────────────────────────┐  │  │  │
+│  │  │  │  Receptor HTTP (:8080/data/report/)      │  │  │  │
+│  │  │  └─────────────────┬─────────────────────────┘  │  │  │
+│  │  │  ┌─────────────────▼─────────────────────────┐  │  │  │
+│  │  │  │  Base de Datos (SQLite)                  │  │  │  │
+│  │  │  └─────────────────┬─────────────────────────┘  │  │  │
+│  │  │  ┌─────────────────▼─────────────────────────┐  │  │  │
+│  │  │  │  Dashboard Web + API REST                │  │  │  │
+│  │  │  └───────────────────────────────────────────┘  │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│  Home Assistant │     │  Navegador Web  │
+│  (integración)  │     │  (dashboard)    │
+└─────────────────┘     └─────────────────┘
 ```
+
+**Nota importante:** Los dispositivos Ecowitt no soportan conexiones HTTPS/TLS. El servidor debe aceptar HTTP en puerto 8080 para recibir datos del gateway.
 
 ---
 
-## 9. Requisitos de Infraestructura
+# PARTE III: ANÁLISIS DE INFRAESTRUCTURA
 
-### Opción Económica: Raspberry Pi
-- **Hardware**: Raspberry Pi 4 (2GB+) - ~$45
-- **Almacenamiento**: microSD 32GB+ o SSD USB
-- **Red**: IP fija local o DDNS
-- **Costo mensual**: $0 (electricidad ~$3/año)
+---
 
-### Opción Cloud: VPS
+## 14. Opciones de Infraestructura
 
-#### ⭐ Oracle Cloud Free Tier (GRATIS de por vida)
+### 14.1 Opciones Analizadas
 
-Oracle ofrece un VPS **Always Free** que es más que suficiente para este proyecto:
+#### Opción A: Oracle Cloud Free Tier
 
 | Recurso | Especificación |
 |---------|----------------|
@@ -632,412 +723,264 @@ Oracle ofrece un VPS **Always Free** que es más que suficiente para este proyec
 | **Memoria** | 12 GB RAM |
 | **Almacenamiento** | 200 GB Block Volume |
 | **Ancho de banda** | 10 TB/mes saliente |
-| **Costo** | **$0/mes** (siempre gratis) |
+| **Sistema Operativo** | Ubuntu 22.04 LTS |
+| **Costo** | **$0/mes** (Always Free, no expira) |
 
-**Cómo obtener Oracle Cloud Free Tier:**
+**Ventajas:**
+- Costo cero permanente (no es trial)
+- Recursos generosos (12 GB RAM)
+- IP pública fija incluida
+- Acceso global desde cualquier lugar
+- Sin mantenimiento de hardware
 
-1. **Crear cuenta**: [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
-   - Requiere tarjeta de crédito (solo verificación, no cobran)
-   - Seleccionar región cercana (ej: São Paulo, Phoenix)
-   
-2. **Crear instancia ARM**:
-   - Ir a Compute → Instances → Create Instance
-   - Shape: **VM.Standard.A1.Flex**
-   - OCPUs: 2, Memory: 12 GB
-   - Image: Ubuntu 22.04 o Oracle Linux 8
-   - Agregar SSH key pública
-   
-3. **Configurar red**:
-   - Abrir puerto 8080 en Security List (para receptor Ecowitt)
-   - Asignar IP pública reservada (gratis)
-   
-4. **Instalar stack**:
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   sudo apt install docker.io docker-compose -y
-   git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
-   cd ecowitt-weather-server-xe1e
-   docker-compose up -d
-   ```
+**Requisitos:**
+1. Cuenta Oracle Cloud (tarjeta de crédito para verificación, no cobran)
+2. Región con disponibilidad ARM (Phoenix, Ashburn, São Paulo recomendadas)
 
-**Notas importantes:**
-- La instancia ARM es **Always Free** (no expira)
-- Si no usas la instancia por 7 días, Oracle puede reclamarla
-- Configura un cron job simple para mantenerla activa
-- Disponible en la mayoría de regiones (excepto Corea del Sur)
+**Cómo obtener:**
 
-**Referencia**: [Oracle Cloud Free Tier Docs](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
+1. Crear cuenta en [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
+2. Ir a Compute → Instances → Create Instance
+3. Shape: **VM.Standard.A1.Flex** (2 OCPUs, 12 GB)
+4. Image: Ubuntu 22.04
+5. Configurar SSH key y crear
 
----
+Ver [oracle-vps-setup.md](oracle-vps-setup.md) para guía completa.
 
-### Guía Completa: Configurar VPS Oracle (Mientras Llega el Equipo)
+#### Opción B: Raspberry Pi (Local)
 
-Esta guía te permite tener el servidor listo antes de que llegue el hardware.
+| Recurso | Especificación |
+|---------|----------------|
+| **Hardware** | Raspberry Pi 4 (2GB+) |
+| **Almacenamiento** | microSD 32GB+ o SSD USB |
+| **Red** | IP fija local o DDNS |
+| **Costo inicial** | ~$45-75 |
+| **Costo mensual** | ~$3/año electricidad |
 
-#### Paso 1: Crear Cuenta Oracle Cloud
+**Ventajas:**
+- Control físico total
+- Sin dependencia de terceros
+- Una vez comprado, sin costos recurrentes
 
-1. Ir a [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
-2. Click en "Start for free"
-3. Llenar formulario:
-   - Email válido
-   - País/Región
-   - Nombre completo
-4. Verificar email
-5. Agregar tarjeta de crédito (solo verificación, **no cobran**)
-6. Seleccionar **Home Region** (no se puede cambiar después):
-   - **Recomendadas**: Phoenix, Ashburn, São Paulo
-   - Evitar regiones con alta demanda (pueden no tener ARM disponible)
+**Desventajas:**
+- Requiere configurar port forwarding o DDNS
+- Dependiente de conexión de internet local
+- Mantenimiento de hardware (SD cards fallan)
+- No accesible si internet local cae
 
-#### Paso 2: Crear Instancia ARM
+#### Opción C: VPS de Pago
 
-1. Ir a **Compute → Instances → Create Instance**
+| Proveedor | Specs Mínimos | Costo Mensual |
+|-----------|---------------|---------------|
+| DigitalOcean | 1 vCPU, 1GB RAM | $4-6 |
+| Vultr | 1 vCPU, 1GB RAM | $5 |
+| Hetzner | 2 vCPU, 2GB RAM | €3.79 |
+| Linode | 1 vCPU, 1GB RAM | $5 |
 
-2. **Name**: `ecowitt-server`
+**Ventajas:**
+- Más regiones disponibles
+- Soporte dedicado
+- Setup más simple que Oracle
 
-3. **Image and Shape**:
-   - Click "Edit"
-   - Image: **Ubuntu 22.04** (Canonical)
-   - Shape: Click "Change Shape"
-     - Instance type: **Virtual machine**
-     - Shape series: **Ampere** (ARM)
-     - Shape: **VM.Standard.A1.Flex**
-     - OCPUs: **2**
-     - Memory: **12 GB**
+**Desventajas:**
+- Costo mensual recurrente
+- Oracle Free ofrece más recursos gratis
 
-4. **Networking**:
-   - Crear nueva VCN o usar existente
-   - Subnet: pública
-   - ✅ Assign public IPv4 address
+### 14.2 Análisis Comparativo de Infraestructura
 
-5. **SSH Keys**:
-   - Generar par de llaves o subir tu clave pública
-   - **¡GUARDAR LA LLAVE PRIVADA!** (solo se descarga una vez)
+| Criterio | Oracle Free | Raspberry Pi | VPS Pago |
+|----------|-------------|--------------|----------|
+| Costo inicial | $0 | ~$45-75 | $0 |
+| Costo mensual | **$0** | ~$0.25 | $4-6 |
+| RAM | 12 GB | 2-8 GB | 1-2 GB |
+| IP pública | ✅ Incluida | ❌ DDNS | ✅ Incluida |
+| Acceso global | ✅ Sí | ⚠️ Depende | ✅ Sí |
+| Mantenimiento HW | ❌ No necesario | ✅ Sí | ❌ No necesario |
+| Disponibilidad | ⚠️ Por región | ✅ Siempre | ✅ Siempre |
 
-6. Click **Create**
+**Análisis:**
+- **Oracle Free**: Mejor relación costo/beneficio (gratis con 12GB RAM)
+- **Raspberry Pi**: Viable pero requiere configuración de red adicional
+- **VPS Pago**: Innecesario dado que Oracle ofrece más recursos gratis
 
-#### Paso 3: Configurar Firewall (Security List)
+### 14.3 Consideraciones de Red
 
-1. Ir a **Networking → Virtual Cloud Networks**
-2. Click en tu VCN → **Security Lists** → Default Security List
-3. **Add Ingress Rules**:
-
-| Source CIDR | Protocol | Dest Port | Descripción |
-|-------------|----------|-----------|-------------|
-| 0.0.0.0/0 | TCP | 8080 | Receptor Ecowitt |
-| 0.0.0.0/0 | TCP | 80 | HTTP (dashboard) |
-| 0.0.0.0/0 | TCP | 443 | HTTPS |
-| 0.0.0.0/0 | TCP | 3000 | Grafana (opcional) |
-
-#### Paso 4: Conectar por SSH
-
-```bash
-# Linux/Mac
-chmod 400 ~/Downloads/ssh-key.key
-ssh -i ~/Downloads/ssh-key.key ubuntu@<IP_PUBLICA>
-
-# Windows (PowerShell)
-ssh -i C:\Users\TU_USER\Downloads\ssh-key.key ubuntu@<IP_PUBLICA>
 ```
-
-#### Paso 5: Configuración Inicial del Servidor
-
-```bash
-# Actualizar sistema
-sudo apt update && sudo apt upgrade -y
-
-# Instalar Docker
-sudo apt install -y docker.io docker-compose git curl
-
-# Agregar usuario al grupo docker (evita usar sudo)
-sudo usermod -aG docker $USER
-
-# Aplicar cambios de grupo (o reconectar SSH)
-newgrp docker
-
-# Verificar Docker
-docker --version
-docker-compose --version
-```
-
-#### Paso 6: Configurar Firewall del SO (iptables)
-
-Oracle Ubuntu tiene iptables bloqueando puertos por defecto:
-
-```bash
-# Abrir puertos necesarios
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8080 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 3000 -j ACCEPT
-
-# Guardar reglas permanentemente
-sudo netfilter-persistent save
-```
-
-#### Paso 7: Clonar y Levantar el Proyecto
-
-```bash
-# Clonar repositorio
-cd ~
-git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
-cd ecowitt-weather-server-xe1e
-
-# Crear archivo de configuración
-cp .env.example .env
-nano .env  # Ajustar variables si necesario
-
-# Levantar contenedores
-docker-compose up -d
-
-# Verificar que están corriendo
-docker-compose ps
-
-# Ver logs
-docker-compose logs -f
-```
-
-#### Paso 8: Probar con Datos Simulados
-
-Mientras esperas el equipo, prueba que el servidor funciona:
-
-```bash
-# Simular envío de datos Ecowitt
-curl -X POST http://localhost:8080/data/report/ \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "PASSKEY=test123&stationtype=GW3000&dateutc=2026-07-03+12:00:00&tempf=77.0&humidity=55&baromrelin=29.92&windspeedmph=5.5&winddir=180&dailyrainin=0.1&uv=3&solarradiation=250"
-
-# Verificar respuesta
-curl http://localhost:8080/api/current
-```
-
-#### Paso 9: Mantener Instancia Activa (Evitar Reclamación)
-
-Oracle puede reclamar instancias inactivas después de 7 días. Crea un cron job simple:
-
-```bash
-# Editar crontab
-crontab -e
-
-# Agregar esta línea (ping cada 6 horas)
-0 */6 * * * curl -s http://localhost:8080/api/current > /dev/null
-```
-
-#### Paso 10: Servicios Adicionales (Opcional)
-
-Mientras llega el equipo, puedes instalar otros servicios útiles:
-
-**Uptime Kuma (monitoreo de sitios):**
-```bash
-docker run -d \
-  --name uptime-kuma \
-  -p 3001:3001 \
-  -v uptime-kuma:/app/data \
-  --restart unless-stopped \
-  louislam/uptime-kuma:1
-```
-
-**Nginx Proxy Manager (reverse proxy + SSL):**
-```bash
-mkdir ~/nginx-proxy && cd ~/nginx-proxy
-cat > docker-compose.yml << 'EOF'
-version: '3'
-services:
-  npm:
-    image: jc21/nginx-proxy-manager:latest
-    ports:
-      - '80:80'
-      - '443:443'
-      - '81:81'
-    volumes:
-      - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
-    restart: unless-stopped
-EOF
-docker-compose up -d
-# Acceder: http://<IP>:81 (admin@example.com / changeme)
-```
-
-**WireGuard VPN (acceso seguro):**
-```bash
-docker run -d \
-  --name=wireguard \
-  --cap-add=NET_ADMIN \
-  -e PUID=1000 -e PGID=1000 \
-  -e TZ=America/Mexico_City \
-  -e SERVERURL=<TU_IP_PUBLICA> \
-  -e PEERS=3 \
-  -p 51820:51820/udp \
-  -v ~/wireguard:/config \
-  --restart unless-stopped \
-  lscr.io/linuxserver/wireguard
-# Configs en ~/wireguard/peer*/peer*.conf
-```
-
-#### Verificación Final
-
-| Servicio | URL | Estado Esperado |
-|----------|-----|-----------------|
-| Receptor Ecowitt | `http://<IP>:8080/data/report/` | Acepta POST |
-| API Current | `http://<IP>:8080/api/current` | JSON con datos |
-| Dashboard | `http://<IP>:80` | Página web |
-| Uptime Kuma | `http://<IP>:3001` | Panel monitoreo |
-| Nginx Proxy | `http://<IP>:81` | Panel admin |
-
----
-
-#### Alternativas de pago (si Oracle no está disponible)
-- **Proveedores**: DigitalOcean, Vultr, Hetzner
-- **Specs mínimos**: 1 vCPU, 1GB RAM, 25GB SSD
-- **Costo**: $4-6/mes
-- **Ventaja**: Más regiones disponibles, soporte dedicado
-
-### Consideraciones de Red
-```
-Si el servidor está en casa:
+Si el servidor está en casa (Raspberry Pi):
   Router → Port Forward 8080 → Raspberry Pi
+  O usar DDNS (noip.com, duckdns.org)
   
-Si usas VPS:
-  HP2551 → Internet → VPS (IP pública)
+Si usas VPS (Oracle/otro):
+  GW3000 → Internet (HTTP:8080) → VPS (IP pública directa)
 ```
 
----
+### 14.4 Limitación de Seguridad: Solo HTTP
 
-## 10. Hoja de Ruta Sugerida
+**Los dispositivos Ecowitt NO soportan HTTPS/TLS.**
 
-### Fase 1: MVP (1-2 semanas)
-- [ ] Configurar HP2551 para enviar a servidor personalizado
-- [ ] Crear receptor HTTP básico (Python/Flask)
-- [ ] Almacenar en SQLite
-- [ ] Dashboard HTML simple con datos actuales
+| Aspecto | Implicación |
+|---------|-------------|
+| **Protocolo** | Solo HTTP (puerto 8080) |
+| **Datos en tránsito** | No cifrados |
+| **Riesgo** | Bajo - solo datos meteorológicos, no sensibles |
+| **Mitigación** | Los datos no contienen información personal |
 
-### Fase 2: Persistencia (1 semana)
-- [ ] Migrar a InfluxDB o PostgreSQL
-- [ ] Implementar retención de datos (90 días detallado, agregados permanentes)
-- [ ] API REST para consultas históricas
+**Configuración en Oracle Cloud (ya configurado):**
+- Security List: Puerto TCP 8080 abierto ✅
+- Network Security Group (NSG): Puerto TCP 8080 abierto ✅
+- iptables: `sudo iptables -I INPUT -p tcp --dport 8080 -j ACCEPT` ✅
 
-### Fase 3: Visualización (2 semanas)
-- [ ] Dashboard React/Vue con gráficos interactivos
-- [ ] Gráficos históricos (24h, 7d, 30d, 1y)
-- [ ] Widgets: temperatura actual, pronóstico, records
+**Nota importante:** Oracle Cloud requiere abrir puertos en **TRES** lugares:
+1. **Security List** (nivel de subnet)
+2. **Network Security Group** (nivel de VNIC) 
+3. **iptables** (nivel de sistema operativo)
 
-### Fase 4: Funcionalidades Avanzadas
-- [ ] Alertas (temperatura extrema, lluvia, viento)
-- [ ] Comparación con datos históricos
-- [ ] Exportación CSV/JSON
-- [ ] PWA para móviles
+**Nota:** Si necesitas acceder al dashboard de forma segura, puedes configurar un reverse proxy (Nginx) que ofrezca HTTPS para el acceso web, mientras mantiene HTTP interno para recibir datos de Ecowitt.
 
----
+### 14.5 Conclusión Infraestructura
 
-## 11. Estructura Propuesta del Repositorio
+**Infraestructura seleccionada: Oracle Cloud Free Tier**
 
+**Justificación:**
+- Costo cero permanente (Always Free, no es trial)
+- Recursos generosos: 12 GB RAM, 200 GB almacenamiento
+- IP pública fija incluida
+- Acceso global sin configuración adicional
+- Sin mantenimiento de hardware
+- PHP 8.2 y Apache disponibles para ARM64
+
+**Stack de instalación:**
 ```
-ecowitt-weather-station/
-├── README.md
-├── docker-compose.yml
-├── .env.example
-│
-├── receiver/                 # Servidor receptor HTTP
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app.py
-│   └── utils/
-│       ├── converters.py
-│       └── validators.py
-│
-├── api/                      # API REST
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── main.py
-│
-├── dashboard/                # Frontend Web
-│   ├── package.json
-│   ├── src/
-│   └── public/
-│
-├── database/
-│   └── schema.sql
-│
-└── docs/
-    ├── setup.md
-    ├── hp2551-config.md
-    └── api-reference.md
+Ubuntu 22.04 ARM64
+├── Apache 2.4 (servidor web)
+├── PHP 8.2 (runtime)
+│   ├── php8.2-sqlite3
+│   ├── php8.2-curl
+│   ├── php8.2-xml
+│   └── php8.2-mbstring
+└── WeatherNode (aplicación)
 ```
 
----
+**Nota sobre seguridad:** El servidor debe aceptar conexiones HTTP (puerto 8080) porque los dispositivos Ecowitt no soportan HTTPS/TLS.
 
-## 12. Próximos Pasos
-
-### Fase 0: Compra del Hardware (Todo 915MHz)
-- [ ] Comprar **GW3000** (gateway) - ~$60
-- [ ] Comprar **WS69** (sensor exterior 7-en-1) - ~$65
-- [ ] Comprar **WS2910** (pantalla LCD) - ~$68
-- [ ] Comprar **WN31** (sensor temp/hum extra) - ~$11
-- [ ] Comprar **Bird Spikes** + **Battery Pack 10m** - ~$25
-- [ ] Verificar envío a tu ubicación (AliExpress o Ecowitt directo)
-- [ ] **Total estimado: ~$229**
-
-### Fase 1: Instalación Física
-- [ ] Montar sensor WS69 en exterior (poste, techo, etc.)
-- [ ] Instalar Bird Spikes en WS69
-- [ ] Ubicar GW3000 en interior con buena señal WiFi
-- [ ] Ubicar WS2910 donde puedas ver la pantalla
-- [ ] Ubicar WN31 en habitación deseada (configurar canal CH1)
-- [ ] Conectar equipos a la red eléctrica
-
-### Fase 2: Configuración Básica
-- [ ] Configurar GW3000 vía app WSView o WS Tool
-- [ ] Conectar a WiFi de casa
-- [ ] Verificar que WS2910_C recibe datos del sensor
-- [ ] Probar acceso a API local: `http://[IP_GW3000]/get_livedata_info`
-
-### Fase 3: Integración Home Assistant
-- [ ] Agregar integración Ecowitt en HA
-- [ ] Verificar entidades de sensores
-- [ ] Crear dashboard básico
-- [ ] Configurar automatizaciones (alertas lluvia, viento, etc.)
-
-### Fase 4: Dashboard Web Personal (Opcional)
-- [ ] Decidir: ¿WeatherNode o desarrollo propio?
-- [ ] Crear repositorio GitHub
-- [ ] Implementar receptor de datos
-- [ ] Crear visualización web
-
-### Fase 5: Funcionalidades Avanzadas
-- [ ] Históricos y gráficos
-- [ ] Exportación de datos
-- [ ] Alertas por email/Telegram
-- [ ] PWA móvil
+Ver [oracle-vps-setup.md](oracle-vps-setup.md) para guía de configuración completa.
 
 ---
 
-## Fuentes
+# PARTE IV: CONCLUSIONES Y PLAN DE IMPLEMENTACIÓN
 
-### Documentación Oficial
+---
+
+## 15. Hoja de Ruta
+
+### Fase 0: Compra del Hardware
+- [ ] Comprar **GW3000** (915MHz) - ~$60
+- [ ] Comprar **WS69** (915MHz) - ~$65
+- [ ] Comprar **WS2910** (915MHz) - ~$68
+- [ ] Comprar **WN31** (915MHz) - ~$11
+- [ ] Comprar accesorios (bird spikes, battery pack, microSD) - ~$30
+- [ ] **Total: ~$234**
+
+### Fase 1: Configurar VPS Oracle ✅ COMPLETADO
+- [x] Crear cuenta en [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
+- [x] Crear instancia ARM Ampere A1 (2 OCPU, 12GB RAM)
+- [x] Configurar Security List (puerto 8080 abierto)
+- [x] Configurar Network Security Group (puerto 8080 abierto)
+- [x] Instalar stack (Apache 2.4 + PHP 8.2)
+- [x] Instalar WeatherNode (Laravel 12)
+- [x] Configurar firewall del SO (iptables)
+- [x] Probar acceso web: http://163.192.147.208:8080
+
+**Stack instalado:**
+```
+Ubuntu 22.04.5 LTS (aarch64)
+├── Apache 2.4.52 (puerto 8080)
+├── PHP 8.2.31
+│   ├── php8.2-sqlite3
+│   ├── php8.2-curl
+│   ├── php8.2-xml
+│   ├── php8.2-mbstring
+│   └── php8.2-intl
+└── WeatherNode (Laravel 12.62.0)
+    └── SQLite database
+```
+
+**Acceso SSH:**
+```bash
+ssh -i "oracle.key" ubuntu@163.192.147.208
+```
+
+### Fase 2: Instalación Física del Hardware
+- [ ] Montar WS69 en exterior (verificar distancia RF)
+- [ ] Ubicar GW3000 en interior con buena señal WiFi/Ethernet
+- [ ] Ubicar WS2910 donde sea visible
+- [ ] Configurar WN31 en canal CH1
+- [ ] Insertar microSD en GW3000
+
+### Fase 3: Configuración del Gateway
+- [ ] Configurar GW3000 vía app WSView o Web UI
+- [ ] Conectar a red WiFi/Ethernet local
+- [ ] Verificar WS2910 recibe datos de sensores
+- [ ] Probar API local: `http://[IP_GW3000]/get_livedata_info`
+- [ ] Configurar Custom Server:
+  - Server: [IP_VPS_ORACLE]
+  - Port: 8080
+  - Path: /data/report/
+  - Protocol: Ecowitt
+  - Interval: 60s
+
+### Fase 4: Verificación e Integración
+- [ ] Verificar datos llegando a WeatherNode
+- [ ] Configurar dashboard en WeatherNode
+- [ ] Configurar integración Home Assistant (opcional)
+- [ ] Probar alertas y notificaciones
+
+### Fase 5: Mantenimiento
+- [ ] Configurar cron job para mantener VPS activo
+- [ ] Configurar backups de base de datos
+- [ ] Monitorear estado de sensores
+
+---
+
+## 16. Proyectos Open Source Relevantes
+
+| Proyecto | Lenguaje | Descripción |
+|----------|----------|-------------|
+| [ecowitt2mqtt](https://github.com/bachya/ecowitt2mqtt) | Python | Bridge MQTT con sensores calculados |
+| [homeassistant_ecowitt](https://github.com/garbled1/homeassistant_ecowitt) | Python | Integración Home Assistant |
+| [WeatherNode](https://weathernode.dev) | PHP | Dashboard completo |
+| [ha-ecowitt-iot](https://github.com/Ecowitt/ha-ecowitt-iot) | Python | Oficial Ecowitt para HA |
+
+---
+
+## 17. Fuentes y Referencias
+
+### Documentación Oficial Ecowitt
 - [Ecowitt Support Downloads](https://www.ecowitt.com/support/download/1)
 - [Ecowitt HTTP API Protocol V1.0.5](https://oss.ecowitt.net/uploads/20260109/HTTP%20API%20interface%20Protocol%20(Generic)-(V1.0.5-2025-10-08).pdf)
-- [Ecowitt Shop - HP2551](https://shop.ecowitt.com/products/hp2551)
-- [Ecowitt Shop - WS90 Sensor](https://shop.ecowitt.com/products/ws90)
-- [Ecowitt Shop - GW3001](https://shop.ecowitt.com/products/gw3001-gw3011)
+- [GW3000 Manual](https://oss.ecowitt.net/uploads/20241204/GW3000Manual.pdf)
+- [WS View Plus Manual](https://oss.ecowitt.net/uploads/20250408/WS%20View%20Plus%20&%20Web%20UI%20Manual%20(Generic).pdf)
+- [Ecowitt Shop - GW3000](https://shop.ecowitt.com/products/gw3000-gw3010)
+- [Ecowitt Shop - WS2910](https://shop.ecowitt.com/products/ws2910_c)
+- [Ecowitt Shop - WS69](https://shop.ecowitt.com/products/ws69)
 
-### Proyectos Open Source
+### WeatherNode
+- [WeatherNode - Sitio Oficial](https://www.weathernode.dev/)
+- [WeatherNode - GitHub](https://github.com/centauri/WeatherNode)
+
+### Oracle Cloud
+- [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/)
+- [Apache PHP en Ubuntu - Oracle Docs](https://docs.oracle.com/en-us/iaas/Content/developer/apache-on-ubuntu/01oci-ubuntu-apache-summary.htm)
+
+### Home Assistant
+- [Ecowitt Integration - Home Assistant](https://www.home-assistant.io/integrations/ecowitt/)
 - [ecowitt2mqtt - GitHub](https://github.com/bachya/ecowitt2mqtt)
-- [WeatherNode](https://www.weathernode.dev/)
-- [weewx-interceptor](https://github.com/matthewwall/weewx-interceptor)
-- [Home Assistant Ecowitt Integration](https://www.home-assistant.io/integrations/ecowitt/)
-- [GitHub Topics: Ecowitt](https://github.com/topics/ecowitt)
 
 ### Tutoriales y Guías
 - [Ecowitt to InfluxDB - Ben Tasker](https://www.bentasker.co.uk/posts/blog/house-stuff/receiving-weather-info-from-ecowitt-weather-station-and-writing-to-influxdb.html)
 - [Ecowitt Gateways Compared - Smartout](https://smartout.net/ecowitt-gateways-compared-gw1100-gw1200-gw2000-gw3000/)
-- [Which Ecowitt Should I Buy - Weather Station Experts](https://theweatherstationexperts.com/ecowitt-weather-station/)
+- [Home Assistant Ecowitt Setup - Derek Seaman](https://www.derekseaman.com/2023/12/home-assistant-ecowitt-weather-station-setup.html)
 
-### Foros y Discusiones
-- [wxforum - HP2551 Custom Server](https://www.wxforum.net/index.php?topic=38476.0)
-- [wxforum - HP2553 vs HP2551](https://www.wxforum.net/index.php?topic=42421.0)
-- [Cumulus Support - Ecowitt](https://cumulus.hosiene.co.uk/viewtopic.php?t=19343)
+### Foros y Comunidad
+- [wxforum - Ecowitt](https://www.wxforum.net/index.php?board=85.0)
 - [Home Assistant Community - Ecowitt](https://community.home-assistant.io/t/ecowitt-weatherstation-integration-for-home-assistant/194718)
-
-### Comparativas
-- [Best Weather Stations 2026 - TechHive](https://www.techhive.com/article/582346/best-home-weather-station.html)
-- [Best Weather Stations for Home Assistant 2026](https://www.smarthomeexplorer.com/guides/best-smart-weather-stations-home-assistant-irrigation-2026)
-- [WeatherFlow Tempest API](https://weatherflow.github.io/Tempest/api/)
