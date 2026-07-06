@@ -5,8 +5,13 @@ services:
   receiver:
     build: ./receiver
     container_name: ecowitt-receiver
-    ports:
-      - "${SERVER_PORT:-8080}:8080"
+    # No host port: the dashboard (nginx) is the single public entrypoint and
+    # proxies /api and /data/report to receiver:8080 over the internal network.
+    # For standalone dev, uncomment the ports mapping below.
+    # ports:
+    #   - "${SERVER_PORT:-8080}:8080"
+    expose:
+      - "8080"
     environment:
       - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
@@ -30,8 +35,10 @@ services:
   influxdb:
     image: influxdb:2.7
     container_name: ecowitt-influxdb
-    ports:
-      - "8086:8086"
+    # Kept internal (not published) for security on a public VPS.
+    # For admin UI access, tunnel over SSH: ssh -L 8086:localhost:8086 ...
+    expose:
+      - "8086"
     volumes:
       - influxdb-data:/var/lib/influxdb2
       - influxdb-config:/etc/influxdb2
@@ -68,19 +75,18 @@ services:
     profiles:
       - grafana
 
-  # Dashboard - Web frontend (optional)
+  # Dashboard - Web frontend (single public entrypoint)
+  # Serves the React UI and reverse-proxies /api and /data/report to the receiver.
   dashboard:
     build: ./dashboard
     container_name: ecowitt-dashboard
     ports:
-      - "3001:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       - receiver
     restart: unless-stopped
     networks:
       - ecowitt-network
-    profiles:
-      - dashboard
 
 volumes:
   influxdb-data:
