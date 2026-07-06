@@ -17,6 +17,8 @@ interface ChartData {
   humidity: number | null
 }
 
+const REFRESH_INTERVAL = 60000 // 60 seconds, matches the rest of the dashboard
+
 export function TemperatureChart() {
   const [data, setData] = useState<ChartData[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,8 @@ export function TemperatureChart() {
     }
 
     fetchHistory()
+    const interval = setInterval(fetchHistory, REFRESH_INTERVAL)
+    return () => clearInterval(interval)
   }, [])
 
   if (loading) {

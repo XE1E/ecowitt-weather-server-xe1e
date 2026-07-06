@@ -235,7 +235,7 @@ function App() {
           </div>
         )}
 
-        {/* Chart placeholder */}
+        {/* Historical temperature/humidity chart (fetches /api/history) */}
         <div className="card">
           <p className="card-title">Histórico 24h</p>
           <TemperatureChart />
