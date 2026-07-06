@@ -88,10 +88,33 @@ services:
     networks:
       - ecowitt-network
 
+  # Caddy - Reverse proxy con HTTPS automático (Let's Encrypt) para el dominio.
+  # Producción con dominio: docker compose --profile caddy up -d
+  # (el dashboard sigue publicado en 8080 para el push HTTP del WS2910 por IP)
+  caddy:
+    image: caddy:2
+    container_name: ecowitt-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+    networks:
+      - ecowitt-network
+    profiles:
+      - caddy
+
 volumes:
   influxdb-data:
   influxdb-config:
   grafana-data:
+  caddy-data:
+  caddy-config:
 
 networks:
   ecowitt-network:

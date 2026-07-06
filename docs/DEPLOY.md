@@ -131,9 +131,9 @@ Los datos de InfluxDB persisten en el volumen `influxdb-data`.
 
 ## Notas
 
-- **HTTPS:** los dispositivos Ecowitt solo hacen HTTP. Si quieres HTTPS para la UI,
-  añade un reverse proxy (Caddy/nginx) con Let's Encrypt en 443 y deja
-  `/data/report/` en HTTP plano para el WS2910.
+- **HTTPS + dominio (`clima.xe1e.net`):** ver **[DOMINIO-HTTPS.md](DOMINIO-HTTPS.md)**.
+  Resumen: DNS A record → VPS, abrir 80/443 en Oracle, y levantar con el perfil
+  Caddy (`docker compose --profile caddy up -d`). El WS2910 sigue en HTTP por IP:8080.
 - **Home Assistant (remoto):** lee la API REST pública, p. ej.
   `http://163.192.147.208:8080/api/current` (ver Arquitectura B en ESTUDIO_VIABILIDAD.md).
 - **Volver a WeatherNode:** `sudo systemctl enable --now apache2` tras `docker compose down`.

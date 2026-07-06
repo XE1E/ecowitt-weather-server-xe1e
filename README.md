@@ -151,20 +151,20 @@ ecowitt-weather-station/
 
 ## Integración Home Assistant
 
-HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS**:
+HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS** (vía HTTPS con el dominio):
 
 ```yaml
 # configuration.yaml
 sensor:
   - platform: rest
     name: "Temperatura Exterior"
-    resource: http://163.192.147.208:8080/api/current
-    value_template: "{{ value_json.temperature }}"
+    resource: https://clima.xe1e.net/api/current
+    value_template: "{{ value_json.temperature_outdoor }}"
     unit_of_measurement: "°C"
     scan_interval: 60
 ```
 
-> La integración nativa Ecowitt de HA (push/webhook) solo conviene si HA está en la misma red que la estación; no es el caso aquí. Ver [Estudio de Viabilidad §11](docs/ESTUDIO_VIABILIDAD.md).
+> La integración nativa Ecowitt de HA (push/webhook) solo conviene si HA está en la misma red que la estación; no es el caso aquí. Ver [Estudio de Viabilidad §11](docs/ESTUDIO_VIABILIDAD.md) y [DOMINIO-HTTPS.md](docs/DOMINIO-HTTPS.md).
 
 ## Documentación
 

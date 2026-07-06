@@ -1,0 +1,20 @@
+# Caddy reverse proxy con HTTPS automático (Let's Encrypt) para el dashboard.
+# Caddy obtiene y renueva el certificado TLS solo; expone 80/443 al público
+# y hace proxy interno al contenedor del dashboard (nginx en el puerto 80).
+#
+# Cambia el dominio y el email si hace falta.
+
+{
+	# Email para avisos de Let's Encrypt (opcional pero recomendado)
+	email webmaster@luyoa.com
+}
+
+clima.xe1e.net {
+	encode gzip
+	reverse_proxy dashboard:80
+}
+
+# NOTA: el WS2910 hace push por HTTP a la IP:8080 directamente
+# (http://163.192.147.208:8080/data/report/), NO por este dominio, porque los
+# dispositivos Ecowitt no soportan HTTPS. Los navegadores y Home Assistant sí
+# usan https://clima.xe1e.net.
