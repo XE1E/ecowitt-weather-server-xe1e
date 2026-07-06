@@ -1,28 +1,38 @@
 import { ReactNode } from 'react'
+import { WeatherIcon } from './WeatherIcon'
 
 interface WeatherCardProps {
   title: string
   value: number | undefined
   unit: string
-  icon: ReactNode
+  /** Meteocons icon name (preferred) */
+  iconName?: string
+  /** Fallback custom icon node */
+  icon?: ReactNode
   color?: string
   subtitle?: string
+  offline?: boolean
 }
 
 export function WeatherCard({
   title,
   value,
   unit,
+  iconName,
   icon,
   color = 'text-white',
-  subtitle
+  subtitle,
+  offline = false,
 }: WeatherCardProps) {
   return (
     <div className="card">
-      <p className="card-title flex items-center gap-2">
-        {icon}
-        {title}
-      </p>
+      <div className="flex items-start justify-between">
+        <p className="card-title">
+          {iconName ? <WeatherIcon name={iconName} size={22} /> : icon}
+          {title}
+        </p>
+        {offline && <span className="badge badge-offline">offline</span>}
+      </div>
       <p className={`card-value ${color}`}>
         {value?.toFixed(1) ?? '--'}
         <span className="card-unit">{unit}</span>
