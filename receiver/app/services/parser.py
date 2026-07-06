@@ -108,6 +108,20 @@ METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequen
 # Fields that are tags in InfluxDB
 TAG_FIELDS = {"station_type", "model", "frequency"}
 
+# Battery fields that report a NUMERIC voltage or 0-5 level instead of a
+# binary 0/1 OK/Low flag. These must NOT be coerced to a boolean.
+#   - wh40/wh68/wh80/wh90: report voltage (e.g. 1.3)
+#   - wh57 (lightning): reports a 0-5 charge level
+# The WS2910 base setup (WS69 outdoor array + WN31) only uses binary
+# batteries (wh65batt, batt1-8), which are handled as OK/Low booleans.
+VOLTAGE_BATTERY_FIELDS = {
+    "battery_wh40",
+    "battery_wh57",
+    "battery_wh68",
+    "battery_wh80",
+    "battery_wh90",
+}
+
 
 def parse_ecowitt_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -142,10 +156,17 @@ def _convert_value(key: str, value: str) -> Any:
     if value is None or value == "":
         return None
 
-    # Boolean battery fields (0 = OK, 1 = Low)
+    # Battery fields
     if key.startswith("battery_"):
+        # Voltage / level sensors: keep the numeric reading as-is
+        if key in VOLTAGE_BATTERY_FIELDS:
+            try:
+                return float(value)
+            except ValueError:
+                return None
+        # Binary flag sensors (WS69 array, WN31, indoor): 0 = OK, 1 = Low
         try:
-            return int(value) == 0  # True = OK, False = Low
+            return int(float(value)) == 0  # True = OK, False = Low
         except ValueError:
             return None
 
@@ -177,6 +198,27 @@ def _parse_timestamp(timestamp_str: str) -> datetime:
             return datetime.fromisoformat(timestamp_str)
         except ValueError:
             return datetime.utcnow()
+
+
+def describe_device(parsed_data: Dict[str, Any]) -> str:
+    """
+    Build a short human-readable description of the sending device.
+
+    Useful to confirm which station is reporting, e.g. a WS2910 console
+    (stationtype "EasyWeather*") vs a GW3000 gateway (stationtype "GW3000*").
+    """
+    model = parsed_data.get("model")
+    station_type = parsed_data.get("station_type")
+    freq = parsed_data.get("frequency")
+
+    label = model or station_type or "unknown device"
+    details = []
+    if station_type and station_type != label:
+        details.append(f"stationtype={station_type}")
+    if freq:
+        details.append(f"freq={freq}")
+
+    return f"{label} ({', '.join(details)})" if details else label
 
 
 def get_tags(parsed_data: Dict[str, Any]) -> Dict[str, str]:

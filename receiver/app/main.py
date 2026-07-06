@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 
 from .config import settings
-from .services.parser import parse_ecowitt_data
+from .services.parser import parse_ecowitt_data, describe_device
 from .services.converter import convert_to_metric
 from .services.storage import InfluxDBStorage
 
@@ -75,12 +75,18 @@ async def health_check():
     }
 
 
+# Both paths are registered so the device works whether its "Path" field is
+# configured as "/data/report/" or "/data/report" (a common Ecowitt gotcha:
+# without both, a missing trailing slash triggers a 307 redirect that some
+# station firmwares — including WS2910 consoles — do not follow on POST).
 @app.post("/data/report/")
+@app.post("/data/report")
 async def receive_ecowitt_data(request: Request):
     """
-    Receive weather data from Ecowitt gateway.
+    Receive weather data from an Ecowitt station (WS2910 console or gateway).
 
-    The gateway sends data as form-encoded POST request.
+    The station sends data as a form-encoded POST request using the
+    Ecowitt protocol (Weather Services -> Customized -> Protocol: Ecowitt).
     """
     try:
         # Parse form data
@@ -107,7 +113,8 @@ async def receive_ecowitt_data(request: Request):
         await storage.write(parsed_data)
 
         logger.info(
-            f"Stored data - Temp: {parsed_data.get('temperature_outdoor')}°C, "
+            f"Stored data from {describe_device(parsed_data)} - "
+            f"Temp: {parsed_data.get('temperature_outdoor')}°C, "
             f"Humidity: {parsed_data.get('humidity_outdoor')}%, "
             f"Wind: {parsed_data.get('wind_speed')} km/h"
         )
