@@ -71,6 +71,26 @@ function App() {
 
   if (!data) return null
 
+  // Build the list of WN31 channels (1-8) that actually reported data.
+  const WN31_COLORS = [
+    'text-amber-400', 'text-lime-400', 'text-teal-400', 'text-indigo-400',
+    'text-pink-400', 'text-cyan-400', 'text-emerald-400', 'text-fuchsia-400',
+  ]
+  const wn31Channels = Array.from({ length: 8 }, (_, i) => i + 1)
+    .map((ch) => {
+      const temp = data[`temperature_ch${ch}` as keyof WeatherData] as number | undefined
+      const humidity = data[`humidity_ch${ch}` as keyof WeatherData] as number | undefined
+      const battery = data[`battery_ch${ch}` as keyof WeatherData] as boolean | undefined
+      return {
+        ch,
+        temp,
+        humidity,
+        batteryLow: battery === false,
+        color: WN31_COLORS[ch - 1],
+      }
+    })
+    .filter((c) => c.temp !== undefined || c.humidity !== undefined)
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -190,51 +210,27 @@ function App() {
           />
         </div>
 
-        {/* WN31 Extra Sensors - Only show if data exists */}
-        {(data.temperature_ch1 !== undefined || data.temperature_ch2 !== undefined) && (
+        {/* WN31 Extra Sensors (up to 8 channels) - Only show channels with data */}
+        {wn31Channels.length > 0 && (
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-slate-300 mb-4">Sensores Adicionales (WN31)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {data.temperature_ch1 !== undefined && (
-                <WeatherCard
-                  title="Canal 1"
-                  value={data.temperature_ch1}
-                  unit="°C"
-                  icon={<Thermometer className="w-6 h-6" />}
-                  color="text-amber-400"
-                  subtitle={data.humidity_ch1 !== undefined ? `Humedad: ${data.humidity_ch1}%` : undefined}
-                />
-              )}
-              {data.temperature_ch2 !== undefined && (
-                <WeatherCard
-                  title="Canal 2"
-                  value={data.temperature_ch2}
-                  unit="°C"
-                  icon={<Thermometer className="w-6 h-6" />}
-                  color="text-lime-400"
-                  subtitle={data.humidity_ch2 !== undefined ? `Humedad: ${data.humidity_ch2}%` : undefined}
-                />
-              )}
-              {data.temperature_ch3 !== undefined && (
-                <WeatherCard
-                  title="Canal 3"
-                  value={data.temperature_ch3}
-                  unit="°C"
-                  icon={<Thermometer className="w-6 h-6" />}
-                  color="text-teal-400"
-                  subtitle={data.humidity_ch3 !== undefined ? `Humedad: ${data.humidity_ch3}%` : undefined}
-                />
-              )}
-              {data.temperature_ch4 !== undefined && (
-                <WeatherCard
-                  title="Canal 4"
-                  value={data.temperature_ch4}
-                  unit="°C"
-                  icon={<Thermometer className="w-6 h-6" />}
-                  color="text-indigo-400"
-                  subtitle={data.humidity_ch4 !== undefined ? `Humedad: ${data.humidity_ch4}%` : undefined}
-                />
-              )}
+              {wn31Channels.map(({ ch, temp, humidity, batteryLow, color }) => {
+                const subtitleParts: string[] = []
+                if (humidity !== undefined) subtitleParts.push(`Humedad: ${humidity}%`)
+                if (batteryLow) subtitleParts.push('⚠ Batería baja')
+                return (
+                  <WeatherCard
+                    key={ch}
+                    title={`Canal ${ch}`}
+                    value={temp}
+                    unit="°C"
+                    icon={<Thermometer className="w-6 h-6" />}
+                    color={color}
+                    subtitle={subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined}
+                  />
+                )
+              })}
             </div>
           </div>
         )}
@@ -247,7 +243,7 @@ function App() {
 
         {/* Footer */}
         <footer className="mt-8 text-center text-slate-500 text-sm">
-          <p>Ecowitt GW3000 + WS69 | Station: {data.station_type}</p>
+          <p>Ecowitt WS2910 + WS69 | Station: {data.station_type}</p>
         </footer>
       </div>
     </div>

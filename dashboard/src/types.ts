@@ -28,6 +28,15 @@ export interface WeatherData {
   humidity_ch6?: number
   humidity_ch7?: number
   humidity_ch8?: number
+  // WN31 battery status per channel (true = OK, false = Low)
+  battery_ch1?: boolean
+  battery_ch2?: boolean
+  battery_ch3?: boolean
+  battery_ch4?: boolean
+  battery_ch5?: boolean
+  battery_ch6?: boolean
+  battery_ch7?: boolean
+  battery_ch8?: boolean
 
   // Pressure
   pressure_relative: number
