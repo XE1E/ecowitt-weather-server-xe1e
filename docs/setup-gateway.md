@@ -1,13 +1,16 @@
-# Configuración del Gateway Ecowitt GW3000
+# Configuración del Dispositivo Ecowitt (WS2910 / GW3000)
 
-Guía paso a paso para configurar el gateway GW3000 para enviar datos a tu servidor.
+Guía paso a paso para configurar el envío de datos a tu servidor.
+
+> **¿WS2910 o GW3000?** El **WS2910** (consola con pantalla, incluye el sensor WS69) puede enviar datos a un servidor personalizado con protocolo Ecowitt por sí solo — es el dispositivo principal recomendado. El **GW3000** es un upgrade opcional que además ofrece API local en LAN, backup en microSD y Ethernet. **El Paso 4 (Servidor Personalizado) es idéntico en ambos.** Los pasos de conexión WiFi son equivalentes; en el WS2910 se usa la app **WS View Plus**.
 
 ## Requisitos Previos
 
-- Gateway GW3000 conectado a la corriente
-- Smartphone con app **WSView** o **WS Tool** instalada
+- Dispositivo (WS2910 o GW3000) conectado a la corriente
+- Smartphone con app **WS View Plus** instalada
 - Red WiFi 2.4GHz (no soporta 5GHz)
 - Servidor receptor funcionando
+- _(WS2910)_ Preferir la variante de firmware **EasyWeatherPro** (con WebUI)
 
 ## Paso 1: Conexión Inicial
 

@@ -22,21 +22,25 @@ Este documento analiza las opciones disponibles en hardware, software e infraest
 
 | Área | Decisión | Justificación |
 |------|----------|---------------|
-| **Hardware** | WS2910 + GW3000 + WS69 + WN31 | API local + pantalla + modularidad por ~$204 |
+| **Hardware** | WS2910 (kit c/ WS69) + WN31 | Push a servidor custom + pantalla por ~$79-101 |
 | **Infraestructura** | Oracle Cloud Free Tier (ARM) | $0/mes permanente, 12GB RAM, IP pública |
 | **Software** | WeatherNode (PHP nativo) | Dashboard completo, open source, compatible ARM |
 
+> **Revisión julio 2026:** Se confirmó que el **WS2910 sí soporta envío a servidor personalizado con protocolo Ecowitt** (verificado con manual oficial y comunidad). Como toda la arquitectura de este proyecto funciona por **push** (HTTP POST al VPS) y **no usa la API local de pull**, el GW3000 deja de ser necesario y pasa a ser un **upgrade opcional**. Ver [sección 5](#5-el-gw3000-como-upgrade-opcional).
+
 **Costo total estimado:**
-- Hardware: ~$229 (con accesorios)
+- Hardware: ~$109-131 (con accesorios)
 - Infraestructura: $0/mes
 - Software: $0 (open source)
 
 **Consideraciones técnicas verificadas:**
-- ✅ GW3000 soporta envío a servidor custom via protocolo Ecowitt
+- ✅ WS2910 soporta envío a servidor custom via protocolo Ecowitt (App WS View Plus → Weather Services → Customized → Protocol: Ecowitt)
+- ✅ El WS2910 se vende como kit que **incluye el sensor WS69** 7-en-1
 - ✅ WeatherNode soporta protocolo Ecowitt nativamente
 - ✅ PHP 8.2 instalado en Ubuntu ARM64
 - ✅ VPS Oracle operativo: http://163.192.147.208:8080
 - ⚠️ Ecowitt solo soporta HTTP (no HTTPS) - el servidor usa puerto 8080
+- ⚠️ Preferir la variante de firmware **`EasyWeatherPro`** (con WebUI); la variante antigua `EasyWeather-WFI` es "solo Weather Services" y no permite agregar sensores desde la app
 
 **Estado actual:** Servidor listo, esperando hardware Ecowitt.
 
@@ -50,117 +54,106 @@ Este documento analiza las opciones disponibles en hardware, software e infraest
 
 ## 3. Opciones de Hardware
 
-### 3.1 Enfoque A: Consolas Todo-en-Uno
+### 3.1 Concepto Clave: Push vs Pull
 
-Las consolas como HP2551 y HP2553 integran sensor, receptor y pantalla en un solo paquete.
-
-#### El Problema con las Consolas Todo-en-Uno
-
-Las consolas como HP2551 y HP2553 son atractivas porque incluyen todo en un paquete, pero tienen una **limitación crítica para integración**:
+La distinción determinante para este proyecto **no es** "consola vs gateway", sino **cómo llegan los datos al servidor**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    CONSOLAS (HP2551, HP2553)                    │
-│  ✅ Pantalla grande para ver datos                              │
-│  ✅ Todo en uno                                                  │
-│  ❌ SIN API LOCAL - Solo puede ENVIAR datos (push)              │
-│  → Tu servidor debe ESCUCHAR conexiones entrantes               │
-│  → No puedes consultar datos cuando quieras                     │
+│  PUSH (lo que usa este proyecto)                                 │
+│  El dispositivo ENVÍA datos al servidor cada 60s                │
+│  → HTTP POST al VPS: /data/report/ (protocolo Ecowitt)          │
+│  → Lo soportan CONSOLAS (WS2910) y GATEWAYS (GW3000) por igual  │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
-│              GATEWAYS (GW2000, GW3000, Wittboy)                 │
-│  ❌ Sin pantalla (pero puedes agregar WS2910)                   │
-│  ✅ API LOCAL HTTP - Puedes CONSULTAR datos cuando quieras      │
-│  ✅ Más flexible para integración                                │
-│  ✅ Almacenamiento SD (GW3000)                                   │
-│  → Tu servidor puede hacer PULL de datos                        │
+│  PULL / API Local (lo que este proyecto NO usa)                 │
+│  El servidor CONSULTA al dispositivo: get_livedata_info         │
+│  → Requiere gateway en la MISMA red local                       │
+│  → Solo garantizado en GATEWAYS (GW1100/1200/2000/3000)         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Enfoque B: Arquitectura Modular (Gateway + Pantalla Separados)
+**Como la arquitectura elegida (VPS Oracle + WeatherNode) recibe datos por PUSH, cualquier dispositivo Ecowitt con "Customized server + protocolo Ecowitt" es suficiente. El WS2910 cumple.**
 
-Con componentes separados (WS2910 + GW3000) se obtiene **lo mejor de ambos mundos**:
+### 3.2 El WS2910: Consola con Push a Servidor Personalizado
+
+El WS2910 es una consola con pantalla que **también actúa como receptor RF y cliente de servidor personalizado**:
 
 ```
     WS69 (sensor exterior 7-en-1)      WN31 (temp/hum CH1)
-              │                              │
+              │  (incluido en kit WS2910)   │
               │ RF 915MHz broadcast          │
               ▼                              ▼
     ┌─────────────────────────────────────────┐
-    │     Ambos receptores captan todas       │
-    │     las señales de sensores 915MHz      │
+    │        WS2910 (consola + receptor)      │
+    │   Pantalla 6.8" + WiFi 2.4GHz           │
     └──────────────────┬──────────────────────┘
-                       │
-               ┌───────┴───────┐
-               ▼               ▼
-            GW3000          WS2910
-           (gateway)       (pantalla)
-               │
-               │ API Local HTTP
-               │ Almacenamiento SD
-               ▼
-        ┌──────────────────┐
-        │  Home Assistant  │
-        │  Servidor propio │
-        │  Dashboard web   │
-        └──────────────────┘
+                       │ HTTP POST (Protocolo Ecowitt)
+                       │ /data/report/  cada 60s
+                       ▼
+        ┌──────────────────────────────┐
+        │  VPS Oracle → WeatherNode    │
+        │  Dashboard web + API REST    │
+        │  Home Assistant              │
+        └──────────────────────────────┘
 ```
 
-### 3.3 Análisis Comparativo: Modular vs Todo-en-Uno
+### 3.3 Análisis Comparativo: WS2910 vs GW3000 (para este proyecto)
 
-| Aspecto | HP2551 (Todo-en-uno) | WS2910 + GW3000 (Modular) |
-|---------|---------------------|---------------------------|
-| **Precio** | $199 | ~$204 |
-| **Pantalla** | 7" TFT | 6.8" LCD |
-| **API Local** | ❌ No | ✅ Sí |
+| Aspecto | WS2910 (kit) | GW3000 |
+|---------|--------------|--------|
+| **Precio** | ~$68-90 (incluye WS69) | ~$60 (solo gateway) |
+| **Pantalla** | ✅ 6.8" LCD | ❌ No |
+| **Push a servidor custom (Ecowitt)** | ✅ Sí | ✅ Sí |
+| **API Local (pull)** | ⚠️ No garantizada | ✅ Sí |
 | **Almacenamiento SD** | ❌ No | ✅ Sí |
-| **Ethernet** | ❌ Solo WiFi | ✅ WiFi + Ethernet |
-| **Integración HA** | Push only | Push + Pull |
-| **Sensor incluido** | WS69 (mecánico) | WS69 (mecánico) |
-| **Expandibilidad** | Limitada | Alta |
+| **Conectividad** | WiFi 2.4GHz | WiFi + Ethernet |
+| **Antena** | Interna | Externa (más alcance) |
+| **Sensor incluido** | ✅ WS69 en el kit | ❌ Se compra aparte |
+| **¿Requerido para este proyecto?** | ✅ Suficiente por sí solo | Opcional (upgrade) |
 
-**Análisis**: La diferencia de precio es mínima (~$5), pero las ventajas técnicas de la arquitectura modular son significativas:
-- API local permite consultar datos en cualquier momento (no solo esperar push)
-- Almacenamiento SD proporciona backup local
-- Ethernet ofrece conexión más estable que solo WiFi
+**Análisis**: Para la arquitectura push de este proyecto, el WS2910 hace todo lo necesario y además incluye la pantalla y el sensor WS69 en un solo kit. El GW3000 aporta capacidades (API local, SD, Ethernet, antena externa) que **esta arquitectura no aprovecha**, por lo que se reclasifica como upgrade opcional (ver [sección 5](#5-el-gw3000-como-upgrade-opcional)).
 
 ---
 
 ## 4. Análisis de Componentes Seleccionados
 
-### 4.1 GW3000 - El Corazón del Sistema
+### 4.1 WS2910 - Consola, Receptor y Cliente de Servidor (El Corazón del Sistema)
 
 | Especificación | Detalle |
 |----------------|---------|
-| **Precio** | ~$60 |
-| **Conectividad** | WiFi 2.4GHz + Ethernet |
-| **Alimentación** | USB 5V o PoE (GW3010) |
-| **Almacenamiento** | Ranura microSD |
-| **Antena** | Externa (mejor alcance RF) |
-| **API Local** | ✅ HTTP GET/POST |
-| **Sensores soportados** | Hasta 8 canales WN31 + múltiples tipos |
-
-**Endpoint API Local:**
-```
-GET http://[IP_GW3000]/get_livedata_info
-```
-
-Devuelve JSON con todos los datos de sensores en tiempo real.
-
-### 4.2 WS2910 - Pantalla de Visualización
-
-| Especificación | Detalle |
-|----------------|---------|
-| **Precio** | ~$68 |
+| **Precio** | ~$68-90 (kit, incluye WS69) |
 | **Pantalla** | 6.8" LCD color |
 | **Conectividad** | WiFi 2.4GHz |
-| **Función** | Receptor RF + display |
+| **Función** | Receptor RF + display + cliente de servidor |
+| **Push a servidor custom** | ✅ Protocolo Ecowitt o Wunderground |
+| **Almacenamiento SD** | ❌ No |
 | **Alimentación** | USB 5V |
 
-La WS2910 actúa como receptor RF independiente, captando las señales de todos los sensores 915MHz en el área. No requiere conexión con el GW3000 - ambos reciben los datos directamente de los sensores.
+El WS2910 capta las señales 915MHz de todos los sensores, las muestra en pantalla y **las reenvía por HTTP POST a un servidor personalizado** usando el protocolo Ecowitt — exactamente lo que consume el `receiver` de este proyecto.
 
-### 4.3 WS69 - Sensor Exterior 7-en-1
+**Configuración de envío (App WS View Plus):**
+```
+Weather Services → Customized
+  Enable: ON
+  Protocol Type: Ecowitt
+  Server IP: [IP pública del VPS Oracle]
+  Port: 8080
+  Path: /data/report/
+  Upload Interval: 60 s
+```
+
+**Variantes de firmware (importante al comprar):**
+
+| SSID que muestra | Firmware | WebUI | Agregar sensores |
+|------------------|----------|-------|------------------|
+| `EasyWeatherPro-xxxx` | Moderno | ✅ Sí | ✅ Sí | 
+| `EasyWeather-WFIxxxx` | Antiguo ("solo Weather Services") | ❌ No | ❌ No |
+
+Ambas variantes hacen push a servidor custom, pero para usar sensores extra (WN31) conviene la variante **Pro**.
+
+### 4.2 WS69 - Sensor Exterior 7-en-1
 
 | Medición | Rango | Precisión |
 |----------|-------|-----------|
@@ -176,7 +169,7 @@ La WS2910 actúa como receptor RF independiente, captando las señales de todos 
 **Alimentación**: Panel solar + baterías AA
 **Frecuencia RF**: 915 MHz (América)
 
-### 4.4 WN31 - Sensor Temperatura/Humedad Adicional
+### 4.3 WN31 - Sensor Temperatura/Humedad Adicional
 
 | Especificación | Detalle |
 |----------------|---------|
@@ -187,11 +180,65 @@ La WS2910 actúa como receptor RF independiente, captando las señales de todos 
 | **Alimentación** | 2x AA |
 | **Transmisión** | 915 MHz, cada ~60s |
 
-El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `temp1f`-`temp8f` y `humidity1`-`humidity8`.
+Tanto el WS2910 (firmware Pro) como el GW3000 soportan hasta **8 sensores WN31** simultáneamente y los reenvían en el push. Campos de datos: `temp1f`-`temp8f` y `humidity1`-`humidity8`.
 
 ---
 
-## 5. Comparativa de Gateways Ecowitt
+## 5. El GW3000 como Upgrade Opcional
+
+El GW3000 dejó de ser un componente **requerido** porque su ventaja principal — la **API local de pull** — no la usa la arquitectura push de este proyecto. Sin embargo sigue siendo un buen upgrade si en el futuro necesitas lo siguiente.
+
+### 5.1 ¿Qué es la API Local y qué hace?
+
+La API local es un servidor HTTP que corre **dentro del propio gateway** y responde consultas desde tu red local, sin pasar por internet ni por la nube de Ecowitt.
+
+```
+GET http://[IP_GW3000]/get_livedata_info   → JSON con todos los sensores AHORA
+GET http://[IP_GW3000]/get_sensors_info    → lista de sensores y estado de batería
+GET http://[IP_GW3000]/get_network_info    → configuración de red del gateway
+```
+
+`get_livedata_info` devuelve un JSON en tiempo real con temperatura, humedad, viento, lluvia, UV, radiación solar, presión y los canales WN31.
+
+### 5.2 Pull (API local) vs Push (Customized server)
+
+| | **Pull — API local** | **Push — Customized server** |
+|---|---|---|
+| **Quién inicia** | El servidor **pregunta** al gateway | El dispositivo **envía** solo |
+| **Dónde funciona** | Solo en la **misma red local** (LAN) | Por internet, a cualquier IP/VPS |
+| **Latencia** | Instantánea, bajo demanda | Cada N segundos (intervalo fijo) |
+| **Frecuencia** | La decide el cliente (cada 1s si quieres) | Mínimo típico 16-60s |
+| **Necesita servidor a la escucha** | ❌ No | ✅ Sí (el `receiver`) |
+| **La usa este proyecto** | ❌ No | ✅ Sí |
+| **Disponible en WS2910** | ⚠️ No garantizada | ✅ Sí |
+
+### 5.3 Ventajas / Usos reales de la API local
+
+La API local **sí** aporta valor en estos escenarios (ninguno es requisito hoy):
+
+- **Integración nativa con Home Assistant en LAN**: la integración oficial de HA hace *pull* al gateway, sin depender del VPS ni de internet. Datos aunque se caiga tu internet.
+- **Consultas bajo demanda / alta frecuencia**: refrescar un panel cada 1-2s (el push está limitado al intervalo de subida).
+- **Depuración y diagnóstico**: ver al instante estado de sensores, nivel de batería y RSSI de señal sin esperar al siguiente push.
+- **Redundancia**: fuente de datos alterna si el flujo push falla.
+- **Cero dependencia de la nube**: todo queda en tu LAN.
+
+### 5.4 Lo que la API local NO hace / limitaciones
+
+- **No funciona a través de internet**: es solo LAN. Para un VPS remoto como el tuyo, seguirías necesitando push de todos modos.
+- **No almacena histórico**: solo devuelve el estado *actual*; el histórico lo guarda tu base de datos (SQLite/InfluxDB).
+- **Endpoint no documentado oficialmente**: `get_livedata_info` puede cambiar entre versiones de firmware (aunque en la práctica es estable).
+- **No sustituye al push** para arquitecturas en la nube.
+
+### 5.5 Otras ventajas del GW3000 sobre el WS2910
+
+| Ventaja | Utilidad |
+|---------|----------|
+| **Almacenamiento microSD** | Backup local de datos si el servidor/VPS falla |
+| **Ethernet (+ PoE en GW3010)** | Conexión más estable que WiFi; un solo cable |
+| **Antena externa** | Mejor alcance RF para sensores distantes |
+| **API local** | Ver 5.1-5.3 |
+
+### 5.6 Comparativa de Gateways Ecowitt (si decides agregar uno)
 
 | Gateway | Precio | WiFi | Ethernet | API Local | SD Card | PoE | Antena |
 |---------|--------|------|----------|-----------|---------|-----|--------|
@@ -200,11 +247,7 @@ El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `
 | GW2000 | ~$50 | ✅ | ✅ | ✅ | ❌ | ✅ | Interna |
 | **GW3000** | ~$60 | ✅ | ✅ | ✅ | ✅ | ✅ | Externa |
 
-**¿Por qué GW3000?**
-- **Almacenamiento SD**: Backup local de datos (crucial si el servidor falla)
-- **Antena externa**: Mejor alcance RF para sensores distantes
-- **PoE opcional**: GW3010 incluye PoE, simplifica cableado
-- **Diferencia de $10**: Vale la pena por las funciones adicionales
+**Recomendación:** agrega un GW3000 solo si más adelante quieres API local en LAN, backup en SD o Ethernet. Para el objetivo actual (VPS + dashboard vía push) **no es necesario**.
 
 ---
 
@@ -212,11 +255,13 @@ El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `
 
 ### 6.1 Consolas Todo-en-Uno Ecowitt
 
+Todas soportan push a servidor custom (protocolo Ecowitt); la diferencia es sensor, pantalla y si ofrecen API local en LAN. Más caras que el WS2910 para este proyecto.
+
 | Modelo | Precio | Sensor | Pantalla | API Local | Veredicto |
 |--------|--------|--------|----------|-----------|-----------|
-| **HP2551** | $199 | WS69 | 7" TFT | ❌ | Limitada para integración |
-| **HP2553** | ~$280 | WS90 | 7" TFT | ❌ | Mejor sensor, misma limitación |
-| **HP2560 (Wittboy Pro)** | ~$300 | WS90 | 7" TFT | ✅ | Excelente pero costosa |
+| **HP2551** | $199 | WS69 | 7" TFT | ❌ | Funciona por push, pero más cara que el WS2910 |
+| **HP2553** | ~$280 | WS90 | 7" TFT | ❌ | Mejor sensor (WS90), sin API local |
+| **HP2560 (Wittboy Pro)** | ~$300 | WS90 | 7" TFT | ✅ | Excelente (push + API local) pero costosa |
 
 ### 6.2 Kits Wittboy (Gateway + Sensor)
 
@@ -272,13 +317,19 @@ El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `
 
 ### 8.1 Configuración Seleccionada
 
+El WS2910 se vende como **kit que ya incluye el sensor WS69** 7-en-1, por lo que no hay que comprar el sensor por separado.
+
 | Producto | Ecowitt Shop | AliExpress (est.) |
 |----------|-------------|-------------------|
-| [GW3000](https://shop.ecowitt.com/products/gw3000-gw3010) | $59.99 | ~$50-55 |
-| [WS69](https://shop.ecowitt.com/products/ws69) | $64.99 | ~$55-60 |
-| [WS2910](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 |
-| [WN31](https://shop.ecowitt.com/products/wn31) | $10.99 | ~$9-12 |
-| **Subtotal equipos** | **$203.96** | **~$170-190** |
+| [WS2910 (kit con WS69)](https://shop.ecowitt.com/products/ws2910_c) | $67.99 | ~$55-65 |
+| [WN31](https://shop.ecowitt.com/products/wn31) (opcional, interior) | $10.99 | ~$9-12 |
+| **Subtotal equipos** | **$78.98** | **~$64-77** |
+
+**Upgrade opcional (no requerido):**
+
+| Producto | Ecowitt Shop | AliExpress (est.) | Aporta |
+|----------|-------------|-------------------|--------|
+| [GW3000](https://shop.ecowitt.com/products/gw3000-gw3010) | $59.99 | ~$50-55 | API local, SD, Ethernet |
 
 ### 8.2 Accesorios Recomendados
 
@@ -286,9 +337,8 @@ El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `
 |-----------|--------|-------------|
 | [Bird Spikes](https://shop.ecowitt.com/products/bird-spikes-1) | $9.99 | Protección anti-pájaros para WS69 |
 | [Battery Pack 10m](https://shop.ecowitt.com/products/battery-pack) | $14.99 | Cable extensión para cambiar baterías fácil |
-| MicroSD card | ~$5-10 | Almacenamiento local (no incluida) |
 
-**Total estimado con accesorios: ~$229** (Ecowitt Shop)
+**Total estimado con accesorios: ~$104** (Ecowitt Shop, sin GW3000)
 
 ### 8.3 Sensores Adicionales Compatibles
 
@@ -304,24 +354,25 @@ El GW3000 soporta hasta **8 sensores WN31** simultáneamente. Campos de datos: `
 
 ## 9. Resumen de Configuraciones de Hardware
 
-| Opción | Componentes | Precio | API Local | Pantalla |
-|--------|-------------|--------|-----------|----------|
-| **A: Seleccionada** | GW3000 + WS69 + WS2910 + WN31 | ~$204 | ✅ Sí | ✅ 6.8" LCD |
-| B: Sin sensor extra | GW3000 + WS69 + WS2910 | ~$193 | ✅ Sí | ✅ 6.8" LCD |
-| C: Sin pantalla | GW3000 + WS69 + WN31 | ~$136 | ✅ Sí | ❌ No |
-| D: Todo en uno | HP2551 | $199 | ❌ No | ✅ 7" TFT |
-| E: Premium | HP2560 (Wittboy Pro) | ~$300 | ✅ Sí | ✅ 7" TFT |
+| Opción | Componentes | Precio | Push Ecowitt | API Local | Pantalla |
+|--------|-------------|--------|--------------|-----------|----------|
+| **A: Seleccionada** | WS2910 (kit c/ WS69) + WN31 | ~$79 | ✅ Sí | ⚠️ No garantizada | ✅ 6.8" LCD |
+| B: Mínima | WS2910 (kit c/ WS69) | ~$68 | ✅ Sí | ⚠️ No garantizada | ✅ 6.8" LCD |
+| C: Con upgrade | WS2910 (kit) + WN31 + GW3000 | ~$139 | ✅ Sí | ✅ Sí | ✅ 6.8" LCD |
+| D: Todo en uno | HP2551 | $199 | ✅ Sí | ❌ No | ✅ 7" TFT |
+| E: Premium | HP2560 (Wittboy Pro) | ~$300 | ✅ Sí | ✅ Sí | ✅ 7" TFT |
 
 ### Conclusión Hardware
 
-**Configuración seleccionada: Opción A (GW3000 + WS69 + WS2910 + WN31)**
+**Configuración seleccionada: Opción A (WS2910 kit con WS69 + WN31)**
 
 **Justificación:**
-- Proporciona API local HTTP (requisito clave para integración)
+- Envía datos al VPS por push con protocolo Ecowitt (único requisito real de la arquitectura)
 - Incluye pantalla física para visualización sin computadora
-- Precio similar a consola todo-en-uno ($204 vs $199)
-- Permite expansión futura con más sensores
-- Almacenamiento SD como backup de datos
+- El kit ya trae el sensor WS69 — sin doble compra
+- Precio muy inferior a la config anterior (~$79 vs ~$204)
+- Permite expansión con el WN31 (y más sensores en variante firmware Pro)
+- El GW3000 queda disponible como upgrade opcional si luego se necesita API local, SD o Ethernet (ver [sección 5](#5-el-gw3000-como-upgrade-opcional))
 
 ---
 
@@ -377,17 +428,40 @@ humidity1=48          # Sensor WN31 CH1 (%)
 
 ## 11. Integración con Home Assistant
 
-### 11.1 Integración Nativa
+> **Topología:** el HA y el Ecowitt (WS2910) están en **sitios distintos** (no en la misma red local). Por eso el **VPS actúa como punto central** que ambos alcanzan por internet.
+>
+> **Método elegido (Arquitectura B):** el WS2910 (sitio A) hace push al VPS, y **Home Assistant (sitio B) lee el histórico/actual desde la API REST de WeatherNode**. Ver 11.1. No requiere GW3000 ni que HA esté en la misma red que la estación.
 
-El GW3000 tiene **API local**, lo que permite integración nativa:
+### 11.1 Método elegido: HA lee la API REST del VPS
 
+Home Assistant consume la API del servidor con un sensor `rest`:
+
+```yaml
+# configuration.yaml
+sensor:
+  - platform: rest
+    name: "Temperatura Exterior"
+    resource: http://163.192.147.208:8080/api/current
+    value_template: "{{ value_json.temperature }}"
+    unit_of_measurement: "°C"
+    scan_interval: 60
 ```
-Configuración → Dispositivos y Servicios → Agregar integración → Ecowitt
-```
 
-Home Assistant detecta automáticamente el gateway en la red local.
+**Ventaja:** simple, HA accede desde cualquier lugar.
+**Limitación:** si se cae internet, HA no puede leer el VPS (los datos siguen viéndose en la pantalla del WS2910, pero no se registran). Ver [nota de resiliencia](#136-resiliencia-ante-cortes-de-internet).
 
-### 11.2 Alternativa: ecowitt2mqtt
+### 11.2 Alternativa: Integración nativa Ecowitt (push directo a HA)
+
+La integración oficial **Ecowitt de HA es un receptor push** (webhook), *no* usa la API local. Se configura el WS2910 con "Customized → Protocol: Ecowitt" apuntando a la IP de HA.
+
+⚠️ **No recomendada en esta topología** aunque HA sea accesible por internet:
+- El WS2910 tiene **un solo slot "Customized"**: push a HA *en vez de* al VPS (perderías el histórico centralizado en WeatherNode).
+- Obligaría a exponer HA por **HTTP plano** (Ecowitt no soporta HTTPS). Con la Arquitectura B, en cambio, solo el VPS acepta HTTP (datos meteo no sensibles) y **HA se mantiene tras su acceso seguro (HTTPS)**.
+- Al estar HA en otra red, tampoco aporta buffer local para cortes en el sitio de la estación.
+
+Se documenta solo como referencia; la Arquitectura B (11.1) es la adecuada aquí.
+
+### 11.3 Alternativa: ecowitt2mqtt
 
 ```yaml
 # docker-compose.yml
@@ -405,7 +479,7 @@ services:
     restart: unless-stopped
 ```
 
-### 11.3 Sensores Disponibles en Home Assistant
+### 11.4 Sensores Disponibles en Home Assistant
 
 | Sensor | Entidad | Unidad |
 |--------|---------|--------|
@@ -420,7 +494,7 @@ services:
 | Temp CH1 (WN31) | `sensor.ecowitt_temp_1` | °C |
 | Humedad CH1 (WN31) | `sensor.ecowitt_humidity_1` | % |
 
-### 11.4 Automatizaciones Útiles
+### 11.5 Automatizaciones Útiles
 
 ```yaml
 automation:
@@ -630,7 +704,7 @@ sudo unzip weathernode.zip
 sudo chown -R www-data:www-data /var/www/html/weathernode
 ```
 
-### 12.4 Configuración del GW3000 para WeatherNode
+### 12.4 Configuración del WS2910 (o GW3000) para WeatherNode
 
 **Importante: Ecowitt NO soporta HTTPS, solo HTTP**
 
@@ -642,8 +716,8 @@ Path: /data/report/
 Intervalo: 60 segundos
 ```
 
-**Configuración en el GW3000:**
-1. Acceder al Web UI del GW3000: `http://[IP_LOCAL_GW3000]`
+**Configuración en el WS2910 (App WS View Plus):**
+1. Abrir la app **WS View Plus** y seleccionar la consola WS2910
 2. Ir a Weather Services → Customized
 3. Enable: ✅
 4. Protocol Type: Ecowitt
@@ -652,26 +726,28 @@ Intervalo: 60 segundos
 7. Port: 8080
 8. Upload Interval: 60 seconds
 
+> Si en el futuro agregas un GW3000, la configuración es idéntica; además podrás acceder a su Web UI local en `http://[IP_LOCAL_GW3000]`.
+
 ---
 
 ## 13. Arquitectura del Sistema
 
+Topología actual: **estación y HA en sitios distintos**, con el VPS como punto central alcanzable por internet desde ambos.
+
 ```
+  SITIO A (estación)
 ┌─────────────────────────────────────────────────────────────┐
 │                  SENSORES RF 915MHz                         │
 │         WS69 (exterior)      WN31 (interior CH1)            │
 └─────────────────────┬───────────────────────────────────────┘
                       │ RF broadcast
-          ┌───────────┴───────────┐
-          ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│    GW3000       │     │    WS2910       │
-│   (gateway)     │     │   (pantalla)    │
-│                 │     │                 │
-│ ✅ API Local    │     │ ✅ Display LCD  │
-│ ✅ SD Card      │     │   6.8" color    │
-│ ✅ Ethernet     │     └─────────────────┘
-└────────┬────────┘
+                      ▼
+┌───────────────────────────────────┐
+│    WS2910 (consola + receptor)    │
+│    ✅ Display LCD 6.8" color       │
+│    ✅ WiFi 2.4GHz                  │
+│    ✅ Push a servidor custom       │
+└────────┬──────────────────────────┘
          │ HTTP POST (Ecowitt Protocol)
          │ ⚠️ Solo HTTP, no HTTPS
          │ Internet
@@ -694,14 +770,29 @@ Intervalo: 60 segundos
 │  │  │  └───────────────────────────────────────────┘  │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  Home Assistant │     │  Navegador Web  │
-│  (integración)  │     │  (dashboard)    │
-└─────────────────┘     └─────────────────┘
+└──────────┬──────────────────────────────────┬───────────────┘
+           │ REST (internet)                   │ HTTP
+           ▼                                   ▼
+┌─────────────────────┐            ┌─────────────────┐
+│  Home Assistant     │            │  Navegador Web  │
+│  (SITIO B, remoto)  │            │  (dashboard)    │
+│  sensor: rest       │            └─────────────────┘
+└─────────────────────┘
 ```
+
+### 13.6 Resiliencia ante cortes de internet
+
+Con esta topología (WS2910 sin SD, HA remoto) hay dos puntos de fallo independientes:
+
+| Escenario | Pantalla WS2910 | Histórico en VPS | HA (remoto) |
+|-----------|-----------------|------------------|-------------|
+| **Todo OK** | ✅ En vivo | ✅ Guardando | ✅ Leyendo |
+| **Se cae internet en Sitio A (estación)** | ✅ Sigue (RF local) | ❌ Hueco durante el corte, **datos perdidos** (sin SD ni buffer) | Muestra último dato, sin novedades |
+| **Se cae internet en Sitio B (HA)** | ✅ Sigue | ✅ Intacto | ❌ No lee; se pone al día al volver |
+
+**Conclusión:** dado que HA es y seguirá siendo **remoto** (otra red), el único riesgo real de pérdida de datos es un corte de internet **en el sitio de la estación**, donde el WS2910 no tiene dónde almacenar. Mitigación disponible en esta topología:
+- **GW3000 con microSD** (upgrade opcional): guarda una copia local recuperable durante el corte. Es la única forma de no perder datos ante un corte en el sitio de la estación mientras HA esté remoto.
+- Alternativa sin hardware extra: **aceptar el hueco** durante cortes (los datos meteorológicos de esos minutos no son críticos) — es el compromiso de la config "solo WS2910".
 
 **Nota importante:** Los dispositivos Ecowitt no soportan conexiones HTTPS/TLS. El servidor debe aceptar HTTP en puerto 8080 para recibir datos del gateway.
 
@@ -874,12 +965,11 @@ Ver [oracle-vps-setup.md](oracle-vps-setup.md) para guía de configuración comp
 ## 15. Hoja de Ruta
 
 ### Fase 0: Compra del Hardware
-- [ ] Comprar **GW3000** (915MHz) - ~$60
-- [ ] Comprar **WS69** (915MHz) - ~$65
-- [ ] Comprar **WS2910** (915MHz) - ~$68
-- [ ] Comprar **WN31** (915MHz) - ~$11
-- [ ] Comprar accesorios (bird spikes, battery pack, microSD) - ~$30
-- [ ] **Total: ~$234**
+- [ ] Comprar **WS2910 kit** (915MHz, incluye WS69) - ~$68 · verificar firmware **EasyWeatherPro**
+- [ ] Comprar **WN31** (915MHz, opcional interior) - ~$11
+- [ ] Comprar accesorios (bird spikes, battery pack) - ~$25
+- [ ] **Total: ~$104**
+- [ ] _(Opcional / upgrade)_ **GW3000** (915MHz) - ~$60, si luego quieres API local / SD / Ethernet
 
 ### Fase 1: Configurar VPS Oracle ✅ COMPLETADO
 - [x] Crear cuenta en [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
@@ -912,22 +1002,20 @@ ssh -i "oracle.key" ubuntu@163.192.147.208
 
 ### Fase 2: Instalación Física del Hardware
 - [ ] Montar WS69 en exterior (verificar distancia RF)
-- [ ] Ubicar GW3000 en interior con buena señal WiFi/Ethernet
-- [ ] Ubicar WS2910 donde sea visible
+- [ ] Ubicar el WS2910 donde sea visible y con buena señal WiFi 2.4GHz
 - [ ] Configurar WN31 en canal CH1
-- [ ] Insertar microSD en GW3000
+- [ ] _(Opcional)_ Ubicar GW3000 en interior e insertar microSD
 
-### Fase 3: Configuración del Gateway
-- [ ] Configurar GW3000 vía app WSView o Web UI
-- [ ] Conectar a red WiFi/Ethernet local
-- [ ] Verificar WS2910 recibe datos de sensores
-- [ ] Probar API local: `http://[IP_GW3000]/get_livedata_info`
-- [ ] Configurar Custom Server:
+### Fase 3: Configuración de la Consola WS2910
+- [ ] Configurar WS2910 vía app **WS View Plus** (WiFi 2.4GHz)
+- [ ] Verificar que la consola recibe datos de los sensores en pantalla
+- [ ] Configurar Custom Server (Weather Services → Customized):
   - Server: [IP_VPS_ORACLE]
   - Port: 8080
   - Path: /data/report/
   - Protocol: Ecowitt
   - Interval: 60s
+- [ ] _(Opcional, si agregas GW3000)_ Probar API local: `http://[IP_GW3000]/get_livedata_info`
 
 ### Fase 4: Verificación e Integración
 - [ ] Verificar datos llegando a WeatherNode

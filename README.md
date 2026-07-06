@@ -15,28 +15,31 @@ Sistema de captura, almacenamiento y visualización de datos meteorológicos usa
 
 | Componente | Modelo | Precio Aprox |
 |------------|--------|--------------|
-| Gateway + Sensor | Ecowitt GW3002 (GW3000 + WS69) | $119 |
-| Pantalla (opcional) | Ecowitt WS2910_C | $68 |
+| Consola + Sensor | Ecowitt WS2910_C (kit, incluye WS69) | $68 |
+| Sensor interior (opcional) | Ecowitt WN31 | $11 |
 | Accesorios | Bird Spikes, Battery Pack 10m | $25 |
+| Gateway (upgrade opcional) | Ecowitt GW3000 — API local / SD / Ethernet | $60 |
 
-**Frecuencia**: 915 MHz (América)
+**Frecuencia**: 915 MHz (América) · Preferir firmware **EasyWeatherPro**
+
+> El **WS2910** envía datos al servidor por push con protocolo Ecowitt, por lo que basta por sí solo. El **GW3000** es un upgrade opcional que añade API local (pull en LAN), backup en microSD y Ethernet. Ver [Estudio de Viabilidad §5](docs/ESTUDIO_VIABILIDAD.md).
 
 ## Arquitectura
 
 ```
-WS69 (sensor exterior)
-       │
-       │ RF 915MHz
-       ▼
-┌──────────────┐     ┌──────────────┐
-│   GW3000     │     │  WS2910_C    │
-│  (gateway)   │     │  (pantalla)  │
-└──────┬───────┘     └──────────────┘
-       │
-       │ HTTP API Local / Push
+WS69 (exterior)   WN31 (interior)
+       │               │
+       │ RF 915MHz      │
+       ▼               ▼
+┌──────────────────────────────┐
+│   WS2910 (consola + display)  │
+│   push protocolo Ecowitt      │
+└──────┬────────────────────────┘
+       │  (opcional: GW3000 en LAN → API local / SD / Ethernet)
+       │ HTTP POST /data/report/
        ▼
 ┌──────────────────────────────────┐
-│         SERVIDOR                 │
+│         SERVIDOR (VPS)           │
 │  ┌────────────┐  ┌────────────┐  │
 │  │  Receiver  │  │  InfluxDB  │  │
 │  │  (FastAPI) │──│  (datos)   │  │
@@ -77,9 +80,9 @@ docker-compose up -d
 curl http://localhost:8080/health
 ```
 
-## Configuración del Gateway GW3000
+## Configuración del Dispositivo (WS2910 o GW3000)
 
-1. Conectar GW3000 a la red WiFi via app **WSView** o **WS Tool**
+1. Conectar el WS2910 (o GW3000) a la red WiFi 2.4GHz via app **WS View Plus**
 2. Ir a **Weather Services** → **Customized**
 3. Configurar:
    - **Enable**: ON
@@ -148,17 +151,20 @@ ecowitt-weather-station/
 
 ## Integración Home Assistant
 
+HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS**:
+
 ```yaml
 # configuration.yaml
 sensor:
   - platform: rest
     name: "Temperatura Exterior"
-    resource: http://localhost:8080/api/current
+    resource: http://163.192.147.208:8080/api/current
     value_template: "{{ value_json.temperature }}"
     unit_of_measurement: "°C"
+    scan_interval: 60
 ```
 
-O usar la integración oficial Ecowitt si el gateway está en la misma red.
+> La integración nativa Ecowitt de HA (push/webhook) solo conviene si HA está en la misma red que la estación; no es el caso aquí. Ver [Estudio de Viabilidad §11](docs/ESTUDIO_VIABILIDAD.md).
 
 ## Documentación
 
