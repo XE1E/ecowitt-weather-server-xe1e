@@ -1,20 +1,28 @@
-# Caddy reverse proxy con HTTPS automático (Let's Encrypt) para el dashboard.
-# Caddy obtiene y renueva el certificado TLS solo; expone 80/443 al público
-# y hace proxy interno al contenedor del dashboard (nginx en el puerto 80).
+# Caddy reverse proxy para el dashboard, detrás de Cloudflare (Orange Cloud).
 #
-# Cambia el dominio y el email si hace falta.
-
-{
-	# Email para avisos de Let's Encrypt (opcional pero recomendado)
-	email webmaster@luyoa.com
-}
+# Con el proxy de Cloudflare activo, el certificado PÚBLICO lo pone Cloudflare
+# en el borde. Caddy solo cifra el tramo Cloudflare -> origin usando un
+# "Origin Certificate" de Cloudflare (SSL/TLS mode: Full (strict)).
+#
+# Coloca los archivos del Origin Certificate en caddy/certs/ (no se versionan):
+#   caddy/certs/origin.pem   (certificado)
+#   caddy/certs/origin.key   (llave privada)
 
 clima.xe1e.net {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
 	encode gzip
 	reverse_proxy dashboard:80
 }
 
+# --- ALTERNATIVA sin Cloudflare (DNS "grey cloud" / solo DNS) ---
+# Si desactivas el proxy de Cloudflare, comenta el bloque de arriba y usa este,
+# que obtiene un certificado Let's Encrypt automático por HTTP-01:
+#
+# clima.xe1e.net {
+# 	encode gzip
+# 	reverse_proxy dashboard:80
+# }
+#
 # NOTA: el WS2910 hace push por HTTP a la IP:8080 directamente
-# (http://163.192.147.208:8080/data/report/), NO por este dominio, porque los
-# dispositivos Ecowitt no soportan HTTPS. Los navegadores y Home Assistant sí
-# usan https://clima.xe1e.net.
+# (http://163.192.147.208:8080/data/report/), se salta Cloudflare. Los
+# navegadores y Home Assistant usan https://clima.xe1e.net.

@@ -1,96 +1,108 @@
-# Dominio y HTTPS — `clima.xe1e.net`
+# Dominio y HTTPS — `clima.xe1e.net` (con Cloudflare Orange Cloud)
 
-Cómo publicar el dashboard en `https://clima.xe1e.net` con certificado válido,
-usando **Caddy** (HTTPS automático con Let's Encrypt) delante del stack.
+Publicar el dashboard en `https://clima.xe1e.net`. El DNS está en **Cloudflare
+con el proxy activo (nube naranja)**, así que Cloudflare pone el certificado
+público y protege el origin. En el VPS, **Caddy** cifra el tramo Cloudflare→origin
+con un *Origin Certificate* de Cloudflare.
 
-> **Regla de oro:** los **humanos y Home Assistant** entran por `https://clima.xe1e.net`.
-> El **WS2910** hace push por **HTTP a la IP:8080** (los dispositivos Ecowitt no
-> soportan HTTPS). Ambos llegan al mismo VPS.
+> **Regla de oro:** humanos y Home Assistant entran por `https://clima.xe1e.net`
+> (a través de Cloudflare). El **WS2910** hace push por **HTTP a la IP:8080**
+> directamente (Ecowitt no soporta HTTPS y se salta Cloudflare).
 
 ```
-Navegador / HA ──HTTPS 443──▶ Caddy ──▶ dashboard:80 ──▶ receiver ──▶ InfluxDB
-WS2910         ──HTTP 8080──▶ dashboard:80 (nginx) ──/data/report──▶ receiver
+Navegador / HA ─HTTPS─▶ Cloudflare ─HTTPS(origin cert)─▶ Caddy ─▶ dashboard ─▶ receiver
+WS2910         ─────────HTTP:8080 directo a la IP────────▶ dashboard(nginx) ─/data/report─▶ receiver
 ```
 
 ---
 
-## Resumen: 3 cosas que hacer
+## Resumen: qué hacer
 
 | # | Dónde | Qué |
 |---|-------|-----|
-| 1 | Tu proveedor DNS de `xe1e.net` | Registro **A**: `clima` → `163.192.147.208` |
-| 2 | Consola Oracle Cloud | Abrir **80** y **443** (Security List + NSG) y en `iptables` del VPS |
-| 3 | VPS (por SSH) | Levantar el stack con el perfil `caddy` |
+| 1 | Cloudflare DNS | Registro **A** `clima` → `163.192.147.208`, **proxied (naranja)** ✅ (ya hecho) |
+| 2 | Cloudflare SSL/TLS | Modo **Full (strict)** + crear **Origin Certificate** |
+| 3 | Oracle Cloud | Abrir **80** y **443** (Security List + NSG + iptables) |
+| 4 | VPS | Poner el cert en `caddy/certs/` y `docker compose --profile caddy up -d` |
 
 ---
 
-## 1. DNS
+## 1. DNS (ya hecho ✅)
 
-En el panel DNS de `xe1e.net`, crea:
+Registro **A**: `clima` → `163.192.147.208`, con **proxy activo (nube naranja)**.
 
-```
-Tipo: A
-Nombre: clima            (queda clima.xe1e.net)
-Valor: 163.192.147.208   (IP pública del VPS)
-TTL: 300
-```
+> Con el proxy activo, `clima.xe1e.net` resuelve a IPs de Cloudflare (oculta tu
+> VPS). Eso está bien: el WS2910 usa la IP directa, no el dominio.
 
-Verifica la propagación:
+## 2. Cloudflare: modo SSL y Origin Certificate
 
-```bash
-nslookup clima.xe1e.net
-# o
-dig +short clima.xe1e.net
-```
+**a) Modo SSL/TLS:** en el panel de Cloudflare → **SSL/TLS → Overview** → elige
+**Full (strict)**. (Evita "Flexible": deja el tramo al origin sin cifrar y puede
+causar bucles de redirección.)
 
-Debe responder `163.192.147.208` antes de continuar (si no, Let's Encrypt fallará).
+**b) Crear el Origin Certificate:** Cloudflare → **SSL/TLS → Origin Server →
+Create Certificate**:
+1. Deja "Let Cloudflare generate a private key and a CSR".
+2. Hostnames: `clima.xe1e.net` (o `*.xe1e.net`).
+3. Validez: 15 años.
+4. Copia los dos bloques que te da:
+   - **Origin Certificate** → guárdalo como `origin.pem`
+   - **Private Key** → guárdalo como `origin.key`
 
-## 2. Abrir puertos 80 y 443 en Oracle
+**c) (Recomendado)** Activa **Always Use HTTPS** (SSL/TLS → Edge Certificates)
+para que Cloudflare redirija HTTP→HTTPS en el borde.
 
-Oracle exige abrir en **tres** niveles:
+**d) (Recomendado)** Evita que Cloudflare cachee la API: **Rules → Cache Rules**,
+crea una regla que para `URI Path` que **empiece con `/api`** ponga *Bypass cache*.
+(Los assets estáticos del dashboard sí pueden cachearse, mejora la velocidad.)
 
-**a) Security List** (VCN → Subnet → Security List → Ingress Rules): añade
-- `0.0.0.0/0` TCP **80**
-- `0.0.0.0/0` TCP **443**
+## 3. Abrir puertos 80 y 443 en Oracle
 
-**b) Network Security Group** (si la instancia usa NSG): las mismas dos reglas.
+En **tres** niveles:
 
-**c) iptables** en el VPS:
+**Security List / NSG** (Ingress): `0.0.0.0/0` TCP **80** y `0.0.0.0/0` TCP **443**.
 
+**iptables** en el VPS:
 ```bash
 sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
-sudo netfilter-persistent save   # persistir tras reinicio
+sudo netfilter-persistent save
 ```
 
-> El puerto **8080** ya está abierto (lo usa el push del WS2910). Se mantiene.
+> El **8080** ya está abierto (push del WS2910). Se mantiene.
+>
+> **Opcional (seguridad):** con el proxy de Cloudflare, puedes restringir 80/443
+> para que solo acepten las [IPs de Cloudflare](https://www.cloudflare.com/ips/)
+> y así nadie llegue al origin saltándose el proxy. No es obligatorio.
 
-## 3. Levantar el stack con Caddy
+## 4. Instalar el cert y levantar
 
 En el VPS, dentro del repo (ver [DEPLOY.md](DEPLOY.md) para el despliegue base):
 
 ```bash
 cd ~/ecowitt-weather-server-xe1e
 git pull
+
+# Pega los dos archivos del Origin Certificate:
+nano caddy/certs/origin.pem   # pega el "Origin Certificate"
+nano caddy/certs/origin.key   # pega la "Private Key"
+chmod 600 caddy/certs/origin.key
+
 docker compose --profile caddy up -d --build
-docker compose ps
+docker compose logs -f caddy   # sin errores de TLS
 ```
 
-Caddy pedirá el certificado a Let's Encrypt automáticamente (necesita DNS ya
-apuntando y puertos 80/443 abiertos). Verifica:
-
+Verifica:
 ```bash
-docker compose logs -f caddy      # ver la emisión del certificado
-curl -I https://clima.xe1e.net    # debe responder 200 con HTTPS
+curl -I https://clima.xe1e.net     # 200 vía Cloudflare
 ```
-
-Abre en el navegador: **https://clima.xe1e.net** 🔒
+Abre **https://clima.xe1e.net** 🔒
 
 ---
 
-## Configurar el WS2910 (sin cambios respecto al plan)
+## Configurar el WS2910 (sin cambios)
 
-El push sigue yendo por **IP y HTTP**, no por el dominio:
+Push por **IP y HTTP**, no por el dominio:
 
 | Campo | Valor |
 |-------|-------|
@@ -101,8 +113,6 @@ El push sigue yendo por **IP y HTTP**, no por el dominio:
 | Interval | 60 s |
 
 ## Home Assistant (remoto)
-
-Apunta el sensor REST al dominio con HTTPS:
 
 ```yaml
 sensor:
@@ -116,16 +126,21 @@ sensor:
 
 ---
 
-## Notas y problemas comunes
+## Problemas comunes
 
-- **El certificado no se emite:** casi siempre es DNS aún no propagado o el puerto
-  80 cerrado (Let's Encrypt valida por HTTP-01 en el 80). Revisa `docker compose logs caddy`.
-- **Cambiar de dominio:** edita `caddy/Caddyfile` (línea del dominio) y
-  `docker compose --profile caddy up -d` de nuevo.
-- **Certificados persistentes:** se guardan en el volumen `caddy-data`, así que
-  sobreviven a reinicios y no se re-emiten cada vez (evita el rate limit de Let's Encrypt).
-- **Redirección HTTP→HTTPS:** Caddy la hace automática para el dominio. El push
-  del WS2910 no se ve afectado porque usa la IP:8080, no el dominio.
-- **HTTPS opcional para el push:** si algún día quieres que el WS2910 también use
-  el dominio, habría que exponer `/data/report` por HTTP sin redirigir; por ahora
-  IP:8080 es lo más simple y robusto.
+- **Error 521/522 (Cloudflare no llega al origin):** puertos 80/443 cerrados en
+  Oracle, o Caddy no está levantado. Revisa Security List/NSG/iptables y `docker compose ps`.
+- **Bucle de redirección (ERR_TOO_MANY_REDIRECTS):** casi siempre por modo
+  **Flexible**; cámbialo a **Full (strict)**.
+- **Error de certificado / 526:** el Origin Certificate no está bien pegado o el
+  modo no es Full (strict). Revisa `caddy/certs/` y `docker compose logs caddy`.
+- **Datos viejos en HA/dashboard:** añade la Cache Rule de *bypass* para `/api`.
+
+---
+
+## Alternativa: DNS-only (grey cloud)
+
+Si prefieres **desactivar el proxy** (nube gris), no necesitas el Origin
+Certificate: Caddy saca un certificado Let's Encrypt automático. En ese caso usa
+el bloque alternativo comentado en `caddy/Caddyfile`. Pierdes las ventajas del
+proxy (ocultar IP, DDoS, caché), pero es más simple.

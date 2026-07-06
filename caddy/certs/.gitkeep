@@ -1,0 +1,4 @@
+# Coloca aquí el Origin Certificate de Cloudflare:
+#   origin.pem  (certificado)
+#   origin.key  (llave privada)
+# Ambos están ignorados por git (.gitignore: *.pem, *.key). Ver docs/DOMINIO-HTTPS.md.
