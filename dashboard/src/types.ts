@@ -72,6 +72,7 @@ export interface HistoryData {
   humidity_outdoor?: number
   wind_speed?: number
   rain_daily?: number
+  pressure_relative?: number
 }
 
 export interface DailyStats {

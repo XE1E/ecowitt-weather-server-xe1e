@@ -5,14 +5,22 @@ import { WeatherIcon } from './components/WeatherIcon'
 import { WeatherFX } from './components/WeatherFX'
 import { WindCompass } from './components/WindCompass'
 import { TemperatureChart } from './components/TemperatureChart'
-import { WeatherData } from './types'
+import { StatsSummary } from './components/StatsSummary'
+import { Forecast } from './components/Forecast'
+import { Astronomy } from './components/Astronomy'
+import { WeatherData, DailyStats } from './types'
 import { deriveCondition, relativeTime, isStale } from './weather'
+import { fetchForecast, ForecastResult } from './forecast'
 
 const API_URL = '/api/current'
+const STATS_URL = '/api/stats/daily'
 const REFRESH_INTERVAL = 60000 // 60 seconds
+const FORECAST_INTERVAL = 30 * 60000 // 30 minutes
 
 function App() {
   const [data, setData] = useState<WeatherData | null>(null)
+  const [stats, setStats] = useState<DailyStats | null>(null)
+  const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,11 +38,25 @@ function App() {
     } finally {
       setLoading(false)
     }
+    // Daily stats are best-effort; don't fail the whole dashboard if unavailable
+    try {
+      const res = await fetch(STATS_URL)
+      if (res.ok) setStats(await res.json())
+    } catch {
+      /* ignore */
+    }
   }
 
   useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, REFRESH_INTERVAL)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const load = () => fetchForecast().then(setForecast).catch(() => {})
+    load()
+    const interval = setInterval(load, FORECAST_INTERVAL)
     return () => clearInterval(interval)
   }, [])
 
@@ -66,6 +88,7 @@ function App() {
 
   const cond = deriveCondition(data)
   const offline = isStale(data.received_at)
+  const tempStats = stats?.stats?.temperature_outdoor
 
   // WN31 channels (1-8) that reported data
   const WN31_COLORS = [
@@ -115,10 +138,21 @@ function App() {
                 <p className="text-slate-400 mt-1">
                   Sensación {data.feels_like?.toFixed(1)}°C · Punto rocío {data.dew_point?.toFixed(1)}°C
                 </p>
+                {tempStats && (
+                  <p className="text-sm mt-1">
+                    <span className="text-red-300">▲ {tempStats.max?.toFixed(1)}°C</span>
+                    <span className="text-slate-500"> · </span>
+                    <span className="text-sky-300">▼ {tempStats.min?.toFixed(1)}°C</span>
+                    <span className="text-slate-500"> hoy</span>
+                  </p>
+                )}
               </div>
               <WeatherIcon name={cond.icon} size={140} alt={cond.label} />
             </div>
           </div>
+
+          {/* 7-day forecast */}
+          {forecast && <Forecast days={forecast.days} />}
 
           {/* Metric row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -192,6 +226,12 @@ function App() {
               iconName="humidity" color="text-cyan-400" offline={offline}
             />
           </div>
+
+          {/* Astronomy */}
+          {forecast && <Astronomy astro={forecast.astro} />}
+
+          {/* Daily stats summary */}
+          <StatsSummary stats={stats?.stats ?? null} />
 
           {/* WN31 extra sensors (up to 8 channels) */}
           {wn31Channels.length > 0 && (
