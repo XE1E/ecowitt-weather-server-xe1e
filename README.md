@@ -189,6 +189,27 @@ sensor:
 
 > La integración nativa Ecowitt de HA (push/webhook) solo conviene si HA está en la misma red que la estación; no es el caso aquí. Ver [Estudio de Viabilidad §11](docs/ESTUDIO_VIABILIDAD.md) y [DOMINIO-HTTPS.md](docs/DOMINIO-HTTPS.md).
 
+### Opción MQTT (auto-discovery)
+
+Si corres un broker MQTT accesible por HA, el receiver puede publicar los datos
+y **auto-crear las entidades** en Home Assistant (MQTT Discovery). Actívalo en `.env`:
+
+```bash
+MQTT_ENABLED=true
+MQTT_BROKER=192.168.1.100
+MQTT_PORT=1883
+MQTT_USERNAME=
+MQTT_PASSWORD=
+MQTT_TOPIC=weather/ecowitt
+HASS_DISCOVERY=true
+HASS_DISCOVERY_PREFIX=homeassistant
+```
+
+El receiver publica el estado en `weather/ecowitt/state` y los configs de
+discovery bajo `homeassistant/...` (sensores de temperatura, humedad, presión,
+viento, lluvia, UV, radiación, canales WN31 y baterías). HA crea el dispositivo
+"Ecowitt WS2910" automáticamente.
+
 ## Documentación
 
 - [Estudio de Viabilidad](docs/ESTUDIO_VIABILIDAD.md)

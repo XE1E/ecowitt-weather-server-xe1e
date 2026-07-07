@@ -15,6 +15,7 @@ from .services.parser import parse_ecowitt_data, describe_device
 from .services.converter import convert_to_metric
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
+from .services.mqtt_publisher import MqttPublisher
 
 # Configure logging
 logging.basicConfig(
@@ -53,6 +54,9 @@ latest_data: dict = {}
 # Weather alerts (Telegram / log)
 alert_service = AlertService(settings)
 
+# MQTT publisher (with Home Assistant discovery)
+mqtt_publisher = MqttPublisher(settings)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -64,6 +68,11 @@ async def startup_event():
         f"Alerts: {'enabled' if settings.alerts_enabled else 'disabled'}"
         f"{' (Telegram)' if settings.telegram_enabled else ''}"
     )
+    logger.info(
+        f"MQTT: {'enabled' if settings.mqtt_enabled else 'disabled'}"
+        f"{' (HA discovery)' if settings.hass_discovery else ''}"
+    )
+    mqtt_publisher.connect()
 
 
 @app.on_event("shutdown")
@@ -71,6 +80,7 @@ async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down Ecowitt Weather Station Receiver")
     storage.close()
+    mqtt_publisher.close()
 
 
 @app.get("/health")
@@ -126,6 +136,12 @@ async def receive_ecowitt_data(request: Request):
             f"Humidity: {parsed_data.get('humidity_outdoor')}%, "
             f"Wind: {parsed_data.get('wind_speed')} km/h"
         )
+
+        # Publish to MQTT (never let this break ingestion)
+        try:
+            mqtt_publisher.publish(parsed_data)
+        except Exception as e:
+            logger.error(f"MQTT publish failed: {e}")
 
         # Evaluate weather alerts (never let this break ingestion)
         try:
