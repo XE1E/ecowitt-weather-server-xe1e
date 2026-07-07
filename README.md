@@ -4,12 +4,18 @@ Sistema de captura, almacenamiento y visualización de datos meteorológicos usa
 
 ## Características
 
-- Recepción de datos via protocolo Ecowitt (HTTP POST)
-- API local HTTP para consultas en tiempo real
+- Recepción de datos via protocolo Ecowitt (HTTP POST) — WS2910 o gateway
+- API REST para consultas (actual, histórico, estadísticas del día)
 - Almacenamiento en InfluxDB (series temporales)
-- Dashboard web responsive
-- Integración con Home Assistant
-- Alertas configurables (lluvia, viento, temperatura)
+- **Dashboard web** con:
+  - Iconos meteorológicos animados (Meteocons/Basmilius, MIT) y efectos de clima (lluvia/nieve/rayos/niebla)
+  - Hero con condición actual, sensación, punto de rocío y máx/mín del día
+  - Tarjetas de humedad, presión, UV, viento (con brújula), lluvia e interiores
+  - Hasta 8 canales WN31 con aviso de batería baja
+  - Resumen del día (mín/máx/promedio) e histórico con selector de periodo (24h/7d/30d) y métrica
+  - Pronóstico de 7 días y astronomía (amanecer/atardecer, fase lunar) vía Open-Meteo
+  - Badges LIVE/OFFLINE según frescura del dato
+- Integración con Home Assistant (REST vía `https://clima.xe1e.net`)
 
 ## Hardware Recomendado
 
@@ -91,6 +97,23 @@ curl http://localhost:8080/health
    - **Port**: 8080
    - **Path**: /data/report/
    - **Interval**: 60 segundos
+
+## Configuración del Dashboard (ubicación)
+
+El pronóstico y la astronomía usan la ubicación de la estación. Ajústala en
+[`dashboard/src/config.ts`](dashboard/src/config.ts):
+
+```ts
+export const LOCATION = {
+  name: 'Ciudad de México',
+  latitude: 19.4326,
+  longitude: -99.1332,
+}
+```
+
+> Cambia `latitude`/`longitude` por las coordenadas reales de tu estación
+> (clic derecho en Google Maps → copiar). El dato del clima local (Open-Meteo)
+> es gratuito y no requiere API key.
 
 ## Estructura del Proyecto
 
