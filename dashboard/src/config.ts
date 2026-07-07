@@ -5,6 +5,6 @@
 // Puedes obtenerlas en https://www.google.com/maps (clic derecho -> copiar).
 export const LOCATION = {
   name: 'Ciudad de México',
-  latitude: 19.4326,
-  longitude: -99.1332,
+  latitude: 19.380359,
+  longitude: -99.174564,
 }
