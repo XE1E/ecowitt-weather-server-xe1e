@@ -1,0 +1,99 @@
+"""
+Weather Alerts Service
+
+Evaluates configurable thresholds against incoming (metric) weather data and
+sends notifications (Telegram, or the log as fallback). Keeps per-rule state so
+a sustained condition notifies once on trigger and once when it clears, instead
+of spamming on every reading.
+"""
+
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
+import logging
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+# Notifier signature: async (text: str) -> None
+Notifier = Callable[[str], Awaitable[None]]
+
+
+class AlertService:
+    def __init__(self, settings, notifier: Optional[Notifier] = None):
+        self.enabled: bool = settings.alerts_enabled
+        self.temp_high: float = settings.alert_temp_high
+        self.temp_low: float = settings.alert_temp_low
+        self.wind_high: float = settings.alert_wind_high
+        self.rain_rate: float = settings.alert_rain_rate
+
+        self._settings = settings
+        self._notifier: Notifier = notifier or self._default_notifier
+        # Rule keys currently in the "triggered" state
+        self.active: set[str] = set()
+
+    def evaluate(self, data: Dict[str, Any]) -> Dict[str, Tuple[bool, str]]:
+        """Return {rule_key: (triggered, message)} for the rules that apply."""
+        rules: Dict[str, Tuple[bool, str]] = {}
+
+        temp = data.get("temperature_outdoor")
+        if temp is not None:
+            rules["temp_high"] = (
+                temp >= self.temp_high,
+                f"🌡️ Temperatura alta: {temp}°C (≥ {self.temp_high}°C)",
+            )
+            rules["temp_low"] = (
+                temp <= self.temp_low,
+                f"🥶 Temperatura baja: {temp}°C (≤ {self.temp_low}°C)",
+            )
+
+        # Prefer gust for a wind alert, fall back to sustained wind speed
+        wind = data.get("wind_gust")
+        if wind is None:
+            wind = data.get("wind_speed")
+        if wind is not None:
+            rules["wind_high"] = (
+                wind >= self.wind_high,
+                f"💨 Viento fuerte: {wind} km/h (≥ {self.wind_high} km/h)",
+            )
+
+        rain = data.get("rain_rate")
+        if rain is not None:
+            rules["rain_rate"] = (
+                rain >= self.rain_rate,
+                f"🌧️ Lluvia intensa: {rain} mm/h (≥ {self.rain_rate} mm/h)",
+            )
+
+        return rules
+
+    async def process(self, data: Dict[str, Any]) -> None:
+        """Evaluate rules and notify on state transitions."""
+        if not self.enabled:
+            return
+
+        for key, (triggered, message) in self.evaluate(data).items():
+            if triggered and key not in self.active:
+                self.active.add(key)
+                await self._safe_notify(f"⚠️ ALERTA — {message}")
+            elif not triggered and key in self.active:
+                self.active.discard(key)
+                await self._safe_notify(f"✅ Normalizado — {message}")
+
+    async def _safe_notify(self, text: str) -> None:
+        try:
+            await self._notifier(text)
+        except Exception as e:  # never let a notification failure break ingestion
+            logger.error(f"Alert notification failed: {e}")
+
+    async def _default_notifier(self, text: str) -> None:
+        s = self._settings
+        if s.telegram_enabled and s.telegram_bot_token and s.telegram_chat_id:
+            url = f"https://api.telegram.org/bot{s.telegram_bot_token}/sendMessage"
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    url, json={"chat_id": s.telegram_chat_id, "text": text}
+                )
+                resp.raise_for_status()
+            logger.info(f"Telegram alert sent: {text}")
+        else:
+            # Telegram not configured: surface the alert in the log
+            logger.warning(f"[ALERT] {text}")

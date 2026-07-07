@@ -14,6 +14,7 @@ from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device
 from .services.converter import convert_to_metric
 from .services.storage import InfluxDBStorage
+from .services.alerts import AlertService
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +50,9 @@ storage = InfluxDBStorage(
 # Store latest data in memory for quick access
 latest_data: dict = {}
 
+# Weather alerts (Telegram / log)
+alert_service = AlertService(settings)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -56,6 +60,10 @@ async def startup_event():
     logger.info("Starting Ecowitt Weather Station Receiver")
     logger.info(f"InfluxDB URL: {settings.influxdb_url}")
     logger.info(f"Output unit system: {settings.output_unit_system}")
+    logger.info(
+        f"Alerts: {'enabled' if settings.alerts_enabled else 'disabled'}"
+        f"{' (Telegram)' if settings.telegram_enabled else ''}"
+    )
 
 
 @app.on_event("shutdown")
@@ -118,6 +126,12 @@ async def receive_ecowitt_data(request: Request):
             f"Humidity: {parsed_data.get('humidity_outdoor')}%, "
             f"Wind: {parsed_data.get('wind_speed')} km/h"
         )
+
+        # Evaluate weather alerts (never let this break ingestion)
+        try:
+            await alert_service.process(parsed_data)
+        except Exception as e:
+            logger.error(f"Alert processing failed: {e}")
 
         return {"status": "success", "message": "Data received"}
 
