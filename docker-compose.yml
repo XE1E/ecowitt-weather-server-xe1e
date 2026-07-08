@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Receiver - Receives data from Ecowitt gateway
   receiver:
