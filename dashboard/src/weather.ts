@@ -61,6 +61,39 @@ export function deriveCondition(d: WeatherData): Condition {
   return { icon: 'clear-night', label: 'Noche despejada', fx: 'none', intensity: 0 }
 }
 
+/** Wet-bulb temperature (°C) from temp (°C) and RH (%), Stull's approximation. */
+export function wetBulb(tempC: number, rh: number): number {
+  const t = tempC
+  return (
+    t * Math.atan(0.151977 * Math.sqrt(rh + 8.313659)) +
+    Math.atan(t + rh) -
+    Math.atan(rh - 1.676331) +
+    0.00391838 * Math.pow(rh, 1.5) * Math.atan(0.023101 * rh) -
+    4.686035
+  )
+}
+
+/** Beaufort scale from wind speed in km/h. */
+export function beaufort(kmh: number): { scale: number; label: string } {
+  const limits = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118]
+  const labels = [
+    'Calma', 'Ventolina', 'Brisa muy débil', 'Brisa débil', 'Brisa moderada',
+    'Brisa fresca', 'Brisa fuerte', 'Viento fuerte', 'Temporal', 'Temporal fuerte',
+    'Temporal duro', 'Temporal muy duro', 'Huracán',
+  ]
+  let scale = 0
+  for (const l of limits) {
+    if (kmh >= l) scale++
+    else break
+  }
+  return { scale, label: labels[scale] }
+}
+
+/** Cardinal direction (Spanish) from degrees. */
+export function cardinal(deg: number): string {
+  return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]
+}
+
 /** Human-friendly relative time, e.g. "hace 12 s" / "hace 3 min". */
 export function relativeTime(iso?: string): string {
   if (!iso) return '—'

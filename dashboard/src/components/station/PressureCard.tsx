@@ -1,0 +1,71 @@
+import { BarChart, Bar, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
+import { WeatherData, DailyStats, HistoryData } from '../../types'
+
+interface Props {
+  data: WeatherData
+  stats: DailyStats['stats'] | null
+  history: HistoryData[]
+}
+
+export function PressureCard({ data, stats, history }: Props) {
+  const p = data.pressure_relative
+  const s = stats?.pressure_relative
+  const series = history
+    .filter((h) => h.pressure_relative !== undefined)
+    .map((h) => ({ t: h._time, p: h.pressure_relative as number }))
+
+  // Tendencia: comparar el valor actual con ~3h atrás
+  let trend = 'Estable'
+  let trendColor = 'text-slate-300'
+  if (series.length > 6) {
+    const past = series[Math.max(0, series.length - 7)].p
+    const now = series[series.length - 1].p
+    const d = now - past
+    if (d > 0.6) { trend = 'Subiendo'; trendColor = 'text-emerald-300' }
+    else if (d < -0.6) { trend = 'Bajando'; trendColor = 'text-red-300' }
+  }
+
+  return (
+    <div className="card">
+      <p className="card-title">Presión</p>
+      <div className="flex items-end gap-2">
+        <span className="text-4xl font-bold text-violet-300">{(p ?? 0).toFixed(1)}</span>
+        <span className="text-slate-400 mb-1">hPa</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
+        <div>
+          <p className="text-xs text-slate-400">Mín</p>
+          <p className="font-semibold">{s?.min != null ? s.min.toFixed(1) : '--'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400">Máx</p>
+          <p className="font-semibold">{s?.max != null ? s.max.toFixed(1) : '--'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400">Tendencia</p>
+          <p className={`font-semibold ${trendColor}`}>{trend}</p>
+        </div>
+      </div>
+
+      {series.length > 1 && (
+        <div className="mt-3">
+          <p className="text-xs text-slate-500 mb-1">Últimas 24 h</p>
+          <div className="h-24">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={series}>
+                <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
+                  labelStyle={{ display: 'none' }}
+                  formatter={(v: number) => [`${v.toFixed(1)} hPa`, 'Presión']}
+                />
+                <Bar dataKey="p" fill="#a78bfa" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
