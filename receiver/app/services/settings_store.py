@@ -23,6 +23,33 @@ EDITABLE_KEYS = {
     "telegram_bot_token",
     "telegram_chat_id",
     "waqi_token",
+    # Control de calidad
+    "qc_enabled",
+    # Calibración
+    "cal_enabled",
+    "cal_temp_offset",
+    "cal_humidity_offset",
+    "cal_pressure_offset",
+    "cal_wind_mult",
+    "cal_rain_mult",
+    # Publicación a redes públicas
+    "wu_enabled", "wu_station_id", "wu_station_key",
+    "pws_enabled", "pws_station_id", "pws_password",
+    "windy_enabled", "windy_api_key",
+    "owm_enabled", "owm_api_key", "owm_station_id",
+    "cwop_enabled", "cwop_callsign", "cwop_passcode",
+    "cwop_latitude", "cwop_longitude",
+}
+
+# Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
+SECRET_KEYS = {
+    "telegram_bot_token",
+    "waqi_token",
+    "wu_station_key",
+    "pws_password",
+    "windy_api_key",
+    "owm_api_key",
+    "cwop_passcode",
 }
 
 

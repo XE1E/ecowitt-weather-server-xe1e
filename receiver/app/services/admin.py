@@ -57,7 +57,7 @@ def mask(value: Optional[str]) -> Optional[str]:
 
 
 def public_settings(settings) -> Dict[str, Any]:
-    """Ajustes actuales para el panel; los tokens van enmascarados."""
+    """Ajustes actuales para el panel; los tokens/claves van enmascarados."""
     return {
         "alerts_enabled": settings.alerts_enabled,
         "alert_temp_high": settings.alert_temp_high,
@@ -69,6 +69,32 @@ def public_settings(settings) -> Dict[str, Any]:
         "telegram_bot_token_masked": mask(settings.telegram_bot_token),
         "telegram_chat_id": settings.telegram_chat_id,
         "waqi_token_masked": mask(settings.waqi_token),
+        # Control de calidad
+        "qc_enabled": settings.qc_enabled,
+        # Calibración
+        "cal_enabled": settings.cal_enabled,
+        "cal_temp_offset": settings.cal_temp_offset,
+        "cal_humidity_offset": settings.cal_humidity_offset,
+        "cal_pressure_offset": settings.cal_pressure_offset,
+        "cal_wind_mult": settings.cal_wind_mult,
+        "cal_rain_mult": settings.cal_rain_mult,
+        # Publicación a redes públicas (claves enmascaradas)
+        "wu_enabled": settings.wu_enabled,
+        "wu_station_id": settings.wu_station_id,
+        "wu_station_key_masked": mask(settings.wu_station_key),
+        "pws_enabled": settings.pws_enabled,
+        "pws_station_id": settings.pws_station_id,
+        "pws_password_masked": mask(settings.pws_password),
+        "windy_enabled": settings.windy_enabled,
+        "windy_api_key_masked": mask(settings.windy_api_key),
+        "owm_enabled": settings.owm_enabled,
+        "owm_api_key_masked": mask(settings.owm_api_key),
+        "owm_station_id": settings.owm_station_id,
+        "cwop_enabled": settings.cwop_enabled,
+        "cwop_callsign": settings.cwop_callsign,
+        "cwop_passcode_masked": mask(settings.cwop_passcode),
+        "cwop_latitude": settings.cwop_latitude,
+        "cwop_longitude": settings.cwop_longitude,
     }
 
 

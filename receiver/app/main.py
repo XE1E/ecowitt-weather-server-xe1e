@@ -15,12 +15,16 @@ import logging
 
 from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device
-from .services.converter import convert_to_metric
+from .services.converter import convert_to_metric, calculate_derived_values
+from .services.calibration import apply_calibration
+from .services.quality import quality_check
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
 from .services.metar import get_metar
 from .services.air_quality import get_air_quality
+from .services.publishers import publish_all
+from .services import forecaster
 from .services import admin as adminsvc
 from .services import settings_store
 
@@ -163,9 +167,15 @@ async def receive_ecowitt_data(request: Request):
         # Parse Ecowitt protocol
         parsed_data = parse_ecowitt_data(raw_data)
 
-        # Convert units if needed
+        # Convert units if needed (sin derivados: se calculan tras calibración/QC)
         if settings.output_unit_system == "metric":
-            parsed_data = convert_to_metric(parsed_data)
+            parsed_data = convert_to_metric(parsed_data, compute_derived=False)
+
+        # Pipeline estilo WeeWX: calibrar -> control de calidad -> derivar
+        parsed_data = apply_calibration(parsed_data, settings)
+        parsed_data, _ = quality_check(parsed_data, settings)
+        if settings.output_unit_system == "metric":
+            parsed_data = calculate_derived_values(parsed_data)
 
         # Add metadata
         parsed_data["received_at"] = datetime.utcnow().isoformat()
@@ -195,6 +205,12 @@ async def receive_ecowitt_data(request: Request):
             await alert_service.process(parsed_data)
         except Exception as e:
             logger.error(f"Alert processing failed: {e}")
+
+        # Publicar a redes públicas (WU/PWSWeather/Windy/OWM) sin romper ingestión
+        try:
+            await publish_all(parsed_data, settings)
+        except Exception as e:
+            logger.error(f"Public publish failed: {e}")
 
         return {"status": "success", "message": "Data received"}
 
@@ -282,8 +298,8 @@ async def admin_get_settings(authorization: Optional[str] = Header(default=None)
 async def admin_save_settings(body: dict, authorization: Optional[str] = Header(default=None)):
     _require_admin(authorization)
     incoming = {k: v for k, v in body.items() if k in settings_store.EDITABLE_KEYS}
-    # No sobreescribir tokens si vienen vacíos (el form deja los tokens en blanco = conservar)
-    for tk in ("telegram_bot_token", "waqi_token"):
+    # No sobreescribir claves secretas si vienen vacías (en blanco = conservar)
+    for tk in settings_store.SECRET_KEYS:
         if tk in incoming and (incoming[tk] is None or incoming[tk] == ""):
             incoming.pop(tk)
     current = settings_store.load_overrides(settings.settings_file)
@@ -315,6 +331,18 @@ async def get_compare():
     except Exception as e:
         logger.error(f"Error getting comparison: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forecast/local")
+async def get_local_forecast():
+    """Pronóstico local por tendencia barométrica (datos de nuestra estación)."""
+    try:
+        p_now = latest_data.get("pressure_relative")
+        p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
+        return forecaster.local_forecast(p_now, p_3h)
+    except Exception as e:
+        logger.error(f"Error building local forecast: {e}")
+        return {"available": False, "reason": "error"}
 
 
 @app.get("/api/alerts")

@@ -240,6 +240,26 @@ class InfluxDBStorage:
             logger.error(f"Error getting daily stats: {e}")
             raise
 
+    async def get_field_value_ago(
+        self, field: str, start: str = "-3h", measurement: str = "weather"
+    ) -> Optional[float]:
+        """Valor más antiguo del campo dentro de la ventana (p. ej. hace ~3 h)."""
+        try:
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start})
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                |> filter(fn: (r) => r["_field"] == "{field}")
+                |> first()
+            '''
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    return record.get_value()
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching {field} ago: {e}")
+            return None
+
     async def get_comparison(self, measurement: str = "weather") -> Dict[str, Any]:
         """Promedios de las últimas 24 h vs las 24 h previas (aprox. 'vs ayer')."""
         def avg(field: str, start: str, stop: str):

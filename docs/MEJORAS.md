@@ -10,29 +10,36 @@ Pronóstico (Open-Meteo), Historia, Estadísticas, Radar (Ventusky), Astronomía
 Calidad del aire (WAQI). Alertas por umbral + Telegram, MQTT/HA discovery, toggle
 de unidades y FX, backups de InfluxDB, simulador de datos, cuenta PAYG.
 
+**Añadido después:** récords históricos con fecha/hora, tile "vs ayer", lluvia
+acumulada, exportar CSV, responsive + skeletons, **panel de administración**
+(`/pro/admin`, login usuario/contraseña, edición en caliente sin tocar el `.env`).
+Y las **mejoras inspiradas en WeeWX** (ver sección al final): control de calidad,
+calibración de sensores, variables derivadas ampliadas, pronóstico local por
+tendencia barométrica y publicación a redes públicas.
+
 ---
 
 ## 🔔 Fiabilidad / alertas
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 1 | **Alerta de "estación caída"** (avisar si no llegan datos en X min) | 🔴 Alto | 🟢 Bajo | ⏳ Top 3 |
-| 2 | **Terminar Telegram** (crear bot + token en .env) | 🔴 Alto | 🟢 Bajo (acción del usuario) | ⏳ Top 3 |
+| 1 | **Alerta de "estación caída"** (avisar si no llegan datos en X min) | 🔴 Alto | 🟢 Bajo | ✅ Hecho |
+| 2 | **Terminar Telegram** (crear bot + token) | 🔴 Alto | 🟢 Bajo (acción del usuario) | ⏳ Pendiente usuario (ya editable en panel) |
 | 3 | **Monitor de uptime externo** (Cloudflare Worker + cron) | 🟠 | 🟢 | Pendiente |
 
 ## 📊 Datos / features
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 4 | Récords "histórico" con fecha/hora de la máx/mín | 🟠 | 🟠 | Pendiente |
-| 5 | Tile "vs ayer" / vs promedio | 🟢 | 🟢 | Pendiente |
-| 6 | Gráfica de lluvia acumulada (barras diarias) | 🟢 | 🟢 | Pendiente |
-| 7 | Exportar CSV del histórico | 🟢 | 🟢 | Pendiente |
-| 8 | Configurar umbrales de alertas desde la web | 🟠 | 🟠 | Pendiente |
+| 4 | Récords "histórico" con fecha/hora de la máx/mín | 🟠 | 🟠 | ✅ Hecho |
+| 5 | Tile "vs ayer" / vs promedio | 🟢 | 🟢 | ✅ Hecho |
+| 6 | Gráfica de lluvia acumulada (barras diarias) | 🟢 | 🟢 | ✅ Hecho |
+| 7 | Exportar CSV del histórico | 🟢 | 🟢 | ✅ Hecho |
+| 8 | Configurar umbrales de alertas desde la web | 🟠 | 🟠 | ✅ Hecho (panel admin) |
 
 ## 🎨 UX / pulido
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 9 | **Revisar responsive/móvil** de `/pro` | 🟠 | 🟢 | ⏳ Top 3 |
-| 10 | **Skeletons de carga** (evitar tarjetas vacías) | 🟢 | 🟢 | ⏳ Top 3 |
+| 9 | **Revisar responsive/móvil** de `/pro` | 🟠 | 🟢 | ✅ Hecho |
+| 10 | **Skeletons de carga** (evitar tarjetas vacías) | 🟢 | 🟢 | ✅ Hecho |
 | 11 | Tema claro opcional | 🟢 | 🟠 | Pendiente |
 | 12 | i18n / inglés | 🟢 | 🔴 | Pendiente (decisión) |
 | 13 | PWA (instalable) | 🟢 | 🟠 | Pendiente |
@@ -41,7 +48,7 @@ de unidades y FX, backups de InfluxDB, simulador de datos, cuenta PAYG.
 ## 🔐 Administración / seguridad
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 19 | **Panel de administración web** (login seguro) para ver/editar ajustes (umbrales de alertas, unidades por defecto, toggles, tokens) sin tocar el `.env` a mano; y potencialmente ver estado/logs y reiniciar servicios | 🟠 Medio-alto | 🔴 Alto | Pendiente |
+| 19 | **Panel de administración web** (login seguro) para ver/editar ajustes (umbrales de alertas, calibración, QC, Telegram, WAQI, redes públicas) sin tocar el `.env`; edición en caliente | 🟠 Medio-alto | 🔴 Alto | ✅ Hecho |
 
 > Nota de seguridad para #19 (panel de administración): es una superficie sensible.
 > Requisitos: **autenticación fuerte** (usuario+contraseña o token), HTTPS (ya lo hay),
@@ -91,6 +98,78 @@ Desbloquea las alertas por umbral y la de estación caída.
    TELEGRAM_BOT_TOKEN=<token>
    TELEGRAM_CHAT_ID=<chat id>
    ```
-4. Aplica: `docker compose up -d receiver`
+4. Aplica: `docker compose up -d receiver` (o desde el **panel admin**, sin reiniciar).
 5. Prueba: `curl -s -X POST http://localhost:8080/data/report -d "tempf=104&humidity=20&model=WS2910&stationtype=SIMULATOR"`
    → debe llegar la alerta a Telegram.
+
+---
+
+# Mejoras inspiradas en WeeWX (y similares)
+
+> **Prioridad del proyecto (XE1E):** lo que más interesa es **sacar el máximo
+> provecho a los datos LOCALES generados por la estación Ecowitt**, porque son
+> los datos reales y cercanos → información precisa de nuestro punto exacto.
+> Todo lo de abajo va en esa dirección: primero limpiar y enriquecer el dato
+> propio, luego compartirlo.
+>
+> **Nota de alcance:** el proyecto, en sentido estricto, **no** trata de radios,
+> antenas ni cosas de radioafición. Eso no impide que, como radioaficionado, el
+> usuario se involucre; por eso **CWOP queda como opción válida** (no descartada).
+
+## Lo aprobado y ya implementado
+
+| # | Mejora | Qué hace | Editable en panel |
+|---|--------|----------|-------------------|
+| W1 | **Control de calidad (QC)** | Descarta lecturas imposibles (temp −80 °C, humedad 150 %, picos absurdos) antes de guardarlas. Evita ensuciar gráficas y disparar alertas falsas. | `qc_enabled` |
+| W2 | **Calibración de sensores** | Offsets (temp/humedad/presión) y multiplicadores (viento/lluvia) para corregir sesgos conocidos del sensor sin tocar hardware. | `cal_*` |
+| W3 | **Variables derivadas ampliadas** | Además de punto de rocío, sensación térmica, heat index y wind chill (ya existían): **humidex** y **base de nubes** estimada. Se recalculan tras calibrar/QC. | — |
+| W4 | **Pronóstico local propio** | Tendencia barométrica (presión a nivel del mar + su cambio en 3 h) → texto de pronóstico corto. **No depende de Open-Meteo**: es 100 % dato de nuestra estación. Endpoint `/api/forecast/local`. | — |
+| W5 | **Publicar a redes públicas** | Uploaders a Weather Underground, PWSWeather, Windy, OpenWeatherMap y **CWOP/APRS**. Toggle + credenciales por red. | `wu_*`, `pws_*`, `windy_*`, `owm_*`, `cwop_*` |
+
+El pipeline del receiver quedó así (orden tipo WeeWX):
+`parsear → convertir a métrico → calibrar → QC → derivar → guardar → MQTT → alertas → publicar`.
+
+## Redes públicas: a cuál conviene conectarse
+
+Estación en CDMX (zona con **pocas estaciones PWS** → tu aporte cuenta).
+
+| Red | Qué le aportas | Qué te aporta | Esfuerzo |
+|-----|----------------|---------------|----------|
+| **Weather Underground** | Alimenta el pronóstico de The Weather Company | **Mayor audiencia** + página propia + histórico largo + apps | Bajo |
+| **Windy.com** | Mejora cobertura del mapa en zona con pocas estaciones | **Mejor visibilidad visual** + mapa | Bajo |
+| **PWSWeather** | Alimenta productos de Aeris/Xweather | Página limpia, respaldo | Bajo |
+| **OpenWeatherMap** | Mejora su modelo donde hay pocos datos | **Acceso a su API** (útil para dev) | Medio |
+| **CWOP** | **Mayor aporte científico real**: entra a MADIS → modelos de NOAA, con QC del NWS | Validación/prestigio | Medio (origen APRS) |
+| Ecowitt.net | (nube del fabricante) | App móvil oficial | Nulo |
+
+- **Dónde aportas más:** CWOP (único que entra a los modelos de NOAA). Es de origen APRS/radioafición → **opción válida** dado que al usuario no le molesta involucrarse como radioaficionado.
+- **Qué te aporta más:** Weather Underground (audiencia + histórico + apps) y Windy (mapa).
+- **Decisión del usuario:** aportar a **TODAS** las redes (le gusta contribuir; algunas dan cuenta *business* de agradecimiento — misma filosofía que su receptor ADSB, que alimenta 5 sistemas). Las cinco quedan implementadas y activables desde el panel; solo falta poner las credenciales de cada una.
+- **Ampliables a futuro** (mismo patrón, si se quiere aún más alcance): Weathercloud, AWEKAS, Met Office WOW, Windguru.
+
+## Otros software tipo WeeWX (para revisar y sacar más ideas)
+
+| Software | Por qué mirarlo |
+|----------|-----------------|
+| **CumulusMX** ⭐ | Estación completa; soporta Ecowitt; tablero en tiempo real, **alarmas**, sube a WU/PWS/Windy/OWM/CWOP. Buenas páginas de **récords/extremos**, "este mes/año", **tendencias**. |
+| **Meteotemplate** ⭐ | Web (PHP) con **decenas de plugins**: récords, extremos, gráficas, webcam, luna, comparativas. Catálogo de ideas de **interfaz**. |
+| Skins de WeeWX: **Belchertown**, **neowx-material**, **weewx-wdc** | Referencia de **diseño/UX** para el pulido visual. |
+| **Grafana** ⭐ | Encaja con nuestro **InfluxDB**; dashboards meteorológicos comunitarios → ideas de métricas/agregaciones. |
+| **pywws** | Ligero; ideas de resúmenes horarios/diarios y agregación. |
+| **Meteobridge / Weather Display** | Comerciales; útiles por su **lista de integraciones**. |
+
+> **Pendiente de análisis conjunto:** el usuario revisará CumulusMX y Meteotemplate
+> con calma y anotaremos qué funciones sumar aquí.
+
+## Ideas WeeWX aún NO implementadas (candidatas futuras)
+
+Todas explotan el **dato local** (la prioridad):
+
+| Idea | Qué daría |
+|------|-----------|
+| **Reportes de climatología** (mensual/anual estilo NOAA) | Resúmenes con medias, extremos, días de lluvia, grados-día. Necesita meses de histórico. Buena sección "Climatología". |
+| **Grados-día** (calefacción/refrigeración) y **wind run** | Estadísticas agrónomas/energéticas del propio sitio. |
+| **Evapotranspiración (ET)** | Útil para riego/jardinería, con solar + temp + viento + humedad locales. |
+| **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC). |
+| **Almanaque ampliado** | Crepúsculos (civil/náutico/astronómico), % de iluminación lunar, orto/ocaso de planetas. |
+| **Acumuladores explícitos por intervalo** | Rollups min/max/avg por intervalo (además del dato crudo) para históricos largos más rápidos. |

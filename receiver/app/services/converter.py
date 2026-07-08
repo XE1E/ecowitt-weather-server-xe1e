@@ -33,7 +33,7 @@ def mph_to_ms(mph: float) -> float:
     return mph * 0.44704
 
 
-def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
+def convert_to_metric(data: Dict[str, Any], compute_derived: bool = True) -> Dict[str, Any]:
     """
     Convert all imperial units to metric.
 
@@ -45,6 +45,9 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
 
     Args:
         data: Dictionary with imperial units
+        compute_derived: if True, also compute derived values (dew point,
+            heat index, etc.). Set to False when calibration/QC will run first
+            and derived values are computed afterwards.
 
     Returns:
         Dictionary with metric units
@@ -112,7 +115,8 @@ def convert_to_metric(data: Dict[str, Any]) -> Dict[str, Any]:
             del result[imperial_key]
 
     # Calculate derived values
-    result = calculate_derived_values(result)
+    if compute_derived:
+        result = calculate_derived_values(result)
 
     return result
 
@@ -133,13 +137,27 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
     humidity = result.get("humidity_outdoor")
     wind_speed = result.get("wind_speed")
 
+    # Limpiar derivados previos para no dejar valores obsoletos si se recalcula
+    for k in ("dew_point", "heat_index", "wind_chill", "feels_like", "humidex", "cloud_base"):
+        result.pop(k, None)
+
     if temp is not None and humidity is not None:
+        dew = calculate_dew_point(temp, humidity)
         # Dew point (Magnus formula)
-        result["dew_point"] = round(calculate_dew_point(temp, humidity), 1)
+        result["dew_point"] = round(dew, 1)
+
+        # Humidex (índice canadiense de bochorno; útil sobre ~20 °C)
+        if temp >= 20:
+            result["humidex"] = round(calculate_humidex(temp, dew), 1)
 
         # Heat index (only valid for temp >= 27°C and humidity >= 40%)
         if temp >= 27 and humidity >= 40:
             result["heat_index"] = round(calculate_heat_index(temp, humidity), 1)
+
+        # Base de nubes estimada (m sobre el suelo), aprox. Espy
+        cb = calculate_cloud_base(temp, dew)
+        if cb is not None:
+            result["cloud_base"] = round(cb)
 
     if temp is not None and wind_speed is not None:
         # Wind chill (only valid for temp <= 10°C and wind >= 4.8 km/h)
@@ -180,6 +198,23 @@ def calculate_heat_index(temp_c: float, humidity: float) -> float:
 
     # Convert back to Celsius
     return (hi - 32) * 5 / 9
+
+
+def calculate_humidex(temp_c: float, dew_c: float) -> float:
+    """Humidex (Environment Canada): sensación de bochorno por temp + humedad."""
+    e = 6.11 * math.exp(5417.7530 * (1 / 273.16 - 1 / (273.15 + dew_c)))
+    return temp_c + 0.5555 * (e - 10.0)
+
+
+def calculate_cloud_base(temp_c: float, dew_c: float) -> float:
+    """
+    Altura estimada de la base de nubes (m sobre el suelo), fórmula de Espy:
+    ~125 m por cada °C de diferencia entre temperatura y punto de rocío.
+    """
+    spread = temp_c - dew_c
+    if spread <= 0:
+        return 0.0
+    return 125.0 * spread
 
 
 def calculate_wind_chill(temp_c: float, wind_kmh: float) -> float:

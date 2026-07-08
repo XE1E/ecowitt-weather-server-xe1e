@@ -6,6 +6,8 @@ export interface WeatherData {
   dew_point?: number
   heat_index?: number
   wind_chill?: number
+  humidex?: number
+  cloud_base?: number
 
   // Humidity
   humidity_outdoor: number

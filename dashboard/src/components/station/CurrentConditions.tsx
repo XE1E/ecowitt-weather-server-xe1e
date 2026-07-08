@@ -29,6 +29,12 @@ export function CurrentConditions({ data }: { data: WeatherData }) {
         <p>Sensación <span className="text-slate-200">{u.temp(data.feels_like)}{u.tempU}</span></p>
         <p>Punto de rocío <span className="text-slate-200">{u.temp(data.dew_point)}{u.tempU}</span></p>
         {wb !== undefined && <p>Bulbo húmedo <span className="text-slate-200">{u.temp(wb)}{u.tempU}</span></p>}
+        {data.humidex !== undefined && (
+          <p>Humidex <span className="text-slate-200">{u.temp(data.humidex)}{u.tempU}</span></p>
+        )}
+        {data.cloud_base !== undefined && (
+          <p>Base de nubes <span className="text-slate-200">≈ {Math.round(data.cloud_base).toLocaleString('es-MX')} m</span></p>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/10">

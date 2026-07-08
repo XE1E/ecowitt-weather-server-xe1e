@@ -4,6 +4,7 @@ import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
 import { WindCard } from '../components/station/WindCard'
 import { PressureCard } from '../components/station/PressureCard'
+import { LocalForecastCard } from '../components/station/LocalForecastCard'
 import { ForecastCard } from '../components/station/ForecastCard'
 import { StationTempChart } from '../components/station/StationTempChart'
 import { PrecipitationCard } from '../components/station/PrecipitationCard'
@@ -16,7 +17,7 @@ import { RadarCard } from '../components/station/RadarCard'
 import { MetarCard } from '../components/station/MetarCard'
 
 export function HomePage() {
-  const { data, stats, history, forecast, compare, loading } = useStationData()
+  const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
 
   if (loading && !data) {
     return (
@@ -38,6 +39,7 @@ export function HomePage() {
           <CurrentConditions data={data} />
           <WindCard data={data} />
           <PressureCard data={data} stats={stats} history={history} />
+          <LocalForecastCard lf={localForecast} />
         </div>
         <div className="space-y-4">
           <ForecastCard forecast={forecast} />
