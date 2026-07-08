@@ -2,8 +2,21 @@ import { useState, useEffect } from 'react'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { useUnits } from '../units'
 
-interface Stat { min: number | null; max: number | null; avg: number | null }
+interface Stat {
+  min: number | null
+  max: number | null
+  avg: number | null
+  min_time?: string | null
+  max_time?: string | null
+}
 type Stats = Record<string, Stat>
+
+function fmtWhen(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 const PERIODS = [
   { k: '7d', label: '7 días', start: '-7d' },
@@ -81,7 +94,9 @@ export function StatisticsPage() {
                   </div>
                   <div className="text-right text-sm">
                     <p className="text-red-300">▲ máx {s.max != null ? `${m.fmt(s.max)} ${m.unit}` : '--'}</p>
-                    <p className="text-sky-300">▼ mín {s.min != null ? `${m.fmt(s.min)} ${m.unit}` : '--'}</p>
+                    {fmtWhen(s.max_time) && <p className="text-[10px] text-slate-500 -mt-0.5">{fmtWhen(s.max_time)}</p>}
+                    <p className="text-sky-300 mt-1">▼ mín {s.min != null ? `${m.fmt(s.min)} ${m.unit}` : '--'}</p>
+                    {fmtWhen(s.min_time) && <p className="text-[10px] text-slate-500 -mt-0.5">{fmtWhen(s.min_time)}</p>}
                   </div>
                 </div>
               </div>

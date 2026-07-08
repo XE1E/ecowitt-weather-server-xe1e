@@ -196,21 +196,23 @@ class InfluxDBStorage:
                     |> group()
                 '''
 
-                # Min
+                # Min (min()/max() conservan el _time del registro extremo)
                 min_query = query + '|> min()'
                 min_result = self.query_api.query(min_query)
-                min_val = None
+                min_val = min_time = None
                 for table in min_result:
                     for record in table.records:
                         min_val = record.get_value()
+                        min_time = record.get_time()
 
                 # Max
                 max_query = query + '|> max()'
                 max_result = self.query_api.query(max_query)
-                max_val = None
+                max_val = max_time = None
                 for table in max_result:
                     for record in table.records:
                         max_val = record.get_value()
+                        max_time = record.get_time()
 
                 # Mean
                 mean_query = query + '|> mean()'
@@ -222,8 +224,10 @@ class InfluxDBStorage:
 
                 stats[field] = {
                     "min": round(min_val, 1) if min_val is not None else None,
+                    "min_time": min_time.isoformat() if min_time is not None else None,
                     "max": round(max_val, 1) if max_val is not None else None,
-                    "avg": round(mean_val, 1) if mean_val is not None else None
+                    "max_time": max_time.isoformat() if max_time is not None else None,
+                    "avg": round(mean_val, 1) if mean_val is not None else None,
                 }
 
             return {
