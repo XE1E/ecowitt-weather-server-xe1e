@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
 
+    # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
+    waqi_token: Optional[str] = None
+
     # Server
     debug: bool = False
 

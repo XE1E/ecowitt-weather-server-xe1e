@@ -17,6 +17,7 @@ from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
 from .services.metar import get_metar
+from .services.air_quality import get_air_quality
 
 # Configure logging
 logging.basicConfig(
@@ -235,4 +236,14 @@ async def get_metar_data(station: str = "MMMX"):
         return await get_metar(station)
     except Exception as e:
         logger.error(f"Error getting METAR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/airquality")
+async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
+    """Air quality (WAQI) for a location; token from settings (WAQI_TOKEN)."""
+    try:
+        return await get_air_quality(lat, lon, settings.waqi_token)
+    except Exception as e:
+        logger.error(f"Error getting air quality: {e}")
         raise HTTPException(status_code=500, detail=str(e))

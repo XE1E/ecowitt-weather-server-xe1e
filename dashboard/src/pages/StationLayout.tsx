@@ -14,8 +14,9 @@ const NAV_ACTIVE = [
   { to: '/pro/estadisticas', label: 'Estadísticas', end: false },
   { to: '/pro/radar', label: 'Radar', end: false },
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
+  { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
 ]
-const NAV_SOON = ['Calidad del aire']
+const NAV_SOON: string[] = []
 
 export function StationLayout() {
   const { data } = useStationData()
