@@ -153,6 +153,31 @@ docker compose exec influxdb influx restore /tmp/restore -t "$INFLUXDB_TOKEN" --
 
 ---
 
+## 9. Simulador de datos (opcional, mientras llega el hardware)
+
+Para ver el dashboard "vivo" antes de tener el WS2910, un script empuja lecturas
+realistas. Los datos se marcan con `stationtype=SIMULATOR`.
+
+```bash
+# Prueba puntual
+python3 scripts/simulate.py
+
+# Cron cada minuto
+( crontab -l 2>/dev/null; echo "* * * * * python3 $HOME/ecowitt-weather-server-xe1e/scripts/simulate.py >> $HOME/ecowitt-backups/sim.log 2>&1" ) | crontab -
+```
+
+**Apagar y limpiar antes de conectar la estación real:**
+```bash
+# 1) Quitar el cron del simulador
+crontab -l | grep -v simulate.py | crontab -
+
+# 2) Borrar TODOS los datos simulados de InfluxDB (aún no hay datos reales)
+TOKEN=$(grep -E '^INFLUXDB_TOKEN=' .env | cut -d= -f2-)
+docker compose exec influxdb influx delete --bucket ecowitt \
+  --start 2020-01-01T00:00:00Z --stop 2035-01-01T00:00:00Z \
+  --predicate '_measurement="weather"' -t "$TOKEN"
+```
+
 ## Notas
 
 - **HTTPS + dominio (`clima.xe1e.net`):** ver **[DOMINIO-HTTPS.md](DOMINIO-HTTPS.md)**.
