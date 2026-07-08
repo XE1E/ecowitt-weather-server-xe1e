@@ -10,6 +10,11 @@ services:
     #   - "${SERVER_PORT:-8080}:8080"
     expose:
       - "8080"
+    volumes:
+      - receiver-data:/data
+    # Carga TODO el .env al contenedor (alertas, telegram, waqi, admin, etc.)
+    env_file:
+      - .env
     environment:
       - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
@@ -114,6 +119,7 @@ volumes:
   grafana-data:
   caddy-data:
   caddy-config:
+  receiver-data:
 
 networks:
   ecowitt-network:

@@ -5,9 +5,11 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 import asyncio
 import logging
 
@@ -19,6 +21,8 @@ from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
 from .services.metar import get_metar
 from .services.air_quality import get_air_quality
+from .services import admin as adminsvc
+from .services import settings_store
 
 # Configure logging
 logging.basicConfig(
@@ -103,6 +107,15 @@ async def startup_event():
             logger.info("Loaded last reading from InfluxDB into memory")
     except Exception as e:
         logger.warning(f"Could not preload last reading: {e}")
+
+    # Cargar ajustes editables persistidos (panel admin) y aplicarlos
+    try:
+        overrides = settings_store.load_overrides(settings.settings_file)
+        if overrides:
+            adminsvc.apply_overrides(settings, alert_service, overrides)
+            logger.info(f"Applied {len(overrides)} saved setting(s) from {settings.settings_file}")
+    except Exception as e:
+        logger.warning(f"Could not load saved settings: {e}")
 
     # Vigilante de estación caída (solo si las alertas están activas)
     if settings.alerts_enabled:
@@ -239,6 +252,59 @@ async def get_records(start: str = "-30d"):
     except Exception as e:
         logger.error(f"Error getting records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class LoginBody(BaseModel):
+    user: str
+    password: str
+
+
+def _require_admin(authorization: Optional[str]) -> None:
+    if not adminsvc.valid_session(adminsvc.bearer_token(authorization)):
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+
+@app.post("/api/admin/login")
+async def admin_login(body: LoginBody):
+    token = adminsvc.login(settings, body.user, body.password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Credenciales inválidas o panel deshabilitado")
+    return {"token": token}
+
+
+@app.get("/api/admin/settings")
+async def admin_get_settings(authorization: Optional[str] = Header(default=None)):
+    _require_admin(authorization)
+    return adminsvc.public_settings(settings)
+
+
+@app.post("/api/admin/settings")
+async def admin_save_settings(body: dict, authorization: Optional[str] = Header(default=None)):
+    _require_admin(authorization)
+    incoming = {k: v for k, v in body.items() if k in settings_store.EDITABLE_KEYS}
+    # No sobreescribir tokens si vienen vacíos (el form deja los tokens en blanco = conservar)
+    for tk in ("telegram_bot_token", "waqi_token"):
+        if tk in incoming and (incoming[tk] is None or incoming[tk] == ""):
+            incoming.pop(tk)
+    current = settings_store.load_overrides(settings.settings_file)
+    current.update(incoming)
+    settings_store.save_overrides(settings.settings_file, current)
+    adminsvc.apply_overrides(settings, alert_service, current)
+    return {"status": "ok", "applied": list(incoming.keys())}
+
+
+@app.get("/api/admin/status")
+async def admin_status(authorization: Optional[str] = Header(default=None)):
+    _require_admin(authorization)
+    return {
+        "station_offline": alert_service.station_offline,
+        "last_received": latest_data.get("received_at"),
+        "active_alerts": [{"key": k, "message": m} for k, m in alert_service.active.items()],
+        "alerts_enabled": settings.alerts_enabled,
+        "telegram_enabled": settings.telegram_enabled,
+        "waqi_configured": bool(settings.waqi_token),
+        "admin_enabled": adminsvc.admin_enabled(settings),
+    }
 
 
 @app.get("/api/compare")

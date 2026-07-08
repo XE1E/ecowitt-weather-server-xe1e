@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None
 
+    # Panel de administración (si faltan credenciales, el panel queda deshabilitado)
+    admin_user: Optional[str] = None
+    admin_password: Optional[str] = None
+    settings_file: str = "/data/settings.json"
+
     # Server
     debug: bool = False
 

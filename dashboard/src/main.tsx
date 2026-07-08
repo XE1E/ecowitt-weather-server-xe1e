@@ -10,6 +10,7 @@ import { StatisticsPage } from './pages/StatisticsPage'
 import { RadarPage } from './pages/RadarPage'
 import { AstronomyPage } from './pages/AstronomyPage'
 import { AirQualityPage } from './pages/AirQualityPage'
+import { AdminPage } from './pages/AdminPage'
 import { UnitsProvider } from './units'
 import { StationDataProvider } from './station-data'
 import './index.css'
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="radar" element={<RadarPage />} />
                 <Route path="astronomia" element={<AstronomyPage />} />
                 <Route path="calidad-aire" element={<AirQualityPage />} />
+                <Route path="admin" element={<AdminPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/pro" replace />} />
             </Routes>

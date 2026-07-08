@@ -136,7 +136,9 @@ export function StationLayout() {
               precipitación, astronomía (sol y luna), METAR del aeropuerto MMMX e histórico y récords. Los
               datos se actualizan de forma continua. Proyecto personal sobre el clima.
             </p>
-            <p className="text-center text-slate-600 mt-6">© 2026 Estación XE1E · {LOCATION.name}</p>
+            <p className="text-center text-slate-600 mt-6">
+              © 2026 Estación XE1E · {LOCATION.name} · <NavLink to="/pro/admin" className="hover:text-slate-400">⚙ Admin</NavLink>
+            </p>
           </footer>
         </div>
       </div>
