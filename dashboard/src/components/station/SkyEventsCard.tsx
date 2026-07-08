@@ -1,8 +1,8 @@
 import { upcomingMoonEvents } from '../../forecast'
 import { WeatherIcon } from '../WeatherIcon'
 
-export function SkyEventsCard() {
-  const events = upcomingMoonEvents(4)
+export function SkyEventsCard({ count = 4 }: { count?: number }) {
+  const events = upcomingMoonEvents(count)
   if (events.length === 0) return null
 
   return (
