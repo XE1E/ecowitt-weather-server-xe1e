@@ -1,18 +1,32 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import App from './App'
-import { StationPage } from './pages/StationPage'
+import { StationLayout } from './pages/StationLayout'
+import { HomePage } from './pages/HomePage'
+import { ForecastPage } from './pages/ForecastPage'
 import { UnitsProvider } from './units'
+import { StationDataProvider } from './station-data'
 import './index.css'
 
-// Router mínimo sin dependencias: /pro -> página estilo WeatherNode, / -> dashboard clásico
+// /pro* -> app de la estación (WeatherNode-style) con router; / -> dashboard clásico
 const isStation = window.location.pathname.startsWith('/pro')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {isStation ? (
       <UnitsProvider>
-        <StationPage />
+        <StationDataProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/pro" element={<StationLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="pronostico" element={<ForecastPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/pro" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </StationDataProvider>
       </UnitsProvider>
     ) : (
       <App />
