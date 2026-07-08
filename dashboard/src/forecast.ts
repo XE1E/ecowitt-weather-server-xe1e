@@ -68,6 +68,42 @@ export function moonPhase(date: Date): { icon: string; label: string } {
   return { icon: 'moon-new', label: 'Luna nueva' }
 }
 
+export interface SkyEvent {
+  date: string
+  icon: string
+  label: string
+}
+
+/** Próximas fases lunares principales (nueva, cuartos, llena). */
+export function upcomingMoonEvents(count = 4): SkyEvent[] {
+  const targets: [number, string, string][] = [
+    [0, 'moon-new', 'Luna nueva'],
+    [0.25, 'moon-first-quarter', 'Cuarto creciente'],
+    [0.5, 'moon-full', 'Luna llena'],
+    [0.75, 'moon-last-quarter', 'Cuarto menguante'],
+  ]
+  const synodic = 29.530588853
+  const knownNew = Date.UTC(2000, 0, 6, 18, 14, 0)
+  const frac = (d: Date) => {
+    let age = ((d.getTime() - knownNew) / 86400000) % synodic
+    if (age < 0) age += synodic
+    return age / synodic
+  }
+  const events: SkyEvent[] = []
+  const start = new Date()
+  let prev = frac(start)
+  for (let day = 1; day <= 45 && events.length < count; day++) {
+    const d = new Date(start.getTime() + day * 86400000)
+    const f = frac(d)
+    for (const [t, icon, label] of targets) {
+      const crossed = prev <= f ? t > prev && t <= f : t > prev || t <= f
+      if (crossed) events.push({ date: d.toISOString().slice(0, 10), icon, label })
+    }
+    prev = f
+  }
+  return events.slice(0, count)
+}
+
 export async function fetchForecast(): Promise<ForecastResult> {
   const { latitude, longitude } = LOCATION
   const url =

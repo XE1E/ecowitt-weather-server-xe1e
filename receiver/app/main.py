@@ -16,6 +16,7 @@ from .services.converter import convert_to_metric
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
+from .services.metar import get_metar
 
 # Configure logging
 logging.basicConfig(
@@ -205,4 +206,23 @@ async def get_daily_stats():
         return stats
     except Exception as e:
         logger.error(f"Error getting daily stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/alerts")
+async def get_alerts():
+    """Current active weather alerts (from the alert service)."""
+    return {
+        "enabled": alert_service.enabled,
+        "active": [{"key": k, "message": m} for k, m in alert_service.active.items()],
+    }
+
+
+@app.get("/api/metar")
+async def get_metar_data(station: str = "MMMX"):
+    """Latest METAR for an airport (default MMMX / Ciudad de México)."""
+    try:
+        return await get_metar(station)
+    except Exception as e:
+        logger.error(f"Error getting METAR: {e}")
         raise HTTPException(status_code=500, detail=str(e))

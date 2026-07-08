@@ -12,6 +12,12 @@ import { ForecastCard } from '../components/station/ForecastCard'
 import { StationTempChart } from '../components/station/StationTempChart'
 import { PrecipitationCard } from '../components/station/PrecipitationCard'
 import { UvSolarCard } from '../components/station/UvSolarCard'
+import { SunMoonCard } from '../components/station/SunMoonCard'
+import { SkyEventsCard } from '../components/station/SkyEventsCard'
+import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
+import { AlertsPanel } from '../components/station/AlertsPanel'
+import { RadarCard } from '../components/station/RadarCard'
+import { MetarCard } from '../components/station/MetarCard'
 import { LOCATION } from '../config'
 
 const REFRESH = 60000 // 1 min (los datos no necesitan ser instantáneos)
@@ -112,14 +118,48 @@ export function StationPage() {
                   <UvSolarCard data={data} />
                 </div>
                 <div className="space-y-4">
-                  {/* Fase 3: sol/luna, sky events, sensores extra, radar, alertas */}
+                  <SunMoonCard astro={forecast?.astro ?? null} />
+                  <AlertsPanel />
+                  <SkyEventsCard />
+                  <ExtraSensorsCard data={data} />
                 </div>
+              </div>
+
+              {/* Radar + METAR (ancho completo) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <RadarCard />
+                <MetarCard />
               </div>
             </>
           )}
 
-          <footer className="mt-8 text-center text-slate-500 text-xs">
-            <p>Estación XE1E · {LOCATION.name} · datos vía Ecowitt · pronóstico Open-Meteo</p>
+          <footer className="mt-10 pt-6 border-t border-white/10 text-slate-400 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <p className="font-semibold text-slate-300 mb-1">Estación</p>
+                <p>Hardware: Ecowitt WS2910 + WS69 + WN31</p>
+                <p>Ubicación: {LOCATION.label}</p>
+                <p>Coordenadas: {LOCATION.latitude}, {LOCATION.longitude}</p>
+                <p>Datos desde: 2026</p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-300 mb-1">Datos</p>
+                <p>Estación vía protocolo Ecowitt</p>
+                <p>Pronóstico y astronomía: Open-Meteo</p>
+                <p>METAR: aviationweather.gov (MMMX)</p>
+                <p>Radar: Windy</p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-300 mb-1">Proyecto</p>
+                <p>
+                  <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e" className="text-blue-400 hover:text-blue-300">
+                    GitHub — ecowitt-weather-server-xe1e
+                  </a>
+                </p>
+                <p>Stack propio (FastAPI + InfluxDB + React)</p>
+              </div>
+            </div>
+            <p className="text-center text-slate-600 mt-6">© 2026 Estación XE1E · {LOCATION.name}</p>
           </footer>
         </div>
       </div>

@@ -28,8 +28,9 @@ class AlertService:
 
         self._settings = settings
         self._notifier: Notifier = notifier or self._default_notifier
-        # Rule keys currently in the "triggered" state
-        self.active: set[str] = set()
+        # Rule keys currently triggered -> their message (dict so /api/alerts
+        # can expose the active alerts; `key in self.active` still works)
+        self.active: Dict[str, str] = {}
 
     def evaluate(self, data: Dict[str, Any]) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply."""
@@ -72,10 +73,10 @@ class AlertService:
 
         for key, (triggered, message) in self.evaluate(data).items():
             if triggered and key not in self.active:
-                self.active.add(key)
+                self.active[key] = message
                 await self._safe_notify(f"⚠️ ALERTA — {message}")
             elif not triggered and key in self.active:
-                self.active.discard(key)
+                self.active.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}")
 
     async def _safe_notify(self, text: str) -> None:
