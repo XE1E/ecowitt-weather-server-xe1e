@@ -218,6 +218,7 @@ viento, lluvia, UV, radiación, canales WN31 y baterías). HA crea el dispositiv
 - [Dominio y HTTPS (Cloudflare)](docs/DOMINIO-HTTPS.md)
 - [Cloudflare Workers — opciones](docs/CLOUDFLARE-WORKERS.md)
 - [Plan de páginas del cintillo](docs/PLAN-PAGINAS.md)
+- [Plan de mejoras (roadmap)](docs/MEJORAS.md)
 - [Referencia API](docs/api-reference.md)
 
 ## Licencia
