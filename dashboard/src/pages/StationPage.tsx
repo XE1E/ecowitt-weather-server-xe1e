@@ -8,6 +8,10 @@ import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
 import { WindCard } from '../components/station/WindCard'
 import { PressureCard } from '../components/station/PressureCard'
+import { ForecastCard } from '../components/station/ForecastCard'
+import { StationTempChart } from '../components/station/StationTempChart'
+import { PrecipitationCard } from '../components/station/PrecipitationCard'
+import { UvSolarCard } from '../components/station/UvSolarCard'
 import { LOCATION } from '../config'
 
 const REFRESH = 60000 // 1 min (los datos no necesitan ser instantáneos)
@@ -74,8 +78,8 @@ export function StationPage() {
           {/* Header */}
           <header className="flex items-center justify-between flex-wrap gap-2 mb-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">El clima local en {LOCATION.name}</h1>
-              <p className="text-xs text-slate-400">Estación XE1E · Ecowitt WS2910 + WS69</p>
+              <h1 className="text-xl md:text-2xl font-bold">Estación Clima XE1E en {LOCATION.name}</h1>
+              <p className="text-xs text-slate-400">{LOCATION.label}</p>
             </div>
             <div className="flex items-center gap-3 text-sm text-slate-300">
               <span className="font-mono">
@@ -102,7 +106,10 @@ export function StationPage() {
                   <PressureCard data={data} stats={stats} history={history} />
                 </div>
                 <div className="space-y-4">
-                  {/* Fase 2: pronóstico, gráfico temp, precipitación, UV/solar */}
+                  <ForecastCard forecast={forecast} />
+                  <StationTempChart history={history} forecast={forecast} />
+                  <PrecipitationCard data={data} forecast={forecast} />
+                  <UvSolarCard data={data} />
                 </div>
                 <div className="space-y-4">
                   {/* Fase 3: sol/luna, sky events, sensores extra, radar, alertas */}

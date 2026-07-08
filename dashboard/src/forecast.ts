@@ -16,8 +16,16 @@ export interface AstroData {
   moonLabel: string
 }
 
+export interface ForecastHour {
+  time: string       // ISO
+  temp: number
+  precipProb: number
+  icon: string
+}
+
 export interface ForecastResult {
   days: ForecastDay[]
+  hours: ForecastHour[]
   astro: AstroData
 }
 
@@ -65,6 +73,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
+    `&hourly=weather_code,temperature_2m,precipitation_probability` +
     `&timezone=auto&forecast_days=7`
 
   const res = await fetch(url)
@@ -84,13 +93,27 @@ export async function fetchForecast(): Promise<ForecastResult> {
     }
   })
 
+  // Horario: desde "ahora" hacia adelante (próximas ~24 h)
+  const h = j.hourly
+  const nowMs = Date.now()
+  const hours: ForecastHour[] = []
+  for (let i = 0; i < h.time.length && hours.length < 24; i++) {
+    if (new Date(h.time[i]).getTime() < nowMs - 3600000) continue
+    hours.push({
+      time: h.time[i],
+      temp: h.temperature_2m[i],
+      precipProb: h.precipitation_probability?.[i] ?? 0,
+      icon: wmoToIcon(h.weather_code[i]).icon,
+    })
+  }
+
   const astro: AstroData = {
     sunrise: d.sunrise[0],
     sunset: d.sunset[0],
     ...moonPhaseFields(),
   }
 
-  return { days, astro }
+  return { days, hours, astro }
 }
 
 function moonPhaseFields() {
