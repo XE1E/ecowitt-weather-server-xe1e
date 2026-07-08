@@ -174,7 +174,7 @@ ecowitt-weather-station/
 
 ## Integración Home Assistant
 
-HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS** (vía HTTPS con el dominio):
+HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS** (vía HTTPS con el dominio). Config lista para usar (31 sensores, integración `rest:`): [`homeassistant/ecowitt.yaml`](homeassistant/ecowitt.yaml) — cópiala a `<config>/packages/` y actívala. Ejemplo mínimo:
 
 ```yaml
 # configuration.yaml

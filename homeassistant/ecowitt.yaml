@@ -1,238 +1,241 @@
-# Home Assistant - Ecowitt Weather Station Configuration
+# Home Assistant - Estación Ecowitt vía API REST del VPS (Arquitectura B)
+# ---------------------------------------------------------------------------
+# HA está en una red remota; lee los datos desde el servidor por HTTPS.
+# Una sola petición cada 60s a /api/current expone todos los sensores.
 #
-# Hay dos formas de integrar Ecowitt con Home Assistant:
+# CÓMO USARLO (recomendado: paquetes)
+#   1) En configuration.yaml (una vez):
+#        homeassistant:
+#          packages: !include_dir_named packages
+#   2) Copia este archivo a  <config>/packages/ecowitt.yaml
+#   3) Revisa la config (Ajustes → Sistema → Reiniciar → Comprobar config) y reinicia.
 #
-# OPCIÓN 1: Integración Oficial (Recomendada)
-# - Ir a Configuración → Dispositivos y Servicios → Agregar integración → Ecowitt
-# - Detecta automáticamente el gateway GW3000 en la red local
-#
-# OPCIÓN 2: REST Sensors (usando este servidor)
-# - Copia este archivo a tu directorio de configuración de HA
-# - Incluye en configuration.yaml: sensor: !include ecowitt.yaml
+# Alternativa sin paquetes: pega el bloque `rest:` de abajo en tu configuration.yaml.
+# ---------------------------------------------------------------------------
 
-# ============================================
-# REST Sensor - Datos del servidor Ecowitt
-# ============================================
+rest:
+  - resource: https://clima.xe1e.net/api/current
+    scan_interval: 60
+    # Si el servidor aún no tiene datos, /api/current da 404 -> sensores "no disponibles"
+    sensor:
+      - name: "Clima Temperatura Exterior"
+        unique_id: clima_temp_outdoor
+        value_template: "{{ value_json.temperature_outdoor }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
 
-- platform: rest
-  name: "Ecowitt Weather"
-  resource: http://192.168.1.X:8080/api/current  # Cambiar IP
-  scan_interval: 60
-  json_attributes:
-    - temperature_outdoor
-    - temperature_indoor
-    - humidity_outdoor
-    - humidity_indoor
-    - pressure_relative
-    - wind_speed
-    - wind_gust
-    - wind_direction
-    - rain_rate
-    - rain_daily
-    - rain_weekly
-    - rain_monthly
-    - solar_radiation
-    - uv_index
-    - dew_point
-    - feels_like
-    # WN31 Extra sensors (up to 8 channels)
-    - temperature_ch1
-    - temperature_ch2
-    - temperature_ch3
-    - temperature_ch4
-    - humidity_ch1
-    - humidity_ch2
-    - humidity_ch3
-    - humidity_ch4
-  value_template: "OK"
+      - name: "Clima Sensación Térmica"
+        unique_id: clima_feels_like
+        value_template: "{{ value_json.feels_like }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
 
-# ============================================
-# Template Sensors - Extraer valores individuales
-# ============================================
+      - name: "Clima Punto de Rocío"
+        unique_id: clima_dew_point
+        value_template: "{{ value_json.dew_point }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
 
-- platform: template
-  sensors:
-    ecowitt_temperature_outdoor:
-      friendly_name: "Temperatura Exterior"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_outdoor') }}"
-      icon_template: mdi:thermometer
+      - name: "Clima Humedad Exterior"
+        unique_id: clima_humidity_outdoor
+        value_template: "{{ value_json.humidity_outdoor }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
 
-    ecowitt_temperature_indoor:
-      friendly_name: "Temperatura Interior"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_indoor') }}"
-      icon_template: mdi:home-thermometer
+      - name: "Clima Presión"
+        unique_id: clima_pressure
+        value_template: "{{ value_json.pressure_relative }}"
+        unit_of_measurement: "hPa"
+        device_class: atmospheric_pressure
+        state_class: measurement
 
-    ecowitt_humidity_outdoor:
-      friendly_name: "Humedad Exterior"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_outdoor') }}"
-      icon_template: mdi:water-percent
+      - name: "Clima Viento"
+        unique_id: clima_wind_speed
+        value_template: "{{ value_json.wind_speed }}"
+        unit_of_measurement: "km/h"
+        device_class: wind_speed
+        state_class: measurement
+        icon: mdi:weather-windy
 
-    ecowitt_humidity_indoor:
-      friendly_name: "Humedad Interior"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_indoor') }}"
-      icon_template: mdi:water-percent
+      - name: "Clima Ráfaga"
+        unique_id: clima_wind_gust
+        value_template: "{{ value_json.wind_gust }}"
+        unit_of_measurement: "km/h"
+        device_class: wind_speed
+        state_class: measurement
+        icon: mdi:weather-windy-variant
 
-    ecowitt_pressure:
-      friendly_name: "Presión Atmosférica"
-      unit_of_measurement: "hPa"
-      device_class: pressure
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'pressure_relative') }}"
-      icon_template: mdi:gauge
+      - name: "Clima Dirección Viento"
+        unique_id: clima_wind_dir
+        value_template: "{{ value_json.wind_direction }}"
+        unit_of_measurement: "°"
+        state_class: measurement
+        icon: mdi:compass
 
-    ecowitt_wind_speed:
-      friendly_name: "Velocidad del Viento"
-      unit_of_measurement: "km/h"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_speed') }}"
-      icon_template: mdi:weather-windy
+      - name: "Clima Dirección Viento Cardinal"
+        unique_id: clima_wind_dir_cardinal
+        icon: mdi:compass-outline
+        value_template: >
+          {% set d = value_json.wind_direction | float(0) %}
+          {{ ['N','NE','E','SE','S','SO','O','NO'][(((d + 22.5) % 360) / 45) | int] }}
 
-    ecowitt_wind_gust:
-      friendly_name: "Ráfaga de Viento"
-      unit_of_measurement: "km/h"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_gust') }}"
-      icon_template: mdi:weather-windy-variant
+      - name: "Clima Tasa de Lluvia"
+        unique_id: clima_rain_rate
+        value_template: "{{ value_json.rain_rate }}"
+        unit_of_measurement: "mm/h"
+        device_class: precipitation_intensity
+        state_class: measurement
+        icon: mdi:weather-rainy
 
-    ecowitt_wind_direction:
-      friendly_name: "Dirección del Viento"
-      unit_of_measurement: "°"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'wind_direction') }}"
-      icon_template: mdi:compass
+      - name: "Clima Lluvia Diaria"
+        unique_id: clima_rain_daily
+        value_template: "{{ value_json.rain_daily }}"
+        unit_of_measurement: "mm"
+        device_class: precipitation
+        state_class: total_increasing
+        icon: mdi:weather-pouring
 
-    ecowitt_wind_direction_cardinal:
-      friendly_name: "Dirección del Viento (Cardinal)"
-      value_template: >
-        {% set direction = state_attr('sensor.ecowitt_weather', 'wind_direction') | float %}
-        {% if direction >= 337.5 or direction < 22.5 %}N
-        {% elif direction >= 22.5 and direction < 67.5 %}NE
-        {% elif direction >= 67.5 and direction < 112.5 %}E
-        {% elif direction >= 112.5 and direction < 157.5 %}SE
-        {% elif direction >= 157.5 and direction < 202.5 %}S
-        {% elif direction >= 202.5 and direction < 247.5 %}SW
-        {% elif direction >= 247.5 and direction < 292.5 %}W
-        {% elif direction >= 292.5 and direction < 337.5 %}NW
-        {% endif %}
-      icon_template: mdi:compass-outline
+      - name: "Clima Índice UV"
+        unique_id: clima_uv
+        value_template: "{{ value_json.uv_index }}"
+        state_class: measurement
+        icon: mdi:sun-wireless
 
-    ecowitt_rain_rate:
-      friendly_name: "Tasa de Lluvia"
-      unit_of_measurement: "mm/h"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_rate') }}"
-      icon_template: mdi:weather-rainy
+      - name: "Clima Radiación Solar"
+        unique_id: clima_solar
+        value_template: "{{ value_json.solar_radiation }}"
+        unit_of_measurement: "W/m²"
+        device_class: irradiance
+        state_class: measurement
 
-    ecowitt_rain_daily:
-      friendly_name: "Lluvia Diaria"
-      unit_of_measurement: "mm"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_daily') }}"
-      icon_template: mdi:weather-pouring
+      - name: "Clima Temperatura Interior"
+        unique_id: clima_temp_indoor
+        value_template: "{{ value_json.temperature_indoor }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
 
-    ecowitt_rain_weekly:
-      friendly_name: "Lluvia Semanal"
-      unit_of_measurement: "mm"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_weekly') }}"
-      icon_template: mdi:calendar-week
+      - name: "Clima Humedad Interior"
+        unique_id: clima_humidity_indoor
+        value_template: "{{ value_json.humidity_indoor }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
 
-    ecowitt_rain_monthly:
-      friendly_name: "Lluvia Mensual"
-      unit_of_measurement: "mm"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'rain_monthly') }}"
-      icon_template: mdi:calendar-month
-
-    ecowitt_solar_radiation:
-      friendly_name: "Radiación Solar"
-      unit_of_measurement: "W/m²"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'solar_radiation') }}"
-      icon_template: mdi:white-balance-sunny
-
-    ecowitt_uv_index:
-      friendly_name: "Índice UV"
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'uv_index') }}"
-      icon_template: mdi:sun-wireless
-
-    ecowitt_dew_point:
-      friendly_name: "Punto de Rocío"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'dew_point') }}"
-      icon_template: mdi:water
-
-    ecowitt_feels_like:
-      friendly_name: "Sensación Térmica"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'feels_like') }}"
-      icon_template: mdi:thermometer-lines
-
-    # ============================================
-    # WN31 Extra Sensors (Channels 1-4)
-    # ============================================
-
-    ecowitt_temperature_ch1:
-      friendly_name: "Temperatura Canal 1"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch1') }}"
-      icon_template: mdi:thermometer
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch1') is not none }}"
-
-    ecowitt_humidity_ch1:
-      friendly_name: "Humedad Canal 1"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch1') }}"
-      icon_template: mdi:water-percent
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch1') is not none }}"
-
-    ecowitt_temperature_ch2:
-      friendly_name: "Temperatura Canal 2"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch2') }}"
-      icon_template: mdi:thermometer
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch2') is not none }}"
-
-    ecowitt_humidity_ch2:
-      friendly_name: "Humedad Canal 2"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch2') }}"
-      icon_template: mdi:water-percent
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch2') is not none }}"
-
-    ecowitt_temperature_ch3:
-      friendly_name: "Temperatura Canal 3"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch3') }}"
-      icon_template: mdi:thermometer
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch3') is not none }}"
-
-    ecowitt_humidity_ch3:
-      friendly_name: "Humedad Canal 3"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch3') }}"
-      icon_template: mdi:water-percent
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch3') is not none }}"
-
-    ecowitt_temperature_ch4:
-      friendly_name: "Temperatura Canal 4"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch4') }}"
-      icon_template: mdi:thermometer
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'temperature_ch4') is not none }}"
-
-    ecowitt_humidity_ch4:
-      friendly_name: "Humedad Canal 4"
-      unit_of_measurement: "%"
-      device_class: humidity
-      value_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch4') }}"
-      icon_template: mdi:water-percent
-      availability_template: "{{ state_attr('sensor.ecowitt_weather', 'humidity_ch4') is not none }}"
+      # --- Canales WN31 (1-8): solo aparecen si el sensor reporta ---
+      - name: "Clima Temp Canal 1"
+        unique_id: clima_temp_ch1
+        value_template: "{{ value_json.temperature_ch1 }}"
+        availability: "{{ value_json.temperature_ch1 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 1"
+        unique_id: clima_humidity_ch1
+        value_template: "{{ value_json.humidity_ch1 }}"
+        availability: "{{ value_json.humidity_ch1 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 2"
+        unique_id: clima_temp_ch2
+        value_template: "{{ value_json.temperature_ch2 }}"
+        availability: "{{ value_json.temperature_ch2 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 2"
+        unique_id: clima_humidity_ch2
+        value_template: "{{ value_json.humidity_ch2 }}"
+        availability: "{{ value_json.humidity_ch2 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 3"
+        unique_id: clima_temp_ch3
+        value_template: "{{ value_json.temperature_ch3 }}"
+        availability: "{{ value_json.temperature_ch3 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 3"
+        unique_id: clima_humidity_ch3
+        value_template: "{{ value_json.humidity_ch3 }}"
+        availability: "{{ value_json.humidity_ch3 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 4"
+        unique_id: clima_temp_ch4
+        value_template: "{{ value_json.temperature_ch4 }}"
+        availability: "{{ value_json.temperature_ch4 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 4"
+        unique_id: clima_humidity_ch4
+        value_template: "{{ value_json.humidity_ch4 }}"
+        availability: "{{ value_json.humidity_ch4 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 5"
+        unique_id: clima_temp_ch5
+        value_template: "{{ value_json.temperature_ch5 }}"
+        availability: "{{ value_json.temperature_ch5 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 5"
+        unique_id: clima_humidity_ch5
+        value_template: "{{ value_json.humidity_ch5 }}"
+        availability: "{{ value_json.humidity_ch5 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 6"
+        unique_id: clima_temp_ch6
+        value_template: "{{ value_json.temperature_ch6 }}"
+        availability: "{{ value_json.temperature_ch6 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 6"
+        unique_id: clima_humidity_ch6
+        value_template: "{{ value_json.humidity_ch6 }}"
+        availability: "{{ value_json.humidity_ch6 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 7"
+        unique_id: clima_temp_ch7
+        value_template: "{{ value_json.temperature_ch7 }}"
+        availability: "{{ value_json.temperature_ch7 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 7"
+        unique_id: clima_humidity_ch7
+        value_template: "{{ value_json.humidity_ch7 }}"
+        availability: "{{ value_json.humidity_ch7 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: "Clima Temp Canal 8"
+        unique_id: clima_temp_ch8
+        value_template: "{{ value_json.temperature_ch8 }}"
+        availability: "{{ value_json.temperature_ch8 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Clima Humedad Canal 8"
+        unique_id: clima_humidity_ch8
+        value_template: "{{ value_json.humidity_ch8 }}"
+        availability: "{{ value_json.humidity_ch8 is defined }}"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
