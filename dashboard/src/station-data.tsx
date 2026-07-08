@@ -2,11 +2,16 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { WeatherData, DailyStats, HistoryData } from './types'
 import { fetchForecast, ForecastResult } from './forecast'
 
+export interface Comparison {
+  [field: string]: { today: number | null; yesterday: number | null; delta: number | null }
+}
+
 interface StationData {
   data: WeatherData | null
   stats: DailyStats['stats'] | null
   history: HistoryData[]
   forecast: ForecastResult | null
+  compare: Comparison | null
   loading: boolean
 }
 
@@ -20,19 +25,22 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<DailyStats['stats'] | null>(null)
   const [history, setHistory] = useState<HistoryData[]>([])
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
+  const [compare, setCompare] = useState<Comparison | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [cur, st, hist] = await Promise.all([
+        const [cur, st, hist, cmp] = await Promise.all([
           fetch('/api/current').then((r) => (r.ok ? r.json() : null)),
           fetch('/api/stats/daily').then((r) => (r.ok ? r.json() : null)),
           fetch('/api/history?start=-24h').then((r) => (r.ok ? r.json() : { data: [] })),
+          fetch('/api/compare').then((r) => (r.ok ? r.json() : null)),
         ])
         if (cur) setData(cur)
         setStats(st?.stats ?? null)
         setHistory(hist?.data ?? [])
+        if (cmp) setCompare(cmp)
       } catch {
         /* ignore */
       } finally {
@@ -52,7 +60,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <Ctx.Provider value={{ data, stats, history, forecast, loading }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ data, stats, history, forecast, compare, loading }}>{children}</Ctx.Provider>
   )
 }
 

@@ -241,6 +241,16 @@ async def get_records(start: str = "-30d"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/compare")
+async def get_compare():
+    """Comparación 24h vs 24h previas (aprox. 'vs ayer')."""
+    try:
+        return await storage.get_comparison()
+    except Exception as e:
+        logger.error(f"Error getting comparison: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/alerts")
 async def get_alerts():
     """Current active weather alerts (from the alert service)."""

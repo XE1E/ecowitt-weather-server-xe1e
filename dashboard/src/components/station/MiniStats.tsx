@@ -1,11 +1,13 @@
 import { WeatherData, DailyStats } from '../../types'
 import { ForecastResult } from '../../forecast'
+import { Comparison } from '../../station-data'
 import { useUnits } from '../../units'
 
 interface Props {
   data: WeatherData
   stats: DailyStats['stats'] | null
   forecast: ForecastResult | null
+  compare: Comparison | null
 }
 
 function Tile({ label, value, sub, color = 'text-slate-100' }: {
@@ -20,12 +22,16 @@ function Tile({ label, value, sub, color = 'text-slate-100' }: {
   )
 }
 
-export function MiniStats({ data, stats, forecast }: Props) {
+export function MiniStats({ data, stats, forecast, compare }: Props) {
   const u = useUnits()
   const t = stats?.temperature_outdoor
   const g = stats?.wind_gust
   const today = forecast?.days?.[0]
   const uv = data.uv_index ?? 0
+
+  // Delta de temperatura vs 24h previas (conversión de diferencia: °F = °C*9/5)
+  const dRaw = compare?.temperature_outdoor?.delta
+  const dDisp = dRaw != null ? (u.system === 'imperial' ? dRaw * 9 / 5 : dRaw) : null
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-1">
@@ -55,6 +61,14 @@ export function MiniStats({ data, stats, forecast }: Props) {
         color="text-sky-300"
       />
       <Tile label="Humedad" value={`${(data.humidity_outdoor ?? 0).toFixed(0)}%`} color="text-cyan-300" />
+      {dDisp != null && (
+        <Tile
+          label="vs ayer"
+          value={`${dDisp > 0 ? '+' : ''}${dDisp.toFixed(1)}°`}
+          sub={dDisp > 0.1 ? 'más cálido' : dDisp < -0.1 ? 'más frío' : 'similar'}
+          color={dDisp > 0.1 ? 'text-red-300' : dDisp < -0.1 ? 'text-sky-300' : 'text-slate-300'}
+        />
+      )}
     </div>
   )
 }

@@ -16,7 +16,7 @@ import { RadarCard } from '../components/station/RadarCard'
 import { MetarCard } from '../components/station/MetarCard'
 
 export function HomePage() {
-  const { data, stats, history, forecast, loading } = useStationData()
+  const { data, stats, history, forecast, compare, loading } = useStationData()
 
   if (loading && !data) {
     return (
@@ -30,7 +30,7 @@ export function HomePage() {
   return (
     <>
       <div className="mb-4">
-        <MiniStats data={data} stats={stats} forecast={forecast} />
+        <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

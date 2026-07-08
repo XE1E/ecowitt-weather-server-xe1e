@@ -239,3 +239,30 @@ class InfluxDBStorage:
         except Exception as e:
             logger.error(f"Error getting daily stats: {e}")
             raise
+
+    async def get_comparison(self, measurement: str = "weather") -> Dict[str, Any]:
+        """Promedios de las últimas 24 h vs las 24 h previas (aprox. 'vs ayer')."""
+        def avg(field: str, start: str, stop: str):
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start}, stop: {stop})
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                |> filter(fn: (r) => r["_field"] == "{field}")
+                |> mean()
+            '''
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    return record.get_value()
+            return None
+
+        result: Dict[str, Any] = {}
+        for field in ("temperature_outdoor", "humidity_outdoor"):
+            today = avg(field, "-24h", "now()")
+            prev = avg(field, "-48h", "-24h")
+            delta = round(today - prev, 1) if (today is not None and prev is not None) else None
+            result[field] = {
+                "today": round(today, 1) if today is not None else None,
+                "yesterday": round(prev, 1) if prev is not None else None,
+                "delta": delta,
+            }
+        return result
