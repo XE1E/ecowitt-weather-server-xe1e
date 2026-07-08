@@ -38,6 +38,11 @@ de unidades y FX, backups de InfluxDB, simulador de datos, cuenta PAYG.
 | 13 | PWA (instalable) | 🟢 | 🟠 | Pendiente |
 | 14 | Widget "Share & Embed" de condiciones actuales | 🟢 | 🟠 | Pendiente |
 
+## 📝 Contenido
+| # | Idea | Valor | Esfuerzo | Estado |
+|---|------|-------|----------|--------|
+| 18 | **Redactar artículo para el blog** (sobre el proyecto/estación) | 🟠 | 🟠 | Pendiente |
+
 ## ☁️ Arquitectura / experimentos
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|

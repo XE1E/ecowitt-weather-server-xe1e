@@ -8,6 +8,7 @@ of spamming on every reading.
 """
 
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
+from datetime import datetime
 import logging
 
 import httpx
@@ -31,6 +32,8 @@ class AlertService:
         # Rule keys currently triggered -> their message (dict so /api/alerts
         # can expose the active alerts; `key in self.active` still works)
         self.active: Dict[str, str] = {}
+        # Estado de "estación caída" (sin datos)
+        self.station_offline: bool = False
 
     def evaluate(self, data: Dict[str, Any]) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply."""
@@ -78,6 +81,34 @@ class AlertService:
             elif not triggered and key in self.active:
                 self.active.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}")
+
+    async def send(self, text: str) -> None:
+        """Enviar una notificación suelta."""
+        await self._safe_notify(text)
+
+    async def check_station(self, last_iso, now, threshold_s: float):
+        """
+        Evalúa si la estación está caída (sin datos) o se recuperó, y notifica en
+        las transiciones. Devuelve el texto enviado o None. `now` y `last_iso` se
+        pasan como argumentos para que sea testeable.
+        """
+        if not last_iso:
+            return None
+        try:
+            age = (now - datetime.fromisoformat(last_iso)).total_seconds()
+        except (ValueError, TypeError):
+            return None
+        if age > threshold_s and not self.station_offline:
+            self.station_offline = True
+            msg = f"🔌 La estación XE1E no envía datos desde hace {int(age // 60)} min."
+            await self._safe_notify(msg)
+            return msg
+        if age <= threshold_s and self.station_offline:
+            self.station_offline = False
+            msg = "✅ La estación XE1E volvió a enviar datos."
+            await self._safe_notify(msg)
+            return msg
+        return None
 
     async def _safe_notify(self, text: str) -> None:
         try:

@@ -8,6 +8,7 @@ and stores it in InfluxDB.
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+import asyncio
 import logging
 
 from .config import settings
@@ -60,6 +61,22 @@ alert_service = AlertService(settings)
 mqtt_publisher = MqttPublisher(settings)
 
 
+async def station_watchdog():
+    """Avisa (Telegram/log) si la estación deja de enviar datos, y cuando vuelve."""
+    if not settings.alerts_enabled:
+        return
+    threshold = settings.alert_station_offline_minutes * 60
+    await asyncio.sleep(90)  # gracia inicial tras el arranque
+    while True:
+        try:
+            await alert_service.check_station(
+                latest_data.get("received_at"), datetime.utcnow(), threshold
+            )
+        except Exception as e:
+            logger.error(f"Watchdog error: {e}")
+        await asyncio.sleep(60)
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize connections on startup."""
@@ -86,6 +103,10 @@ async def startup_event():
             logger.info("Loaded last reading from InfluxDB into memory")
     except Exception as e:
         logger.warning(f"Could not preload last reading: {e}")
+
+    # Vigilante de estación caída (solo si las alertas están activas)
+    if settings.alerts_enabled:
+        asyncio.create_task(station_watchdog())
 
 
 @app.on_event("shutdown")

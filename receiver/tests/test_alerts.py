@@ -81,6 +81,39 @@ def test_disabled_does_not_notify():
     assert c.msgs == []
 
 
+def test_station_offline_then_recovery():
+    from datetime import datetime, timedelta
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    now = datetime(2026, 7, 8, 12, 0, 0)
+    fresh = (now - timedelta(minutes=2)).isoformat()
+    stale = (now - timedelta(minutes=30)).isoformat()
+
+    # Fresco -> nada
+    asyncio.run(svc.check_station(fresh, now, 15 * 60))
+    assert svc.station_offline is False
+    assert c.msgs == []
+
+    # Viejo -> alerta de caída (una vez)
+    asyncio.run(svc.check_station(stale, now, 15 * 60))
+    asyncio.run(svc.check_station(stale, now, 15 * 60))  # no repite
+    assert svc.station_offline is True
+    assert len(c.msgs) == 1 and "no envía datos" in c.msgs[0]
+
+    # Fresco de nuevo -> recuperación
+    asyncio.run(svc.check_station(fresh, now, 15 * 60))
+    assert svc.station_offline is False
+    assert len(c.msgs) == 2 and "volvió a enviar" in c.msgs[1]
+
+
+def test_station_check_ignores_empty():
+    from datetime import datetime
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    asyncio.run(svc.check_station(None, datetime(2026, 7, 8), 900))
+    assert c.msgs == []
+
+
 def test_notification_failure_does_not_raise():
     async def boom(_text):
         raise RuntimeError("network down")

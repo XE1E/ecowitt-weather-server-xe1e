@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     alert_temp_low: float = 0.0
     alert_wind_high: float = 50.0
     alert_rain_rate: float = 10.0
+    # Avisar si la estación deja de enviar datos por este tiempo (minutos)
+    alert_station_offline_minutes: int = 15
 
     # Telegram notifications
     telegram_enabled: bool = False
