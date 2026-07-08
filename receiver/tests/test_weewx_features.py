@@ -7,6 +7,7 @@ from app.services.quality import quality_check
 from app.services.converter import calculate_derived_values, calculate_humidex, calculate_cloud_base
 from app.services.forecaster import local_forecast, classify_trend
 from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
+from app.services.aggregator import local_day_bounds_utc, flatten_stats, all_time_records
 from datetime import datetime
 
 
@@ -111,3 +112,39 @@ def test_cwop_packet_structure():
     assert "h55" in pkt
     assert "b10132" in pkt        # 1013.2 hPa -> décimas
     assert "r010" in pkt          # 2.54 mm -> 0.1 in -> 10 centésimas
+
+
+# ---------- Acumuladores / resumen diario ----------
+def test_local_day_bounds_utc():
+    # CDMX es UTC-6: el día local 2026-07-08 empieza a las 06:00Z y dura 24 h
+    start, stop, start_dt = local_day_bounds_utc(datetime(2026, 7, 8))
+    assert start == "2026-07-08T06:00:00Z"
+    assert stop == "2026-07-09T06:00:00Z"
+
+
+def test_flatten_stats():
+    stats = {"stats": {
+        "temperature_outdoor": {"min": 12.0, "max": 24.0, "avg": 18.0,
+                                "min_time": "t1", "max_time": "t2"},
+        "wind_gust": {"min": 0, "max": 30.0, "avg": 10, "max_time": "tg"},
+        "rain_daily": {"min": 0, "max": 6.2, "avg": 3},
+    }}
+    f = flatten_stats(stats)
+    assert f["temp_min"] == 12.0 and f["temp_max"] == 24.0
+    assert f["temp_max_time"] == "t2"
+    assert f["gust_max"] == 30.0
+    assert f["rain_total"] == 6.2
+    assert "hum_min" not in f  # sin datos de humedad -> no aparece
+
+
+def test_all_time_records():
+    rows = [
+        {"date": "2026-07-01", "temp_max": 25.0, "temp_min": 10.0, "rain_total": 2.0},
+        {"date": "2026-07-02", "temp_max": 28.5, "temp_min": 8.0, "rain_total": 12.0},
+        {"date": "2026-07-03", "temp_max": 26.0, "temp_min": 9.0, "rain_total": 0.0},
+    ]
+    rec = all_time_records(rows)
+    assert rec["temp_max"] == {"value": 28.5, "date": "2026-07-02"}
+    assert rec["temp_min"] == {"value": 8.0, "date": "2026-07-02"}
+    assert rec["rain_max_day"] == {"value": 12.0, "date": "2026-07-02"}
+    assert rec["days"] == 3

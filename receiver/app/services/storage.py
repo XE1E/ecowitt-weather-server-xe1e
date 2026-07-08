@@ -164,13 +164,15 @@ class InfluxDBStorage:
             raise
 
     async def get_daily_stats(
-        self, measurement: str = "weather", start: str = "-24h"
+        self, measurement: str = "weather", start: str = "-24h", stop: str = "now()"
     ) -> Dict[str, Any]:
         """
         Get statistics (min, max, avg) for key measurements over a time range.
 
         Args:
-            start: Flux range start (e.g. "-24h", "-7d", "-30d", "-365d")
+            start: Flux range start (e.g. "-24h", "-7d", "-30d", "-365d",
+                or an RFC3339 timestamp)
+            stop: Flux range stop (e.g. "now()" or an RFC3339 timestamp)
 
         Returns:
             Dictionary with statistics for each field
@@ -190,7 +192,7 @@ class InfluxDBStorage:
             for field in stats_fields:
                 query = f'''
                     from(bucket: "{self.bucket}")
-                    |> range(start: {start})
+                    |> range(start: {start}, stop: {stop})
                     |> filter(fn: (r) => r["_measurement"] == "{measurement}")
                     |> filter(fn: (r) => r["_field"] == "{field}")
                     |> group()
@@ -239,6 +241,52 @@ class InfluxDBStorage:
         except Exception as e:
             logger.error(f"Error getting daily stats: {e}")
             raise
+
+    async def write_daily_summary(
+        self, date_str: str, fields: Dict[str, Any], ts: datetime
+    ) -> None:
+        """
+        Escribe/actualiza el resumen de un día en el measurement 'weather_daily'.
+        Un punto por día (tag date=YYYY-MM-DD), timestamp al inicio del día (UTC).
+        Reescribir el mismo día sobrescribe (mismo measurement+tag+time).
+        """
+        try:
+            point = Point("weather_daily").tag("date", date_str)
+            for k, v in fields.items():
+                if v is None:
+                    continue
+                if isinstance(v, bool):
+                    point.field(k, v)
+                elif isinstance(v, (int, float)):
+                    point.field(k, float(v))
+                elif isinstance(v, str):
+                    point.field(k, v)
+            point.time(ts)
+            self.write_api.write(bucket=self.bucket, record=point)
+        except Exception as e:
+            logger.error(f"Error writing daily summary {date_str}: {e}")
+            raise
+
+    async def query_daily_summaries(
+        self, start: str = "-365d", stop: str = "now()"
+    ) -> List[Dict[str, Any]]:
+        """Devuelve los resúmenes diarios (weather_daily) en el rango dado."""
+        try:
+            query = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start}, stop: {stop})
+                |> filter(fn: (r) => r["_measurement"] == "weather_daily")
+                |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+            '''
+            rows = []
+            for table in self.query_api.query(query):
+                for record in table.records:
+                    rows.append(record.values)
+            rows.sort(key=lambda r: r.get("date", ""))
+            return rows
+        except Exception as e:
+            logger.error(f"Error querying daily summaries: {e}")
+            return []
 
     async def get_field_value_ago(
         self, field: str, start: str = "-3h", measurement: str = "weather"

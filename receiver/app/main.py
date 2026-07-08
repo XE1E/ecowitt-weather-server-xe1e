@@ -25,6 +25,7 @@ from .services.metar import get_metar
 from .services.air_quality import get_air_quality
 from .services.publishers import publish_all
 from .services import forecaster
+from .services import aggregator
 from .services import admin as adminsvc
 from .services import settings_store
 
@@ -85,6 +86,24 @@ async def station_watchdog():
         await asyncio.sleep(60)
 
 
+async def daily_rollup_task():
+    """
+    Mantiene el resumen diario (weather_daily). Al arrancar rellena los últimos
+    ~90 días que falten; luego refresca hoy/ayer cada hora.
+    """
+    await asyncio.sleep(120)  # gracia inicial
+    try:
+        await aggregator.backfill(storage, days=90)
+    except Exception as e:
+        logger.error(f"Backfill inicial de resumen diario falló: {e}")
+    while True:
+        await asyncio.sleep(3600)
+        try:
+            await aggregator.backfill(storage, days=2)  # hoy y ayer
+        except Exception as e:
+            logger.error(f"Refresco de resumen diario falló: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize connections on startup."""
@@ -124,6 +143,9 @@ async def startup_event():
     # Vigilante de estación caída (solo si las alertas están activas)
     if settings.alerts_enabled:
         asyncio.create_task(station_watchdog())
+
+    # Acumuladores: resumen diario (Dayfile) para récords/climatología
+    asyncio.create_task(daily_rollup_task())
 
 
 @app.on_event("shutdown")
@@ -330,6 +352,28 @@ async def get_compare():
         return await storage.get_comparison()
     except Exception as e:
         logger.error(f"Error getting comparison: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/climate/daily")
+async def get_climate_daily(start: str = "-365d", stop: str = "now()"):
+    """Resúmenes diarios (weather_daily): un registro por día con extremos."""
+    try:
+        rows = await storage.query_daily_summaries(start=start, stop=stop)
+        return {"days": rows, "count": len(rows)}
+    except Exception as e:
+        logger.error(f"Error getting daily summaries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/climate/records")
+async def get_climate_records(start: str = "-3650d"):
+    """Récords de siempre calculados desde el resumen diario."""
+    try:
+        rows = await storage.query_daily_summaries(start=start)
+        return aggregator.all_time_records(rows)
+    except Exception as e:
+        logger.error(f"Error getting climate records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

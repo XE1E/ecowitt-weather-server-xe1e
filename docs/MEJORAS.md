@@ -151,25 +151,42 @@ Estación en CDMX (zona con **pocas estaciones PWS** → tu aporte cuenta).
 
 | Software | Por qué mirarlo |
 |----------|-----------------|
-| **CumulusMX** ⭐ | Estación completa; soporta Ecowitt; tablero en tiempo real, **alarmas**, sube a WU/PWS/Windy/OWM/CWOP. Buenas páginas de **récords/extremos**, "este mes/año", **tendencias**. |
-| **Meteotemplate** ⭐ | Web (PHP) con **decenas de plugins**: récords, extremos, gráficas, webcam, luna, comparativas. Catálogo de ideas de **interfaz**. |
+| **CumulusMX** ⭐ | Estación completa (C#, muy activo, v5.1.4 jun-2026); soporta Ecowitt; tablero en tiempo real, **alarmas**, sube a WU/PWS/Windy/OWM/CWOP/WOW/AWEKAS/Weathercloud. Buenas páginas de **récords/extremos**, "este mes/año", **tendencias**, reportes NOAA. |
+| **Meteotemplate** | ⚠️ **Descontinuado** (operó 2013–2026). Fue web (PHP) con decenas de plugins. Ya no es adoptable, pero sus ideas de **interfaz** (récords, extremos, comparativas, "en este día") siguen siendo válidas como inspiración. |
 | Skins de WeeWX: **Belchertown**, **neowx-material**, **weewx-wdc** | Referencia de **diseño/UX** para el pulido visual. |
 | **Grafana** ⭐ | Encaja con nuestro **InfluxDB**; dashboards meteorológicos comunitarios → ideas de métricas/agregaciones. |
 | **pywws** | Ligero; ideas de resúmenes horarios/diarios y agregación. |
 | **Meteobridge / Weather Display** | Comerciales; útiles por su **lista de integraciones**. |
 
-> **Pendiente de análisis conjunto:** el usuario revisará CumulusMX y Meteotemplate
-> con calma y anotaremos qué funciones sumar aquí.
+## Revisión de CumulusMX (ideas concretas a adoptar)
+
+Filtradas a lo que aprovecha el **dato local** y encaja en nuestro stack:
+
+| Idea de CumulusMX | Qué nos daría | Prioridad |
+|-------------------|---------------|-----------|
+| **Resumen diario ("Dayfile")** — un registro por día con mín/máx/prom/total + horas | **Base** de récords, climatología y "en este día"; hace rápidas las consultas largas. Es la pieza de **arquitectura de WeeWX** (acumuladores) | 🔴 Fundacional |
+| **Récords ampliados** — histórico de siempre + récord por cada mes calendario + "este mes/año/ayer" con fecha/hora | Página de récords tipo CumulusMX | 🟠 (depende de Dayfile) |
+| **Reporte climatológico NOAA** (mensual/anual): medias, extremos, días de lluvia, grados-día | Sección "Climatología" | 🟠 (depende de Dayfile) |
+| **Más alarmas**: ráfaga alta, lluvia diaria alta, presión alta/baja, **batería baja (WN31)**, contacto de sensor perdido, pico | Cobertura de avisos como CumulusMX (ya tenemos temp/viento/lluvia/estación-caída) | 🟠 |
+| **"En este día"** (efeméride) — qué pasó tal día en años previos | Enganche/curiosidad | 🟢 (depende de Dayfile) |
+| **Wind run + dirección dominante + rosa de vientos** | Estadística de viento del sitio | 🟢 |
+| **Grados-día** (calefacción/refrigeración) y **chill hours** | Estadística energética/agrícola local | 🟢 |
+| **Rachas de lluvia**: días secos/húmedos consecutivos, día más lluvioso | Analítica de lluvia | 🟢 |
+| **Editor de datos** (admin) para corregir registros erróneos | Higiene de datos | 🟢 |
+| **Comparación de años** en gráficas | Ver tendencias interanuales | 🟢 |
+
+De Meteotemplate (descontinuado) se rescatan las mismas ideas de **récords/extremos/"en este día"** y gauges; no aporta nada que CumulusMX no cubra.
 
 ## Ideas WeeWX aún NO implementadas (candidatas futuras)
 
 Todas explotan el **dato local** (la prioridad):
 
-| Idea | Qué daría |
-|------|-----------|
-| **Reportes de climatología** (mensual/anual estilo NOAA) | Resúmenes con medias, extremos, días de lluvia, grados-día. Necesita meses de histórico. Buena sección "Climatología". |
-| **Grados-día** (calefacción/refrigeración) y **wind run** | Estadísticas agrónomas/energéticas del propio sitio. |
-| **Evapotranspiración (ET)** | Útil para riego/jardinería, con solar + temp + viento + humedad locales. |
-| **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC). |
-| **Almanaque ampliado** | Crepúsculos (civil/náutico/astronómico), % de iluminación lunar, orto/ocaso de planetas. |
-| **Acumuladores explícitos por intervalo** | Rollups min/max/avg por intervalo (además del dato crudo) para históricos largos más rápidos. |
+| Idea | Qué daría | Estado |
+|------|-----------|--------|
+| **Acumuladores/resumen diario (Dayfile)** | Rollups min/máx/prom/total por día (arquitectura WeeWX) para históricos largos rápidos | 🔧 En curso |
+| **Reportes de climatología** (mensual/anual estilo NOAA) | Resúmenes con medias, extremos, días de lluvia, grados-día. Depende del Dayfile | Pendiente |
+| **Grados-día** (calefacción/refrigeración) y **wind run** | Estadísticas agrónomas/energéticas del propio sitio | Pendiente |
+| **Evapotranspiración (ET)** | Útil para riego/jardinería, con solar + temp + viento + humedad locales | Pendiente |
+| **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC) | Pendiente |
+| **Almanaque ampliado** | Crepúsculos (civil/náutico/astronómico), % de iluminación lunar, orto/ocaso de planetas | Pendiente |
+| **Más alarmas + "en este día" + rosa de vientos** | Ver revisión de CumulusMX arriba | Pendiente |

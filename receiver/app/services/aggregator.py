@@ -1,0 +1,129 @@
+"""
+Acumuladores / resumen diario ("Dayfile", idea de WeeWX y CumulusMX).
+
+Mantiene un registro por día en el measurement 'weather_daily' con los
+extremos y promedios de la jornada (más la hora del extremo). Esto:
+  - hace rápidas las consultas de récords y climatología (no re-escanear el crudo),
+  - habilita "récords de siempre", reportes mensuales/anuales y "en este día".
+
+El día se define en HORA LOCAL (America/Mexico_City), coherente con el
+contador rain_daily de la consola Ecowitt, que se reinicia a medianoche local.
+"""
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+import logging
+
+try:
+    from zoneinfo import ZoneInfo
+    _TZ = ZoneInfo("America/Mexico_City")
+except Exception:  # pragma: no cover
+    _TZ = timezone(timedelta(hours=-6))
+
+logger = logging.getLogger(__name__)
+
+
+def local_day_bounds_utc(day: "datetime") -> Tuple[str, str, datetime]:
+    """
+    Dado un date/datetime (se usa solo la fecha), devuelve:
+      (inicio_utc_iso, fin_utc_iso, inicio_utc_datetime)
+    para el día LOCAL correspondiente. Los ISO llevan sufijo 'Z' para Flux.
+    """
+    start_local = datetime(day.year, day.month, day.day, 0, 0, 0, tzinfo=_TZ)
+    end_local = start_local + timedelta(days=1)
+    start_utc = start_local.astimezone(timezone.utc)
+    end_utc = end_local.astimezone(timezone.utc)
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return start_utc.strftime(fmt), end_utc.strftime(fmt), start_utc
+
+
+def flatten_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convierte la estructura de get_daily_stats() en campos planos del resumen.
+    Solo incluye lo que tenga valor.
+    """
+    s = stats.get("stats", stats) if stats else {}
+
+    def g(field, key):
+        return (s.get(field) or {}).get(key)
+
+    out: Dict[str, Any] = {
+        "temp_min": g("temperature_outdoor", "min"),
+        "temp_max": g("temperature_outdoor", "max"),
+        "temp_avg": g("temperature_outdoor", "avg"),
+        "temp_min_time": g("temperature_outdoor", "min_time"),
+        "temp_max_time": g("temperature_outdoor", "max_time"),
+        "hum_min": g("humidity_outdoor", "min"),
+        "hum_max": g("humidity_outdoor", "max"),
+        "hum_avg": g("humidity_outdoor", "avg"),
+        "wind_avg": g("wind_speed", "avg"),
+        "wind_max": g("wind_speed", "max"),
+        "gust_max": g("wind_gust", "max"),
+        "gust_max_time": g("wind_gust", "max_time"),
+        "rain_total": g("rain_daily", "max"),
+        "press_min": g("pressure_relative", "min"),
+        "press_max": g("pressure_relative", "max"),
+        "press_avg": g("pressure_relative", "avg"),
+    }
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def all_time_records(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calcula récords de siempre a partir de los resúmenes diarios.
+    Cada récord incluye valor y fecha (YYYY-MM-DD) en que ocurrió.
+    """
+    def best(field, pick_max=True):
+        cand = [(r.get(field), r.get("date")) for r in rows if r.get(field) is not None]
+        if not cand:
+            return None
+        val, date = (max if pick_max else min)(cand, key=lambda x: x[0])
+        return {"value": round(val, 1), "date": date}
+
+    return {
+        "temp_max": best("temp_max", True),
+        "temp_min": best("temp_min", False),
+        "gust_max": best("gust_max", True),
+        "wind_max": best("wind_max", True),
+        "rain_max_day": best("rain_total", True),
+        "press_max": best("press_max", True),
+        "press_min": best("press_min", False),
+        "hum_max": best("hum_max", True),
+        "hum_min": best("hum_min", False),
+        "days": len(rows),
+    }
+
+
+async def compute_and_store_day(storage, day: datetime) -> Optional[Dict[str, Any]]:
+    """Calcula el resumen de un día local y lo guarda en weather_daily."""
+    start_iso, stop_iso, ts_utc = local_day_bounds_utc(day)
+    stats = await storage.get_daily_stats(start=start_iso, stop=stop_iso)
+    fields = flatten_stats(stats)
+    if not fields:
+        return None
+    date_str = day.strftime("%Y-%m-%d")
+    await storage.write_daily_summary(date_str, fields, ts_utc)
+    return {"date": date_str, **fields}
+
+
+async def backfill(storage, days: int = 90) -> int:
+    """
+    Rellena los resúmenes de los últimos `days` días locales que falten.
+    Hoy y ayer se recalculan siempre (pueden estar incompletos).
+    Devuelve cuántos días se (re)escribieron.
+    """
+    today = datetime.now(_TZ)
+    existing = {r.get("date") for r in await storage.query_daily_summaries(start=f"-{days + 2}d")}
+    written = 0
+    for i in range(days):
+        day = today - timedelta(days=i)
+        date_str = day.strftime("%Y-%m-%d")
+        if date_str in existing and i > 1:
+            continue  # ya existe y no es hoy/ayer
+        try:
+            if await compute_and_store_day(storage, day):
+                written += 1
+        except Exception as e:
+            logger.error(f"Backfill {date_str} falló: {e}")
+    if written:
+        logger.info(f"Resumen diario: {written} día(s) (re)calculados")
+    return written

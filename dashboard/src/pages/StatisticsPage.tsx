@@ -25,11 +25,40 @@ const PERIODS = [
   { k: 'all', label: 'Histórico', start: '-3650d' },
 ]
 
+interface ClimateRecord {
+  value: number
+  date: string
+}
+interface AllTime {
+  temp_max?: ClimateRecord | null
+  temp_min?: ClimateRecord | null
+  gust_max?: ClimateRecord | null
+  rain_max_day?: ClimateRecord | null
+  press_max?: ClimateRecord | null
+  press_min?: ClimateRecord | null
+  days: number
+}
+
+function fmtDay(date?: string): string {
+  if (!date) return ''
+  const d = new Date(date + 'T12:00:00')
+  if (Number.isNaN(d.getTime())) return date
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export function StatisticsPage() {
   const u = useUnits()
   const [period, setPeriod] = useState('30d')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [allTime, setAllTime] = useState<AllTime | null>(null)
+
+  useEffect(() => {
+    fetch('/api/climate/records')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setAllTime(j))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const start = PERIODS.find((p) => p.k === period)!.start
@@ -61,10 +90,36 @@ export function StatisticsPage() {
 
   const available = stats ? metrics.filter((m) => stats[m.key]) : []
 
+  const records: { label: string; rec?: ClimateRecord | null; color: string; fmt: (v: number) => string; unit: string }[] = [
+    { label: 'Temperatura máxima', rec: allTime?.temp_max, color: 'text-orange-300', fmt: (v) => u.temp(v), unit: u.tempU },
+    { label: 'Temperatura mínima', rec: allTime?.temp_min, color: 'text-sky-300', fmt: (v) => u.temp(v), unit: u.tempU },
+    { label: 'Ráfaga máxima', rec: allTime?.gust_max, color: 'text-emerald-300', fmt: (v) => u.wind(v), unit: u.windU },
+    { label: 'Día más lluvioso', rec: allTime?.rain_max_day, color: 'text-blue-300', fmt: (v) => u.rain(v), unit: u.rainU },
+    { label: 'Presión máxima', rec: allTime?.press_max, color: 'text-violet-300', fmt: (v) => u.press(v), unit: u.pressU },
+    { label: 'Presión mínima', rec: allTime?.press_min, color: 'text-violet-300', fmt: (v) => u.press(v), unit: u.pressU },
+  ]
+
   return (
     <div>
+      {allTime && allTime.days > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-300 mb-3">
+            Récords de siempre <span className="text-xs text-slate-500 font-normal">({allTime.days} días registrados)</span>
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {records.filter((r) => r.rec).map((r) => (
+              <div key={r.label} className="card">
+                <p className="text-xs text-slate-400">{r.label}</p>
+                <p className={`text-2xl font-bold ${r.color}`}>{r.fmt(r.rec!.value)}<span className="text-sm text-slate-500 ml-1">{r.unit}</span></p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{fmtDay(r.rec!.date)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h2 className="text-lg font-semibold text-slate-300">Estadísticas y récords</h2>
+        <h2 className="text-lg font-semibold text-slate-300">Estadísticas por periodo</h2>
         <div className="flex gap-1">
           {PERIODS.map((p) => (
             <button key={p.k} className={btn(period === p.k)} onClick={() => setPeriod(p.k)}>
