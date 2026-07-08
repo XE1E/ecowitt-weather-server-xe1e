@@ -209,6 +209,16 @@ async def get_daily_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/stats/records")
+async def get_records(start: str = "-30d"):
+    """Statistics (min/max/avg) over a range (e.g. -7d, -30d, -365d, -3650d)."""
+    try:
+        return await storage.get_daily_stats(start=start)
+    except Exception as e:
+        logger.error(f"Error getting records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/alerts")
 async def get_alerts():
     """Current active weather alerts (from the alert service)."""

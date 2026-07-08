@@ -163,9 +163,14 @@ class InfluxDBStorage:
             logger.error(f"Error querying InfluxDB: {e}")
             raise
 
-    async def get_daily_stats(self, measurement: str = "weather") -> Dict[str, Any]:
+    async def get_daily_stats(
+        self, measurement: str = "weather", start: str = "-24h"
+    ) -> Dict[str, Any]:
         """
-        Get daily statistics (min, max, avg) for key measurements.
+        Get statistics (min, max, avg) for key measurements over a time range.
+
+        Args:
+            start: Flux range start (e.g. "-24h", "-7d", "-30d", "-365d")
 
         Returns:
             Dictionary with statistics for each field
@@ -185,7 +190,7 @@ class InfluxDBStorage:
             for field in stats_fields:
                 query = f'''
                     from(bucket: "{self.bucket}")
-                    |> range(start: -24h)
+                    |> range(start: {start})
                     |> filter(fn: (r) => r["_measurement"] == "{measurement}")
                     |> filter(fn: (r) => r["_field"] == "{field}")
                     |> group()
@@ -222,7 +227,7 @@ class InfluxDBStorage:
                 }
 
             return {
-                "period": "24h",
+                "period": start,
                 "stats": stats,
                 "generated_at": datetime.utcnow().isoformat()
             }
