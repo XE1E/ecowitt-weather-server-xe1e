@@ -22,10 +22,11 @@ function Rose({ direction }: { direction: number }) {
       <text x={c} y={size - 4} textAnchor="middle" fontSize="11" fill="#94a3b8">S</text>
       <text x="7" y={c + 4} textAnchor="middle" fontSize="11" fill="#94a3b8">O</text>
       <g transform={`rotate(${direction} ${c} ${c})`}>
-        <polygon points={`${c},18 ${c - 7},${c} ${c + 7},${c}`} fill="#34d399" />
-        <polygon points={`${c},${size - 18} ${c - 7},${c} ${c + 7},${c}`} fill="rgba(255,255,255,0.25)" />
+        <polygon points={`${c},16 ${c - 8},${c} ${c + 8},${c}`} fill="#34d399" />
+        <polygon points={`${c},${size - 16} ${c - 8},${c} ${c + 8},${c}`} fill="rgba(255,255,255,0.2)" />
       </g>
-      <circle cx={c} cy={c} r="4" fill="#0b1120" stroke="#34d399" strokeWidth="2" />
+      {/* Cubo central sólido para que el número no se encime con la aguja */}
+      <circle cx={c} cy={c} r="21" fill="#0e1626" stroke="rgba(52,211,153,0.6)" strokeWidth="1.5" />
     </svg>
   )
 }
