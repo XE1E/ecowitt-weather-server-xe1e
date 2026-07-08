@@ -1,12 +1,13 @@
 import { AstroData } from '../../forecast'
 import { WeatherIcon } from '../WeatherIcon'
+import { CardSkeleton } from './CardSkeleton'
 
 function time(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function SunMoonCard({ astro }: { astro: AstroData | null }) {
-  if (!astro) return null
+  if (!astro) return <CardSkeleton title="Sol y Luna" lines={2} />
   const rise = new Date(astro.sunrise).getTime()
   const set = new Date(astro.sunset).getTime()
   const daylightMin = Math.max(0, Math.round((set - rise) / 60000))

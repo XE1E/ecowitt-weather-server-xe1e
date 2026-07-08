@@ -38,6 +38,20 @@ de unidades y FX, backups de InfluxDB, simulador de datos, cuenta PAYG.
 | 13 | PWA (instalable) | 🟢 | 🟠 | Pendiente |
 | 14 | Widget "Share & Embed" de condiciones actuales | 🟢 | 🟠 | Pendiente |
 
+## 🔐 Administración / seguridad
+| # | Idea | Valor | Esfuerzo | Estado |
+|---|------|-------|----------|--------|
+| 19 | **Panel de administración web** (login seguro) para ver/editar ajustes (umbrales de alertas, unidades por defecto, toggles, tokens) sin tocar el `.env` a mano; y potencialmente ver estado/logs y reiniciar servicios | 🟠 Medio-alto | 🔴 Alto | Pendiente |
+
+> Nota de seguridad para #19 (panel de administración): es una superficie sensible.
+> Requisitos: **autenticación fuerte** (usuario+contraseña o token), HTTPS (ya lo hay),
+> e idealmente restringir por IP o poner **Cloudflare Access** delante. Diseño posible:
+> - Guardar los ajustes en un archivo/tabla (JSON/SQLite) en vez del `.env`, para
+>   editarlos y recargarlos **en caliente** sin reiniciar el contenedor.
+> - Endpoints protegidos en el receiver (GET/POST /admin/settings) + una página
+>   `/pro/admin` con login.
+> - Nunca mostrar secretos en claro (tokens enmascarados).
+
 ## 📝 Contenido
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
@@ -61,3 +75,22 @@ de unidades y FX, backups de InfluxDB, simulador de datos, cuenta PAYG.
 - Poner **WAQI_TOKEN** en el `.env` del VPS (para Calidad del aire).
 - Decidir **i18n / inglés**.
 - **~2026-07-17**: llega el WS2910 → apagar simulador, limpiar datos falsos, apuntar la estación.
+
+---
+
+## Procedimiento: activar Telegram (para hacer más tarde)
+Desbloquea las alertas por umbral y la de estación caída.
+
+1. **Crear el bot**: en Telegram, abre **@BotFather** → `/newbot` → sigue los pasos → copia el **token**.
+2. **Obtener chat_id**: escríbele algo a tu bot; abre
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` y busca `"chat":{"id":123456789}`.
+3. **En el VPS**, edita `.env`:
+   ```
+   ALERTS_ENABLED=true
+   TELEGRAM_ENABLED=true
+   TELEGRAM_BOT_TOKEN=<token>
+   TELEGRAM_CHAT_ID=<chat id>
+   ```
+4. Aplica: `docker compose up -d receiver`
+5. Prueba: `curl -s -X POST http://localhost:8080/data/report -d "tempf=104&humidity=20&model=WS2910&stationtype=SIMULATOR"`
+   → debe llegar la alerta a Telegram.

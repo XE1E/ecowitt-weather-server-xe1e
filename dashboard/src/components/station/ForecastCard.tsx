@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ForecastResult } from '../../forecast'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
+import { CardSkeleton } from './CardSkeleton'
 
 function dayName(iso: string, i: number): string {
   if (i === 0) return 'Hoy'
@@ -14,7 +15,7 @@ function hourLabel(iso: string): string {
 export function ForecastCard({ forecast }: { forecast: ForecastResult | null }) {
   const u = useUnits()
   const [tab, setTab] = useState<'5d' | 'hourly'>('5d')
-  if (!forecast) return null
+  if (!forecast) return <CardSkeleton title="Pronóstico" lines={2} />
   const T = (c: number) => Math.round(u.tempN(c))
 
   const btn = (a: boolean) =>
