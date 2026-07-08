@@ -127,6 +127,30 @@ docker compose down                    # detener (conserva volúmenes/datos)
 
 Los datos de InfluxDB persisten en el volumen `influxdb-data`.
 
+## 8. Backups de InfluxDB
+
+Hay un script que genera un backup consistente (`influx backup`) y rota los
+últimos 7:
+
+```bash
+chmod +x scripts/backup-influx.sh
+./scripts/backup-influx.sh        # (usa sudo si tu usuario no está en el grupo docker)
+```
+
+Los backups quedan en `~/ecowitt-backups/influx-YYYYmmdd-HHMMSS.tar.gz`.
+
+**Automatizar con cron** (diario a las 3:30 am):
+```bash
+( crontab -l 2>/dev/null; echo "30 3 * * * cd $HOME/ecowitt-weather-server-xe1e && ./scripts/backup-influx.sh >> $HOME/ecowitt-backups/backup.log 2>&1" ) | crontab -
+```
+
+**Restaurar** (si algún día hace falta):
+```bash
+tar -xzf ~/ecowitt-backups/influx-XXXX.tar.gz -C /tmp
+docker compose cp /tmp/influx-XXXX influxdb:/tmp/restore
+docker compose exec influxdb influx restore /tmp/restore -t "$INFLUXDB_TOKEN" --full
+```
+
 ---
 
 ## Notas
