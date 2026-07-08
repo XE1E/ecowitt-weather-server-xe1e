@@ -84,6 +84,35 @@ class InfluxDBStorage:
             logger.error(f"Error writing to InfluxDB: {e}")
             raise
 
+    async def get_latest(self, measurement: str = "weather") -> Dict[str, Any]:
+        """
+        Return the most recent reading as a dict of field -> value.
+
+        Used to repopulate the in-memory "current" data after a restart so the
+        API/dashboard keep showing the last reading instead of "no data".
+        """
+        try:
+            query = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: -30d)
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                |> last()
+                |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+            '''
+            tables = self.query_api.query(query)
+            latest: Dict[str, Any] = {}
+            for table in tables:
+                for record in table.records:
+                    for key, value in record.values.items():
+                        # Skip Flux metadata columns
+                        if key.startswith("_") or key in ("result", "table"):
+                            continue
+                        latest[key] = value
+            return latest
+        except Exception as e:
+            logger.error(f"Error fetching latest reading: {e}")
+            return {}
+
     async def query(
         self,
         start: str = "-24h",

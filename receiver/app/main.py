@@ -74,6 +74,17 @@ async def startup_event():
     )
     mqtt_publisher.connect()
 
+    # Repopulate the in-memory latest reading from InfluxDB so /api/current
+    # survives restarts (shows the last stored value instead of "no data").
+    global latest_data
+    try:
+        last = await storage.get_latest()
+        if last:
+            latest_data = last
+            logger.info("Loaded last reading from InfluxDB into memory")
+    except Exception as e:
+        logger.warning(f"Could not preload last reading: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
