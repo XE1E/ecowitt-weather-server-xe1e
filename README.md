@@ -213,7 +213,10 @@ viento, lluvia, UV, radiación, canales WN31 y baterías). HA crea el dispositiv
 ## Documentación
 
 - [Estudio de Viabilidad](docs/ESTUDIO_VIABILIDAD.md)
-- [Configuración del Gateway](docs/setup-gateway.md)
+- [Configuración del Gateway/Consola](docs/setup-gateway.md)
+- [Despliegue en el VPS](docs/DEPLOY.md)
+- [Dominio y HTTPS (Cloudflare)](docs/DOMINIO-HTTPS.md)
+- [Cloudflare Workers — opciones](docs/CLOUDFLARE-WORKERS.md)
 - [Referencia API](docs/api-reference.md)
 
 ## Licencia
