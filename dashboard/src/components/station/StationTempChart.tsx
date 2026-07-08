@@ -3,6 +3,7 @@ import {
 } from 'recharts'
 import { HistoryData } from '../../types'
 import { ForecastResult } from '../../forecast'
+import { useUnits } from '../../units'
 
 interface Props {
   history: HistoryData[]
@@ -17,6 +18,7 @@ interface Point {
 }
 
 export function StationTempChart({ history, forecast }: Props) {
+  const u = useUnits()
   const points: Point[] = []
 
   for (const h of history) {
@@ -25,7 +27,7 @@ export function StationTempChart({ history, forecast }: Props) {
     points.push({
       t,
       label: new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-      obs: h.temperature_outdoor,
+      obs: u.tempN(h.temperature_outdoor),
       fc: null,
     })
   }
@@ -36,7 +38,7 @@ export function StationTempChart({ history, forecast }: Props) {
         t,
         label: new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
         obs: null,
-        fc: hr.temp,
+        fc: u.tempN(hr.temp),
       })
     }
   }
@@ -56,7 +58,7 @@ export function StationTempChart({ history, forecast }: Props) {
             <Tooltip
               contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
               labelStyle={{ color: '#e2e8f0' }}
-              formatter={(v: number, n: string) => [`${v?.toFixed(1)}°C`, n === 'obs' ? 'Observado' : 'Pronóstico']}
+              formatter={(v: number, n: string) => [`${v?.toFixed(1)}${u.tempU}`, n === 'obs' ? 'Observado' : 'Pronóstico']}
             />
             <Legend formatter={(v) => (v === 'obs' ? 'Observado' : 'Pronóstico')} />
             <Line type="monotone" dataKey="obs" stroke="#34d399" strokeWidth={2} dot={false} connectNulls name="obs" />

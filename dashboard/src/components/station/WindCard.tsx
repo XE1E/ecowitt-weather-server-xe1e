@@ -1,5 +1,6 @@
 import { WeatherData } from '../../types'
 import { beaufort, cardinal } from '../../weather'
+import { useUnits } from '../../units'
 
 function Rose({ direction }: { direction: number }) {
   // SVG wind rose, 120x120, arrow points FROM where the wind comes (meteorological)
@@ -32,6 +33,7 @@ function Rose({ direction }: { direction: number }) {
 }
 
 export function WindCard({ data }: { data: WeatherData }) {
+  const u = useUnits()
   const dir = data.wind_direction ?? 0
   const bf = beaufort(data.wind_speed ?? 0)
   return (
@@ -42,9 +44,9 @@ export function WindCard({ data }: { data: WeatherData }) {
           <Rose direction={dir} />
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-2xl font-bold text-emerald-300 leading-none">
-              {(data.wind_speed ?? 0).toFixed(1)}
+              {u.wind(data.wind_speed)}
             </span>
-            <span className="text-[10px] text-slate-400">km/h</span>
+            <span className="text-[10px] text-slate-400">{u.windU}</span>
           </div>
         </div>
         <div className="space-y-2 text-sm">
@@ -54,7 +56,7 @@ export function WindCard({ data }: { data: WeatherData }) {
           </div>
           <div>
             <p className="text-slate-400">Ráfaga</p>
-            <p className="font-semibold">{(data.wind_gust ?? 0).toFixed(1)} km/h</p>
+            <p className="font-semibold">{u.wind(data.wind_gust)} {u.windU}</p>
           </div>
           <div>
             <p className="text-slate-400">Beaufort</p>

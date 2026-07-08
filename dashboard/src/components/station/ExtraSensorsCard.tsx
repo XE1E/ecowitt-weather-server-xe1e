@@ -1,6 +1,8 @@
 import { WeatherData } from '../../types'
+import { useUnits } from '../../units'
 
 export function ExtraSensorsCard({ data }: { data: WeatherData }) {
+  const u = useUnits()
   const channels = Array.from({ length: 8 }, (_, i) => i + 1)
     .map((ch) => ({
       ch,
@@ -20,7 +22,7 @@ export function ExtraSensorsCard({ data }: { data: WeatherData }) {
           <div key={c.ch} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
             <span className="text-sm text-slate-300">Canal {c.ch}</span>
             <span className="text-sm">
-              <span className="font-bold text-amber-300">{c.temp?.toFixed(1) ?? '--'}°C</span>
+              <span className="font-bold text-amber-300">{u.temp(c.temp)}{u.tempU}</span>
               {c.humidity !== undefined && <span className="text-slate-400"> · {c.humidity}%</span>}
               {c.batteryLow && <span className="text-red-300"> · ⚠ batería</span>}
             </span>

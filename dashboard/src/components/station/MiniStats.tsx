@@ -1,5 +1,6 @@
 import { WeatherData, DailyStats } from '../../types'
 import { ForecastResult } from '../../forecast'
+import { useUnits } from '../../units'
 
 interface Props {
   data: WeatherData
@@ -20,6 +21,7 @@ function Tile({ label, value, sub, color = 'text-slate-100' }: {
 }
 
 export function MiniStats({ data, stats, forecast }: Props) {
+  const u = useUnits()
   const t = stats?.temperature_outdoor
   const g = stats?.wind_gust
   const today = forecast?.days?.[0]
@@ -29,23 +31,23 @@ export function MiniStats({ data, stats, forecast }: Props) {
     <div className="flex gap-3 overflow-x-auto pb-1">
       <Tile
         label="Hoy"
-        value={t?.max != null ? `${t.max.toFixed(1)}°` : '--'}
-        sub={t?.min != null ? `mín ${t.min.toFixed(1)}°` : undefined}
+        value={t?.max != null ? `${u.temp(t.max)}${u.tempU}` : '--'}
+        sub={t?.min != null ? `mín ${u.temp(t.min)}${u.tempU}` : undefined}
         color="text-orange-300"
       />
       <Tile
         label="Viento máx"
-        value={g?.max != null ? `${g.max.toFixed(0)} km/h` : '--'}
+        value={g?.max != null ? `${u.wind(g.max, 0)} ${u.windU}` : '--'}
         color="text-emerald-300"
       />
-      <Tile label="Precipitación" value={`${(data.rain_daily ?? 0).toFixed(1)} mm`} sub="hoy" color="text-blue-300" />
+      <Tile label="Precipitación" value={`${u.rain(data.rain_daily)} ${u.rainU}`} sub="hoy" color="text-blue-300" />
       <Tile
         label="Índice UV"
         value={`${uv}`}
         color={uv >= 8 ? 'text-red-300' : uv >= 6 ? 'text-orange-300' : 'text-yellow-300'}
       />
-      <Tile label="Sensación" value={data.feels_like !== undefined ? `${data.feels_like.toFixed(1)}°` : '--'} />
-      <Tile label="Presión" value={`${(data.pressure_relative ?? 0).toFixed(0)}`} sub="hPa" color="text-violet-300" />
+      <Tile label="Sensación" value={`${u.temp(data.feels_like)}${u.tempU}`} />
+      <Tile label="Presión" value={u.press(data.pressure_relative, 0)} sub={u.pressU} color="text-violet-300" />
       <Tile
         label="Prob. lluvia"
         value={today ? `${today.precipProb}%` : '--'}

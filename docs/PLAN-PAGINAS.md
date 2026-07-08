@@ -43,8 +43,11 @@ qué datos, y cómo construirlas.
 5. **Astronomía** y **Radar** (páginas dedicadas) — bajo esfuerzo.
 6. **Opcionales**: Calidad del aire (Open-Meteo), Satélite, Fire Weather — según interés.
 
-## Decisiones abiertas (a definir contigo)
-- ¿`react-router-dom` (recomendado) o seguir con router manual?
-- ¿Incluir **Calidad del aire** aunque sea dato externo (no de la estación)? Se etiquetaría claramente.
-- ¿Idiomas (i18n) antes o después de las subpáginas? (i18n es un refactor grande; conviene decidir pronto para no traducir dos veces).
-- Prioridad real: ¿Historia y Estadísticas primero (mi recomendación) o Pronóstico?
+## Decisiones tomadas (2026-07-08)
+- **Routing**: `react-router-dom` ✅
+- **Primera subpágina**: **Pronóstico** (la más útil), luego **Historia** ✅
+- **Calidad del aire (ICA)**: **incluir** como dato externo, pero **revisar la fuente**
+  para que sea realmente precisa para CDMX (candidatas: Open-Meteo Air Quality,
+  IQAir/AirVisual, WAQI/aqicn, SEDEMA/SIMAT CDMX oficial). ⚠️ Validar precisión antes.
+- **Idiomas (i18n)**: pendiente; posiblemente **solo inglés** además del español.
+- **Unidades**: incluir presión en **mb/inHg** (mb ≡ hPa) además de temp/viento/lluvia.

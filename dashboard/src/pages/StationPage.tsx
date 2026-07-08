@@ -19,6 +19,7 @@ import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { MetarCard } from '../components/station/MetarCard'
 import { LOCATION } from '../config'
+import { useUnits } from '../units'
 
 const REFRESH = 60000 // 1 min (los datos no necesitan ser instantáneos)
 const FORECAST_REFRESH = 30 * 60000
@@ -31,6 +32,7 @@ export function StationPage() {
   const [now, setNow] = useState(() => new Date())
   const [loading, setLoading] = useState(true)
   const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
+  const units = useUnits()
 
   const toggleFx = () => {
     setFxEnabled((prev) => {
@@ -100,6 +102,13 @@ export function StationPage() {
               <span className="font-mono">
                 {now.toLocaleTimeString('es-MX')} · {now.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })}
               </span>
+              <button
+                onClick={units.toggle}
+                title="Cambiar unidades (métrico / imperial)"
+                className="text-xs rounded-lg px-2 py-1 border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 transition"
+              >
+                {units.system === 'metric' ? '°C · km/h' : '°F · mph'}
+              </button>
               <button
                 onClick={toggleFx}
                 title="Efectos de clima (lluvia/nieve/etc.)"
