@@ -30,6 +30,15 @@ export function StationPage() {
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [now, setNow] = useState(() => new Date())
   const [loading, setLoading] = useState(true)
+  const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
+
+  const toggleFx = () => {
+    setFxEnabled((prev) => {
+      const next = !prev
+      localStorage.setItem('fx', next ? 'on' : 'off')
+      return next
+    })
+  }
 
   const load = async () => {
     try {
@@ -78,7 +87,7 @@ export function StationPage() {
 
   return (
     <>
-      <WeatherFX type={cond.fx} intensity={cond.intensity} />
+      <WeatherFX type={fxEnabled ? cond.fx : 'none'} intensity={cond.intensity} />
       <div className="min-h-screen p-3 md:p-6">
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
@@ -91,6 +100,17 @@ export function StationPage() {
               <span className="font-mono">
                 {now.toLocaleTimeString('es-MX')} · {now.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })}
               </span>
+              <button
+                onClick={toggleFx}
+                title="Efectos de clima (lluvia/nieve/etc.)"
+                className={`text-xs rounded-lg px-2 py-1 border transition ${
+                  fxEnabled
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                FX {fxEnabled ? 'on' : 'off'}
+              </button>
               <a href="/" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 Vista clásica
               </a>
