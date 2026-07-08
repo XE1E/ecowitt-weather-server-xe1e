@@ -5,6 +5,7 @@ import App from './App'
 import { StationLayout } from './pages/StationLayout'
 import { HomePage } from './pages/HomePage'
 import { ForecastPage } from './pages/ForecastPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { UnitsProvider } from './units'
 import { StationDataProvider } from './station-data'
 import './index.css'
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/pro" element={<StationLayout />}>
                 <Route index element={<HomePage />} />
                 <Route path="pronostico" element={<ForecastPage />} />
+                <Route path="historia" element={<HistoryPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/pro" replace />} />
             </Routes>

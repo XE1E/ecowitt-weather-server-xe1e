@@ -73,6 +73,33 @@ export function ForecastPage() {
         </div>
         <p className="text-xs text-slate-500 mt-2">Fuente: Open-Meteo · temperaturas en {u.tempU}</p>
       </section>
+
+      {/* Acerca del pronóstico / modelos */}
+      <section>
+        <h2 className="text-lg font-semibold text-slate-300 mb-3">Acerca del pronóstico</h2>
+        <div className="card text-sm text-slate-300 space-y-2 leading-relaxed">
+          <p>
+            El pronóstico proviene de <span className="font-semibold">Open-Meteo</span>, un servicio
+            meteorológico abierto y gratuito. Se muestra a modo informativo y son estimaciones de
+            modelos numéricos, <span className="text-slate-400">no mediciones de la estación</span>.
+          </p>
+          <p>
+            Open-Meteo usa por defecto el modo <span className="font-mono text-slate-200">best_match</span>,
+            que selecciona automáticamente el mejor modelo global para la ubicación. Suele combinar
+            modelos de referencia según la zona:
+          </p>
+          <ul className="list-disc list-inside text-slate-400 space-y-1">
+            <li><span className="text-slate-200">ECMWF IFS</span> — Centro Europeo, muy preciso a medio plazo</li>
+            <li><span className="text-slate-200">GFS</span> — NOAA (EE. UU.), cobertura global</li>
+            <li><span className="text-slate-200">ICON</span> — DWD (Alemania), buen detalle regional</li>
+          </ul>
+          <p className="text-slate-400">
+            Los modelos se actualizan varias veces al día; esta página refresca el pronóstico cada
+            30 minutos. La precisión disminuye con el horizonte: los primeros 2-3 días son los más
+            confiables.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
