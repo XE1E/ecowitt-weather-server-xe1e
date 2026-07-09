@@ -191,6 +191,29 @@ def noaa_year(rows: List[Dict[str, Any]], year: int) -> Dict[str, Any]:
             "months": months, "summary": period_summary(year_rows)}
 
 
+def on_this_day(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Efeméride: qué pasó el mismo día calendario (MM-DD) en AÑOS PREVIOS.
+    Devuelve los días coincidentes (más reciente primero) y los extremos entre ellos.
+    """
+    today = today or datetime.now(_TZ)
+    md = today.strftime("%m-%d")
+    this_year = today.strftime("%Y")
+    matches = [
+        r for r in rows
+        if str(r.get("date", ""))[5:] == md and str(r.get("date", ""))[:4] != this_year
+    ]
+    matches.sort(key=lambda r: r.get("date", ""), reverse=True)
+    return {
+        "month_day": md,
+        "years": matches,
+        "count": len(matches),
+        "warmest": _best(matches, "temp_max", True),
+        "coldest": _best(matches, "temp_min", False),
+        "wettest": _best(matches, "rain_total", True),
+    }
+
+
 def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
     """Paquete de récords: de siempre, por mes, este mes, este año y ayer."""
     today = today or datetime.now(_TZ)

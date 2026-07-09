@@ -167,7 +167,7 @@ Filtradas a lo que aprovecha el **dato local** y encaja en nuestro stack:
 | **Resumen diario ("Dayfile")** — un registro por día con mín/máx/prom/total + horas | **Base** de récords, climatología y "en este día"; hace rápidas las consultas largas. Es la pieza de **arquitectura de WeeWX** (acumuladores) | 🔴 Fundacional |
 | **Récords ampliados** — histórico de siempre + récord por cada mes calendario + "este mes/año/ayer" con fecha/hora | Página de récords tipo CumulusMX | ✅ Hecho (Climatología) |
 | **Reporte climatológico NOAA** (mensual/anual): medias, extremos, días de lluvia, grados-día | Sección "Climatología" | ✅ Hecho (Climatología) |
-| **Más alarmas**: **batería baja (WN31/WS69)** ✅, **contacto de sensor perdido** ✅, **pico** ✅; faltan ráfaga alta, lluvia diaria alta, presión alta/baja | Cobertura de avisos como CumulusMX (ya teníamos temp/viento/lluvia/estación-caída) | 🟡 Parcial |
+| **Más alarmas**: batería baja, sensor perdido, pico, **ráfaga**, **lluvia diaria**, **presión alta/baja** | Cobertura de avisos como CumulusMX | ✅ Hecho |
 | **"En este día"** (efeméride) — qué pasó tal día en años previos | Enganche/curiosidad | 🟢 (depende de Dayfile) |
 | **Wind run + dirección dominante + rosa de vientos** | Estadística de viento del sitio | 🟢 |
 | **Grados-día** (calefacción/refrigeración) y **chill hours** | Estadística energética/agrícola local | 🟢 |
@@ -190,4 +190,6 @@ Todas explotan el **dato local** (la prioridad):
 | **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC) | ✅ Hecho (quality.py, toggle en panel) |
 | **Almanaque ampliado** | Crepúsculos (civil/náutico/astronómico), % de iluminación lunar, orto/ocaso de planetas | ✅ Hecho (pyephem, en Astronomía) |
 | **Alarmas batería baja + sensor perdido** | Avisos WN31/WS69 sin batería o sin contacto | ✅ Hecho (panel) |
-| **Más alarmas (ráfaga, lluvia diaria, presión) + "en este día" + rosa de vientos** | Ver revisión de CumulusMX arriba | Pendiente |
+| **"En este día"** (efeméride) | Qué pasó tal día en años previos — en Climatología | ✅ Hecho |
+| **Rosa de vientos** | Distribución dirección/velocidad — en Estadísticas | ✅ Hecho |
+| Grados-día como estadística visible · evapotranspiración (ET) | Estadística energética/agrícola | Pendiente |

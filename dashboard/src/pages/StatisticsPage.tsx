@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { WeatherIcon } from '../components/WeatherIcon'
+import { WindRoseCard } from '../components/station/WindRoseCard'
 import { useUnits } from '../units'
 
 interface Stat {
@@ -160,6 +161,10 @@ export function StatisticsPage() {
         </div>
       )}
       <p className="text-xs text-slate-500 mt-3">Calculado desde el histórico de la estación (InfluxDB).</p>
+
+      <div className="mt-6">
+        <WindRoseCard />
+      </div>
     </div>
   )
 }

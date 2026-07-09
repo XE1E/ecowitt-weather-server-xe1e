@@ -53,9 +53,19 @@ function hhmm(iso?: string | null) {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 }
 
+interface OnThisDay {
+  month_day: string
+  count: number
+  years: { date: string; temp_max?: number | null; temp_min?: number | null; rain_total?: number | null }[]
+  warmest?: Rec | null
+  coldest?: Rec | null
+  wettest?: Rec | null
+}
+
 export function ClimatePage() {
   const u = useUnits()
   const [rec, setRec] = useState<RecordsBundle | null>(null)
+  const [otd, setOtd] = useState<OnThisDay | null>(null)
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState<number | null>(null) // null = anual
   const [noaa, setNoaa] = useState<Noaa | null>(null)
@@ -63,6 +73,7 @@ export function ClimatePage() {
 
   useEffect(() => {
     fetch('/api/climate/records').then((r) => (r.ok ? r.json() : null)).then(setRec).catch(() => {})
+    fetch('/api/climate/onthisday').then((r) => (r.ok ? r.json() : null)).then(setOtd).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -103,6 +114,35 @@ export function ClimatePage() {
       {!hasData && (
         <div className="card text-slate-400">
           Aún no hay días registrados. La climatología se irá construyendo día a día conforme la estación acumule datos.
+        </div>
+      )}
+
+      {otd && otd.count > 0 && (
+        <div className="card mb-6">
+          <p className="card-title">En este día</p>
+          <p className="text-xs text-slate-500 -mt-1 mb-2">Qué pasó un {otd.month_day.slice(3)}/{otd.month_day.slice(0, 2)} en años anteriores</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[360px]">
+              <thead>
+                <tr className="text-[11px] text-slate-500 text-left">
+                  <th className="font-normal">Año</th>
+                  <th className="text-right font-normal">Máx</th>
+                  <th className="text-right font-normal">Mín</th>
+                  <th className="text-right font-normal">Lluvia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {otd.years.map((y) => (
+                  <tr key={y.date} className="border-t border-white/5">
+                    <td className="py-1 text-slate-300">{y.date.slice(0, 4)}</td>
+                    <td className="text-right text-orange-300">{y.temp_max != null ? `${u.temp(y.temp_max)}${u.tempU}` : '--'}</td>
+                    <td className="text-right text-sky-300">{y.temp_min != null ? `${u.temp(y.temp_min)}${u.tempU}` : '--'}</td>
+                    <td className="text-right text-blue-300">{y.rain_total != null ? `${u.rain(y.rain_total)} ${u.rainU}` : '--'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

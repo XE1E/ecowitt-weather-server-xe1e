@@ -10,7 +10,9 @@ from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
 from app.services.aggregator import (
     local_day_bounds_utc, flatten_stats, all_time_records,
     period_summary, monthly_records, noaa_month, noaa_year, build_records,
+    on_this_day,
 )
+from app.services.windrose import compute_wind_rose
 from datetime import datetime
 
 
@@ -235,3 +237,35 @@ def test_build_records_periods():
     assert b["this_month"]["days"] == 2          # ambos de 2026-07
     assert b["this_year"]["days"] == 3           # 2026-06 + 2026-07
     assert b["all_time"]["temp_max"]["value"] == 29.0
+
+
+def test_on_this_day():
+    rows = [
+        {"date": "2024-07-10", "temp_max": 26.0, "temp_min": 11.0, "rain_total": 3.0},
+        {"date": "2025-07-10", "temp_max": 28.0, "temp_min": 12.0, "rain_total": 8.0},
+        {"date": "2026-07-10", "temp_max": 25.0, "temp_min": 10.0, "rain_total": 0.0},  # año en curso, se excluye
+        {"date": "2025-07-11", "temp_max": 30.0, "temp_min": 9.0, "rain_total": 0.0},
+    ]
+    e = on_this_day(rows, today=datetime(2026, 7, 10))
+    assert e["month_day"] == "07-10"
+    assert e["count"] == 2                       # 2024 y 2025 (no 2026)
+    assert e["years"][0]["date"] == "2025-07-10"  # más reciente primero
+    assert e["warmest"]["value"] == 28.0
+
+
+# ---------- Rosa de vientos ----------
+def test_wind_rose_sectors():
+    recs = [
+        {"wind_direction": 0, "wind_speed": 10},    # N
+        {"wind_direction": 5, "wind_speed": 20},    # N
+        {"wind_direction": 90, "wind_speed": 15},   # E
+        {"wind_direction": 180, "wind_speed": 0.2}, # calma (< 1.0)
+    ]
+    rose = compute_wind_rose(recs)
+    assert rose["total"] == 4
+    assert rose["calm_pct"] == 25.0
+    n = next(s for s in rose["sectors"] if s["label"] == "N")
+    assert n["count"] == 2
+    assert n["avg_speed"] == 15.0
+    assert n["max_speed"] == 20.0
+    assert rose["dominant"] == "N"

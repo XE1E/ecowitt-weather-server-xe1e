@@ -27,6 +27,7 @@ from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
 from .services.almanac import get_almanac
+from .services.windrose import compute_wind_rose
 from .services import admin as adminsvc
 from .services import settings_store
 
@@ -380,6 +381,17 @@ async def get_climate_records(start: str = "-3650d"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/climate/onthisday")
+async def get_on_this_day():
+    """Efeméride: qué pasó el mismo día calendario en años previos."""
+    try:
+        rows = await storage.query_daily_summaries(start="-3650d")
+        return aggregator.on_this_day(rows)
+    except Exception as e:
+        logger.error(f"Error building on-this-day: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/climate/noaa")
 async def get_climate_noaa(year: int, month: Optional[int] = None):
     """Reporte climatológico estilo NOAA: mensual (con month) o anual (sin month)."""
@@ -390,6 +402,17 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
         return aggregator.noaa_year(rows, year)
     except Exception as e:
         logger.error(f"Error building NOAA report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/wind/rose")
+async def get_wind_rose(start: str = "-7d"):
+    """Rosa de vientos: distribución por sectores en el periodo (desde histórico)."""
+    try:
+        records = await storage.query(start=start, fields=["wind_direction", "wind_speed"])
+        return compute_wind_rose(records)
+    except Exception as e:
+        logger.error(f"Error building wind rose: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
