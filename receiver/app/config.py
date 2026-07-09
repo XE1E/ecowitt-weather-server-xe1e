@@ -29,7 +29,11 @@ class Settings(BaseSettings):
     alert_temp_high: float = 35.0
     alert_temp_low: float = 0.0
     alert_wind_high: float = 50.0
+    alert_gust_high: float = 70.0
     alert_rain_rate: float = 10.0
+    alert_rain_daily: float = 40.0
+    alert_pressure_high: float = 1030.0
+    alert_pressure_low: float = 1000.0
     # Avisar si la estación deja de enviar datos por este tiempo (minutos)
     alert_station_offline_minutes: int = 15
     # Avisos de batería baja y de sensor sin contacto

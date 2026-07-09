@@ -13,6 +13,10 @@ def make_settings(**kw):
         alert_temp_low=0.0,
         alert_wind_high=50.0,
         alert_rain_rate=10.0,
+        alert_gust_high=70.0,
+        alert_rain_daily=40.0,
+        alert_pressure_high=1030.0,
+        alert_pressure_low=1000.0,
         alert_battery_enabled=True,
         alert_sensor_lost_enabled=True,
         telegram_enabled=False,
@@ -31,6 +35,23 @@ class Collector:
 
     async def __call__(self, text):
         self.msgs.append(text)
+
+
+def test_gust_rain_daily_pressure_alarms():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({
+        "wind_speed": 20, "wind_gust": 85, "rain_daily": 55,
+        "pressure_relative": 1032,
+    })
+    assert r["wind_high"][0] is False       # 20 < 50 sostenido
+    assert r["gust_high"][0] is True        # 85 >= 70 ráfaga
+    assert r["rain_daily"][0] is True       # 55 >= 40 acumulada
+    assert r["pressure_high"][0] is True    # 1032 >= 1030
+    assert r["pressure_low"][0] is False
+    # Presión baja
+    r2 = svc.evaluate({"pressure_relative": 998})
+    assert r2["pressure_low"][0] is True
+    assert r2["pressure_high"][0] is False
 
 
 def test_battery_low_alarm():
@@ -73,10 +94,15 @@ def test_evaluate_temp_thresholds():
     assert rules["temp_low"][0] is True
 
 
-def test_wind_gust_preferred_over_speed():
+def test_wind_sustained_vs_gust():
+    # wind_high = viento sostenido; gust_high = ráfaga (reglas separadas)
     svc = AlertService(make_settings(), notifier=Collector())
-    rules = svc.evaluate({"wind_gust": 60, "wind_speed": 10})
-    assert rules["wind_high"][0] is True
+    rules = svc.evaluate({"wind_gust": 75, "wind_speed": 10})
+    assert rules["wind_high"][0] is False   # sostenido 10 < 50
+    assert rules["gust_high"][0] is True     # ráfaga 75 >= 70
+    # Sin ráfaga, wind_high usa la velocidad sostenida disponible
+    rules2 = svc.evaluate({"wind_speed": 55})
+    assert rules2["wind_high"][0] is True
 
 
 def test_rain_rate_threshold():

@@ -77,14 +77,23 @@ class AlertService:
                 f"🥶 Temperatura baja: {temp}°C (≤ {self.temp_low}°C)",
             )
 
-        # Prefer gust for a wind alert, fall back to sustained wind speed
-        wind = data.get("wind_gust")
+        # Viento sostenido
+        wind = data.get("wind_speed")
         if wind is None:
-            wind = data.get("wind_speed")
+            wind = data.get("wind_gust")
         if wind is not None:
             rules["wind_high"] = (
                 wind >= self.wind_high,
                 f"💨 Viento fuerte: {wind} km/h (≥ {self.wind_high} km/h)",
+            )
+
+        # Ráfaga (pico de viento)
+        gust = data.get("wind_gust")
+        gust_hi = getattr(self._settings, "alert_gust_high", 70.0)
+        if gust is not None:
+            rules["gust_high"] = (
+                gust >= gust_hi,
+                f"🌬️ Ráfaga fuerte: {gust} km/h (≥ {gust_hi} km/h)",
             )
 
         rain = data.get("rain_rate")
@@ -92,6 +101,29 @@ class AlertService:
             rules["rain_rate"] = (
                 rain >= self.rain_rate,
                 f"🌧️ Lluvia intensa: {rain} mm/h (≥ {self.rain_rate} mm/h)",
+            )
+
+        # Lluvia acumulada del día
+        rain_day = data.get("rain_daily")
+        rain_day_hi = getattr(self._settings, "alert_rain_daily", 40.0)
+        if rain_day is not None:
+            rules["rain_daily"] = (
+                rain_day >= rain_day_hi,
+                f"🌧️ Lluvia acumulada alta: {rain_day} mm hoy (≥ {rain_day_hi} mm)",
+            )
+
+        # Presión alta / baja (a nivel del mar)
+        press = data.get("pressure_relative")
+        if press is not None:
+            p_hi = getattr(self._settings, "alert_pressure_high", 1030.0)
+            p_lo = getattr(self._settings, "alert_pressure_low", 1000.0)
+            rules["pressure_high"] = (
+                press >= p_hi,
+                f"📈 Presión alta: {press} hPa (≥ {p_hi} hPa)",
+            )
+            rules["pressure_low"] = (
+                press <= p_lo,
+                f"📉 Presión baja: {press} hPa (≤ {p_lo} hPa)",
             )
 
         # Batería baja: campos battery_* binarios (True=OK / False=baja).

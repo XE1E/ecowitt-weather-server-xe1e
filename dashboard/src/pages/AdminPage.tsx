@@ -5,7 +5,11 @@ interface Settings {
   alert_temp_high: number
   alert_temp_low: number
   alert_wind_high: number
+  alert_gust_high: number
   alert_rain_rate: number
+  alert_rain_daily: number
+  alert_pressure_high: number
+  alert_pressure_low: number
   alert_station_offline_minutes: number
   alert_battery_enabled: boolean
   alert_sensor_lost_enabled: boolean
@@ -86,7 +90,11 @@ export function AdminPage() {
       alert_temp_high: Number(s.alert_temp_high),
       alert_temp_low: Number(s.alert_temp_low),
       alert_wind_high: Number(s.alert_wind_high),
+      alert_gust_high: Number(s.alert_gust_high),
       alert_rain_rate: Number(s.alert_rain_rate),
+      alert_rain_daily: Number(s.alert_rain_daily),
+      alert_pressure_high: Number(s.alert_pressure_high),
+      alert_pressure_low: Number(s.alert_pressure_low),
       alert_station_offline_minutes: Number(s.alert_station_offline_minutes),
       alert_battery_enabled: s.alert_battery_enabled,
       alert_sensor_lost_enabled: s.alert_sensor_lost_enabled,
@@ -187,7 +195,11 @@ export function AdminPage() {
             <label className="text-xs text-slate-400">Temp alta (°C){num('alert_temp_high')}</label>
             <label className="text-xs text-slate-400">Temp baja (°C){num('alert_temp_low')}</label>
             <label className="text-xs text-slate-400">Viento (km/h){num('alert_wind_high')}</label>
+            <label className="text-xs text-slate-400">Ráfaga (km/h){num('alert_gust_high')}</label>
             <label className="text-xs text-slate-400">Lluvia (mm/h){num('alert_rain_rate')}</label>
+            <label className="text-xs text-slate-400">Lluvia diaria (mm){num('alert_rain_daily')}</label>
+            <label className="text-xs text-slate-400">Presión alta (hPa){num('alert_pressure_high')}</label>
+            <label className="text-xs text-slate-400">Presión baja (hPa){num('alert_pressure_low')}</label>
             <label className="text-xs text-slate-400">Estación caída (min){num('alert_station_offline_minutes')}</label>
           </div>
           <div className="mt-2 space-y-1">
