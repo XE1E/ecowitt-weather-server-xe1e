@@ -25,6 +25,7 @@ EDITABLE_KEYS = {
     "waqi_token",
     # Control de calidad
     "qc_enabled",
+    "qc_spike_enabled",
     # Calibración
     "cal_enabled",
     "cal_temp_offset",

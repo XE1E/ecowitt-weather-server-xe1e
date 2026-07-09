@@ -13,6 +13,7 @@ interface Settings {
   waqi_token_masked: string | null
   // Control de calidad
   qc_enabled: boolean
+  qc_spike_enabled: boolean
   // Calibración
   cal_enabled: boolean
   cal_temp_offset: number
@@ -89,6 +90,7 @@ export function AdminPage() {
       telegram_chat_id: s.telegram_chat_id,
       // QC
       qc_enabled: s.qc_enabled,
+      qc_spike_enabled: s.qc_spike_enabled,
       // Calibración
       cal_enabled: s.cal_enabled,
       cal_temp_offset: Number(s.cal_temp_offset),
@@ -190,6 +192,7 @@ export function AdminPage() {
         <section className="border-t border-white/10 pt-4">
           <p className="card-title">Control de calidad</p>
           {toggle('qc_enabled', 'Descartar lecturas fuera de rango (recomendado)')}
+          {toggle('qc_spike_enabled', 'Filtro de picos: descartar saltos imposibles entre lecturas')}
         </section>
 
         {/* Calibración */}

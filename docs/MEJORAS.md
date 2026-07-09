@@ -187,6 +187,6 @@ Todas explotan el **dato local** (la prioridad):
 | **Reportes de climatología** (mensual/anual estilo NOAA) | Resúmenes con medias, extremos, días de lluvia, grados-día. Depende del Dayfile | Pendiente |
 | **Grados-día** (calefacción/refrigeración) y **wind run** | Estadísticas agrónomas/energéticas del propio sitio | Pendiente |
 | **Evapotranspiración (ET)** | Útil para riego/jardinería, con solar + temp + viento + humedad locales | Pendiente |
-| **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC) | Pendiente |
+| **Filtro de picos (spike)** | Rechazar saltos imposibles entre lecturas consecutivas (extensión del QC) | ✅ Hecho (quality.py, toggle en panel) |
 | **Almanaque ampliado** | Crepúsculos (civil/náutico/astronómico), % de iluminación lunar, orto/ocaso de planetas | Pendiente |
 | **Más alarmas + "en este día" + rosa de vientos** | Ver revisión de CumulusMX arriba | Pendiente |

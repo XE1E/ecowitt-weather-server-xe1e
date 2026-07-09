@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 from app.services.calibration import apply_calibration
-from app.services.quality import quality_check
+from app.services.quality import quality_check, spike_check
 from app.services.converter import calculate_derived_values, calculate_humidex, calculate_cloud_base
 from app.services.forecaster import local_forecast, classify_trend
 from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
@@ -58,6 +58,44 @@ def test_qc_disabled_keeps_everything():
     out, rejected = quality_check(data, s)
     assert out["temperature_outdoor"] == 999.0
     assert rejected == []
+
+
+# ---------- Filtro de picos ----------
+def test_spike_rejects_impossible_jump():
+    s = SimpleNamespace(qc_spike_enabled=True)
+    now = datetime(2026, 7, 8, 12, 2, 0)
+    prev = {"temperature_outdoor": 20.0, "received_at": "2026-07-08T12:00:00"}
+    out, rejected = spike_check({"temperature_outdoor": 45.0}, prev, s, now=now)
+    assert out["temperature_outdoor"] is None
+    assert ("temperature_outdoor", 45.0, 20.0) in rejected
+
+
+def test_spike_allows_normal_change():
+    s = SimpleNamespace(qc_spike_enabled=True)
+    now = datetime(2026, 7, 8, 12, 2, 0)
+    prev = {"temperature_outdoor": 20.0, "received_at": "2026-07-08T12:00:00"}
+    out, rejected = spike_check({"temperature_outdoor": 21.5}, prev, s, now=now)
+    assert out["temperature_outdoor"] == 21.5
+    assert rejected == []
+
+
+def test_spike_skipped_when_previous_is_stale():
+    # Lectura previa de hace >15 min: un salto grande puede ser legítimo -> no filtrar
+    s = SimpleNamespace(qc_spike_enabled=True)
+    now = datetime(2026, 7, 8, 13, 0, 0)
+    prev = {"temperature_outdoor": 20.0, "received_at": "2026-07-08T12:00:00"}
+    out, rejected = spike_check({"temperature_outdoor": 45.0}, prev, s, now=now)
+    assert out["temperature_outdoor"] == 45.0
+    assert rejected == []
+
+
+def test_spike_disabled_or_no_previous():
+    off = SimpleNamespace(qc_spike_enabled=False)
+    out, rej = spike_check({"temperature_outdoor": 99.0}, {"temperature_outdoor": 20.0, "received_at": "2026-07-08T12:00:00"}, off, now=datetime(2026, 7, 8, 12, 1))
+    assert out["temperature_outdoor"] == 99.0 and rej == []
+    on = SimpleNamespace(qc_spike_enabled=True)
+    out2, rej2 = spike_check({"temperature_outdoor": 99.0}, None, on)
+    assert out2["temperature_outdoor"] == 99.0 and rej2 == []
 
 
 # ---------- Variables derivadas ----------

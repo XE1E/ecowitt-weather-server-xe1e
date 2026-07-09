@@ -71,6 +71,7 @@ def public_settings(settings) -> Dict[str, Any]:
         "waqi_token_masked": mask(settings.waqi_token),
         # Control de calidad
         "qc_enabled": settings.qc_enabled,
+        "qc_spike_enabled": settings.qc_spike_enabled,
         # Calibración
         "cal_enabled": settings.cal_enabled,
         "cal_temp_offset": settings.cal_temp_offset,

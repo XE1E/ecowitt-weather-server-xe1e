@@ -17,7 +17,7 @@ from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device
 from .services.converter import convert_to_metric, calculate_derived_values
 from .services.calibration import apply_calibration
-from .services.quality import quality_check
+from .services.quality import quality_check, spike_check
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
@@ -179,6 +179,7 @@ async def receive_ecowitt_data(request: Request):
     The station sends data as a form-encoded POST request using the
     Ecowitt protocol (Weather Services -> Customized -> Protocol: Ecowitt).
     """
+    global latest_data
     try:
         # Parse form data
         form_data = await request.form()
@@ -193,9 +194,11 @@ async def receive_ecowitt_data(request: Request):
         if settings.output_unit_system == "metric":
             parsed_data = convert_to_metric(parsed_data, compute_derived=False)
 
-        # Pipeline estilo WeeWX: calibrar -> control de calidad -> derivar
+        # Pipeline estilo WeeWX: calibrar -> QC rangos -> QC picos -> derivar
+        # (latest_data aún contiene la lectura PREVIA en este punto)
         parsed_data = apply_calibration(parsed_data, settings)
         parsed_data, _ = quality_check(parsed_data, settings)
+        parsed_data, _ = spike_check(parsed_data, latest_data, settings)
         if settings.output_unit_system == "metric":
             parsed_data = calculate_derived_values(parsed_data)
 
@@ -203,7 +206,6 @@ async def receive_ecowitt_data(request: Request):
         parsed_data["received_at"] = datetime.utcnow().isoformat()
 
         # Store latest data in memory
-        global latest_data
         latest_data = parsed_data.copy()
 
         # Write to InfluxDB

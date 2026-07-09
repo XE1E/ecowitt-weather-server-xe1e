@@ -43,6 +43,8 @@ class Settings(BaseSettings):
 
     # Control de calidad (QC): descarta lecturas fuera de rango antes de guardar
     qc_enabled: bool = True
+    # Filtro de picos: descarta saltos imposibles entre lecturas consecutivas
+    qc_spike_enabled: bool = True
 
     # Calibración de sensores (offsets se suman; multiplicadores escalan; 1.0 = sin cambio)
     cal_enabled: bool = False
