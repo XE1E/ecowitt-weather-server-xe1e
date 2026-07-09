@@ -8,12 +8,13 @@ function fmtWhen(sec: number): string {
 
 export function EarthquakesPage() {
   const [quakes, setQuakes] = useState<Quake[] | null>(null)
+  const [source, setSource] = useState<string | null>(null)
 
   useEffect(() => {
     const load = () =>
       fetch('/api/earthquakes')
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => setQuakes(d?.quakes ?? []))
+        .then((d) => { setQuakes(d?.quakes ?? []); setSource(d?.source ?? null) })
         .catch(() => setQuakes([]))
     load()
     const i = setInterval(load, 600000)
@@ -24,7 +25,8 @@ export function EarthquakesPage() {
     <div className="max-w-2xl">
       <h2 className="text-lg font-semibold text-slate-300 mb-1">Sismos recientes</h2>
       <p className="text-sm text-slate-400 mb-4">
-        Sismos de magnitud ≥ 4 en un radio de ~800 km alrededor de la estación, más recientes primero.
+        Sismos recientes cerca de la estación, más recientes primero
+        {source === 'SSN' ? ' (fuente oficial SSN)' : source === 'USGS' ? ' (magnitud ≥ 4, ~800 km — fuente USGS)' : ''}.
       </p>
 
       {!quakes ? (
@@ -61,8 +63,10 @@ export function EarthquakesPage() {
       )}
 
       <p className="text-xs text-slate-500 mt-4">
-        Fuente: <a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400">USGS</a> ·
-        dato externo, no medido por esta estación. La profundidad y magnitud son estimaciones preliminares.
+        Fuente: {source === 'SSN'
+          ? <a href="http://www.ssn.unam.mx" target="_blank" rel="noopener noreferrer" className="text-blue-400">SSN (UNAM)</a>
+          : <a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400">USGS</a>}
+        {' '}· dato externo, no medido por esta estación. La profundidad y magnitud son estimaciones preliminares.
       </p>
     </div>
   )

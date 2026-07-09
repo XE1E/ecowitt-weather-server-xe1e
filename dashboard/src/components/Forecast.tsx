@@ -21,7 +21,8 @@ export function Forecast({ days }: ForecastProps) {
         {days.map((d, i) => (
           <div key={d.date} className="card flex flex-col items-center text-center p-3">
             <p className="text-sm font-semibold text-slate-300 capitalize">{dayName(d.date, i)}</p>
-            <WeatherIcon name={d.icon} size={56} alt={d.label} />
+            {/* Móvil 56px; PC más grande (CSS override sobre el tamaño base) */}
+            <WeatherIcon name={d.icon} size={56} className="w-14 h-14 md:w-[72px] md:h-[72px] lg:w-[88px] lg:h-[88px] my-1" alt={d.label} />
             <p className="text-sm">
               <span className="font-bold">{Math.round(d.tempMax)}°</span>
               <span className="text-slate-500"> / {Math.round(d.tempMin)}°</span>

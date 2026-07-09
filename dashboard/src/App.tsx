@@ -151,9 +151,6 @@ function App() {
             </div>
           </div>
 
-          {/* 7-day forecast */}
-          {forecast && <Forecast days={forecast.days} />}
-
           {/* Metric row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <WeatherCard
@@ -214,6 +211,9 @@ function App() {
               </div>
             </div>
           </div>
+
+          {/* 7-day forecast (debajo de viento y lluvia) */}
+          {forecast && <Forecast days={forecast.days} />}
 
           {/* Indoor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
