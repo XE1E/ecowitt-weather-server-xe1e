@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 # Notifier signature: async (text: str) -> None
 Notifier = Callable[[str], Awaitable[None]]
 
+# Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
+_SENSOR_PRESENCE = {
+    "temperature_outdoor": "outdoor",
+    "temperature_ch1": "ch1", "temperature_ch2": "ch2", "temperature_ch3": "ch3",
+    "temperature_ch4": "ch4", "temperature_ch5": "ch5", "temperature_ch6": "ch6",
+    "temperature_ch7": "ch7", "temperature_ch8": "ch8",
+}
+
 
 class AlertService:
     def __init__(self, settings, notifier: Optional[Notifier] = None):
@@ -34,6 +42,25 @@ class AlertService:
         self.active: Dict[str, str] = {}
         # Estado de "estación caída" (sin datos)
         self.station_offline: bool = False
+        # Sensores vistos alguna vez (para detectar "sensor perdido")
+        self.known_sensors: set = set()
+
+    # Etiquetas legibles por sensor (batería / contacto)
+    _SENSOR_LABELS = {
+        "outdoor": "estación exterior",
+        "indoor": "consola interior",
+        "ws69": "estación exterior (WS69)", "wh65": "estación exterior",
+        "wh26": "sensor T/H", "wh25": "consola", "wh40": "pluviómetro",
+        "wh57": "sensor de rayos", "wh68": "estación", "wh80": "anemómetro",
+        "wh90": "estación", "wh31": "sensor T/H",
+    }
+
+    def _sensor_label(self, name: str) -> str:
+        if name in self._SENSOR_LABELS:
+            return self._SENSOR_LABELS[name]
+        if name.startswith("ch"):
+            return f"canal {name[2:]} (WN31)"
+        return name
 
     def evaluate(self, data: Dict[str, Any]) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply."""
@@ -66,6 +93,29 @@ class AlertService:
                 rain >= self.rain_rate,
                 f"🌧️ Lluvia intensa: {rain} mm/h (≥ {self.rain_rate} mm/h)",
             )
+
+        # Batería baja: campos battery_* binarios (True=OK / False=baja).
+        if getattr(self._settings, "alert_battery_enabled", True):
+            for key, val in data.items():
+                if not key.startswith("battery_") or not isinstance(val, bool):
+                    continue
+                name = key[len("battery_"):]
+                rules[f"battery_{name}"] = (
+                    val is False,
+                    f"🔋 Batería baja: {self._sensor_label(name)}",
+                )
+
+        # Sensor perdido: un sensor visto antes que deja de reportar.
+        if getattr(self._settings, "alert_sensor_lost_enabled", True):
+            for skey in list(_SENSOR_PRESENCE):
+                present = data.get(skey) is not None
+                if present:
+                    self.known_sensors.add(skey)
+                if skey in self.known_sensors:
+                    rules[f"sensor_{skey}"] = (
+                        not present,
+                        f"📡 Sensor sin contacto: {self._sensor_label(_SENSOR_PRESENCE[skey])}",
+                    )
 
         return rules
 

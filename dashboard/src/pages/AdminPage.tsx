@@ -7,6 +7,8 @@ interface Settings {
   alert_wind_high: number
   alert_rain_rate: number
   alert_station_offline_minutes: number
+  alert_battery_enabled: boolean
+  alert_sensor_lost_enabled: boolean
   telegram_enabled: boolean
   telegram_bot_token_masked: string | null
   telegram_chat_id: string | null
@@ -86,6 +88,8 @@ export function AdminPage() {
       alert_wind_high: Number(s.alert_wind_high),
       alert_rain_rate: Number(s.alert_rain_rate),
       alert_station_offline_minutes: Number(s.alert_station_offline_minutes),
+      alert_battery_enabled: s.alert_battery_enabled,
+      alert_sensor_lost_enabled: s.alert_sensor_lost_enabled,
       telegram_enabled: s.telegram_enabled,
       telegram_chat_id: s.telegram_chat_id,
       // QC
@@ -185,6 +189,10 @@ export function AdminPage() {
             <label className="text-xs text-slate-400">Viento (km/h){num('alert_wind_high')}</label>
             <label className="text-xs text-slate-400">Lluvia (mm/h){num('alert_rain_rate')}</label>
             <label className="text-xs text-slate-400">Estación caída (min){num('alert_station_offline_minutes')}</label>
+          </div>
+          <div className="mt-2 space-y-1">
+            {toggle('alert_battery_enabled', 'Avisar batería baja (WN31 / WS69)')}
+            {toggle('alert_sensor_lost_enabled', 'Avisar sensor sin contacto')}
           </div>
         </section>
 

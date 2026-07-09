@@ -26,6 +26,7 @@ from .services.air_quality import get_air_quality
 from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
+from .services.almanac import get_almanac
 from .services import admin as adminsvc
 from .services import settings_store
 
@@ -390,6 +391,18 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
     except Exception as e:
         logger.error(f"Error building NOAA report: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/almanac")
+async def get_almanac_data():
+    """Almanaque astronómico ampliado (sol, crepúsculos, luna y planetas)."""
+    try:
+        lat = getattr(settings, "cwop_latitude", 19.380359)
+        lon = getattr(settings, "cwop_longitude", -99.174564)
+        return get_almanac(lat, lon)
+    except Exception as e:
+        logger.error(f"Error getting almanac: {e}")
+        return {"available": False, "reason": "error"}
 
 
 @app.get("/api/forecast/local")

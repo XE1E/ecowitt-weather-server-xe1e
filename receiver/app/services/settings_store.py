@@ -19,6 +19,8 @@ EDITABLE_KEYS = {
     "alert_wind_high",
     "alert_rain_rate",
     "alert_station_offline_minutes",
+    "alert_battery_enabled",
+    "alert_sensor_lost_enabled",
     "telegram_enabled",
     "telegram_bot_token",
     "telegram_chat_id",

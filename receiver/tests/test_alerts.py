@@ -13,6 +13,8 @@ def make_settings(**kw):
         alert_temp_low=0.0,
         alert_wind_high=50.0,
         alert_rain_rate=10.0,
+        alert_battery_enabled=True,
+        alert_sensor_lost_enabled=True,
         telegram_enabled=False,
         telegram_bot_token=None,
         telegram_chat_id=None,
@@ -29,6 +31,35 @@ class Collector:
 
     async def __call__(self, text):
         self.msgs.append(text)
+
+
+def test_battery_low_alarm():
+    svc = AlertService(make_settings(), notifier=Collector())
+    # WN31 canal 1 batería baja (False = baja); WS69 OK (True)
+    rules = svc.evaluate({"battery_ch1": False, "battery_ws69": True})
+    assert rules["battery_ch1"][0] is True
+    assert "canal 1" in rules["battery_ch1"][1]
+    assert rules["battery_ws69"][0] is False
+
+
+def test_battery_alarm_toggle_off():
+    svc = AlertService(make_settings(alert_battery_enabled=False), notifier=Collector())
+    rules = svc.evaluate({"battery_ch1": False})
+    assert "battery_ch1" not in rules
+
+
+def test_sensor_lost_alarm():
+    svc = AlertService(make_settings(), notifier=Collector())
+    # Primera lectura: el canal 1 está presente -> queda "conocido", sin alarma
+    rules = svc.evaluate({"temperature_ch1": 21.0})
+    assert rules["sensor_temperature_ch1"][0] is False
+    # Segunda lectura: el canal 1 desaparece -> alarma de sensor perdido
+    rules = svc.evaluate({"temperature_outdoor": 20.0})
+    assert rules["sensor_temperature_ch1"][0] is True
+    assert "canal 1" in rules["sensor_temperature_ch1"][1]
+    # Vuelve a reportar -> se normaliza
+    rules = svc.evaluate({"temperature_ch1": 21.5})
+    assert rules["sensor_temperature_ch1"][0] is False
 
 
 def test_evaluate_temp_thresholds():

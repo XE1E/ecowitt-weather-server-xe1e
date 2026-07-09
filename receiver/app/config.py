@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     alert_rain_rate: float = 10.0
     # Avisar si la estación deja de enviar datos por este tiempo (minutos)
     alert_station_offline_minutes: int = 15
+    # Avisos de batería baja y de sensor sin contacto
+    alert_battery_enabled: bool = True
+    alert_sensor_lost_enabled: bool = True
 
     # Telegram notifications
     telegram_enabled: bool = False

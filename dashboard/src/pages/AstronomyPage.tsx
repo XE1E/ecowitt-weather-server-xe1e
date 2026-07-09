@@ -1,6 +1,7 @@
 import { useStationData } from '../station-data'
 import { SunMoonCard } from '../components/station/SunMoonCard'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
+import { AlmanacCard } from '../components/station/AlmanacCard'
 import { LOCATION } from '../config'
 
 export function AstronomyPage() {
@@ -15,11 +16,17 @@ export function AstronomyPage() {
         <SkyEventsCard count={8} />
       </div>
 
+      <div className="mt-4">
+        <AlmanacCard />
+      </div>
+
       <div className="card mt-4 text-sm text-slate-300 leading-relaxed">
         <p>
-          Horarios de salida y puesta del Sol calculados para {LOCATION.name} (vía Open-Meteo), junto con la
-          fase lunar actual y las próximas fases principales (nueva, cuartos y llena). Las horas están en la
-          zona horaria local. La fase de la Luna se calcula a partir del ciclo sinódico (~29.5 días).
+          El <strong>almanaque</strong> se calcula localmente para {LOCATION.name} (con pyephem): orto y ocaso del
+          Sol, mediodía solar y duración del día; los tres crepúsculos (civil −6°, náutico −12° y astronómico −18°),
+          amanecer y anochecer; la Luna (orto/ocaso, fase, % de iluminación y próximas luna nueva y llena); y los
+          planetas visibles (Mercurio, Venus, Marte, Júpiter y Saturno) con su orto/ocaso, altitud actual y magnitud.
+          Todas las horas están en la zona horaria local.
         </p>
       </div>
     </div>

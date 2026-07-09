@@ -65,6 +65,8 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_wind_high": settings.alert_wind_high,
         "alert_rain_rate": settings.alert_rain_rate,
         "alert_station_offline_minutes": settings.alert_station_offline_minutes,
+        "alert_battery_enabled": settings.alert_battery_enabled,
+        "alert_sensor_lost_enabled": settings.alert_sensor_lost_enabled,
         "telegram_enabled": settings.telegram_enabled,
         "telegram_bot_token_masked": mask(settings.telegram_bot_token),
         "telegram_chat_id": settings.telegram_chat_id,
