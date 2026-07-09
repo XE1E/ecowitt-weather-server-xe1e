@@ -10,6 +10,9 @@
 > switch" cuando esté validado.
 >
 > Documento vivo — se irá afinando. Última revisión: 2026-07-09.
+>
+> **Complementos:** [Modelo de datos D1 + Worker de ingesta](PROYECTO-CLOUDFLARE-D1-Y-WORKER.md) ·
+> [Prueba de concepto de la ingesta HTTP](PRUEBA-INGESTA-CLOUDFLARE.md)
 
 ---
 
