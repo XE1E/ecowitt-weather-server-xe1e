@@ -5,10 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/weather.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Ecowitt Weather Station Dashboard - Real-time weather monitoring" />
-    <meta name="theme-color" content="#1e293b" />
+    <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f7fb" media="(prefers-color-scheme: light)" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/weather.svg" />
     <title>Weather Station XE1E</title>
+    <script>
+      // Aplica el tema guardado antes de pintar (evita parpadeo)
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-900 text-white">
+  <body class="text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

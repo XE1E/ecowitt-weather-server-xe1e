@@ -40,9 +40,9 @@ tendencia barométrica y publicación a redes públicas.
 |---|------|-------|----------|--------|
 | 9 | **Revisar responsive/móvil** de `/pro` | 🟠 | 🟢 | ✅ Hecho |
 | 10 | **Skeletons de carga** (evitar tarjetas vacías) | 🟢 | 🟢 | ✅ Hecho |
-| 11 | Tema claro opcional | 🟢 | 🟠 | Pendiente |
+| 11 | Tema claro opcional | 🟢 | 🟠 | ✅ Hecho (toggle ☀️/🌙 en el header) |
 | 12 | i18n / inglés | 🟢 | 🔴 | Pendiente (decisión) |
-| 13 | PWA (instalable) | 🟢 | 🟠 | Pendiente |
+| 13 | PWA (instalable) | 🟢 | 🟠 | ✅ Hecho (manifest + service worker + íconos) |
 | 14 | Widget "Share & Embed" de condiciones actuales | 🟢 | 🟠 | Pendiente |
 
 ## 🔐 Administración / seguridad

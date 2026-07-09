@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: dark;
+  /* Tokens leídos por componentes en canvas (p. ej. la rosa de vientos) */
+  --line: rgba(255, 255, 255, 0.14);
+  --muted: #8496a6;
+  --ink: #e8edf5;
 }
 
 body {
@@ -17,6 +21,55 @@ body {
   background-attachment: fixed;
   min-height: 100vh;
 }
+
+/* ================= Tema claro ================= */
+/* Se activa con data-theme="light" en <html>. Capa de overrides sobre el
+   diseño dark-first, sin tocar los componentes uno a uno. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --line: rgba(15, 30, 50, 0.14);
+  --muted: #5a6b7b;
+  --ink: #16232f;
+}
+:root[data-theme="light"] body {
+  color: #1e2a37;
+  background:
+    radial-gradient(1200px 800px at 15% -10%, #e8f0fb 0%, transparent 55%),
+    radial-gradient(1000px 700px at 90% 0%, #eef3f9 0%, transparent 50%),
+    linear-gradient(160deg, #f4f7fb 0%, #eef2f7 60%, #e9eef4 100%);
+}
+:root[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 30, 50, 0.1);
+  box-shadow: 0 1px 2px rgba(22, 35, 47, 0.05), 0 8px 26px rgba(22, 35, 47, 0.07);
+}
+:root[data-theme="light"] .card:hover {
+  border-color: rgba(15, 30, 50, 0.18);
+  box-shadow: 0 12px 34px rgba(22, 35, 47, 0.12);
+}
+:root[data-theme="light"] .card-title { color: #5a6b7b; }
+:root[data-theme="light"] .card-unit { color: #6b7a8d; }
+
+/* Neutrales de texto (mayor especificidad que las utilidades de Tailwind) */
+:root[data-theme="light"] .text-white { color: #16232f; }
+:root[data-theme="light"] .text-slate-100 { color: #1b2733; }
+:root[data-theme="light"] .text-slate-200 { color: #243447; }
+:root[data-theme="light"] .text-slate-300 { color: #33465a; }
+:root[data-theme="light"] .text-slate-400 { color: #526475; }
+:root[data-theme="light"] .text-slate-500 { color: #6b7a8d; }
+:root[data-theme="light"] .text-slate-600 { color: #8394a5; }
+
+/* Superficies y bordes translúcidos */
+:root[data-theme="light"] .bg-white\/5 { background-color: rgba(15, 30, 50, 0.04); }
+:root[data-theme="light"] .bg-white\/10 { background-color: rgba(15, 30, 50, 0.07); }
+:root[data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(15, 30, 50, 0.08); }
+:root[data-theme="light"] .border-white\/5 { border-color: rgba(15, 30, 50, 0.08); }
+:root[data-theme="light"] .border-white\/10 { border-color: rgba(15, 30, 50, 0.12); }
+:root[data-theme="light"] .bg-slate-700 { background-color: #e2e8f0; }
+:root[data-theme="light"] .border-slate-600 { border-color: #cbd5e1; }
+
+/* Enlaces un poco más oscuros para contraste sobre claro */
+:root[data-theme="light"] .text-blue-400 { color: #2563a8; }
 
 @layer components {
   /* Glassmorphism card */

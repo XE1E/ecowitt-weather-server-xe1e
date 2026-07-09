@@ -16,6 +16,13 @@ import { UnitsProvider } from './units'
 import { StationDataProvider } from './station-data'
 import './index.css'
 
+// Registrar el service worker (PWA instalable + offline del app shell)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
+
 // /pro* -> app de la estación (WeatherNode-style) con router; / -> dashboard clásico
 const isStation = window.location.pathname.startsWith('/pro')
 

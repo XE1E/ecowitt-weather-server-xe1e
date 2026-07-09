@@ -24,6 +24,17 @@ export function StationLayout() {
   const units = useUnits()
   const [now, setNow] = useState(() => new Date())
   const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  )
+
+  const toggleTheme = () =>
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('theme', next)
+      document.documentElement.dataset.theme = next
+      return next
+    })
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -65,6 +76,13 @@ export function StationLayout() {
                 className="text-xs rounded-lg px-2 py-1 border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 transition"
               >
                 {units.system === 'metric' ? '°C · km/h' : '°F · mph'}
+              </button>
+              <button
+                onClick={toggleTheme}
+                title="Tema claro / oscuro"
+                className="text-xs rounded-lg px-2 py-1 border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 transition"
+              >
+                {theme === 'dark' ? '🌙' : '☀️'}
               </button>
               <button
                 onClick={toggleFx}
