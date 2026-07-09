@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { WeatherData } from '../../types'
 import { beaufort, cardinal } from '../../weather'
 import { useUnits } from '../../units'
@@ -38,7 +39,10 @@ export function WindCard({ data }: { data: WeatherData }) {
   const bf = beaufort(data.wind_speed ?? 0)
   return (
     <div className="card">
-      <p className="card-title">Viento</p>
+      <div className="flex items-center justify-between">
+        <p className="card-title">Viento</p>
+        <Link to="/pro/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>
+      </div>
       <div className="flex items-center gap-4">
         <div className="relative">
           <Rose direction={dir} />
@@ -49,18 +53,18 @@ export function WindCard({ data }: { data: WeatherData }) {
             <span className="text-[10px] text-slate-400">{u.windU}</span>
           </div>
         </div>
-        <div className="space-y-2 text-sm">
-          <div>
-            <p className="text-slate-400">Dirección</p>
-            <p className="font-semibold">{cardinal(dir)} {dir}°</p>
+        <div className="flex-1 space-y-2 text-sm">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-slate-400">Dirección</span>
+            <span className="font-semibold">{cardinal(dir)} {dir}°</span>
           </div>
-          <div>
-            <p className="text-slate-400">Ráfaga</p>
-            <p className="font-semibold">{u.wind(data.wind_gust)} {u.windU}</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-slate-400">Ráfaga</span>
+            <span className="font-semibold">{u.wind(data.wind_gust)} {u.windU}</span>
           </div>
-          <div>
-            <p className="text-slate-400">Beaufort</p>
-            <p className="font-semibold">{bf.scale} · {bf.label}</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-slate-400">Beaufort</span>
+            <span className="font-semibold text-right">{bf.scale} · {bf.label}</span>
           </div>
         </div>
       </div>

@@ -23,6 +23,7 @@ from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
 from .services.metar import get_metar
 from .services.air_quality import get_air_quality
+from .services.earthquakes import get_earthquakes
 from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
@@ -468,3 +469,15 @@ async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
     except Exception as e:
         logger.error(f"Error getting air quality: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/earthquakes")
+async def get_earthquakes_data():
+    """Sismos recientes cerca de la estación (USGS)."""
+    try:
+        lat = getattr(settings, "cwop_latitude", 19.380359)
+        lon = getattr(settings, "cwop_longitude", -99.174564)
+        return await get_earthquakes(lat, lon)
+    except Exception as e:
+        logger.error(f"Error getting earthquakes: {e}")
+        return {"quakes": []}

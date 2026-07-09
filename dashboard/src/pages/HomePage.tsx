@@ -15,6 +15,8 @@ import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { MetarCard } from '../components/station/MetarCard'
+import { AirQualityCard } from '../components/station/AirQualityCard'
+import { EarthquakesCard } from '../components/station/EarthquakesCard'
 
 export function HomePage() {
   const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
@@ -49,6 +51,8 @@ export function HomePage() {
         </div>
         <div className="space-y-4">
           <SunMoonCard astro={forecast?.astro ?? null} />
+          <AirQualityCard />
+          <EarthquakesCard />
           <AlertsPanel />
           <SkyEventsCard />
           <ExtraSensorsCard data={data} />

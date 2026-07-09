@@ -19,6 +19,10 @@ const NAV_ACTIVE = [
 ]
 const NAV_SOON: string[] = []
 
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const pad = (n: number) => String(n).padStart(2, '0')
+
 export function StationLayout() {
   const { data } = useStationData()
   const units = useUnits()
@@ -60,16 +64,17 @@ export function StationLayout() {
       <WeatherFX type={fxEnabled ? cond.fx : 'none'} intensity={cond.intensity} />
       <div className="min-h-screen p-3 md:p-6">
         <div className="max-w-[1400px] mx-auto">
-          {/* Header */}
-          <header className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold">Estación Clima XE1E en {LOCATION.name}</h1>
-              <p className="text-xs text-slate-400">{LOCATION.label}</p>
+          {/* Header (banner fijo con nombre y fecha/hora centrada) */}
+          <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10 flex items-center gap-3">
+            <div className="min-w-0 shrink">
+              <h1 className="text-base md:text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
+              <p className="text-[11px] text-slate-400 truncate hidden sm:block">{LOCATION.label}</p>
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <span className="font-mono">
-                {now.toLocaleTimeString('es-MX')} · {now.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })}
-              </span>
+            <div className="flex-1 text-center leading-tight">
+              <p className="text-xs md:text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
+              <p className="font-mono text-lg md:text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-300 shrink-0">
               <button
                 onClick={units.toggle}
                 title="Cambiar unidades (métrico / imperial)"

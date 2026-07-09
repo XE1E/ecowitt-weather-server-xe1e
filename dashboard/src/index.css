@@ -22,6 +22,16 @@ body {
   min-height: 100vh;
 }
 
+/* Banner fijo (header sticky) — fondo semiopaco por tema */
+.appbar {
+  background: rgba(10, 15, 26, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+:root[data-theme="light"] .appbar {
+  background: rgba(244, 247, 251, 0.9);
+}
+
 /* ================= Tema claro ================= */
 /* Se activa con data-theme="light" en <html>. Capa de overrides sobre el
    diseño dark-first, sin tocar los componentes uno a uno. */

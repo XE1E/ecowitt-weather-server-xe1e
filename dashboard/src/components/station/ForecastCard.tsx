@@ -27,7 +27,7 @@ export function ForecastCard({ forecast }: { forecast: ForecastResult | null }) 
         <p className="card-title mb-0">Pronóstico</p>
         <div className="flex gap-1">
           <button className={btn(tab === '5d')} onClick={() => setTab('5d')}>5 días</button>
-          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>Horario</button>
+          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>por Hora</button>
         </div>
       </div>
 

@@ -39,17 +39,16 @@ export function MetarCard() {
 
   return (
     <div className="card">
-      <p className="card-title">METAR — {m.station} (AICM)</p>
-      <div className="grid grid-cols-2 gap-y-1 text-sm">
-        <div><span className="text-slate-400">Temp</span> {m.temp_c != null ? `${m.temp_c}°C` : '--'}</div>
-        <div><span className="text-slate-400">Viento</span> {m.wind_dir != null ? `${m.wind_dir}° / ${m.wind_speed_kt} kt` : '--'}</div>
-        <div><span className="text-slate-400">Presión</span> {m.altimeter_hpa != null ? `${m.altimeter_hpa} hPa` : '--'}</div>
-        <div><span className="text-slate-400">Categoría</span> <span className={catColor}>{cat ?? '--'}</span></div>
+      <div className="flex items-center justify-between">
+        <p className="card-title">METAR · {m.station}</p>
+        <span className={`text-xs font-semibold ${catColor}`}>{cat ?? ''}</span>
       </div>
-      {m.clouds && m.clouds.length > 0 && (
-        <p className="text-xs text-slate-400 mt-2">Nubes: {m.clouds.join(', ')}</p>
-      )}
-      <p className="text-[11px] text-slate-500 mt-2 font-mono break-all">{m.raw}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+        <span><span className="text-slate-400">Temp</span> {m.temp_c != null ? `${m.temp_c}°C` : '--'}</span>
+        <span><span className="text-slate-400">Viento</span> {m.wind_dir != null ? `${m.wind_dir}°/${m.wind_speed_kt}kt` : '--'}</span>
+        <span><span className="text-slate-400">Presión</span> {m.altimeter_hpa != null ? `${m.altimeter_hpa} hPa` : '--'}</span>
+      </div>
+      <p className="text-[10px] text-slate-500 mt-1 font-mono truncate" title={m.raw}>{m.raw}</p>
     </div>
   )
 }
