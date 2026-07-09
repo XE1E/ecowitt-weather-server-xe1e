@@ -7,7 +7,10 @@ from app.services.quality import quality_check
 from app.services.converter import calculate_derived_values, calculate_humidex, calculate_cloud_base
 from app.services.forecaster import local_forecast, classify_trend
 from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
-from app.services.aggregator import local_day_bounds_utc, flatten_stats, all_time_records
+from app.services.aggregator import (
+    local_day_bounds_utc, flatten_stats, all_time_records,
+    period_summary, monthly_records, noaa_month, noaa_year, build_records,
+)
 from datetime import datetime
 
 
@@ -148,3 +151,49 @@ def test_all_time_records():
     assert rec["temp_min"] == {"value": 8.0, "date": "2026-07-02"}
     assert rec["rain_max_day"] == {"value": 12.0, "date": "2026-07-02"}
     assert rec["days"] == 3
+
+
+# ---------- Récords ampliados + NOAA ----------
+_SAMPLE = [
+    {"date": "2025-07-10", "temp_avg": 19.0, "temp_max": 27.0, "temp_min": 11.0, "rain_total": 5.0, "wind_avg": 7, "wind_max": 14, "gust_max": 20},
+    {"date": "2026-06-15", "temp_avg": 20.0, "temp_max": 29.0, "temp_min": 12.0, "rain_total": 0.0, "wind_avg": 8, "wind_max": 16, "gust_max": 25},
+    {"date": "2026-07-01", "temp_avg": 18.0, "temp_max": 24.0, "temp_min": 10.0, "rain_total": 12.0, "wind_avg": 6, "wind_max": 12, "gust_max": 18},
+    {"date": "2026-07-02", "temp_avg": 22.0, "temp_max": 28.5, "temp_min": 9.0, "rain_total": 0.1, "wind_avg": 9, "wind_max": 18, "gust_max": 30},
+]
+
+
+def test_period_summary():
+    s = period_summary(_SAMPLE)
+    assert s["days"] == 4
+    assert s["high"] == {"value": 29.0, "date": "2026-06-15"}
+    assert s["low"] == {"value": 9.0, "date": "2026-07-02"}
+    assert s["rain_total"] == 17.1
+    assert s["rain_days"] == 2          # 5.0 y 12.0 >= 0.2 (0.0 y 0.1 no)
+    assert s["hdd"] > 0                 # temps medias < 18.3 aportan HDD
+
+
+def test_monthly_records():
+    mr = monthly_records(_SAMPLE)
+    # julio (7) agrupa 2025-07 y 2026-07
+    assert mr[7]["temp_max"]["value"] == 28.5
+    assert mr[7]["temp_min"]["value"] == 9.0
+    assert mr[6]["temp_max"]["value"] == 29.0  # junio
+
+
+def test_noaa_month_and_year():
+    m = noaa_month(_SAMPLE, 2026, 7)
+    assert m["scope"] == "month"
+    assert len(m["days"]) == 2
+    assert m["days"][0]["date"] == "2026-07-01"
+    assert m["summary"]["rain_total"] == 12.1
+    y = noaa_year(_SAMPLE, 2026)
+    assert y["scope"] == "year"
+    assert {mm["month"] for mm in y["months"]} == {6, 7}
+
+
+def test_build_records_periods():
+    b = build_records(_SAMPLE, today=datetime(2026, 7, 3))
+    assert b["yesterday"]["date"] == "2026-07-02"
+    assert b["this_month"]["days"] == 2          # ambos de 2026-07
+    assert b["this_year"]["days"] == 3           # 2026-06 + 2026-07
+    assert b["all_time"]["temp_max"]["value"] == 29.0

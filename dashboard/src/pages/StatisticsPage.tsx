@@ -56,7 +56,7 @@ export function StatisticsPage() {
   useEffect(() => {
     fetch('/api/climate/records')
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => setAllTime(j))
+      .then((j) => setAllTime(j?.all_time ?? null))
       .catch(() => {})
   }, [])
 

@@ -93,6 +93,122 @@ def all_time_records(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+# Base para grados-día (°C). Estándar NOAA: 65 °F = 18.3 °C.
+BASE_DD = 18.3
+# Umbral para contar un "día con lluvia" (mm). NOAA usa 0.01 in ≈ 0.254 mm.
+RAIN_DAY_MM = 0.2
+
+
+def _month_of(date_str: str) -> Optional[int]:
+    try:
+        return int(date_str[5:7])
+    except (ValueError, IndexError):
+        return None
+
+
+def _best(rows, field, pick_max=True):
+    cand = [(r.get(field), r.get("date")) for r in rows if r.get(field) is not None]
+    if not cand:
+        return None
+    val, date = (max if pick_max else min)(cand, key=lambda x: x[0])
+    return {"value": round(val, 1), "date": date}
+
+
+def period_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Resumen agregado de un conjunto de días (mes, año, etc.)."""
+    if not rows:
+        return {"days": 0}
+    means = [r["temp_avg"] for r in rows if r.get("temp_avg") is not None]
+    rain_vals = [r.get("rain_total") or 0.0 for r in rows]
+    wind_avgs = [r["wind_avg"] for r in rows if r.get("wind_avg") is not None]
+    hdd = sum(max(0.0, BASE_DD - r["temp_avg"]) for r in rows if r.get("temp_avg") is not None)
+    cdd = sum(max(0.0, r["temp_avg"] - BASE_DD) for r in rows if r.get("temp_avg") is not None)
+    return {
+        "days": len(rows),
+        "mean_temp": round(sum(means) / len(means), 1) if means else None,
+        "high": _best(rows, "temp_max", True),
+        "low": _best(rows, "temp_min", False),
+        "rain_total": round(sum(rain_vals), 1),
+        "rain_max_day": _best(rows, "rain_total", True),
+        "rain_days": sum(1 for v in rain_vals if v >= RAIN_DAY_MM),
+        "wind_avg": round(sum(wind_avgs) / len(wind_avgs), 1) if wind_avgs else None,
+        "wind_max": _best(rows, "wind_max", True),
+        "gust_max": _best(rows, "gust_max", True),
+        "hdd": round(hdd, 1),
+        "cdd": round(cdd, 1),
+    }
+
+
+def monthly_records(rows: List[Dict[str, Any]]) -> Dict[int, Any]:
+    """Récords por mes calendario (p. ej. 'el julio más caluroso de siempre')."""
+    out: Dict[int, Any] = {}
+    for m in range(1, 13):
+        mrows = [r for r in rows if _month_of(str(r.get("date", ""))) == m]
+        if not mrows:
+            continue
+        out[m] = {
+            "temp_max": _best(mrows, "temp_max", True),
+            "temp_min": _best(mrows, "temp_min", False),
+            "rain_max_day": _best(mrows, "rain_total", True),
+            "gust_max": _best(mrows, "gust_max", True),
+        }
+    return out
+
+
+def noaa_month(rows: List[Dict[str, Any]], year: int, month: int) -> Dict[str, Any]:
+    """Reporte climatológico mensual estilo NOAA: una fila por día + resumen."""
+    prefix = f"{year:04d}-{month:02d}"
+    days = sorted((r for r in rows if str(r.get("date", "")).startswith(prefix)),
+                  key=lambda r: r.get("date", ""))
+    per_day = []
+    for r in days:
+        ta = r.get("temp_avg")
+        per_day.append({
+            "date": r.get("date"),
+            "mean_temp": ta,
+            "high": r.get("temp_max"), "high_time": r.get("temp_max_time"),
+            "low": r.get("temp_min"), "low_time": r.get("temp_min_time"),
+            "hdd": round(max(0.0, BASE_DD - ta), 1) if ta is not None else None,
+            "cdd": round(max(0.0, ta - BASE_DD), 1) if ta is not None else None,
+            "rain": r.get("rain_total"),
+            "wind_avg": r.get("wind_avg"),
+            "gust_max": r.get("gust_max"), "gust_time": r.get("gust_max_time"),
+        })
+    return {"scope": "month", "year": year, "month": month,
+            "days": per_day, "summary": period_summary(days)}
+
+
+def noaa_year(rows: List[Dict[str, Any]], year: int) -> Dict[str, Any]:
+    """Reporte climatológico anual estilo NOAA: una fila por mes + resumen."""
+    prefix = f"{year:04d}-"
+    year_rows = [r for r in rows if str(r.get("date", "")).startswith(prefix)]
+    months = []
+    for m in range(1, 13):
+        mrows = [r for r in year_rows if _month_of(str(r.get("date", ""))) == m]
+        if mrows:
+            months.append({"month": m, **period_summary(mrows)})
+    return {"scope": "year", "year": year,
+            "months": months, "summary": period_summary(year_rows)}
+
+
+def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
+    """Paquete de récords: de siempre, por mes, este mes, este año y ayer."""
+    today = today or datetime.now(_TZ)
+    ym = today.strftime("%Y-%m")
+    y = today.strftime("%Y")
+    yest = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+    this_month = [r for r in rows if str(r.get("date", "")).startswith(ym)]
+    this_year = [r for r in rows if str(r.get("date", "")).startswith(y)]
+    yesterday = next((r for r in rows if r.get("date") == yest), None)
+    return {
+        "all_time": all_time_records(rows),
+        "monthly": monthly_records(rows),
+        "this_month": period_summary(this_month),
+        "this_year": period_summary(this_year),
+        "yesterday": yesterday,
+    }
+
+
 async def compute_and_store_day(storage, day: datetime) -> Optional[Dict[str, Any]]:
     """Calcula el resumen de un día local y lo guarda en weather_daily."""
     start_iso, stop_iso, ts_utc = local_day_bounds_utc(day)

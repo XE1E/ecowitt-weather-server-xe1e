@@ -368,12 +368,25 @@ async def get_climate_daily(start: str = "-365d", stop: str = "now()"):
 
 @app.get("/api/climate/records")
 async def get_climate_records(start: str = "-3650d"):
-    """Récords de siempre calculados desde el resumen diario."""
+    """Récords ampliados: de siempre, por mes calendario, este mes/año y ayer."""
     try:
         rows = await storage.query_daily_summaries(start=start)
-        return aggregator.all_time_records(rows)
+        return aggregator.build_records(rows)
     except Exception as e:
         logger.error(f"Error getting climate records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/climate/noaa")
+async def get_climate_noaa(year: int, month: Optional[int] = None):
+    """Reporte climatológico estilo NOAA: mensual (con month) o anual (sin month)."""
+    try:
+        rows = await storage.query_daily_summaries(start="-3650d")
+        if month:
+            return aggregator.noaa_month(rows, year, month)
+        return aggregator.noaa_year(rows, year)
+    except Exception as e:
+        logger.error(f"Error building NOAA report: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

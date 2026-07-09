@@ -165,8 +165,8 @@ Filtradas a lo que aprovecha el **dato local** y encaja en nuestro stack:
 | Idea de CumulusMX | Qué nos daría | Prioridad |
 |-------------------|---------------|-----------|
 | **Resumen diario ("Dayfile")** — un registro por día con mín/máx/prom/total + horas | **Base** de récords, climatología y "en este día"; hace rápidas las consultas largas. Es la pieza de **arquitectura de WeeWX** (acumuladores) | 🔴 Fundacional |
-| **Récords ampliados** — histórico de siempre + récord por cada mes calendario + "este mes/año/ayer" con fecha/hora | Página de récords tipo CumulusMX | 🟠 (depende de Dayfile) |
-| **Reporte climatológico NOAA** (mensual/anual): medias, extremos, días de lluvia, grados-día | Sección "Climatología" | 🟠 (depende de Dayfile) |
+| **Récords ampliados** — histórico de siempre + récord por cada mes calendario + "este mes/año/ayer" con fecha/hora | Página de récords tipo CumulusMX | ✅ Hecho (Climatología) |
+| **Reporte climatológico NOAA** (mensual/anual): medias, extremos, días de lluvia, grados-día | Sección "Climatología" | ✅ Hecho (Climatología) |
 | **Más alarmas**: ráfaga alta, lluvia diaria alta, presión alta/baja, **batería baja (WN31)**, contacto de sensor perdido, pico | Cobertura de avisos como CumulusMX (ya tenemos temp/viento/lluvia/estación-caída) | 🟠 |
 | **"En este día"** (efeméride) — qué pasó tal día en años previos | Enganche/curiosidad | 🟢 (depende de Dayfile) |
 | **Wind run + dirección dominante + rosa de vientos** | Estadística de viento del sitio | 🟢 |

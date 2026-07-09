@@ -12,6 +12,7 @@ const NAV_ACTIVE = [
   { to: '/pro/pronostico', label: 'Pronóstico', end: false },
   { to: '/pro/historia', label: 'Historia', end: false },
   { to: '/pro/estadisticas', label: 'Estadísticas', end: false },
+  { to: '/pro/climatologia', label: 'Climatología', end: false },
   { to: '/pro/radar', label: 'Radar', end: false },
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
   { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
