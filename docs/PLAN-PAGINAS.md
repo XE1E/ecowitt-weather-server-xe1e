@@ -26,12 +26,14 @@ qué datos, y cómo construirlas.
 | **Astronomía** | ✅ Sí | Open-Meteo + cálculo | 🟢 Bajo | Ampliar lo que ya hay: sol/luna, fases, horas de luz, quizá planetas visibles |
 | **Radar** | ✅ Sí (fácil) | Windy embed | 🟢 Bajo | Página con radar a pantalla completa (ya tenemos el widget chico) |
 | **Satélite** | 🟡 Opcional | Windy/NOAA embed | 🟢 Bajo | Otro embed (capa satélite). Externo, no de la estación |
-| **Calidad del aire** | 🟡 Opcional (externo) | **Open-Meteo Air Quality** (gratis) | 🟠 Medio | La estación NO mide aire, pero Open-Meteo da PM2.5/PM10/AQI de CDMX gratis. Se puede mostrar como dato **externo** claramente etiquetado |
+| **Calidad del aire** | ✅ Hecho (externo) | **WAQI / aqicn** (token gratis) | 🟠 Medio | La estación NO mide aire; WAQI da AQI + PM2.5/PM10/O₃… de las estaciones de CDMX. Etiquetado como dato **externo**. Tarjeta en Home + página propia |
 | **Fire Weather** | 🟡 Opcional | Derivado (temp/hum/viento) | 🟠 Medio | Índice de riesgo de incendio calculado. Nicho; útil en secas |
 | **Polen** | ❌ Omitir | — | — | Sin fuente confiable para CDMX; la estación no lo mide |
 | **Sky & Water (mareas)** | ❌ Omitir | — | — | CDMX es interior; no aplica |
 | **Community Stations** | ❌ Omitir | — | — | Requeriría una red de estaciones |
-| **Alertas / Earthquakes / Aurora / METAR** | Parcial | — | — | Alertas y METAR ya están en Home. Sismos/aurora: omitir (no aplican / externos) |
+| **Alertas / METAR** | ✅ Hecho | — | — | En Home |
+| **Sismos** | ✅ Hecho (añadido después) | SSN → USGS | — | Tarjeta "Último sismo" en Home + página `/pro/sismos`. México es zona sísmica, sí aplica |
+| **Aurora** | ❌ Omitir | — | — | No aplica en la latitud de CDMX |
 
 ---
 

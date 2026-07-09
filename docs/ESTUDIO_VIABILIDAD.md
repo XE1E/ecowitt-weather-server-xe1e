@@ -1,5 +1,10 @@
 # Estudio de Viabilidad: Estación Meteorológica Ecowitt
-## Servidor Local + Dashboard Web Personal
+## Servidor propio (VPS) + Dashboard Web Personal
+
+> Nota: el título original decía "Servidor Local". La arquitectura final (B) usa
+> **push del WS2910 por internet a un VPS con HTTPS**, no un servidor en LAN. Las
+> menciones a "red local / API local" más abajo describen la opción del GW3000
+> que se evaluó y **no** se usa.
 
 ---
 

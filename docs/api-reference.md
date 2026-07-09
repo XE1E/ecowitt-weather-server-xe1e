@@ -5,7 +5,8 @@ Documentación de la API REST del servidor Ecowitt Weather Station.
 ## Base URL
 
 ```
-http://localhost:8080
+http://localhost:8080            # en el servidor
+https://clima.xe1e.net           # producción (vía Cloudflare/HTTPS)
 ```
 
 ## Endpoints
@@ -77,7 +78,9 @@ GET /api/current
   "uv_index": 5,
   "dew_point": 18.2,
   "feels_like": 26.1,
-  "station_type": "GW3000A_V3.0.5",
+  "humidex": 27.3,
+  "cloud_base": 890,
+  "station_type": "WS2910_V1.0.0",
   "model": "WS69",
   "received_at": "2024-01-15T14:30:00.000Z"
 }
@@ -193,6 +196,37 @@ GET /api/stats/daily
 
 ---
 
+### Más endpoints
+
+Todos bajo la misma base. Devuelven JSON.
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `GET /api/stats/records?start=-30d` | Estadísticas (mín/máx/prom con fecha del extremo) sobre un rango |
+| `GET /api/compare` | Últimas 24 h vs 24 h previas ("vs ayer") |
+| `GET /api/forecast/local` | Pronóstico local por tendencia barométrica (dato propio) |
+| `GET /api/climate/daily?start=-365d` | Resúmenes diarios (Dayfile) |
+| `GET /api/climate/records` | Récords: de siempre, por mes calendario, este mes/año, ayer |
+| `GET /api/climate/onthisday` | Efeméride: mismo día en años previos |
+| `GET /api/climate/noaa?year=YYYY&month=MM` | Reporte climatológico NOAA (mensual con `month`, anual sin él) |
+| `GET /api/wind/rose?start=-7d` | Rosa de vientos (16 sectores, frecuencia y velocidad) |
+| `GET /api/almanac` | Almanaque: sol, crepúsculos, luna y planetas |
+| `GET /api/alerts` | Alertas activas |
+| `GET /api/metar?station=MMMX` | METAR del aeropuerto (proxy a aviationweather.gov) |
+| `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
+| `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
+
+### Administración (requiere sesión)
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `POST /api/admin/login` | `{user, password}` → `{token}` (sesión 12 h) |
+| `GET /api/admin/settings` | Ajustes actuales (tokens/claves enmascarados). Header `Authorization: Bearer <token>` |
+| `POST /api/admin/settings` | Actualiza ajustes editables (en blanco = conservar secretos) |
+| `GET /api/admin/status` | Estado de alertas/estación |
+
+---
+
 ## Data Fields Reference
 
 ### Temperature Fields
@@ -205,6 +239,9 @@ GET /api/stats/daily
 | `feels_like` | °C | Sensación térmica |
 | `heat_index` | °C | Índice de calor (solo en temp > 27°C) |
 | `wind_chill` | °C | Sensación térmica por viento (solo temp < 10°C) |
+| `humidex` | °C | Índice de bochorno (temp + humedad, sobre ~20°C) |
+| `cloud_base` | m | Altura estimada de la base de nubes |
+| `temperature_ch1`…`ch8` | °C | Canales WN31 (1-8) |
 
 ### Humidity Fields
 
