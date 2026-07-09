@@ -2,6 +2,21 @@
 
 Sistema de captura, almacenamiento y visualización de datos meteorológicos usando estaciones Ecowitt con servidor local.
 
+**🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net) · Benito Juárez, Ciudad de México
+
+## 📚 Documentación
+
+| Documento | Contenido |
+|-----------|-----------|
+| **[Guía completa](docs/GUIA.md)** | Manual de referencia: hardware, arquitectura, cada página, API, operación y glosario |
+| [Roadmap / mejoras](docs/MEJORAS.md) | Estado del proyecto: hecho y pendiente |
+| [Artículo de blog](docs/blog-articulo.md) | Borrador divulgativo sobre el proyecto |
+| [Referencia de API](docs/api-reference.md) | Endpoints del receiver |
+| [Despliegue](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md) | Puesta en producción |
+| [Configurar el gateway](docs/setup-gateway.md) · [Estudio de viabilidad](docs/ESTUDIO_VIABILIDAD.md) | Hardware y alcance |
+
+> ¿Primera vez? Empieza por la **[Guía completa](docs/GUIA.md)**.
+
 ## Características
 
 - Recepción de datos via protocolo Ecowitt (HTTP POST) — WS2910 o gateway

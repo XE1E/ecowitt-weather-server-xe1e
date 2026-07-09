@@ -145,6 +145,8 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 - **Reloj** en vivo (hora y fecha local).
 - **Botón de unidades:** conmuta métrico (°C · km/h · mm · mb) ↔ imperial
   (°F · mph · in · inHg). Afecta a todo el sitio.
+- **Botón de tema:** ☀️ claro / 🌙 oscuro. Se recuerda entre visitas y aplica a
+  ambas vistas.
 - **Botón FX:** activa/desactiva los **efectos de clima** (lluvia, nieve, etc.)
   animados de fondo según la condición actual.
 - **Vista clásica:** enlace a `/`.
@@ -189,17 +191,24 @@ Gráficas del **histórico propio** (InfluxDB). Selector de **métrica**
   máx/mín — cada uno con la **fecha** en que ocurrió.
 - **Estadísticas por periodo** (7 días / 30 días / año / histórico): promedio,
   máx y mín (con fecha/hora del extremo) de cada variable.
+- **Rosa de vientos:** distribución del viento en 16 sectores (frecuencia y
+  velocidad media por sector), con dirección dominante y % de calma; selector de
+  periodo (7 d / 30 d / año).
 
 ### 5.5 Climatología
-Construida sobre el **resumen diario**. Tres bloques:
-- **Resúmenes rápidos:** Ayer · Este mes · Este año (media, máx/mín, lluvia,
-  días con lluvia).
+Construida sobre el **resumen diario**. Bloques:
+- **En este día:** qué pasó el mismo día calendario en años previos (máx/mín/
+  lluvia por año). Se muestra cuando ya hay al menos un año de histórico.
+- **Resúmenes rápidos:** Ayer · Este mes · Este año — media, máx/mín, lluvia,
+  días con lluvia, **grados-día** (calefacción/refrigeración) y
+  **evapotranspiración (ET)** del periodo.
 - **Récords por mes calendario:** p. ej. "el junio más caluroso de siempre".
 - **Reporte climatológico estilo NOAA:** selector de **año** y **mes/anual**.
-  - *Mensual:* una fila por día — media, máx/mín con hora, **grados-día** de
-    calefacción y refrigeración (base 18.3 °C), lluvia y ráfaga + resumen del mes.
+  - *Mensual:* una fila por día — media, máx/mín con hora, **grados-día**
+    (base 18.3 °C), lluvia, ráfaga y **ET** + resumen del mes.
   - *Anual:* una fila por mes + resumen del año.
-  - "Día con lluvia" = ≥ 0.2 mm.
+  - "Día con lluvia" = ≥ 0.2 mm. La **ET** se calcula por el método Hargreaves
+    (solo temperaturas + latitud/día del año).
 
 ### 5.6 Radar
 Mapa interactivo de **Ventusky** centrado en la CDMX, con capas (radar de
@@ -227,8 +236,18 @@ consulta rápida.
 
 ### 5.10 Pie de página
 Tres columnas (Estación / Datos / Proyecto) con hardware, ubicación, fuentes de
-datos y enlace al repositorio; un párrafo descriptivo; y un enlace discreto
-**⚙ Admin**.
+datos y enlace al repositorio; un párrafo descriptivo; y enlaces discretos a
+**Compartir / insertar** y **⚙ Admin**.
+
+### 5.11 Compartir e instalar (PWA)
+- **Compartir / insertar** (`/pro/compartir`): elige unidades y tema, ve una
+  **vista previa en vivo** del widget y copia el **código `<iframe>`** para
+  incrustarlo en otra web o blog, o el **enlace directo**. El widget (`/embed`)
+  es una tarjeta compacta con las condiciones actuales que se actualiza cada
+  minuto y acepta `?units=` y `?theme=`.
+- **Instalable (PWA):** el sitio es una *Progressive Web App*; desde el móvil se
+  puede **"Añadir a pantalla de inicio"** y queda como una app con su ícono; el
+  "app shell" queda disponible sin conexión.
 
 ---
 
@@ -262,8 +281,11 @@ normalizarse** (no spamean). Canal: **Telegram** si está configurado, o el log.
 | Alerta | Se dispara cuando… |
 |--------|--------------------|
 | Temp alta / baja | temp ≥/≤ umbral |
-| Viento fuerte | ráfaga (o viento) ≥ umbral |
+| Viento fuerte | viento sostenido ≥ umbral |
+| Ráfaga fuerte | ráfaga ≥ umbral |
 | Lluvia intensa | tasa de lluvia ≥ umbral |
+| Lluvia diaria alta | acumulado del día ≥ umbral |
+| Presión alta / baja | presión ≥/≤ umbral |
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
@@ -319,7 +341,9 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/forecast/local` | pronóstico por tendencia barométrica |
 | `GET /api/climate/daily` | resúmenes diarios |
 | `GET /api/climate/records` | récords (siempre, por mes, este mes/año, ayer) |
+| `GET /api/climate/onthisday` | efeméride: mismo día en años previos |
 | `GET /api/climate/noaa?year=&month=` | reporte NOAA mensual/anual |
+| `GET /api/wind/rose?start=-7d` | rosa de vientos (16 sectores) |
 | `GET /api/almanac` | almanaque astronómico |
 | `GET /api/alerts` | alertas activas |
 | `GET /api/metar?station=MMMX` | METAR |
@@ -389,16 +413,19 @@ fuera del VPS, p. ej. a R2/almacenamiento externo.)
 
 El estado detallado y el roadmap viven en **`docs/MEJORAS.md`**. Resumen:
 
-**Hecho:** despliegue con HTTPS, vista clásica + `/pro` con 8 secciones, unidades
-y FX, alertas (umbral + estación caída + batería + sensor perdido), Telegram,
-MQTT/HA, control de calidad (rangos + picos), calibración, variables derivadas
-ampliadas, pronóstico local, publicación a 5 redes, resumen diario, récords
-ampliados, reporte NOAA y almanaque ampliado.
+**Hecho:** despliegue con HTTPS, vista clásica + `/pro` con 8 secciones,
+**tema claro/oscuro**, unidades y FX, **PWA instalable**, **widget insertable**
+(`/embed`) y página **Compartir**; alertas completas (temp, viento, **ráfaga**,
+lluvia, **lluvia diaria**, **presión**, estación caída, batería, sensor perdido),
+Telegram, MQTT/HA; control de calidad (rangos + picos), calibración, variables
+derivadas ampliadas, pronóstico local, publicación a 5 redes; resumen diario,
+récords ampliados, **"en este día"**, reporte NOAA, **grados-día + ET**,
+**rosa de vientos** y almanaque ampliado.
 
-**Pendiente:** alarmas de ráfaga/lluvia diaria/presión; "en este día"; rosa de
-vientos y grados-día como estadística visible; evapotranspiración; tema claro;
-PWA; backups fuera del VPS; artículo de blog; y las acciones del usuario
-(crear bot de Telegram, token WAQI, credenciales de redes).
+**Pendiente:** i18n/inglés (decisión); monitor de uptime externo; backups fuera
+del VPS (R2); Grafana; **publicar el artículo de blog** (borrador en
+`docs/blog-articulo.md`); y las acciones del usuario (crear bot de Telegram,
+token WAQI, credenciales de las redes públicas).
 
 ---
 
