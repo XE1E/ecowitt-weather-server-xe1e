@@ -14,6 +14,7 @@ Sistema de captura, almacenamiento y visualización de datos meteorológicos usa
 | [Referencia de API](docs/api-reference.md) | Endpoints del receiver |
 | [Despliegue](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md) | Puesta en producción |
 | [Backups a R2](docs/backups-r2.md) · [Monitor de uptime](uptime-worker/README.md) | Respaldo y vigilancia |
+| [Proyecto "Todo con Cloudflare"](docs/PROYECTO-CLOUDFLARE.md) | Estudio para migrar a 100 % serverless (sin VPS) |
 | [Configurar el gateway](docs/setup-gateway.md) · [Estudio de viabilidad](docs/ESTUDIO_VIABILIDAD.md) | Hardware y alcance |
 
 > ¿Primera vez? Empieza por la **[Guía completa](docs/GUIA.md)**.

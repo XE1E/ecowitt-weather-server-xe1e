@@ -67,7 +67,21 @@ tendencia barométrica y publicación a redes públicas.
 ## ☁️ Arquitectura / experimentos
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 15 | Laboratorio "todo Cloudflare" (Workers + D1 + Pages) | 🟢 | 🔴 | Pendiente (ver CLOUDFLARE-WORKERS.md) |
+| 15 | **Proyecto "Todo con Cloudflare"** (serverless, sin VPS) | 🟠 | 🔴 | 📓 En estudio — ver [`docs/PROYECTO-CLOUDFLARE.md`](PROYECTO-CLOUDFLARE.md) |
+
+> **Proyecto paralelo "Todo con Cloudflare".** Objetivo: migrar todo a Cloudflare
+> (Workers + Pages + D1 + KV + R2 + Cron), **sin VPS ni externos**. Documento de
+> estudio completo en [`docs/PROYECTO-CLOUDFLARE.md`](PROYECTO-CLOUDFLARE.md).
+>
+> **Resumen técnico de la ingesta (el punto clave a validar):** el WS2910 postea
+> **solo por HTTP (sin TLS)**, a host+puerto+ruta, y **no sigue redirecciones**.
+> Un Worker de Cloudflare **puede** recibir ese push directo si: (1) se usa un
+> **puerto HTTP compatible** con el proxy (80, 8080, 8880, 2052, 2082, 2086,
+> 2095); (2) se **exenta la ruta de ingesta** de "Always Use HTTPS" (regla) para
+> que no haya redirect 301; (3) el Worker se ata a `…/data/report*`. El tramo
+> estación→edge va en **HTTP plano** (dato público, bajo riesgo). **Hay que
+> probarlo con el hardware real (≥ 17 jul)**; si fallara, Plan B = mini-relay que
+> reciba el push y lo reenvíe al Worker por HTTPS.
 | 16 | Backups fuera del VPS (R2 / almacenamiento externo) | 🟠 | 🟠 | ✅ Hecho (subida a R2 en el script; ver `docs/backups-r2.md`) |
 | 17 | Grafana (ya en compose, perfil opcional) | 🟢 | 🟢 | Pendiente |
 
