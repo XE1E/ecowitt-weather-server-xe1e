@@ -142,6 +142,11 @@ export function StationLayout() {
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Proyecto</p>
                 <p>
+                  <a href="/guia.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                    📖 Guía completa de la estación
+                  </a>
+                </p>
+                <p>
                   <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e" className="text-blue-400 hover:text-blue-300">
                     GitHub — ecowitt-weather-server-xe1e
                   </a>
