@@ -68,7 +68,7 @@ tendencia barométrica y publicación a redes públicas.
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
 | 15 | Laboratorio "todo Cloudflare" (Workers + D1 + Pages) | 🟢 | 🔴 | Pendiente (ver CLOUDFLARE-WORKERS.md) |
-| 16 | Backups fuera del VPS (R2 / almacenamiento externo) | 🟠 | 🟠 | Pendiente |
+| 16 | Backups fuera del VPS (R2 / almacenamiento externo) | 🟠 | 🟠 | ✅ Hecho (subida a R2 en el script; ver `docs/backups-r2.md`) |
 | 17 | Grafana (ya en compose, perfil opcional) | 🟢 | 🟢 | Pendiente |
 
 ---
