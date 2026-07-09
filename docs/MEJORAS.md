@@ -24,7 +24,7 @@ tendencia barométrica y publicación a redes públicas.
 |---|------|-------|----------|--------|
 | 1 | **Alerta de "estación caída"** (avisar si no llegan datos en X min) | 🔴 Alto | 🟢 Bajo | ✅ Hecho |
 | 2 | **Terminar Telegram** (crear bot + token) | 🔴 Alto | 🟢 Bajo (acción del usuario) | ⏳ Pendiente usuario (ya editable en panel) |
-| 3 | **Monitor de uptime externo** (Cloudflare Worker + cron) | 🟠 | 🟢 | Pendiente |
+| 3 | **Monitor de uptime externo** (Cloudflare Worker + cron) | 🟠 | 🟢 | ✅ Código listo (`uptime-worker/`); falta desplegar |
 
 ## 📊 Datos / features
 | # | Idea | Valor | Esfuerzo | Estado |

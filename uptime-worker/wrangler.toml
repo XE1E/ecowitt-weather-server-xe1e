@@ -1,0 +1,20 @@
+name = "clima-xe1e-uptime"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Comprobar cada 5 minutos
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+TARGET_URL = "https://clima.xe1e.net/health"
+
+# Namespace KV para recordar el último estado (up/down). Reemplaza el id por el
+# que te dé:  wrangler kv namespace create UPTIME
+[[kv_namespaces]]
+binding = "UPTIME"
+id = "REEMPLAZAR_CON_TU_KV_ID"
+
+# Secretos (NO van aquí; se cargan aparte):
+#   wrangler secret put TELEGRAM_BOT_TOKEN
+#   wrangler secret put TELEGRAM_CHAT_ID
