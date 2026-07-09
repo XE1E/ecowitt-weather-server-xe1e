@@ -1,6 +1,6 @@
 # Ecowitt Weather Station Server
 
-Sistema de captura, almacenamiento y visualización de datos meteorológicos usando estaciones Ecowitt con servidor local.
+Sistema de captura, almacenamiento y visualización de datos meteorológicos de una estación Ecowitt. La estación (WS2910) **envía sus datos por push** al servidor a través de internet; el servidor corre en un **VPS con HTTPS** y es accesible desde cualquier lugar, con integración a Home Assistant.
 
 **🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net) · Benito Juárez, Ciudad de México
 
@@ -82,9 +82,9 @@ WS69 (exterior)   WN31 (interior)
 
 ## Requisitos
 
-- Python 3.11+
-- Docker & Docker Compose
-- Red local (el gateway y servidor deben estar en la misma red)
+- Docker & Docker Compose (en el servidor/VPS)
+- Un servidor accesible por internet (VPS) y, para HTTPS, un dominio (aquí vía Cloudflare)
+- El WS2910 con salida a internet para enviar el push al servidor (no requiere estar en la misma red)
 
 ## Instalación Rápida
 
