@@ -156,7 +156,9 @@ export function StationLayout() {
               datos se actualizan de forma continua. Proyecto personal sobre el clima.
             </p>
             <p className="text-center text-slate-600 mt-6">
-              © 2026 Estación XE1E · {LOCATION.name} · <NavLink to="/pro/admin" className="hover:text-slate-400">⚙ Admin</NavLink>
+              © 2026 Estación XE1E · {LOCATION.name} ·{' '}
+              <NavLink to="/pro/compartir" className="hover:text-slate-400">Compartir / insertar</NavLink> ·{' '}
+              <NavLink to="/pro/admin" className="hover:text-slate-400">⚙ Admin</NavLink>
             </p>
           </footer>
         </div>

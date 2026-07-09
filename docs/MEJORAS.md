@@ -43,7 +43,7 @@ tendencia barométrica y publicación a redes públicas.
 | 11 | Tema claro opcional | 🟢 | 🟠 | ✅ Hecho (toggle ☀️/🌙 en el header) |
 | 12 | i18n / inglés | 🟢 | 🔴 | Pendiente (decisión) |
 | 13 | PWA (instalable) | 🟢 | 🟠 | ✅ Hecho (manifest + service worker + íconos) |
-| 14 | Widget "Share & Embed" de condiciones actuales | 🟢 | 🟠 | Pendiente |
+| 14 | Widget "Share & Embed" de condiciones actuales | 🟢 | 🟠 | ✅ Hecho (/embed + página Compartir) |
 
 ## 🔐 Administración / seguridad
 | # | Idea | Valor | Esfuerzo | Estado |
@@ -62,7 +62,7 @@ tendencia barométrica y publicación a redes públicas.
 ## 📝 Contenido
 | # | Idea | Valor | Esfuerzo | Estado |
 |---|------|-------|----------|--------|
-| 18 | **Redactar artículo para el blog** (sobre el proyecto/estación) | 🟠 | 🟠 | Pendiente |
+| 18 | **Redactar artículo para el blog** (sobre el proyecto/estación) | 🟠 | 🟠 | ✅ Borrador listo (`docs/blog-articulo.md`); falta publicar |
 
 ## ☁️ Arquitectura / experimentos
 | # | Idea | Valor | Esfuerzo | Estado |

@@ -11,7 +11,9 @@ import { RadarPage } from './pages/RadarPage'
 import { AstronomyPage } from './pages/AstronomyPage'
 import { AirQualityPage } from './pages/AirQualityPage'
 import { ClimatePage } from './pages/ClimatePage'
+import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { AdminPage } from './pages/AdminPage'
+import { EmbedWidget } from './pages/EmbedWidget'
 import { UnitsProvider } from './units'
 import { StationDataProvider } from './station-data'
 import './index.css'
@@ -23,12 +25,16 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-// /pro* -> app de la estación (WeatherNode-style) con router; / -> dashboard clásico
-const isStation = window.location.pathname.startsWith('/pro')
+// /embed -> widget compacto para incrustar; /pro* -> app de la estación; / -> clásico
+const path = window.location.pathname
+const isEmbed = path.startsWith('/embed')
+const isStation = path.startsWith('/pro')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {isStation ? (
+    {isEmbed ? (
+      <EmbedWidget />
+    ) : isStation ? (
       <UnitsProvider>
         <StationDataProvider>
           <BrowserRouter>
@@ -42,6 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="radar" element={<RadarPage />} />
                 <Route path="astronomia" element={<AstronomyPage />} />
                 <Route path="calidad-aire" element={<AirQualityPage />} />
+                <Route path="compartir" element={<ShareEmbedPage />} />
                 <Route path="admin" element={<AdminPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/pro" replace />} />
