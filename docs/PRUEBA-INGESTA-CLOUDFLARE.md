@@ -89,36 +89,18 @@ sorpresa futura.
 
 Objetivo: demostrar de punta a punta que un POST HTTP plano llega a un Worker.
 
-**Paso 1 — Worker mínimo de prueba** (`test-ingest/src/index.ts`):
-
-```typescript
-export default {
-  async fetch(req: Request): Promise<Response> {
-    if (req.method === 'POST') {
-      const body = await req.text();
-      console.log('INGESTA OK:', body.slice(0, 300));  // se ve con `wrangler tail`
-      return new Response('OK', { status: 200 });
-    }
-    return new Response('ready', { status: 200 });
-  },
-};
-```
-
-`wrangler.toml`:
-```toml
-name = "test-ingest"
-main = "src/index.ts"
-compatibility_date = "2024-11-01"
-[[routes]]
-pattern = "estacion-test.xe1e.net/*"
-zone_name = "xe1e.net"
-```
-
+**Paso 1 — Worker mínimo de prueba.** Ya está listo en la carpeta
+[`test-ingest/`](../test-ingest/) del repo (Worker + `wrangler.toml` +
+instrucciones). Solo:
 ```bash
-wrangler deploy
-wrangler tail          # logs en vivo, en otra terminal
+cd test-ingest
+npm install
+npx wrangler login
+npm run deploy         # despliega a estacion-test.xe1e.net
+npm run tail           # logs en vivo, en otra terminal
 ```
-(Crear el registro DNS `estacion-test` como **proxied** (nube naranja) en Cloudflare.)
+(Antes: crear el registro DNS `estacion-test` como **proxied** en Cloudflare.
+Detalle completo en [`test-ingest/README.md`](../test-ingest/README.md).)
 
 **Paso 2 — Reproducir el problema (con "Always Use HTTPS" activo):**
 ```bash

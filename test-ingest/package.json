@@ -1,0 +1,14 @@
+{
+  "name": "estacion-test-ingest",
+  "private": true,
+  "description": "Worker de prueba para validar la ingesta HTTP del WS2910 en Cloudflare",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "wrangler": "^3.86.0"
+  }
+}
