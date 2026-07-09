@@ -192,4 +192,4 @@ Todas explotan el **dato local** (la prioridad):
 | **Alarmas batería baja + sensor perdido** | Avisos WN31/WS69 sin batería o sin contacto | ✅ Hecho (panel) |
 | **"En este día"** (efeméride) | Qué pasó tal día en años previos — en Climatología | ✅ Hecho |
 | **Rosa de vientos** | Distribución dirección/velocidad — en Estadísticas | ✅ Hecho |
-| Grados-día como estadística visible · evapotranspiración (ET) | Estadística energética/agrícola | Pendiente |
+| **Grados-día** (visibles) + **evapotranspiración (ET)** | ET0 Hargreaves; grados-día y ET en Climatología y reporte NOAA | ✅ Hecho |

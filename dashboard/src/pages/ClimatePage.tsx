@@ -15,6 +15,7 @@ interface Period {
   gust_max?: Rec | null
   hdd?: number
   cdd?: number
+  et_total?: number | null
 }
 interface DailyRow {
   date: string
@@ -30,7 +31,7 @@ interface RecordsBundle {
 interface NoaaDay {
   date: string; mean_temp?: number | null; high?: number | null; high_time?: string | null
   low?: number | null; low_time?: string | null; hdd?: number | null; cdd?: number | null
-  rain?: number | null; wind_avg?: number | null; gust_max?: number | null
+  rain?: number | null; wind_avg?: number | null; gust_max?: number | null; et?: number | null
 }
 interface NoaaMonthRow extends Period { month: number }
 interface Noaa {
@@ -101,6 +102,14 @@ export function ClimatePage() {
           <span className="text-slate-400">Mín</span><span className="text-right text-sky-300">{p.low ? `${u.temp(p.low.value)}${u.tempU}` : '--'}</span>
           <span className="text-slate-400">Lluvia</span><span className="text-right text-blue-300">{p.rain_total != null ? `${u.rain(p.rain_total)} ${u.rainU}` : '--'}</span>
           <span className="text-slate-400">Días lluvia</span><span className="text-right">{p.rain_days ?? '--'}</span>
+          {(p.hdd != null || p.cdd != null) && (<>
+            <span className="text-slate-400" title="Grados-día calefacción / refrigeración">Grados-día</span>
+            <span className="text-right">{p.hdd ?? '--'} / {p.cdd ?? '--'}</span>
+          </>)}
+          {p.et_total != null && (<>
+            <span className="text-slate-400" title="Evapotranspiración de referencia (Hargreaves)">ET</span>
+            <span className="text-right text-emerald-300">{p.et_total} mm</span>
+          </>)}
         </div>
       </div>
     )
@@ -219,6 +228,7 @@ export function ClimatePage() {
                 <th className="text-right" title="Grados-día de calefacción">GD cal</th>
                 <th className="text-right" title="Grados-día de refrigeración">GD ref</th>
                 <th className="text-right">Lluvia</th><th className="text-right">Ráfaga</th>
+                <th className="text-right" title="Evapotranspiración (mm)">ET</th>
               </tr>
             </thead>
             <tbody>
@@ -234,6 +244,7 @@ export function ClimatePage() {
                   <td className="text-right text-slate-400">{d.cdd ?? '--'}</td>
                   <td className="text-right text-blue-300">{d.rain != null ? u.rain(d.rain) : '--'}</td>
                   <td className="text-right text-emerald-300">{d.gust_max != null ? u.wind(d.gust_max) : '--'}</td>
+                  <td className="text-right text-slate-400">{d.et != null ? d.et : '--'}</td>
                 </tr>
               ))}
             </tbody>
@@ -271,6 +282,8 @@ export function ClimatePage() {
             máx {noaa.summary.high ? `${u.temp(noaa.summary.high.value)}${u.tempU} (${fmtDay(noaa.summary.high.date)})` : '--'} ·
             mín {noaa.summary.low ? `${u.temp(noaa.summary.low.value)}${u.tempU} (${fmtDay(noaa.summary.low.date)})` : '--'} ·
             lluvia {noaa.summary.rain_total != null ? `${u.rain(noaa.summary.rain_total)} ${u.rainU}` : '--'} en {noaa.summary.rain_days ?? 0} día(s)
+            {noaa.summary.et_total != null ? ` · ET ${noaa.summary.et_total} mm` : ''}
+            {(noaa.summary.hdd != null || noaa.summary.cdd != null) ? ` · grados-día ${noaa.summary.hdd ?? 0}/${noaa.summary.cdd ?? 0}` : ''}
           </p>
         ) : null}
       </div>

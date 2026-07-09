@@ -10,7 +10,7 @@ from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
 from app.services.aggregator import (
     local_day_bounds_utc, flatten_stats, all_time_records,
     period_summary, monthly_records, noaa_month, noaa_year, build_records,
-    on_this_day,
+    on_this_day, et0_hargreaves, daily_et0,
 )
 from app.services.windrose import compute_wind_rose
 from datetime import datetime
@@ -269,3 +269,25 @@ def test_wind_rose_sectors():
     assert n["avg_speed"] == 15.0
     assert n["max_speed"] == 20.0
     assert rose["dominant"] == "N"
+
+
+# ---------- Evapotranspiración (Hargreaves) ----------
+def test_et0_hargreaves_reasonable():
+    # Día de verano en CDMX (lat 19.4), doy ~190: ET0 típico ~3–6 mm
+    et = et0_hargreaves(tmin=12.0, tmax=26.0, tmean=19.0, lat_deg=19.4, doy=190)
+    assert 2.0 < et < 8.0
+    # Menor rango térmico -> menor ET
+    et2 = et0_hargreaves(tmin=17.0, tmax=20.0, tmean=18.5, lat_deg=19.4, doy=190)
+    assert et2 < et
+
+
+def test_period_summary_et_total():
+    rows = [
+        {"date": "2026-07-01", "temp_min": 12.0, "temp_max": 26.0, "temp_avg": 19.0, "rain_total": 0},
+        {"date": "2026-07-02", "temp_min": 13.0, "temp_max": 27.0, "temp_avg": 20.0, "rain_total": 0},
+    ]
+    s_no_lat = period_summary(rows)
+    assert "et_total" not in s_no_lat          # sin lat, no se calcula
+    s = period_summary(rows, lat=19.4)
+    assert s["et_total"] is not None and s["et_total"] > 0
+    assert daily_et0(rows[0], 19.4) is not None

@@ -12,6 +12,7 @@ contador rain_daily de la consola Ecowitt, que se reinicia a medianoche local.
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import logging
+import math
 
 try:
     from zoneinfo import ZoneInfo
@@ -114,7 +115,44 @@ def _best(rows, field, pick_max=True):
     return {"value": round(val, 1), "date": date}
 
 
-def period_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _day_of_year(date_str: str) -> Optional[int]:
+    try:
+        return datetime.strptime(date_str[:10], "%Y-%m-%d").timetuple().tm_yday
+    except (ValueError, TypeError):
+        return None
+
+
+def et0_hargreaves(tmin: float, tmax: float, tmean: float, lat_deg: float, doy: int) -> float:
+    """
+    Evapotranspiración de referencia (ET0) diaria en mm, método Hargreaves.
+    Usa solo temperaturas + radiación extraterrestre (calculada por latitud y día
+    del año), así que no necesita medir radiación solar.
+    """
+    if tmax is None or tmin is None or tmean is None or doy is None:
+        return 0.0
+    dt = max(0.0, tmax - tmin)
+    phi = math.radians(lat_deg)
+    dr = 1 + 0.033 * math.cos(2 * math.pi * doy / 365)
+    dec = 0.409 * math.sin(2 * math.pi * doy / 365 - 1.39)
+    x = -math.tan(phi) * math.tan(dec)
+    x = max(-1.0, min(1.0, x))
+    ws = math.acos(x)
+    # Radiación extraterrestre Ra (MJ/m²/día); Gsc = 0.0820 MJ/m²/min
+    ra = (24 * 60 / math.pi) * 0.0820 * dr * (
+        ws * math.sin(phi) * math.sin(dec) + math.cos(phi) * math.cos(dec) * math.sin(ws)
+    )
+    ra_mm = 0.408 * ra  # equivalente de evaporación en mm/día
+    return max(0.0, 0.0023 * (tmean + 17.8) * math.sqrt(dt) * ra_mm)
+
+
+def daily_et0(row: Dict[str, Any], lat: float) -> Optional[float]:
+    doy = _day_of_year(str(row.get("date", "")))
+    if doy is None or row.get("temp_avg") is None or row.get("temp_max") is None or row.get("temp_min") is None:
+        return None
+    return round(et0_hargreaves(row["temp_min"], row["temp_max"], row["temp_avg"], lat, doy), 2)
+
+
+def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> Dict[str, Any]:
     """Resumen agregado de un conjunto de días (mes, año, etc.)."""
     if not rows:
         return {"days": 0}
@@ -123,7 +161,7 @@ def period_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     wind_avgs = [r["wind_avg"] for r in rows if r.get("wind_avg") is not None]
     hdd = sum(max(0.0, BASE_DD - r["temp_avg"]) for r in rows if r.get("temp_avg") is not None)
     cdd = sum(max(0.0, r["temp_avg"] - BASE_DD) for r in rows if r.get("temp_avg") is not None)
-    return {
+    out = {
         "days": len(rows),
         "mean_temp": round(sum(means) / len(means), 1) if means else None,
         "high": _best(rows, "temp_max", True),
@@ -137,6 +175,11 @@ def period_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "hdd": round(hdd, 1),
         "cdd": round(cdd, 1),
     }
+    if lat is not None:
+        ets = [daily_et0(r, lat) for r in rows]
+        ets = [e for e in ets if e is not None]
+        out["et_total"] = round(sum(ets), 1) if ets else None
+    return out
 
 
 def monthly_records(rows: List[Dict[str, Any]]) -> Dict[int, Any]:
@@ -155,7 +198,7 @@ def monthly_records(rows: List[Dict[str, Any]]) -> Dict[int, Any]:
     return out
 
 
-def noaa_month(rows: List[Dict[str, Any]], year: int, month: int) -> Dict[str, Any]:
+def noaa_month(rows: List[Dict[str, Any]], year: int, month: int, lat: Optional[float] = None) -> Dict[str, Any]:
     """Reporte climatológico mensual estilo NOAA: una fila por día + resumen."""
     prefix = f"{year:04d}-{month:02d}"
     days = sorted((r for r in rows if str(r.get("date", "")).startswith(prefix)),
@@ -173,12 +216,13 @@ def noaa_month(rows: List[Dict[str, Any]], year: int, month: int) -> Dict[str, A
             "rain": r.get("rain_total"),
             "wind_avg": r.get("wind_avg"),
             "gust_max": r.get("gust_max"), "gust_time": r.get("gust_max_time"),
+            "et": daily_et0(r, lat) if lat is not None else None,
         })
     return {"scope": "month", "year": year, "month": month,
-            "days": per_day, "summary": period_summary(days)}
+            "days": per_day, "summary": period_summary(days, lat)}
 
 
-def noaa_year(rows: List[Dict[str, Any]], year: int) -> Dict[str, Any]:
+def noaa_year(rows: List[Dict[str, Any]], year: int, lat: Optional[float] = None) -> Dict[str, Any]:
     """Reporte climatológico anual estilo NOAA: una fila por mes + resumen."""
     prefix = f"{year:04d}-"
     year_rows = [r for r in rows if str(r.get("date", "")).startswith(prefix)]
@@ -186,9 +230,9 @@ def noaa_year(rows: List[Dict[str, Any]], year: int) -> Dict[str, Any]:
     for m in range(1, 13):
         mrows = [r for r in year_rows if _month_of(str(r.get("date", ""))) == m]
         if mrows:
-            months.append({"month": m, **period_summary(mrows)})
+            months.append({"month": m, **period_summary(mrows, lat)})
     return {"scope": "year", "year": year,
-            "months": months, "summary": period_summary(year_rows)}
+            "months": months, "summary": period_summary(year_rows, lat)}
 
 
 def on_this_day(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
@@ -214,7 +258,8 @@ def on_this_day(rows: List[Dict[str, Any]], today: Optional[datetime] = None) ->
     }
 
 
-def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
+def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None,
+                  lat: Optional[float] = None) -> Dict[str, Any]:
     """Paquete de récords: de siempre, por mes, este mes, este año y ayer."""
     today = today or datetime.now(_TZ)
     ym = today.strftime("%Y-%m")
@@ -226,8 +271,8 @@ def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None) 
     return {
         "all_time": all_time_records(rows),
         "monthly": monthly_records(rows),
-        "this_month": period_summary(this_month),
-        "this_year": period_summary(this_year),
+        "this_month": period_summary(this_month, lat),
+        "this_year": period_summary(this_year, lat),
         "yesterday": yesterday,
     }
 
