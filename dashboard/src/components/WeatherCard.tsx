@@ -31,7 +31,7 @@ export function WeatherCard({
           {iconName ? <WeatherIcon name={iconName} size={22} /> : icon}
           {title}
         </p>
-        {offline && <span className="badge badge-offline">offline</span>}
+        {offline && <span className="badge badge-offline">sin conexión</span>}
       </div>
       <p className={`card-value ${color}`}>
         {value?.toFixed(1) ?? '--'}

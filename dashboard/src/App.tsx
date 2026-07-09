@@ -112,10 +112,10 @@ function App() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <header className="mb-6 flex items-center justify-between flex-wrap gap-2">
-            <h1 className="text-3xl font-bold">Weather Station XE1E</h1>
+            <h1 className="text-3xl font-bold">Estación Clima XE1E en CDMX</h1>
             <div className="flex items-center gap-3 text-sm text-slate-400">
               <span className={`badge ${offline ? 'badge-offline' : 'badge-live'}`}>
-                {offline ? 'offline' : 'live'}
+                {offline ? 'sin conexión' : 'en vivo'}
               </span>
               <span>Actualizado {relativeTime(data.received_at)}</span>
               <button onClick={fetchData} className="text-blue-400 hover:text-blue-300">
@@ -171,7 +171,7 @@ function App() {
             <WeatherCard
               title="Lluvia hoy" value={data.rain_daily} unit="mm"
               iconName="raindrops" color="text-blue-400" offline={offline}
-              subtitle={`Rate: ${data.rain_rate?.toFixed(1)} mm/h`}
+              subtitle={`Tasa: ${data.rain_rate?.toFixed(1)} mm/h`}
             />
           </div>
 
@@ -205,7 +205,7 @@ function App() {
                 <span className="card-unit">mm</span>
               </p>
               <div className="mt-4 space-y-1 text-sm text-slate-400">
-                <p>Rate: {data.rain_rate?.toFixed(1)} mm/h</p>
+                <p>Tasa: {data.rain_rate?.toFixed(1)} mm/h</p>
                 <p>Semanal: {data.rain_weekly?.toFixed(1)} mm</p>
                 <p>Mensual: {data.rain_monthly?.toFixed(1)} mm</p>
               </div>
@@ -267,7 +267,7 @@ function App() {
 
           {/* Footer */}
           <footer className="mt-8 text-center text-slate-500 text-sm">
-            <p>Ecowitt WS2910 + WS69 | Station: {data.station_type}</p>
+            <p>Ecowitt WS2910 + WS69 | Estación: {data.station_type}</p>
           </footer>
         </div>
       </div>
