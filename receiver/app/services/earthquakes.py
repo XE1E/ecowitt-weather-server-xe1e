@@ -32,9 +32,34 @@ _SSN_URL = "http://www.ssn.unam.mx/rss/ultimos-sismos.xml"
 _USGS_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 
 
+# Traducción de rumbos de USGS (inglés) a español, del más largo al más corto
+_DIRS_EN_ES = [
+    ("NNE", "NNE"), ("ENE", "ENE"), ("ESE", "ESE"), ("SSE", "SSE"),
+    ("SSW", "SSO"), ("WSW", "OSO"), ("WNW", "ONO"), ("NNW", "NNO"),
+    ("NE", "NE"), ("NW", "NO"), ("SE", "SE"), ("SW", "SO"),
+    ("N", "N"), ("S", "S"), ("E", "E"), ("W", "O"),
+]
+
+
+def _es_place(place: Optional[str]) -> Optional[str]:
+    """'8 km WNW of Tepetixtla, Mexico' -> '8 km al ONO de Tepetixtla, México'."""
+    if not place:
+        return place
+    m = re.match(r"^\s*(\d+)\s*km\s+([NSEW]+)\s+of\s+(.+)$", place)
+    if m:
+        dist, dir_en, rest = m.group(1), m.group(2), m.group(3)
+        dir_es = dict(_DIRS_EN_ES).get(dir_en, dir_en)
+        place = f"{dist} km al {dir_es} de {rest}"
+    else:
+        place = re.sub(r"\bnear the coast of\b", "cerca de la costa de", place, flags=re.I)
+        place = re.sub(r"\boff the coast of\b", "frente a la costa de", place, flags=re.I)
+        place = re.sub(r"\bof\b", "de", place)
+    return place.replace("Mexico", "México")
+
+
 async def _from_ssn(limit: int) -> List[Dict[str, Any]]:
     """Parsea el RSS de últimos sismos del SSN (tolerante a variaciones)."""
-    async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=6, follow_redirects=True) as client:
         r = await client.get(_SSN_URL, headers=_UA)
         r.raise_for_status()
         root = ET.fromstring(r.text)
@@ -89,7 +114,7 @@ async def _from_usgs(lat, lon, radius_km, min_mag, limit) -> List[Dict[str, Any]
         g = (f.get("geometry", {}) or {}).get("coordinates", [None, None, None])
         t_ms = p.get("time")
         quakes.append({
-            "mag": p.get("mag"), "place": p.get("place"),
+            "mag": p.get("mag"), "place": _es_place(p.get("place")),
             "time": (t_ms / 1000.0) if t_ms is not None else None,
             "depth_km": g[2] if len(g) > 2 else None,
             "url": p.get("url"),
