@@ -250,7 +250,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
   const h = j.hourly
   const nowMs = Date.now()
   const hours: ForecastHour[] = []
-  for (let i = 0; i < h.time.length && hours.length < 24; i++) {
+  for (let i = 0; i < h.time.length && hours.length < 48; i++) {
     if (new Date(h.time[i]).getTime() < nowMs - 3600000) continue
     hours.push({
       time: h.time[i],

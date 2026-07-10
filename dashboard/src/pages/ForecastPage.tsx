@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
@@ -19,6 +20,7 @@ function hourLabel(iso: string): string {
 export function ForecastPage() {
   const { forecast } = useStationData()
   const u = useUnits()
+  const [tab, setTab] = useState<'days' | 'hourly'>('days')
 
   if (!forecast) {
     return (
@@ -28,12 +30,21 @@ export function ForecastPage() {
     )
   }
   const T = (c: number) => Math.round(u.tempN(c))
+  const btn = (a: boolean) =>
+    `px-3 py-1.5 rounded-lg text-sm transition ${a ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`
 
   return (
     <div className="space-y-6">
-      {/* Pronóstico diario (7 días) */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-slate-300">Pronóstico</h2>
+        <div className="flex gap-1">
+          <button className={btn(tab === 'days')} onClick={() => setTab('days')}>7 días</button>
+          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>Por hora</button>
+        </div>
+      </div>
+
+      {tab === 'days' && (
       <section>
-        <h2 className="text-lg font-semibold text-slate-300 mb-3">Pronóstico 7 días</h2>
         <div className="space-y-2">
           {forecast.days.map((d, i) => (
             <div key={d.date} className="card flex items-start gap-4 py-3">
@@ -62,10 +73,10 @@ export function ForecastPage() {
           Descripciones generadas automáticamente (NLG — generación de lenguaje natural) a partir del pronóstico de Open-Meteo.
         </p>
       </section>
+      )}
 
-      {/* Pronóstico horario (próximas 24 h) */}
+      {tab === 'hourly' && (
       <section>
-        <h2 className="text-lg font-semibold text-slate-300 mb-3">Próximas 24 horas</h2>
         <div className="card">
           <div className="flex gap-2 overflow-x-auto pb-1">
             {forecast.hours.map((h) => (
@@ -80,8 +91,9 @@ export function ForecastPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-2">Fuente: Open-Meteo · temperaturas en {u.tempU}</p>
+        <p className="text-xs text-slate-500 mt-2">Próximas 48 horas · Fuente: Open-Meteo · temperaturas en {u.tempU}</p>
       </section>
+      )}
 
       {/* Acerca del pronóstico / modelos */}
       <section>
