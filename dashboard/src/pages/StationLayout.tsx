@@ -9,6 +9,7 @@ import { LOCATION } from '../config'
 // Cintillo: páginas listas (link) + próximas (deshabilitadas)
 const NAV_ACTIVE = [
   { to: '/pro', label: 'Inicio', end: true },
+  { to: '/pro/tablero', label: 'Mi tablero', end: false },
   { to: '/pro/pronostico', label: 'Pronóstico', end: false },
   { to: '/pro/historia', label: 'Historia', end: false },
   { to: '/pro/estadisticas', label: 'Estadísticas', end: false },

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import App from './App'
 import { StationLayout } from './pages/StationLayout'
 import { HomePage } from './pages/HomePage'
+import { MiTableroPage } from './pages/MiTableroPage'
 import { ForecastPage } from './pages/ForecastPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { StatisticsPage } from './pages/StatisticsPage'
@@ -43,6 +44,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/pro" element={<StationLayout />}>
                 <Route index element={<HomePage />} />
+                <Route path="tablero" element={<MiTableroPage />} />
                 <Route path="pronostico" element={<ForecastPage />} />
                 <Route path="historia" element={<HistoryPage />} />
                 <Route path="estadisticas" element={<StatisticsPage />} />
