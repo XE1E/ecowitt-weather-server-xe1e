@@ -194,14 +194,15 @@
       <li><a href="#arquitectura"><span class="num">03</span> Arquitectura y datos</a></li>
       <li><a href="#procesamiento"><span class="num">04</span> Procesamiento local</a></li>
       <li><a href="#web"><span class="num">05</span> La página web</a></li>
-      <li><a href="#admin"><span class="num">06</span> Administración</a></li>
-      <li><a href="#alertas"><span class="num">07</span> Alertas</a></li>
-      <li><a href="#redes"><span class="num">08</span> Redes públicas</a></li>
-      <li><a href="#fuentes"><span class="num">09</span> Fuentes de datos</a></li>
-      <li><a href="#api"><span class="num">10</span> API</a></li>
-      <li><a href="#operacion"><span class="num">11</span> Operación</a></li>
-      <li><a href="#glosario"><span class="num">12</span> Glosario</a></li>
-      <li><a href="#estado"><span class="num">13</span> Estado y pendientes</a></li>
+      <li><a href="#widget"><span class="num">06</span> Widget para tu sitio</a></li>
+      <li><a href="#admin"><span class="num">07</span> Administración</a></li>
+      <li><a href="#alertas"><span class="num">08</span> Alertas</a></li>
+      <li><a href="#redes"><span class="num">09</span> Redes públicas</a></li>
+      <li><a href="#fuentes"><span class="num">10</span> Fuentes de datos</a></li>
+      <li><a href="#api"><span class="num">11</span> API</a></li>
+      <li><a href="#operacion"><span class="num">12</span> Operación</a></li>
+      <li><a href="#glosario"><span class="num">13</span> Glosario</a></li>
+      <li><a href="#estado"><span class="num">14</span> Estado y pendientes</a></li>
     </ol>
   </nav>
 
@@ -310,8 +311,30 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p><code>/</code> es un tablero sencillo para consulta rápida. En <strong>Compartir / insertar</strong> (<code>/pro/compartir</code>) puedes copiar un <strong>widget <code>&lt;iframe&gt;</code></strong> con las condiciones actuales (o el enlace directo) para ponerlo en otra web. Y el sitio es una <strong>PWA instalable</strong>: desde el móvil, "Añadir a pantalla de inicio" lo deja como una app.</p>
     </section>
 
+    <section id="widget">
+      <span class="sec-eyebrow">06 — Widget</span>
+      <h2>Widget para tu sitio (<code>/pro/compartir</code>)</h2>
+      <p>Cualquiera puede poner el clima en vivo de la estación en su web o blog con un <strong>widget <code>&lt;iframe&gt;</code></strong>. La página <a href="https://clima.xe1e.net/pro/compartir">Widget para tu sitio</a> es un generador: eliges <strong>unidades</strong> (°C/°F), <strong>tema</strong> (claro/oscuro) y <strong>tamaño</strong>, ves una vista previa y copias el código listo para pegar.</p>
+      <h3>Cómo insertarlo</h3>
+      <ol>
+        <li>Ajusta unidades, tema y tamaño hasta que la vista previa te guste.</li>
+        <li>Pulsa <strong>«Copiar código»</strong>.</li>
+        <li>Pega el código en el HTML de tu página: en <strong>WordPress</strong> un bloque «HTML personalizado»; en <strong>Blogger/Wix</strong> un elemento «Insertar código»; en <strong>HTML puro</strong>, dentro del <code>&lt;body&gt;</code>.</li>
+      </ol>
+      <p>Ejemplo del código:</p>
+      <pre><code>&lt;iframe src="https://clima.xe1e.net/embed?units=metric&amp;theme=dark"
+  width="360" height="210"
+  style="border:0;border-radius:16px;max-width:100%"
+  title="Clima CDMX" loading="lazy"&gt;&lt;/iframe&gt;</code></pre>
+      <ul>
+        <li><strong>Ruta base:</strong> <code>/embed</code>, con parámetros opcionales <code>?units=metric|imperial</code> y <code>&amp;theme=light|dark</code>.</li>
+        <li><strong>Muestra:</strong> temperatura, sensación y condición, más presión, humedad y viento; se actualiza solo cada minuto.</li>
+        <li><strong>Responsivo</strong> (<code>max-width:100%</code>), sin cuentas ni permisos; al hacer clic abre el sitio completo.</li>
+      </ul>
+    </section>
+
     <section id="admin">
-      <span class="sec-eyebrow">06 — Administración</span>
+      <span class="sec-eyebrow">07 — Administración</span>
       <h2>Panel de administración (<code>/pro/admin</code>)</h2>
       <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Permite editar en caliente, sin reiniciar, todo lo configurable:</p>
       <ul>
@@ -324,7 +347,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="alertas">
-      <span class="sec-eyebrow">07 — Alertas</span>
+      <span class="sec-eyebrow">08 — Alertas</span>
       <h2>Alertas y notificaciones</h2>
       <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canal: Telegram (si está configurado) o el log.</p>
       <div class="tablewrap"><table>
@@ -342,7 +365,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="redes">
-      <span class="sec-eyebrow">08 — Redes públicas</span>
+      <span class="sec-eyebrow">09 — Redes públicas</span>
       <h2>Publicación a redes públicas</h2>
       <p>El servidor reenvía cada lectura (tolerante a fallos) a las redes que se activen con sus credenciales desde el panel:</p>
       <div class="tablewrap"><table>
@@ -358,7 +381,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="fuentes">
-      <span class="sec-eyebrow">09 — Fuentes</span>
+      <span class="sec-eyebrow">10 — Fuentes</span>
       <h2>Fuentes de datos externas</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Fuente</th><th>Qué aporta</th><th>Frecuencia</th></tr></thead>
@@ -375,7 +398,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="api">
-      <span class="sec-eyebrow">10 — API</span>
+      <span class="sec-eyebrow">11 — API</span>
       <h2>API (endpoints)</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Endpoint</th><th>Devuelve</th></tr></thead>
@@ -401,7 +424,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="operacion">
-      <span class="sec-eyebrow">11 — Operación</span>
+      <span class="sec-eyebrow">12 — Operación</span>
       <h2>Operación y mantenimiento</h2>
       <p>Servidor: VPS Oracle ARM, cuenta <strong>PAYG</strong> (evita recuperación por inactividad). Dominio <code>clima.xe1e.net</code> tras Cloudflare.</p>
       <h3>Desplegar / actualizar</h3>
@@ -419,7 +442,7 @@ docker compose ps                 # verificar estado</code></pre>
     </section>
 
     <section id="glosario">
-      <span class="sec-eyebrow">12 — Glosario</span>
+      <span class="sec-eyebrow">13 — Glosario</span>
       <h2>Glosario de términos e índices</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Término</th><th>Qué es</th></tr></thead>
@@ -442,7 +465,7 @@ docker compose ps                 # verificar estado</code></pre>
     </section>
 
     <section id="estado">
-      <span class="sec-eyebrow">13 — Estado</span>
+      <span class="sec-eyebrow">14 — Estado</span>
       <h2>Estado y pendientes</h2>
       <p>El roadmap detallado vive en <code>docs/MEJORAS.md</code>. Resumen:</p>
       <p><span class="pill">Hecho</span> Despliegue con HTTPS, vista clásica + <code>/pro</code> con 8 secciones, <strong>tema claro/oscuro</strong>, unidades y FX, <strong>PWA instalable</strong>, <strong>widget insertable</strong> y página Compartir; alertas completas (temp, viento, ráfaga, lluvia, lluvia diaria, presión, estación caída, batería, sensor perdido), Telegram, MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas, pronóstico local, publicación a 5 redes; resumen diario, récords ampliados, «en este día», reporte NOAA, grados-día + ET, rosa de vientos y almanaque ampliado.</p>
