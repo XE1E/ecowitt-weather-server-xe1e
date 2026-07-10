@@ -141,8 +141,8 @@ export function StationLayout() {
                 <p className="font-semibold text-slate-300 mb-1">Datos</p>
                 <p>Estación vía protocolo Ecowitt</p>
                 <p>Pronóstico y astronomía: Open-Meteo</p>
-                <p>METAR: aviationweather.gov (MMMX)</p>
-                <p>Radar / mapa: Ventusky</p>
+                <p>Radar: Ventusky · Satélite: NASA GIBS</p>
+                <p>Calidad del aire: WAQI · IMECA (Open-Meteo)</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Proyecto</p>
@@ -161,8 +161,8 @@ export function StationLayout() {
             </div>
             <p className="mt-5 text-slate-500 leading-relaxed">
               Datos meteorológicos en vivo y pronóstico para {LOCATION.label}. Esta estación (Ecowitt
-              WS2910 + WS69 + WN31) publica condiciones actuales, pronóstico horario y diario, radar de
-              precipitación, astronomía (sol y luna), METAR del aeropuerto MMMX e histórico y récords. Los
+              WS2910 + WS69 + WN31) publica condiciones actuales, pronóstico horario y diario, radar y
+              satélite, astronomía (sol y luna), calidad del aire (AQI e IMECA) e histórico y récords. Los
               datos se actualizan de forma continua. Proyecto personal sobre el clima.
             </p>
             <p className="text-center text-slate-600 mt-6">

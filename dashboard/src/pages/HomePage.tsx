@@ -14,8 +14,8 @@ import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
-import { MetarCard } from '../components/station/MetarCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
+import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { EarthquakesCard } from '../components/station/EarthquakesCard'
 
 export function HomePage() {
@@ -52,6 +52,7 @@ export function HomePage() {
         <div className="space-y-4">
           <SunMoonCard astro={forecast?.astro ?? null} />
           <AirQualityCard />
+          <ImecaMiniCard />
           <EarthquakesCard />
           <AlertsPanel />
           <SkyEventsCard />
@@ -59,9 +60,8 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      <div className="mt-4">
         <RadarCard />
-        <MetarCard />
       </div>
     </>
   )
