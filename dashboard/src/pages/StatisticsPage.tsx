@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { WindRoseCard } from '../components/station/WindRoseCard'
+import { HistoricalRecords } from '../components/station/HistoricalRecords'
 import { useUnits } from '../units'
 
 interface Stat {
@@ -51,8 +52,6 @@ interface NoaaYear {
   summary: YearSummary
   season: Season
 }
-type RecordsTop = Record<string, Rec[]>
-
 const MES_ABR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 const PERIODS = [
@@ -65,16 +64,6 @@ const PERIODS = [
 const NOW_YEAR = new Date().getFullYear()
 const YEARS: number[] = []
 for (let y = NOW_YEAR; y >= 2026; y--) YEARS.push(y)
-
-// Agrupación de récords en pestañas (como el modelo)
-const REC_TABS: { key: string; label: string; cats: string[] }[] = [
-  { key: 'temp', label: 'Temperatura', cats: ['temp_max', 'temp_min', 'warm_day', 'cold_day', 'range_day'] },
-  { key: 'precip', label: 'Precipitaciones', cats: ['rain_day'] },
-  { key: 'wind', label: 'Viento', cats: ['gust_max', 'wind_max'] },
-  { key: 'press', label: 'Presión', cats: ['press_max', 'press_min'] },
-  { key: 'hum', label: 'Humedad', cats: ['hum_max', 'hum_min'] },
-  { key: 'solaruv', label: 'Solar y UV', cats: ['solar_max', 'uv_max'] },
-]
 
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''
@@ -93,9 +82,6 @@ export function StatisticsPage() {
   const u = useUnits()
   const [year, setYear] = useState(NOW_YEAR)
   const [noaa, setNoaa] = useState<NoaaYear | null>(null)
-  const [recTop, setRecTop] = useState<RecordsTop | null>(null)
-  const [recDays, setRecDays] = useState(0)
-  const [recTab, setRecTab] = useState('temp')
   const [period, setPeriod] = useState('30d')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -109,14 +95,6 @@ export function StatisticsPage() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [year])
-
-  // Récords de siempre (top-5)
-  useEffect(() => {
-    fetch('/api/climate/records')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { setRecTop(j?.all_time_top ?? null); setRecDays(j?.all_time?.days ?? 0) })
-      .catch(() => {})
-  }, [])
 
   // Estadísticas por periodo
   useEffect(() => {
@@ -135,33 +113,6 @@ export function StatisticsPage() {
 
   const sum = noaa?.summary
   const hasYear = !!sum && sum.days > 0
-
-  // --- Formateadores de récords por tipo de variable ---
-  const recFmt: Record<string, (v: number) => string> = {
-    temp: (v) => `${u.temp(v)} ${u.tempU}`,
-    rain: (v) => `${u.rain(v)} ${u.rainU}`,
-    wind: (v) => `${u.wind(v)} ${u.windU}`,
-    press: (v) => `${u.press(v)} ${u.pressU}`,
-    pct: (v) => `${v.toFixed(0)} %`,
-    uv: (v) => v.toFixed(0),
-    solar: (v) => `${v.toFixed(0)} W/m²`,
-  }
-  const REC_CATS: { key: string; label: string; color: string; kind: string }[] = [
-    { key: 'temp_max', label: 'Temperatura máxima', color: 'text-orange-300', kind: 'temp' },
-    { key: 'temp_min', label: 'Temperatura mínima', color: 'text-sky-300', kind: 'temp' },
-    { key: 'warm_day', label: 'Día más cálido (prom.)', color: 'text-orange-300', kind: 'temp' },
-    { key: 'cold_day', label: 'Día más frío (prom.)', color: 'text-sky-300', kind: 'temp' },
-    { key: 'range_day', label: 'Mayor rango diario', color: 'text-amber-300', kind: 'temp' },
-    { key: 'rain_day', label: 'Día más lluvioso', color: 'text-blue-300', kind: 'rain' },
-    { key: 'gust_max', label: 'Ráfaga máxima', color: 'text-emerald-300', kind: 'wind' },
-    { key: 'wind_max', label: 'Viento medio máx.', color: 'text-emerald-300', kind: 'wind' },
-    { key: 'press_max', label: 'Presión máxima', color: 'text-violet-300', kind: 'press' },
-    { key: 'press_min', label: 'Presión mínima', color: 'text-violet-300', kind: 'press' },
-    { key: 'hum_max', label: 'Humedad máxima', color: 'text-cyan-300', kind: 'pct' },
-    { key: 'hum_min', label: 'Humedad mínima', color: 'text-cyan-300', kind: 'pct' },
-    { key: 'uv_max', label: 'Índice UV máx.', color: 'text-fuchsia-300', kind: 'uv' },
-    { key: 'solar_max', label: 'Radiación solar máx.', color: 'text-amber-300', kind: 'solar' },
-  ]
 
   const metrics: { key: string; label: string; icon: string; unit: string; color: string; fmt: (v: number) => string }[] = [
     { key: 'temperature_outdoor', label: 'Temperatura', icon: 'thermometer', unit: u.tempU, color: 'text-orange-300', fmt: (v) => u.temp(v) },
@@ -268,35 +219,10 @@ export function StatisticsPage() {
         </div>
       )}
 
-      {/* ── Récords históricos (pestañas + top 5) ── */}
-      {recTop && (() => {
-        const catMap = Object.fromEntries(REC_CATS.map((c) => [c.key, c]))
-        const tab = REC_TABS.find((t) => t.key === recTab)!
-        const rows = tab.cats.map((k) => catMap[k]).filter((c) => c && (recTop[c.key]?.length ?? 0) > 0)
-        return (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-300 mb-3">
-              Récords históricos <span className="text-xs text-slate-500 font-normal">({recDays} días registrados)</span>
-            </h3>
-            <div className="card">
-              <div className="flex flex-wrap gap-1 mb-3">
-                {REC_TABS.map((t) => (
-                  <button key={t.key} className={btn(recTab === t.key)} onClick={() => setRecTab(t.key)}>{t.label}</button>
-                ))}
-              </div>
-              {rows.length === 0 ? (
-                <p className="text-sm text-slate-400 py-4 text-center">Sin récords en esta categoría todavía.</p>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                  {rows.map((c) => (
-                    <RecordRow key={c.key} label={c.label} color={c.color} list={recTop[c.key]} fmt={recFmt[c.kind]} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })()}
+      {/* ── Récords históricos ── */}
+      <div className="mb-6">
+        <HistoricalRecords />
+      </div>
 
       {/* ── Estadísticas por periodo ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -354,36 +280,3 @@ function SummaryCard({ label, value, unit, color, note }: { label: string; value
   )
 }
 
-function RecordRow({ label, color, list, fmt }: { label: string; color: string; list: Rec[]; fmt: (v: number) => string }) {
-  const [open, setOpen] = useState(false)
-  const top = list[0]
-  const rest = list.slice(1)
-  return (
-    <div className="rounded-lg bg-white/5 px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-300">
-          {label}
-          {rest.length > 0 && (
-            <button onClick={() => setOpen((o) => !o)} className="text-xs text-blue-400 hover:text-blue-300 ml-2 align-middle">
-              {open ? 'ocultar' : 'Top 5'}
-            </button>
-          )}
-        </span>
-        <span className="text-right whitespace-nowrap">
-          <span className={`text-lg font-bold ${color}`}>{fmt(top.value)}</span>
-          <span className="text-xs text-slate-500 ml-2">{fmtDay(top.date)}</span>
-        </span>
-      </div>
-      {open && rest.length > 0 && (
-        <ol className="mt-2 pt-2 border-t border-white/10 space-y-1 text-xs" start={2}>
-          {rest.map((r, i) => (
-            <li key={i} className="flex justify-between text-slate-400">
-              <span className="text-slate-500">{i + 2}.</span>
-              <span className="whitespace-nowrap"><span className="text-slate-300">{fmt(r.value)}</span><span className="text-slate-500 ml-2">{fmtDay(r.date)}</span></span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  )
-}

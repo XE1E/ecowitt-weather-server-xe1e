@@ -206,6 +206,8 @@ def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> D
         "gust_max": _best(rows, "gust_max", True),
         "wind_dir": vector_mean_dir(rows, "wind_dir", "wind_max"),
         "hum_avg": _avg(rows, "hum_avg"),
+        "hum_max": (lambda v: max(v) if v else None)([r["hum_max"] for r in rows if r.get("hum_max") is not None]),
+        "hum_min": (lambda v: min(v) if v else None)([r["hum_min"] for r in rows if r.get("hum_min") is not None]),
         "dew_avg": _avg(rows, "dew_avg"),
         "press_avg": _avg(rows, "press_avg"),
         "uv_max": (lambda v: max(v) if v else None)([r["uv_max"] for r in rows if r.get("uv_max") is not None]),
@@ -366,7 +368,7 @@ def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None,
         "monthly": monthly_records(rows),
         "this_month": period_summary(this_month, lat),
         "this_year": period_summary(this_year, lat),
-        "yesterday": yesterday,
+        "yesterday": {**period_summary([yesterday], lat), "date": yesterday.get("date")} if yesterday else None,
     }
 
 

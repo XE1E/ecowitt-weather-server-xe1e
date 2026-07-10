@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts'
 import { useUnits } from '../units'
+import { LOCATION } from '../config'
 
 interface Rec { value: number; date: string }
 interface Period {
   days: number
+  date?: string
   mean_temp?: number | null
   high?: Rec | null
   low?: Rec | null
@@ -13,20 +18,19 @@ interface Period {
   wind_avg?: number | null
   wind_max?: Rec | null
   gust_max?: Rec | null
+  hum_avg?: number | null
+  hum_max?: number | null
+  hum_min?: number | null
   hdd?: number
   cdd?: number
   et_total?: number | null
-}
-interface DailyRow {
-  date: string
-  temp_avg?: number | null
 }
 interface RecordsBundle {
   all_time: Record<string, Rec | null> & { days: number }
   monthly: Record<string, { temp_max?: Rec; temp_min?: Rec; rain_max_day?: Rec; gust_max?: Rec }>
   this_month: Period
   this_year: Period
-  yesterday: DailyRow | null
+  yesterday: Period | null
 }
 interface NoaaDay {
   date: string; mean_temp?: number | null; high?: number | null; high_time?: string | null
@@ -70,12 +74,18 @@ export function ClimatePage() {
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState<number | null>(null) // null = anual
   const [noaa, setNoaa] = useState<Noaa | null>(null)
+  const [yearData, setYearData] = useState<Noaa | null>(null)
   const [loadingNoaa, setLoadingNoaa] = useState(false)
 
   useEffect(() => {
     fetch('/api/climate/records').then((r) => (r.ok ? r.json() : null)).then(setRec).catch(() => {})
     fetch('/api/climate/onthisday').then((r) => (r.ok ? r.json() : null)).then(setOtd).catch(() => {})
   }, [])
+
+  // Datos anuales para el climograma (siempre año completo, independiente del selector)
+  useEffect(() => {
+    fetch(`/api/climate/noaa?year=${year}`).then((r) => (r.ok ? r.json() : null)).then(setYearData).catch(() => {})
+  }, [year])
 
   useEffect(() => {
     setLoadingNoaa(true)
@@ -89,69 +99,65 @@ export function ClimatePage() {
 
   const hasData = rec && rec.all_time && rec.all_time.days > 0
 
+  const row = (label: string, value: string, color = 'text-slate-200') => (
+    <><span className="text-slate-400">{label}</span><span className={`text-right ${color}`}>{value}</span></>
+  )
+
   const periodCard = (title: string, p?: Period | null) => {
     if (!p || !p.days) return (
-      <div className="card"><p className="card-title">{title}</p><p className="text-slate-500 text-sm">Sin datos aún</p></div>
+      <div className="card"><p className="text-base font-bold text-slate-100">{title}</p><p className="text-slate-500 text-sm mt-1">Sin datos aún</p></div>
     )
     return (
       <div className="card">
-        <p className="card-title">{title} <span className="text-slate-500 font-normal text-xs">({p.days} d)</span></p>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm mt-1">
-          <span className="text-slate-400">Media</span><span className="text-right">{p.mean_temp != null ? `${u.temp(p.mean_temp)}${u.tempU}` : '--'}</span>
-          <span className="text-slate-400">Máx</span><span className="text-right text-orange-300">{p.high ? `${u.temp(p.high.value)}${u.tempU}` : '--'}</span>
-          <span className="text-slate-400">Mín</span><span className="text-right text-sky-300">{p.low ? `${u.temp(p.low.value)}${u.tempU}` : '--'}</span>
-          <span className="text-slate-400">Lluvia</span><span className="text-right text-blue-300">{p.rain_total != null ? `${u.rain(p.rain_total)} ${u.rainU}` : '--'}</span>
-          <span className="text-slate-400">Días lluvia</span><span className="text-right">{p.rain_days ?? '--'}</span>
-          {(p.hdd != null || p.cdd != null) && (<>
-            <span className="text-slate-400" title="Grados-día calefacción / refrigeración">Grados-día</span>
-            <span className="text-right">{p.hdd ?? '--'} / {p.cdd ?? '--'}</span>
-          </>)}
-          {p.et_total != null && (<>
-            <span className="text-slate-400" title="Evapotranspiración de referencia (Hargreaves)">ET</span>
-            <span className="text-right text-emerald-300">{p.et_total} mm</span>
-          </>)}
+        <p className="text-base font-bold text-slate-100">
+          {title}
+          <span className="text-slate-500 font-normal text-xs ml-1">
+            {p.date ? fmtDay(p.date) : `${p.days} d`}
+          </span>
+        </p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm mt-2">
+          {row('Temperatura media', p.mean_temp != null ? `${u.temp(p.mean_temp)}${u.tempU}` : '--')}
+          {row('Temperatura máxima', p.high ? `${u.temp(p.high.value)}${u.tempU}` : '--', 'text-right text-orange-300')}
+          {row('Temperatura mínima', p.low ? `${u.temp(p.low.value)}${u.tempU}` : '--', 'text-right text-sky-300')}
+          <div className="col-span-2 border-t border-white/5 my-1" />
+          {row('Humedad media', p.hum_avg != null ? `${p.hum_avg.toFixed(0)} %` : '--')}
+          {row('Humedad máxima', p.hum_max != null ? `${p.hum_max.toFixed(0)} %` : '--', 'text-right text-cyan-300')}
+          {row('Humedad mínima', p.hum_min != null ? `${p.hum_min.toFixed(0)} %` : '--', 'text-right text-cyan-300')}
+          <div className="col-span-2 border-t border-white/5 my-1" />
+          {row('Viento medio', p.wind_avg != null ? `${u.wind(p.wind_avg)} ${u.windU}` : '--')}
+          {row('Viento máximo', p.wind_max ? `${u.wind(p.wind_max.value)} ${u.windU}` : '--', 'text-right text-emerald-300')}
+          {row('Ráfaga máxima', p.gust_max ? `${u.wind(p.gust_max.value)} ${u.windU}` : '--', 'text-right text-emerald-300')}
+          <div className="col-span-2 border-t border-white/5 my-1" />
+          {row('Lluvia', p.rain_total != null ? `${u.rain(p.rain_total)} ${u.rainU}` : '--', 'text-right text-blue-300')}
+          {row('Días con lluvia', p.rain_days != null ? String(p.rain_days) : '--')}
+          {(p.hdd != null || p.cdd != null) && row('Grados-día (cal/ref)', `${p.hdd ?? '--'} / ${p.cdd ?? '--'}`, 'text-right text-slate-400')}
+          {p.et_total != null && row('Evapotranspiración', `${p.et_total} mm`, 'text-right text-emerald-300')}
         </div>
       </div>
     )
   }
 
+  // ── Climograma: barras de lluvia + líneas de temperatura por mes ──
+  const climo = (yearData?.months ?? []).map((m) => ({
+    mes: MES[m.month - 1],
+    lluvia: m.rain_total != null ? Number(u.rain(m.rain_total)) : null,
+    tmed: m.mean_temp != null ? Number(u.temp(m.mean_temp)) : null,
+    tmax: m.high ? Number(u.temp(m.high.value)) : null,
+    tmin: m.low ? Number(u.temp(m.low.value)) : null,
+  }))
+  const tip = {
+    contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
+    labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
+  }
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-100 mb-1">Climatología</h2>
-      <p className="text-xs text-slate-400 mb-4">Resúmenes construidos desde el histórico diario de la estación.</p>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1">Climatología Local</h2>
+      <p className="text-xs text-slate-400 mb-4">Resúmenes construidos desde el histórico diario de la estación Clima XE1E · {LOCATION.label}.</p>
 
       {!hasData && (
-        <div className="card text-slate-400">
+        <div className="card text-slate-400 mb-6">
           Aún no hay días registrados. La climatología se irá construyendo día a día conforme la estación acumule datos.
-        </div>
-      )}
-
-      {otd && otd.count > 0 && (
-        <div className="card mb-6">
-          <p className="card-title">En este día</p>
-          <p className="text-xs text-slate-500 -mt-1 mb-2">Qué pasó un {otd.month_day.slice(3)}/{otd.month_day.slice(0, 2)} en años anteriores</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[360px]">
-              <thead>
-                <tr className="text-[11px] text-slate-500 text-left">
-                  <th className="font-normal">Año</th>
-                  <th className="text-right font-normal">Máx</th>
-                  <th className="text-right font-normal">Mín</th>
-                  <th className="text-right font-normal">Lluvia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {otd.years.map((y) => (
-                  <tr key={y.date} className="border-t border-white/5">
-                    <td className="py-1 text-slate-300">{y.date.slice(0, 4)}</td>
-                    <td className="text-right text-orange-300">{y.temp_max != null ? `${u.temp(y.temp_max)}${u.tempU}` : '--'}</td>
-                    <td className="text-right text-sky-300">{y.temp_min != null ? `${u.temp(y.temp_min)}${u.tempU}` : '--'}</td>
-                    <td className="text-right text-blue-300">{y.rain_total != null ? `${u.rain(y.rain_total)} ${u.rainU}` : '--'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
@@ -159,13 +165,49 @@ export function ClimatePage() {
         <>
           {/* Resúmenes rápidos */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            {periodCard('Ayer', rec!.yesterday ? { days: 1, mean_temp: rec!.yesterday.temp_avg } as Period : null)}
+            {periodCard('Ayer', rec!.yesterday)}
             {periodCard('Este mes', rec!.this_month)}
             {periodCard('Este año', rec!.this_year)}
           </div>
 
+          {/* Climograma anual */}
+          {climo.length > 0 && (
+            <div className="mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 className="text-lg font-semibold text-slate-300">Climograma · {year}</h3>
+                <select value={year} onChange={(e) => setYear(Number(e.target.value))}
+                  className="bg-white/5 border border-white/10 rounded-lg text-sm px-2 py-1">
+                  {[YEAR_NOW, YEAR_NOW - 1, YEAR_NOW - 2].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div className="card">
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
+                      <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                      <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44}
+                        label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#60a5fa', fontSize: 11 }} />
+                      <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
+                      <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip}
+                        formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                      <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                      <Line yAxisId="t" type="monotone" dataKey="tmax" name="T. máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="t" type="monotone" dataKey="tmed" name="T. media" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="t" type="monotone" dataKey="tmin" name="T. mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Barras: precipitación mensual. Líneas: temperatura media, máxima y mínima del mes.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Récords por mes */}
-          <h3 className="text-base font-semibold text-slate-300 mb-2">Récords por mes</h3>
+          <h3 className="text-lg font-semibold text-slate-300 mb-2">Récords por mes</h3>
           <div className="card overflow-x-auto mb-6">
             <table className="w-full text-sm min-w-[520px]">
               <thead>
@@ -194,12 +236,42 @@ export function ClimatePage() {
               </tbody>
             </table>
           </div>
+
+          {/* En este día */}
+          {otd && otd.count > 0 && (
+            <div className="card mb-6">
+              <p className="text-base font-bold text-slate-100">En este día</p>
+              <p className="text-xs text-slate-500 mb-2">Qué pasó un {otd.month_day.slice(3)}/{otd.month_day.slice(0, 2)} en años anteriores</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[360px]">
+                  <thead>
+                    <tr className="text-[11px] text-slate-500 text-left">
+                      <th className="font-normal">Año</th>
+                      <th className="text-right font-normal">Máx</th>
+                      <th className="text-right font-normal">Mín</th>
+                      <th className="text-right font-normal">Lluvia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {otd.years.map((y) => (
+                      <tr key={y.date} className="border-t border-white/5">
+                        <td className="py-1 text-slate-300">{y.date.slice(0, 4)}</td>
+                        <td className="text-right text-orange-300">{y.temp_max != null ? `${u.temp(y.temp_max)}${u.tempU}` : '--'}</td>
+                        <td className="text-right text-sky-300">{y.temp_min != null ? `${u.temp(y.temp_min)}${u.tempU}` : '--'}</td>
+                        <td className="text-right text-blue-300">{y.rain_total != null ? `${u.rain(y.rain_total)} ${u.rainU}` : '--'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
 
       {/* Reporte NOAA */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h3 className="text-base font-semibold text-slate-300">Reporte climatológico (estilo NOAA)</h3>
+        <h3 className="text-lg font-semibold text-slate-300">Reporte climatológico (estilo NOAA)</h3>
         <div className="flex items-center gap-1 flex-wrap">
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}
             className="bg-white/5 border border-white/10 rounded-lg text-sm px-2 py-1">
