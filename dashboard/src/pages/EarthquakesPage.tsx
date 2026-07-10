@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Activity } from 'lucide-react'
 import { Quake, magColor, timeAgo } from '../components/station/quakes'
+import { PageInfo } from '../components/station/PageInfo'
 
 function fmtWhen(sec: number): string {
   const d = new Date(sec * 1000)
@@ -23,7 +25,7 @@ export function EarthquakesPage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold text-slate-100 mb-1">Sismos recientes</h2>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2"><Activity className="w-6 h-6 text-sky-400" /> Sismos recientes</h2>
       <p className="text-sm text-slate-400 mb-4">
         Sismos recientes cerca de la estación, más recientes primero
         {source === 'SSN' ? ' (fuente oficial SSN)' : source === 'USGS' ? ' (magnitud ≥ 4, ~800 km — fuente USGS)' : ''}.
@@ -68,6 +70,16 @@ export function EarthquakesPage() {
           : <a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400">USGS</a>}
         {' '}· dato externo, no medido por esta estación. La profundidad y magnitud son estimaciones preliminares.
       </p>
+
+      <PageInfo>
+        <p>
+          Lista los sismos recientes cerca de la estación, del más nuevo al más antiguo. Se usa un esquema
+          {' '}<span className="font-semibold">híbrido</span>: primero el <span className="font-semibold">SSN</span> (Servicio
+          Sismológico Nacional, UNAM) —la fuente oficial de México— y, si no está disponible, el <span className="font-semibold">USGS</span>
+          {' '}de EE. UU. (magnitud ≥ 4 en ~800 km). El color indica la magnitud. Es información sísmica externa, ajena a los
+          sensores meteorológicos de la estación; las magnitudes y profundidades iniciales pueden revisarse después.
+        </p>
+      </PageInfo>
     </div>
   )
 }

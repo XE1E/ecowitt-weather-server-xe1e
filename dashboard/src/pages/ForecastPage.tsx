@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, CloudSun } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
 import { WeatherIcon } from '../components/WeatherIcon'
@@ -38,7 +38,7 @@ export function ForecastPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100">Pronóstico</h2>
+          <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><CloudSun className="w-6 h-6 text-sky-400" /> Pronóstico</h2>
           <p className="text-xs text-slate-400">Pronóstico para {LOCATION.label}</p>
         </div>
         <div className="flex gap-1">

@@ -1,5 +1,7 @@
+import { Radar } from 'lucide-react'
 import { LOCATION } from '../config'
 import { NasaSatelliteCard } from '../components/station/NasaSatelliteCard'
+import { PageInfo } from '../components/station/PageInfo'
 
 /**
  * Radar / mapa meteorológico vía embed de Ventusky, centrado en la estación,
@@ -11,7 +13,7 @@ export function RadarPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-100">Radar y satélite</h2>
+      <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Radar className="w-6 h-6 text-sky-400" /> Radar y satélite</h2>
       <p className="text-xs text-slate-400 mb-4">Radar meteorológico interactivo e imagen satelital diaria para {LOCATION.label}.</p>
 
       <div className="rounded-2xl overflow-hidden border border-white/10" style={{ height: 560 }}>
@@ -36,6 +38,16 @@ export function RadarPage() {
       </div>
 
       <p className="text-xs text-slate-500 mt-2">Mapa: Ventusky · Satélite: NASA GIBS · centrado en {LOCATION.label}</p>
+
+      <PageInfo>
+        <p>
+          El <span className="font-semibold">radar</span> (Ventusky) muestra dónde está lloviendo ahora y su intensidad,
+          combinando radar meteorológico con satélite y modelos; anima la línea de tiempo para ver hacia dónde se mueve.
+          La <span className="font-semibold">imagen satelital</span> (NASA GIBS) es la foto de color real del día: te deja
+          ver la nubosidad y los sistemas sobre la región. Son datos externos de referencia general —a diferencia del resto
+          del sitio, no provienen de tu estación.
+        </p>
+      </PageInfo>
     </div>
   )
 }

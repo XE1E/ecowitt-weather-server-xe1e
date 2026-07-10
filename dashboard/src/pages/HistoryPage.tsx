@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { History } from 'lucide-react'
 import { useUnits } from '../units'
 import { LOCATION } from '../config'
 import { HistoryDayDetail } from '../components/station/HistoryDayDetail'
 import { HistoryCharts, HistPoint } from '../components/station/HistoryCharts'
+import { PageInfo } from '../components/station/PageInfo'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const MES_ABR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -208,6 +210,17 @@ export function HistoryPage() {
         </>
       )}
       <p className="text-xs text-slate-500">Datos de la estación (InfluxDB) · temperaturas en {u.tempU}. Pasa el cursor sobre las gráficas para ver los valores.</p>
+
+      <PageInfo>
+        <p>
+          <span className="font-semibold">Historia</span> es el archivo de tu estación. Elige la granularidad
+          {' '}<span className="font-semibold">Día</span>, <span className="font-semibold">Mes</span> o
+          {' '}<span className="font-semibold">Año</span> y compara temperatura, viento, humedad y punto de rocío,
+          radiación UV/solar, y precipitación y presión en <span className="font-semibold">gráficas interactivas</span>
+          {' '}(pasa el cursor para ver los valores exactos). Haz clic en un día o mes de la tabla para abrir su detalle.
+          Todo proviene de las mediciones que la estación guarda cada minuto, resumidas por periodo.
+        </p>
+      </PageInfo>
     </div>
   )
 }
@@ -227,7 +240,7 @@ function Header(props: {
   return (
     <div className="flex items-start justify-between gap-3 flex-wrap">
       <div>
-        <h2 className="text-2xl font-bold text-slate-100">Historia</h2>
+        <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><History className="w-6 h-6 text-sky-400" /> Historia</h2>
         <p className="text-xs text-slate-400">Historial meteorológico para {LOCATION.label}.</p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">

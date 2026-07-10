@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
+import { CalendarDays } from 'lucide-react'
 import { useUnits } from '../units'
 import { LOCATION } from '../config'
+import { PageInfo } from '../components/station/PageInfo'
 
 interface Rec { value: number; date: string }
 interface Period {
@@ -152,7 +154,7 @@ export function ClimatePage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-100 mb-1">Climatología Local</h2>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2"><CalendarDays className="w-6 h-6 text-sky-400" /> Climatología Local</h2>
       <p className="text-xs text-slate-400 mb-4">Resúmenes construidos desde el histórico diario de la estación Clima XE1E · {LOCATION.label}.</p>
 
       {!hasData && (
@@ -360,6 +362,18 @@ export function ClimatePage() {
         ) : null}
       </div>
       <p className="text-[11px] text-slate-600 mt-2">Temperaturas en {u.tempU}. Grados-día con base 18.3 °C (estándar NOAA). Un "día con lluvia" es ≥ 0.2 mm.</p>
+
+      <PageInfo>
+        <p>
+          La <span className="font-semibold">climatología</span> describe el comportamiento típico del clima en tu
+          ubicación a partir del histórico diario de la estación: resúmenes de <span className="font-semibold">ayer, este mes y este año</span>,
+          el <span className="font-semibold">climograma</span> (barras de lluvia y líneas de temperatura por mes —
+          la gráfica clásica del clima), los <span className="font-semibold">récords por mes</span>, el
+          {' '}<span className="font-semibold">reporte estilo NOAA</span> (tabla diaria/mensual/anual) y la efeméride
+          {' '}<span className="font-semibold">“en este día”</span>. A diferencia del pronóstico, describe lo ya ocurrido y
+          se enriquece con cada día que la estación acumula.
+        </p>
+      </PageInfo>
     </div>
   )
 }

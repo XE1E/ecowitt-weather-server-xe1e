@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Wind } from 'lucide-react'
 import { ImecaCard } from '../components/station/ImecaCard'
+import { PageInfo } from '../components/station/PageInfo'
 import { LOCATION } from '../config'
 
 interface AQ {
@@ -52,7 +53,7 @@ export function AirQualityPage() {
   if (aq?.error === 'no_token') {
     return (
       <div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-3">Calidad del aire</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-3 flex items-center gap-2"><Wind className="w-6 h-6 text-sky-400" /> Calidad del aire</h2>
         <div className="card text-sm text-slate-300">
           <p>Falta configurar el token de WAQI. Consíguelo gratis en
             {' '}<a href="https://aqicn.org/data-platform/token/" className="text-blue-400">aqicn.org/data-platform/token</a>
@@ -66,7 +67,7 @@ export function AirQualityPage() {
   if (!aq || aq.aqi == null) {
     return (
       <div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-3">Calidad del aire</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-3 flex items-center gap-2"><Wind className="w-6 h-6 text-sky-400" /> Calidad del aire</h2>
         <div className="card text-slate-400">Sin datos de calidad del aire por ahora.</div>
       </div>
     )
@@ -77,7 +78,7 @@ export function AirQualityPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-100">Calidad del aire</h2>
+      <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><Wind className="w-6 h-6 text-sky-400" /> Calidad del aire</h2>
       <p className="text-xs text-slate-400 mb-4">Índice de calidad del aire (AQI) y contaminantes cerca de {LOCATION.label}.</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -115,16 +116,17 @@ export function AirQualityPage() {
       {/* IMECA estimado (índice oficial de CDMX) */}
       <ImecaCard />
 
-      <div className="card mt-4 text-sm text-slate-300 leading-relaxed">
+      <PageInfo>
         <p>
-          Índice de calidad del aire (<span className="font-semibold">AQI, escala US EPA</span>) vía
-          {' '}<span className="font-semibold">WAQI/aqicn</span>, que usa las estaciones oficiales de
-          monitoreo de CDMX{aq.station ? ` (estación: ${aq.station})` : ''}. Los valores por contaminante
-          son sub-índices AQI. Nota: el AQI (US) puede diferir del índice oficial mexicano (IMECA / Aire y
-          Salud) aunque provengan de las mismas estaciones. Dato externo, no medido por esta estación.
-          {aq.time ? ` Actualizado: ${aq.time}.` : ''}
+          Se muestran dos índices: el <span className="font-semibold">AQI (escala US EPA)</span> vía WAQI/aqicn
+          {aq.station ? ` (estación: ${aq.station})` : ''}, y el <span className="font-semibold">IMECA</span>, el índice
+          oficial de la Ciudad de México, que aquí se <span className="font-semibold">estima</span> con las tablas de la
+          norma NADF-009-AIRE-2017 a partir de concentraciones modeladas (Open-Meteo/CAMS). Ambos resumen los mismos
+          contaminantes (PM2.5, PM10, O₃, NO₂, SO₂, CO) pero con escalas distintas, por eso los números difieren. El
+          {' '}<span className="font-semibold">contaminante dominante</span> es el que marca el nivel. Son datos externos de
+          referencia, no medidos por tu estación.{aq.time ? ` Actualizado: ${aq.time}.` : ''}
         </p>
-      </div>
+      </PageInfo>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plane, RefreshCw, Search } from 'lucide-react'
 import { AtmosphericProfile } from '../components/station/AtmosphericProfile'
+import { PageInfo } from '../components/station/PageInfo'
 
 // Los 15 aeropuertos más importantes de México (ICAO · nombre)
 const AIRPORTS: [string, string][] = [
@@ -220,16 +221,18 @@ export function AeronauticaPage() {
         <p className="text-[11px] text-slate-500 mt-2">Busca cualquier código ICAO arriba para ver su METAR, TAF y perfil atmosférico.</p>
       </div>
 
-      <div className="card mt-4 text-sm text-slate-300 leading-relaxed">
+      <PageInfo>
         <p>
           El <span className="font-semibold">METAR</span> es la observación del aeropuerto (cada hora); el
           {' '}<span className="font-semibold">TAF</span> es el pronóstico aeronáutico (~24–30 h). La
           {' '}<span className="font-semibold">categoría de vuelo</span> resume las condiciones:
           {' '}<span style={{ color: CAT.VFR.color }}>VFR</span> (visual), <span style={{ color: CAT.MVFR.color }}>MVFR</span>,
-          {' '}<span style={{ color: CAT.IFR.color }}>IFR</span> y <span style={{ color: CAT.LIFR.color }}>LIFR</span>.
-          Fuente: aviationweather.gov (NOAA), en unidades aeronáuticas (nudos, millas terrestres, hPa). Horas en tu zona local.
+          {' '}<span style={{ color: CAT.IFR.color }}>IFR</span> y <span style={{ color: CAT.LIFR.color }}>LIFR</span> (peores
+          condiciones). El <span className="font-semibold">perfil atmosférico</span> dibuja las capas de nubes por altitud,
+          el viento y el QNH del reporte. Fuente: aviationweather.gov (NOAA), en unidades aeronáuticas (nudos, millas
+          terrestres, hPa). Horas en tu zona local.
         </p>
-      </div>
+      </PageInfo>
     </div>
   )
 }

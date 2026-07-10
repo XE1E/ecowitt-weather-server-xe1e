@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { BarChart3 } from 'lucide-react'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { WindRoseCard } from '../components/station/WindRoseCard'
 import { HistoricalRecords } from '../components/station/HistoricalRecords'
+import { PageInfo } from '../components/station/PageInfo'
 import { useUnits } from '../units'
 
 interface Stat {
@@ -128,7 +130,7 @@ export function StatisticsPage() {
     <div>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100">Estadísticas y récords</h2>
+          <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><BarChart3 className="w-6 h-6 text-sky-400" /> Estadísticas y récords</h2>
           <p className="text-xs text-slate-400">Resumen del año, récords de siempre y estadísticas por periodo.</p>
         </div>
         <select
@@ -266,6 +268,18 @@ export function StatisticsPage() {
       <div className="mt-6">
         <WindRoseCard />
       </div>
+
+      <PageInfo>
+        <p>
+          Aquí se resume todo el dato de tu estación: el <span className="font-semibold">resumen del año</span>
+          {' '}(máximas, mínimas, lluvia y ráfaga), los <span className="font-semibold">promedios mensuales</span>,
+          {' '}<span className="font-semibold">contadores de días</span> (cálidos, noches frescas, con y sin lluvia),
+          los <span className="font-semibold">grados-día</span> y la <span className="font-semibold">evapotranspiración</span>,
+          los <span className="font-semibold">récords históricos</span> por categoría (con su top 5 y fecha), las
+          {' '}estadísticas por periodo y la <span className="font-semibold">rosa de vientos</span>. Los grados-día miden
+          cuánto y por cuánto tiempo la temperatura se aleja de los 18.3 °C (base NOAA), útil para energía y agricultura.
+        </p>
+      </PageInfo>
     </div>
   )
 }

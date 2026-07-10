@@ -69,7 +69,7 @@ export function StationLayout() {
           <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10 flex items-center gap-3">
             <div className="min-w-0 shrink">
               <h1 className="text-base md:text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
-              <p className="text-[11px] text-slate-400 truncate hidden sm:block">{LOCATION.label}</p>
+              <p className="text-sm md:text-base text-slate-300 truncate">{LOCATION.label}</p>
             </div>
             <div className="flex-1 text-center leading-tight">
               <p className="text-xs md:text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
@@ -144,6 +144,8 @@ export function StationLayout() {
                 <p>Pronóstico y astronomía: Open-Meteo</p>
                 <p>Radar: Ventusky · Satélite: NASA GIBS</p>
                 <p>Calidad del aire: WAQI · IMECA (Open-Meteo)</p>
+                <p>Sismos: USGS / SSN (México)</p>
+                <p>METAR / TAF: aviationweather.gov (NOAA)</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Proyecto</p>
