@@ -66,6 +66,16 @@ const NOW_YEAR = new Date().getFullYear()
 const YEARS: number[] = []
 for (let y = NOW_YEAR; y >= 2026; y--) YEARS.push(y)
 
+// Agrupación de récords en pestañas (como el modelo)
+const REC_TABS: { key: string; label: string; cats: string[] }[] = [
+  { key: 'temp', label: 'Temperatura', cats: ['temp_max', 'temp_min', 'warm_day', 'cold_day', 'range_day'] },
+  { key: 'precip', label: 'Precipitaciones', cats: ['rain_day'] },
+  { key: 'wind', label: 'Viento', cats: ['gust_max', 'wind_max'] },
+  { key: 'press', label: 'Presión', cats: ['press_max', 'press_min'] },
+  { key: 'hum', label: 'Humedad', cats: ['hum_max', 'hum_min'] },
+  { key: 'solaruv', label: 'Solar y UV', cats: ['solar_max', 'uv_max'] },
+]
+
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -85,6 +95,7 @@ export function StatisticsPage() {
   const [noaa, setNoaa] = useState<NoaaYear | null>(null)
   const [recTop, setRecTop] = useState<RecordsTop | null>(null)
   const [recDays, setRecDays] = useState(0)
+  const [recTab, setRecTab] = useState('temp')
   const [period, setPeriod] = useState('30d')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -257,19 +268,35 @@ export function StatisticsPage() {
         </div>
       )}
 
-      {/* ── Récords de siempre (top 5) ── */}
-      {recTop && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-slate-300 mb-3">
-            Récords de siempre <span className="text-xs text-slate-500 font-normal">({recDays} días registrados)</span>
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {REC_CATS.filter((c) => (recTop[c.key]?.length ?? 0) > 0).map((c) => (
-              <RecordCard key={c.key} label={c.label} color={c.color} list={recTop[c.key]} fmt={recFmt[c.kind]} />
-            ))}
+      {/* ── Récords históricos (pestañas + top 5) ── */}
+      {recTop && (() => {
+        const catMap = Object.fromEntries(REC_CATS.map((c) => [c.key, c]))
+        const tab = REC_TABS.find((t) => t.key === recTab)!
+        const rows = tab.cats.map((k) => catMap[k]).filter((c) => c && (recTop[c.key]?.length ?? 0) > 0)
+        return (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-300 mb-3">
+              Récords históricos <span className="text-xs text-slate-500 font-normal">({recDays} días registrados)</span>
+            </h3>
+            <div className="card">
+              <div className="flex flex-wrap gap-1 mb-3">
+                {REC_TABS.map((t) => (
+                  <button key={t.key} className={btn(recTab === t.key)} onClick={() => setRecTab(t.key)}>{t.label}</button>
+                ))}
+              </div>
+              {rows.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">Sin récords en esta categoría todavía.</p>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {rows.map((c) => (
+                    <RecordRow key={c.key} label={c.label} color={c.color} list={recTop[c.key]} fmt={recFmt[c.kind]} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Estadísticas por periodo ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -327,33 +354,32 @@ function SummaryCard({ label, value, unit, color, note }: { label: string; value
   )
 }
 
-function RecordCard({ label, color, list, fmt }: { label: string; color: string; list: Rec[]; fmt: (v: number) => string }) {
+function RecordRow({ label, color, list, fmt }: { label: string; color: string; list: Rec[]; fmt: (v: number) => string }) {
   const [open, setOpen] = useState(false)
   const top = list[0]
   const rest = list.slice(1)
   return (
-    <div className="card">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs text-slate-400">{label}</p>
-          <p className={`text-2xl font-bold ${color}`}>{fmt(top.value)}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">{fmtDay(top.date)}</p>
-        </div>
-        {rest.length > 0 && (
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className="text-[11px] text-slate-400 hover:text-slate-200 shrink-0"
-          >
-            {open ? 'ocultar' : `top ${list.length}`}
-          </button>
-        )}
+    <div className="rounded-lg bg-white/5 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-slate-300">
+          {label}
+          {rest.length > 0 && (
+            <button onClick={() => setOpen((o) => !o)} className="text-xs text-blue-400 hover:text-blue-300 ml-2 align-middle">
+              {open ? 'ocultar' : 'Top 5'}
+            </button>
+          )}
+        </span>
+        <span className="text-right whitespace-nowrap">
+          <span className={`text-lg font-bold ${color}`}>{fmt(top.value)}</span>
+          <span className="text-xs text-slate-500 ml-2">{fmtDay(top.date)}</span>
+        </span>
       </div>
       {open && rest.length > 0 && (
         <ol className="mt-2 pt-2 border-t border-white/10 space-y-1 text-xs" start={2}>
           {rest.map((r, i) => (
             <li key={i} className="flex justify-between text-slate-400">
-              <span><span className="text-slate-500 mr-1">{i + 2}.</span>{fmt(r.value)}</span>
-              <span className="text-slate-500">{fmtDay(r.date)}</span>
+              <span className="text-slate-500">{i + 2}.</span>
+              <span className="whitespace-nowrap"><span className="text-slate-300">{fmt(r.value)}</span><span className="text-slate-500 ml-2">{fmtDay(r.date)}</span></span>
             </li>
           ))}
         </ol>
