@@ -17,6 +17,7 @@ const NAV_ACTIVE = [
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
   { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
   { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
+  { to: '/pro/compartir', label: 'Widget', end: false },
 ]
 const NAV_SOON: string[] = []
 
@@ -170,7 +171,7 @@ export function StationLayout() {
             </p>
             <p className="text-center text-slate-600 mt-6">
               © 2026 Estación XE1E · {LOCATION.name} ·{' '}
-              <NavLink to="/pro/compartir" className="hover:text-slate-400">Compartir / insertar</NavLink> ·{' '}
+              <NavLink to="/pro/compartir" className="hover:text-slate-400">Widget para tu sitio</NavLink> ·{' '}
               <NavLink to="/pro/admin" className="hover:text-slate-400">⚙ Admin</NavLink>
             </p>
           </footer>
