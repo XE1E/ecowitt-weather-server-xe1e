@@ -54,35 +54,34 @@ export function EmbedWidget() {
               <div>
                 <p className="text-xs text-slate-400">{LOCATION.name}</p>
                 <div className="flex items-end gap-1">
-                  <span className="text-4xl font-bold tracking-tight">{tC(data.temperature_outdoor)}</span>
+                  <span className="text-5xl font-bold tracking-tight leading-none">{tC(data.temperature_outdoor)}</span>
                   <span className="text-lg text-slate-400 mb-1">{tU}</span>
                 </div>
-                <p className="text-sm text-slate-300">{cond?.label}</p>
+                <p className="text-sm text-slate-300 mt-1">{cond?.label}</p>
+                <p className="text-xs text-slate-400">Sensación {tC(data.feels_like ?? data.temperature_outdoor)}{tU}</p>
               </div>
-              {cond && <WeatherIcon name={cond.icon} size={64} alt={cond.label} />}
+              {cond && <WeatherIcon name={cond.icon} size={72} alt={cond.label} className="shrink-0" />}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10 text-center text-sm">
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10 text-center">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wide">Sensación</p>
-                <p className="font-semibold">{tC(data.feels_like ?? data.temperature_outdoor)}{tU}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wide">Presión</p>
+                <p className="text-lg font-bold">{pr(data.pressure_relative)}<span className="text-xs text-slate-400 ml-0.5">{pU}</span></p>
               </div>
               <div>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wide">Humedad</p>
-                <p className="font-semibold">{data.humidity_outdoor != null ? `${Math.round(data.humidity_outdoor)}%` : '--'}</p>
+                <p className="text-lg font-bold">{data.humidity_outdoor != null ? Math.round(data.humidity_outdoor) : '--'}<span className="text-xs text-slate-400 ml-0.5">%</span></p>
               </div>
               <div>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wide">Viento</p>
-                <p className="font-semibold">
-                  {w(data.wind_speed)} {wU}
-                  {data.wind_direction != null && <span className="text-slate-400"> {cardinal(data.wind_direction)}</span>}
+                <p className="text-lg font-bold">
+                  {w(data.wind_speed)}<span className="text-xs text-slate-400 ml-0.5">{wU}</span>
+                  {data.wind_direction != null && <span className="text-xs text-slate-400"> {cardinal(data.wind_direction)}</span>}
                 </p>
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-500 mt-2 text-center">
-              Presión {pr(data.pressure_relative)} {pU} · clima.xe1e.net
-            </p>
+            <p className="text-[10px] text-slate-500 mt-3 text-center">clima.xe1e.net</p>
           </>
         )}
       </a>
