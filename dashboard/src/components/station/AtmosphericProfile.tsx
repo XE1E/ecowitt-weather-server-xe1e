@@ -4,7 +4,7 @@ interface Cloud { cover: string; base: number | null }
 interface Metar {
   station?: string; observed?: string; flight_category?: string | null
   wind_dir?: number | null; wind_speed_kt?: number | null; wind_gust_kt?: number | null
-  altimeter_hpa?: number | null; clouds?: Cloud[]; temp_c?: number | null
+  altimeter_hpa?: number | null; clouds?: Cloud[]; temp_c?: number | null; wx?: string | null
 }
 
 const CAT: Record<string, string> = { VFR: '#34d399', MVFR: '#38bdf8', IFR: '#fb923c', LIFR: '#f87171' }
@@ -80,6 +80,13 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const wd = typeof m.wind_dir === 'number' ? m.wind_dir : null
   const ws = m.wind_speed_kt ?? 0
   const wdLabel = wd != null ? `${wd}° ${ws}kt` : ws > 0 ? `VRB ${ws}kt` : 'Calma'
+
+  // Precipitación / tormenta según el METAR (wx)
+  const wxs = (m.wx || '').toUpperCase()
+  const rain = /RA|DZ|SH|TS/.test(wxs)
+  const storm = /TS/.test(wxs)
+  const bases = (m.clouds ?? []).map((c) => c.base).filter((b): b is number => b != null)
+  const rainTop = yOf(altFrac(bases.length ? Math.min(...bases) : 2500))
 
   // Colores de la ciudad (silueta CDMX)
   const cityBack = night ? '#1b3352' : '#93a9c7'
@@ -234,26 +241,40 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           <polygon points={`397,${GROUND - 84} 404,${GROUND - 74} 397,${GROUND - 78}`} fill="#f5c451" />
         </g>
 
+        {/* Lluvia (si el METAR reporta precipitación) */}
+        {rain && Array.from({ length: 80 }, (_, i) => {
+          const x = (i * 47) % W
+          const y1 = rainTop + ((i * 23) % 34)
+          return <line key={i} x1={x} y1={y1} x2={x - 4} y2={y1 + 15} stroke={night ? '#7aa7d8' : '#4d8fd0'} strokeWidth="1.4" opacity="0.5" />
+        })}
+        {/* Rayos (tormenta) */}
+        {storm && [320, 640].map((bx) => (
+          <polyline key={bx} points={`${bx},${rainTop} ${bx - 11},${rainTop + 30} ${bx + 5},${rainTop + 30} ${bx - 9},${rainTop + 64}`}
+            fill="none" stroke="#fde047" strokeWidth="2.5" opacity="0.9" />
+        ))}
+
         {/* Piso */}
         <rect x="0" y={GROUND} width={W} height={H - GROUND} fill={night ? '#0a1a10' : '#1c3f27'} />
       </svg>
 
-      {/* Reloj + categoría (arriba izq.) */}
-      <div className="absolute top-3 left-3 flex items-center gap-3">
-        <div className="bg-black/45 rounded-lg px-3 py-1.5 backdrop-blur-sm">
+      {/* Reloj + categoría + antigüedad (arriba der., para no tapar la escala) */}
+      <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+        <div className="bg-black/45 rounded-lg px-3 py-1.5 backdrop-blur-sm text-right">
           <p className="text-lg font-bold tabular-nums text-white leading-none">{clock}</p>
           <p className="text-[10px] text-slate-300 capitalize">{dateStr} · hora local</p>
         </div>
-        {m.flight_category && (
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: catColor }} />
-            <span className="text-sm font-bold" style={{ color: catColor }}>{m.flight_category}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {m.flight_category && (
+            <span className="flex items-center gap-1.5 bg-black/40 rounded px-2 py-0.5">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: catColor }} />
+              <span className="text-sm font-bold" style={{ color: catColor }}>{m.flight_category}</span>
+            </span>
+          )}
+          {ageMin != null && (
+            <span className="text-[11px] text-slate-300 bg-black/40 rounded px-2 py-0.5">hace {ageMin} min</span>
+          )}
+        </div>
       </div>
-      {ageMin != null && (
-        <span className="absolute top-3 right-3 text-[11px] text-slate-300 bg-black/40 rounded px-2 py-0.5">hace {ageMin} min</span>
-      )}
 
       {/* Brújula de viento + QNH (abajo der.) */}
       <div className="absolute bottom-3 right-3 flex items-end gap-2">
