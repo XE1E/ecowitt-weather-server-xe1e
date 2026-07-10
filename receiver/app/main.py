@@ -21,7 +21,7 @@ from .services.quality import quality_check, spike_check
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
-from .services.metar import get_metar
+from .services.metar import get_metar, get_taf
 from .services.air_quality import get_air_quality
 from .services import imeca
 from .services.earthquakes import get_earthquakes
@@ -459,6 +459,16 @@ async def get_metar_data(station: str = "MMMX"):
         return await get_metar(station)
     except Exception as e:
         logger.error(f"Error getting METAR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/taf")
+async def get_taf_data(station: str = "MMMX"):
+    """Latest TAF (forecast) for an airport (default MMMX)."""
+    try:
+        return await get_taf(station)
+    except Exception as e:
+        logger.error(f"Error getting TAF: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

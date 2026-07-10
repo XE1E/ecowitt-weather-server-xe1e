@@ -10,6 +10,7 @@ import { StatisticsPage } from './pages/StatisticsPage'
 import { RadarPage } from './pages/RadarPage'
 import { AstronomyPage } from './pages/AstronomyPage'
 import { AirQualityPage } from './pages/AirQualityPage'
+import { AeronauticaPage } from './pages/AeronauticaPage'
 import { ClimatePage } from './pages/ClimatePage'
 import { EarthquakesPage } from './pages/EarthquakesPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
@@ -49,6 +50,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="radar" element={<RadarPage />} />
                 <Route path="astronomia" element={<AstronomyPage />} />
                 <Route path="calidad-aire" element={<AirQualityPage />} />
+                <Route path="aeronautica" element={<AeronauticaPage />} />
                 <Route path="sismos" element={<EarthquakesPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
                 <Route path="admin" element={<AdminPage />} />

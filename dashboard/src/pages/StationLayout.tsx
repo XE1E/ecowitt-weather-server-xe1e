@@ -16,6 +16,7 @@ const NAV_ACTIVE = [
   { to: '/pro/radar', label: 'Radar', end: false },
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
   { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
+  { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
 ]
 const NAV_SOON: string[] = []
 
