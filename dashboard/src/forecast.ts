@@ -13,6 +13,7 @@ export interface ForecastDay {
   summary?: string  // descripción en prosa (cielo + lluvia + viento), sin temperaturas
   tempMorning?: number   // °C aprox. por la mañana (~09h)
   tempAfternoon?: number // °C aprox. por la tarde (~15h)
+  precipSum?: number     // mm de precipitación acumulada del día
 }
 
 export interface AstroData {
@@ -165,7 +166,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
   const { latitude, longitude } = LOCATION
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset` +
     `&hourly=weather_code,temperature_2m,precipitation_probability` +
     `&timezone=auto&forecast_days=7`
 
@@ -243,6 +244,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
       summary: [skyText, precipText, windText].filter(Boolean).join(' '),
       tempMorning,
       tempAfternoon,
+      precipSum: d.precipitation_sum?.[i],
     }
   })
 

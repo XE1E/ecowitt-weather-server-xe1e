@@ -4,6 +4,7 @@ import { useStationData } from '../station-data'
 import { useUnits } from '../units'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { describeDay } from '../forecast'
+import { LOCATION } from '../config'
 
 function dayName(iso: string, i: number): string {
   if (i === 0) return 'Hoy'
@@ -35,13 +36,37 @@ export function ForecastPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-slate-300">Pronóstico</h2>
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-300">Pronóstico</h2>
+          <p className="text-xs text-slate-400">Pronóstico para {LOCATION.label}</p>
+        </div>
         <div className="flex gap-1">
-          <button className={btn(tab === 'days')} onClick={() => setTab('days')}>7 días</button>
-          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>Por hora</button>
+          <button className={btn(tab === 'days')} onClick={() => setTab('days')}>Diario</button>
+          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>Cada hora</button>
         </div>
       </div>
+
+      {/* Tarjeta de resumen del día actual (visible en ambas pestañas) */}
+      {forecast.days[0] && (
+        <div className="card flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <WeatherIcon name={forecast.days[0].icon} size={64} alt={forecast.days[0].label} className="shrink-0" />
+            <div className="min-w-0">
+              <p className="text-lg font-semibold">{forecast.days[0].label}</p>
+              <p className="text-xs text-slate-400 first-letter:uppercase">
+                {new Date(forecast.days[0].date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-4 text-center shrink-0">
+            <div><p className="text-xs text-slate-400">Máx</p><p className="text-xl font-bold text-orange-300">{T(forecast.days[0].tempMax)}°</p></div>
+            <div><p className="text-xs text-slate-400">Mín</p><p className="text-xl font-bold text-sky-300">{T(forecast.days[0].tempMin)}°</p></div>
+            <div><p className="text-xs text-slate-400">Precip.</p><p className="text-xl font-bold text-violet-300">{forecast.days[0].precipSum != null ? u.rain(forecast.days[0].precipSum) : '--'}<span className="text-sm text-slate-500"> {u.rainU}</span></p></div>
+            <div><p className="text-xs text-slate-400">Viento</p><p className="text-xl font-bold text-emerald-300">{forecast.days[0].windMax != null ? u.wind(forecast.days[0].windMax) : '--'}<span className="text-sm text-slate-500"> {u.windU}</span></p></div>
+          </div>
+        </div>
+      )}
 
       {tab === 'days' && (
       <section>
