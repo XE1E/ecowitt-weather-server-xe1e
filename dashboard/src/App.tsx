@@ -121,6 +121,9 @@ function App() {
               <button onClick={fetchData} className="text-blue-400 hover:text-blue-300">
                 <RefreshCw className="w-4 h-4" />
               </button>
+              <a href="/pro" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+                App completa →
+              </a>
             </div>
           </header>
 

@@ -21,7 +21,9 @@
         try {
           var standalone = window.matchMedia('(display-mode: standalone)').matches
             || window.navigator.standalone === true;
-          if (standalone && location.pathname === '/') { location.replace('/pro'); }
+          // No redirigir si el usuario pidió explícitamente la Vista clásica (?clasica)
+          var wantsClassic = /[?&]clasica/.test(location.search);
+          if (standalone && location.pathname === '/' && !wantsClassic) { location.replace('/pro'); }
         } catch (e) {}
       })();
       // Aplica el tema guardado antes de pintar (evita parpadeo)

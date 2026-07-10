@@ -102,7 +102,7 @@ export function StationLayout() {
               >
                 FX {fxEnabled ? 'on' : 'off'}
               </button>
-              <a href="/" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+              <a href="/?clasica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 Vista clásica
               </a>
             </div>
