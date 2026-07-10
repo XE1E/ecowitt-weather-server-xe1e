@@ -59,11 +59,11 @@ export function ForecastPage() {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4 text-center shrink-0">
-            <div><p className="text-xs text-slate-400">Máx</p><p className="text-2xl font-bold text-orange-300">{T(forecast.days[0].tempMax)}<span className="text-base font-semibold text-slate-400">°</span></p></div>
-            <div><p className="text-xs text-slate-400">Mín</p><p className="text-2xl font-bold text-sky-300">{T(forecast.days[0].tempMin)}<span className="text-base font-semibold text-slate-400">°</span></p></div>
-            <div><p className="text-xs text-slate-400">Precip.</p><p className="text-2xl font-bold text-violet-300">{forecast.days[0].precipSum != null ? u.rain(forecast.days[0].precipSum) : '--'}<span className="text-base font-semibold text-slate-400"> {u.rainU}</span></p></div>
-            <div><p className="text-xs text-slate-400">Viento</p><p className="text-2xl font-bold text-emerald-300">{forecast.days[0].windMax != null ? u.wind(forecast.days[0].windMax) : '--'}<span className="text-base font-semibold text-slate-400"> {u.windU}</span></p></div>
+          <div className="grid grid-cols-4 gap-5 text-center shrink-0">
+            <div><p className="text-sm text-slate-400 mb-0.5">Máx</p><p className="text-3xl font-bold text-orange-300 leading-none">{T(forecast.days[0].tempMax)}<span className="text-lg font-semibold text-slate-400">°</span></p></div>
+            <div><p className="text-sm text-slate-400 mb-0.5">Mín</p><p className="text-3xl font-bold text-sky-300 leading-none">{T(forecast.days[0].tempMin)}<span className="text-lg font-semibold text-slate-400">°</span></p></div>
+            <div><p className="text-sm text-slate-400 mb-0.5">Precip.</p><p className="text-3xl font-bold text-violet-300 leading-none">{forecast.days[0].precipSum != null ? u.rain(forecast.days[0].precipSum) : '--'}<span className="text-lg font-semibold text-slate-400"> {u.rainU}</span></p></div>
+            <div><p className="text-sm text-slate-400 mb-0.5">Viento</p><p className="text-3xl font-bold text-emerald-300 leading-none">{forecast.days[0].windMax != null ? u.wind(forecast.days[0].windMax) : '--'}<span className="text-lg font-semibold text-slate-400"> {u.windU}</span></p></div>
           </div>
         </div>
       )}
