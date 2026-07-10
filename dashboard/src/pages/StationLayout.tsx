@@ -67,16 +67,16 @@ export function StationLayout() {
       <div className="min-h-screen p-3 md:p-6">
         <div className="max-w-[1400px] mx-auto">
           {/* Header (banner fijo con nombre y fecha/hora centrada) */}
-          <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10 flex items-center gap-3">
-            <div className="min-w-0 shrink">
+          <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="min-w-0 flex-1 order-1">
               <h1 className="text-base md:text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
               <p className="text-sm md:text-base text-slate-300 truncate">{LOCATION.label}</p>
             </div>
-            <div className="flex-1 text-center leading-tight">
+            <div className="order-2 shrink-0 text-right sm:text-center sm:flex-1 leading-tight">
               <p className="text-xs md:text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
               <p className="font-mono text-lg md:text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-300 shrink-0">
+            <div className="order-3 w-full sm:w-auto flex items-center gap-2 flex-wrap justify-end text-sm text-slate-300">
               <button
                 onClick={units.toggle}
                 title="Cambiar unidades (métrico / imperial)"

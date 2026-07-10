@@ -72,25 +72,23 @@ export function ForecastPage() {
       <section>
         <div className="space-y-2">
           {forecast.days.map((d, i) => (
-            <div key={d.date} className="card flex items-start gap-4 py-3">
-              <div className="w-24 sm:w-28 shrink-0">
-                <p className="font-semibold capitalize">{dayName(d.date, i)}</p>
-                <p className="text-xs text-slate-400 capitalize">{dayDate(d.date)}</p>
-              </div>
-              <WeatherIcon name={d.icon} size={44} alt={d.label} className="shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-200">{d.label}</p>
-                <p className="text-sm text-slate-400 leading-snug mt-0.5">
-                  {describeDay(d, (c) => `${u.temp(c)}${u.tempU}`)}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <p>
+            <div key={d.date} className="card py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-20 sm:w-28 shrink-0">
+                  <p className="font-semibold capitalize">{dayName(d.date, i)}</p>
+                  <p className="text-xs text-slate-400 capitalize">{dayDate(d.date)}</p>
+                </div>
+                <WeatherIcon name={d.icon} size={40} alt={d.label} className="shrink-0" />
+                <p className="flex-1 min-w-0 font-medium text-slate-200 truncate">{d.label}</p>
+                <div className="text-right shrink-0 whitespace-nowrap">
                   <span className="font-bold text-lg">{T(d.tempMax)}°</span>
                   <span className="text-slate-500"> / {T(d.tempMin)}°</span>
-                </p>
-                {d.precipProb > 0 && <p className="text-sm text-sky-400">💧 {d.precipProb}%</p>}
+                  {d.precipProb > 0 && <span className="text-sm text-sky-400 ml-2">💧 {d.precipProb}%</span>}
+                </div>
               </div>
+              <p className="text-sm text-slate-400 leading-snug mt-2">
+                {describeDay(d, (c) => `${u.temp(c)}${u.tempU}`)}
+              </p>
             </div>
           ))}
         </div>
