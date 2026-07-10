@@ -117,8 +117,8 @@ export function ClimatePage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-300 mb-1">Climatología</h2>
-      <p className="text-xs text-slate-500 mb-4">Resúmenes construidos desde el histórico diario de la estación.</p>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1">Climatología</h2>
+      <p className="text-xs text-slate-400 mb-4">Resúmenes construidos desde el histórico diario de la estación.</p>
 
       {!hasData && (
         <div className="card text-slate-400">

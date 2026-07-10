@@ -9,7 +9,8 @@ export function AstronomyPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-300 mb-3">Astronomía</h2>
+      <h2 className="text-2xl font-bold text-slate-100">Astronomía</h2>
+      <p className="text-xs text-slate-400 mb-4">Sol, luna, crepúsculos y planetas visibles desde {LOCATION.label}.</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SunMoonCard astro={forecast?.astro ?? null} />

@@ -25,7 +25,7 @@ export function ShareEmbedPage() {
 
   return (
     <div className="max-w-3xl">
-      <h2 className="text-lg font-semibold text-slate-300 mb-1">Compartir / insertar</h2>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1">Compartir / insertar</h2>
       <p className="text-sm text-slate-400 mb-4">
         Comparte el enlace de la estación o incrusta un widget con las condiciones actuales en otra web o blog.
       </p>

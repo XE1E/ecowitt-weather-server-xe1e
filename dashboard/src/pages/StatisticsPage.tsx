@@ -102,11 +102,15 @@ export function StatisticsPage() {
 
   return (
     <div>
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-slate-100">Estadísticas y récords</h2>
+        <p className="text-xs text-slate-400">Extremos históricos y resúmenes por periodo de la estación.</p>
+      </div>
       {allTime && allTime.days > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">
+          <h3 className="text-lg font-semibold text-slate-300 mb-3">
             Récords de siempre <span className="text-xs text-slate-500 font-normal">({allTime.days} días registrados)</span>
-          </h2>
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {records.filter((r) => r.rec).map((r) => (
               <div key={r.label} className="card">
@@ -120,7 +124,7 @@ export function StatisticsPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h2 className="text-lg font-semibold text-slate-300">Estadísticas por periodo</h2>
+        <h3 className="text-lg font-semibold text-slate-300">Estadísticas por periodo</h3>
         <div className="flex gap-1">
           {PERIODS.map((p) => (
             <button key={p.k} className={btn(period === p.k)} onClick={() => setPeriod(p.k)}>

@@ -23,7 +23,7 @@ export function EarthquakesPage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-lg font-semibold text-slate-300 mb-1">Sismos recientes</h2>
+      <h2 className="text-2xl font-bold text-slate-100 mb-1">Sismos recientes</h2>
       <p className="text-sm text-slate-400 mb-4">
         Sismos recientes cerca de la estación, más recientes primero
         {source === 'SSN' ? ' (fuente oficial SSN)' : source === 'USGS' ? ' (magnitud ≥ 4, ~800 km — fuente USGS)' : ''}.

@@ -38,7 +38,7 @@ export function ForecastPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h2 className="text-lg font-semibold text-slate-300">Pronóstico</h2>
+          <h2 className="text-2xl font-bold text-slate-100">Pronóstico</h2>
           <p className="text-xs text-slate-400">Pronóstico para {LOCATION.label}</p>
         </div>
         <div className="flex gap-1">

@@ -51,7 +51,7 @@ export function AirQualityPage() {
   if (aq?.error === 'no_token') {
     return (
       <div>
-        <h2 className="text-lg font-semibold text-slate-300 mb-3">Calidad del aire</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-3">Calidad del aire</h2>
         <div className="card text-sm text-slate-300">
           <p>Falta configurar el token de WAQI. Consíguelo gratis en
             {' '}<a href="https://aqicn.org/data-platform/token/" className="text-blue-400">aqicn.org/data-platform/token</a>
@@ -65,7 +65,7 @@ export function AirQualityPage() {
   if (!aq || aq.aqi == null) {
     return (
       <div>
-        <h2 className="text-lg font-semibold text-slate-300 mb-3">Calidad del aire</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-3">Calidad del aire</h2>
         <div className="card text-slate-400">Sin datos de calidad del aire por ahora.</div>
       </div>
     )
@@ -76,7 +76,8 @@ export function AirQualityPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-300 mb-3">Calidad del aire</h2>
+      <h2 className="text-2xl font-bold text-slate-100">Calidad del aire</h2>
+      <p className="text-xs text-slate-400 mb-4">Índice de calidad del aire (AQI) y contaminantes cerca de {LOCATION.label}.</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* AQI principal */}
