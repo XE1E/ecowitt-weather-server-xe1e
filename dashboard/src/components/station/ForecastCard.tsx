@@ -40,6 +40,7 @@ export function ForecastCard({ forecast }: { forecast: ForecastResult | null }) 
               <span className="text-sm font-bold">{T(d.tempMax)}°</span>
               <span className="text-xs text-slate-500">{T(d.tempMin)}°</span>
               {d.precipProb > 0 && <span className="text-[10px] text-sky-400">{d.precipProb}%</span>}
+              <span className="text-[10px] text-slate-400 leading-tight mt-0.5 px-1">{d.label}</span>
             </div>
           ))}
         </div>

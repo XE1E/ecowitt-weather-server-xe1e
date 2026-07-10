@@ -27,6 +27,7 @@ export function Forecast({ days }: ForecastProps) {
               <span className="font-bold">{Math.round(d.tempMax)}°</span>
               <span className="text-slate-500"> / {Math.round(d.tempMin)}°</span>
             </p>
+            <p className="text-xs text-slate-400 leading-tight mt-0.5">{d.label}</p>
             {d.precipProb > 0 && (
               <p className="text-xs text-sky-400 mt-1">💧 {d.precipProb}%</p>
             )}

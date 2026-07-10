@@ -7,6 +7,12 @@ export interface ForecastDay {
   tempMax: number
   tempMin: number
   precipProb: number
+  windMax?: number  // km/h (viento máx del día)
+  windDir?: number  // grados (dirección dominante)
+  code?: number     // código WMO (para la descripción)
+  summary?: string  // descripción en prosa (cielo + lluvia + viento), sin temperaturas
+  tempMorning?: number   // °C aprox. por la mañana (~09h)
+  tempAfternoon?: number // °C aprox. por la tarde (~15h)
 }
 
 export interface AstroData {
@@ -104,11 +110,62 @@ export function upcomingMoonEvents(count = 4): SkyEvent[] {
   return events.slice(0, count)
 }
 
+// --- Generación de descripción en prosa por día ---
+function skyWord(code: number): string {
+  if (code === 0) return 'cielos despejados'
+  if (code === 1) return 'cielos mayormente despejados'
+  if (code === 2) return 'cielos parcialmente nublados'
+  if (code === 3) return 'cielos nublados'
+  if (code === 45 || code === 48) return 'niebla'
+  if (code >= 51 && code <= 57) return 'llovizna'
+  if (code >= 61 && code <= 67) return 'lluvia'
+  if (code >= 71 && code <= 77) return 'nieve'
+  if (code >= 80 && code <= 82) return 'chubascos'
+  if (code >= 85 && code <= 86) return 'chubascos de nieve'
+  if (code >= 95) return 'tormentas'
+  return 'condiciones variables'
+}
+// Ranking de "nubosidad/severidad" para saber si el cielo empeora o mejora
+function cloudRank(code: number): number {
+  if (code >= 95) return 6
+  if (code >= 61) return 5
+  if (code >= 51) return 4
+  if (code === 3 || code === 45 || code === 48) return 3
+  if (code === 2) return 2
+  if (code === 1) return 1
+  return 0
+}
+function dominantCode(codes: number[]): number {
+  if (!codes.length) return 0
+  return codes.reduce((a, b) => (cloudRank(b) > cloudRank(a) ? b : a))
+}
+function cardinalWord(deg: number): string {
+  const dirs = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste']
+  return dirs[Math.round(deg / 45) % 8]
+}
+function windDescriptor(kmh: number): string {
+  if (kmh < 2) return 'calma'
+  if (kmh < 12) return 'una brisa suave'
+  if (kmh < 20) return 'una brisa moderada'
+  if (kmh < 30) return 'viento moderado'
+  if (kmh < 45) return 'viento fuerte'
+  return 'viento muy fuerte'
+}
+
+/** Descripción completa del día, con las temperaturas formateadas por `ft`. */
+export function describeDay(d: ForecastDay, ft: (c: number) => string): string {
+  const base = d.summary ?? d.label
+  if (d.tempMorning != null && d.tempAfternoon != null) {
+    return `${base} Las temperaturas oscilarán entre ${ft(d.tempMorning)} por la mañana y ${ft(d.tempAfternoon)} por la tarde.`
+  }
+  return `${base} Máxima de ${ft(d.tempMax)} y mínima de ${ft(d.tempMin)}.`
+}
+
 export async function fetchForecast(): Promise<ForecastResult> {
   const { latitude, longitude } = LOCATION
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset` +
     `&hourly=weather_code,temperature_2m,precipitation_probability` +
     `&timezone=auto&forecast_days=7`
 
@@ -116,9 +173,63 @@ export async function fetchForecast(): Promise<ForecastResult> {
   if (!res.ok) throw new Error('Error al obtener el pronóstico')
   const j = await res.json()
   const d = j.daily
+  const H = j.hourly
 
   const days: ForecastDay[] = d.time.map((date: string, i: number) => {
     const { icon, label } = wmoToIcon(d.weather_code[i])
+
+    // Índices horarios de ESTE día y helper de hora local
+    const idxs: number[] = H.time
+      .map((t: string, k: number) => (String(t).startsWith(date) ? k : -1))
+      .filter((k: number) => k >= 0)
+    const hourAt = (k: number) => new Date(H.time[k]).getHours()
+    const dayCodes = idxs.filter((k) => hourAt(k) >= 6 && hourAt(k) < 18).map((k) => H.weather_code[k])
+    const nightCodes = idxs.filter((k) => hourAt(k) >= 18).map((k) => H.weather_code[k])
+
+    const skyDay = dominantCode(dayCodes.length ? dayCodes : [d.weather_code[i]])
+    const skyNight = dominantCode(nightCodes.length ? nightCodes : [skyDay])
+
+    // Cielo (con evolución día -> noche)
+    let skyText = `Se esperan ${skyWord(skyDay)}`
+    const rDay = cloudRank(skyDay), rNight = cloudRank(skyNight)
+    if (rNight > rDay) skyText += `, volviéndose ${skyWord(skyNight)} por la noche`
+    else if (rNight < rDay && rDay >= 2) skyText += ', despejando por la noche'
+    skyText += '.'
+
+    // Lluvia (¿seco? / probabilidad y periodo)
+    const probAt = (k: number) => H.precipitation_probability?.[k] ?? 0
+    const periodMax = (a: number, b: number) =>
+      Math.max(0, ...idxs.filter((k) => hourAt(k) >= a && hourAt(k) < b).map(probAt))
+    const pMorning = periodMax(6, 12), pAfternoon = periodMax(12, 18), pNight = periodMax(18, 24)
+    const maxP = Math.max(pMorning, pAfternoon, pNight, d.precipitation_probability_max?.[i] ?? 0)
+    let precipText: string
+    if (maxP < 15) {
+      precipText = 'Permanecerá seco durante todo el día.'
+    } else {
+      const periodo = maxP === pAfternoon ? 'por la tarde' : maxP === pNight ? 'por la noche' : 'por la mañana'
+      const verbo = maxP >= 60 ? 'Se esperan lluvias' : 'Posibilidad de lluvia'
+      precipText = `${verbo} ${periodo} (${maxP}%).`
+    }
+
+    // Viento
+    const windMax = d.wind_speed_10m_max?.[i]
+    const windDir = d.wind_direction_10m_dominant?.[i]
+    let windText = ''
+    if (windMax != null) {
+      const desc = windDescriptor(windMax)
+      windText = desc === 'calma'
+        ? 'El aire estará prácticamente en calma.'
+        : `El viento será ${desc}${windDir != null ? ' desde el ' + cardinalWord(windDir) : ''}.`
+    }
+
+    // Temperaturas por la mañana (~09h) y por la tarde (~15h)
+    const tempAtHour = (hh: number) => {
+      const k = idxs.find((k) => hourAt(k) === hh)
+      return k != null ? H.temperature_2m[k] : undefined
+    }
+    const tempMorning = tempAtHour(9) ?? d.temperature_2m_min[i]
+    const tempAfternoon = tempAtHour(15) ?? d.temperature_2m_max[i]
+
     return {
       date,
       icon,
@@ -126,6 +237,12 @@ export async function fetchForecast(): Promise<ForecastResult> {
       tempMax: d.temperature_2m_max[i],
       tempMin: d.temperature_2m_min[i],
       precipProb: d.precipitation_probability_max?.[i] ?? 0,
+      windMax,
+      windDir,
+      code: d.weather_code[i],
+      summary: [skyText, precipText, windText].filter(Boolean).join(' '),
+      tempMorning,
+      tempAfternoon,
     }
   })
 
