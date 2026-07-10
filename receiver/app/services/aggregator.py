@@ -101,6 +101,11 @@ def all_time_records(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 BASE_DD = 18.3
 # Umbral para contar un "día con lluvia" (mm). NOAA usa 0.01 in ≈ 0.254 mm.
 RAIN_DAY_MM = 0.2
+# Umbrales del "season tracker" adaptados a CDMX (Benito Juárez, altiplano
+# subtropical): rara vez hiela y casi nunca ≥30 °C, así que en vez de días
+# tropicales/de helada usamos días cálidos y noches frescas.
+WARM_DAY_C = 25.0    # día cálido: temperatura máxima ≥ 25 °C
+COOL_NIGHT_C = 10.0  # noche fresca: temperatura mínima ≤ 10 °C
 
 
 def _month_of(date_str: str) -> Optional[int]:
@@ -268,8 +273,9 @@ def noaa_year(rows: List[Dict[str, Any]], year: int, lat: Optional[float] = None
         mrows = [r for r in year_rows if _month_of(str(r.get("date", ""))) == m]
         if mrows:
             months.append({"month": m, **period_summary(mrows, lat)})
-    return {"scope": "year", "year": year,
-            "months": months, "summary": period_summary(year_rows, lat)}
+    return {"scope": "year", "year": year, "months": months,
+            "summary": period_summary(year_rows, lat),
+            "season": season_tracker(year_rows)}
 
 
 def on_this_day(rows: List[Dict[str, Any]], today: Optional[datetime] = None) -> Dict[str, Any]:
@@ -295,6 +301,55 @@ def on_this_day(rows: List[Dict[str, Any]], today: Optional[datetime] = None) ->
     }
 
 
+def _topn(rows: List[Dict[str, Any]], field: Optional[str], pick_max: bool = True,
+          n: int = 5, derive=None) -> List[Dict[str, Any]]:
+    """Top-N valores de un campo (o derivado), con su fecha, ordenados."""
+    cand = []
+    for r in rows:
+        v = derive(r) if derive else r.get(field)
+        d = r.get("date")
+        if v is not None and d:
+            cand.append((v, d))
+    cand.sort(key=lambda x: x[0], reverse=pick_max)
+    return [{"value": round(v, 1), "date": d} for v, d in cand[:n]]
+
+
+def records_top(rows: List[Dict[str, Any]], n: int = 5) -> Dict[str, Any]:
+    """Récords de siempre con el top-N de cada categoría (valor + fecha)."""
+    def rng(r):
+        a, b = r.get("temp_max"), r.get("temp_min")
+        return (a - b) if a is not None and b is not None else None
+    return {
+        "temp_max": _topn(rows, "temp_max", True, n),
+        "temp_min": _topn(rows, "temp_min", False, n),
+        "warm_day": _topn(rows, "temp_avg", True, n),
+        "cold_day": _topn(rows, "temp_avg", False, n),
+        "range_day": _topn(rows, None, True, n, derive=rng),
+        "rain_day": _topn(rows, "rain_total", True, n),
+        "gust_max": _topn(rows, "gust_max", True, n),
+        "wind_max": _topn(rows, "wind_max", True, n),
+        "press_max": _topn(rows, "press_max", True, n),
+        "press_min": _topn(rows, "press_min", False, n),
+        "hum_max": _topn(rows, "hum_max", True, n),
+        "hum_min": _topn(rows, "hum_min", False, n),
+        "uv_max": _topn(rows, "uv_max", True, n),
+        "solar_max": _topn(rows, "solar_max", True, n),
+    }
+
+
+def season_tracker(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Contadores de días característicos del periodo (adaptado a CDMX)."""
+    warm = sum(1 for r in rows if r.get("temp_max") is not None and r["temp_max"] >= WARM_DAY_C)
+    cool = sum(1 for r in rows if r.get("temp_min") is not None and r["temp_min"] <= COOL_NIGHT_C)
+    with_rain = [r for r in rows if r.get("rain_total") is not None]
+    rain = sum(1 for r in with_rain if (r.get("rain_total") or 0.0) >= RAIN_DAY_MM)
+    dry = sum(1 for r in with_rain if (r.get("rain_total") or 0.0) < RAIN_DAY_MM)
+    return {
+        "warm_days": warm, "cool_nights": cool, "rain_days": rain, "dry_days": dry,
+        "warm_threshold": WARM_DAY_C, "cool_threshold": COOL_NIGHT_C,
+    }
+
+
 def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None,
                   lat: Optional[float] = None) -> Dict[str, Any]:
     """Paquete de récords: de siempre, por mes, este mes, este año y ayer."""
@@ -307,6 +362,7 @@ def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None,
     yesterday = next((r for r in rows if r.get("date") == yest), None)
     return {
         "all_time": all_time_records(rows),
+        "all_time_top": records_top(rows),
         "monthly": monthly_records(rows),
         "this_month": period_summary(this_month, lat),
         "this_year": period_summary(this_year, lat),
