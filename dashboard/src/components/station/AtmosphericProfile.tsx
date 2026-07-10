@@ -32,6 +32,7 @@ const COVER_STYLE: Record<string, { n: number; op: number }> = {
 
 export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const [now, setNow] = useState(() => new Date())
+  const [skylineOk, setSkylineOk] = useState(false)
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(i)
@@ -117,33 +118,48 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           fill={night ? '#14243a' : '#5d7f6b'} opacity="0.8" />
         {/* Base de suelo */}
         <rect x="0" y={GROUND - 2} width={W} height={H - GROUND + 2} fill={night ? '#0e2016' : '#20452b'} />
-        {/* Ciudad (rascacielos con ventanas) */}
-        {Array.from({ length: 26 }, (_, i) => {
-          const x = i * 40 + 4
-          const w = 20 + (i % 3) * 7
-          const h = 14 + ((i * 37) % 38)
-          const top = GROUND - h
-          const bld = night ? '#14304a' : '#35526f'
-          const win = night ? '#ffd27a' : '#c6d6e9'
-          const cells = []
-          const rows = Math.floor(h / 9)
-          const cols = Math.max(1, Math.floor(w / 8))
-          for (let r = 0; r < rows; r++)
-            for (let c = 0; c < cols; c++)
-              if ((i + r * 3 + c * 5) % 3 === 0)
-                cells.push(<rect key={`${r}-${c}`} x={x + 3 + c * 8} y={top + 4 + r * 9} width="3" height="4" fill={win} opacity={night ? 0.85 : 0.45} />)
-          return <g key={i}><rect x={x} y={top} width={w} height={h} rx="1" fill={bld} />{cells}</g>
-        })}
-        {/* Molinos de viento */}
-        {[280, 700].map((tx) => (
-          <g key={tx} strokeWidth="1.6" opacity="0.7">
-            <line x1={tx} y1={GROUND} x2={tx} y2={GROUND - 30} stroke={night ? '#2a445e' : '#e6eff7'} />
-            <line x1={tx} y1={GROUND - 32} x2={tx} y2={GROUND - 46} stroke={night ? '#2a445e' : '#e6eff7'} />
-            <line x1={tx} y1={GROUND - 32} x2={tx + 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
-            <line x1={tx} y1={GROUND - 32} x2={tx - 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
-          </g>
-        ))}
+        {/* Ciudad dibujada (respaldo si no hay imagen de skyline) */}
+        {!skylineOk && (
+          <>
+            {Array.from({ length: 26 }, (_, i) => {
+              const x = i * 40 + 4
+              const w = 20 + (i % 3) * 7
+              const h = 14 + ((i * 37) % 38)
+              const top = GROUND - h
+              const bld = night ? '#14304a' : '#35526f'
+              const win = night ? '#ffd27a' : '#c6d6e9'
+              const cells = []
+              const rows = Math.floor(h / 9)
+              const cols = Math.max(1, Math.floor(w / 8))
+              for (let r = 0; r < rows; r++)
+                for (let c = 0; c < cols; c++)
+                  if ((i + r * 3 + c * 5) % 3 === 0)
+                    cells.push(<rect key={`${r}-${c}`} x={x + 3 + c * 8} y={top + 4 + r * 9} width="3" height="4" fill={win} opacity={night ? 0.85 : 0.45} />)
+              return <g key={i}><rect x={x} y={top} width={w} height={h} rx="1" fill={bld} />{cells}</g>
+            })}
+            {[280, 700].map((tx) => (
+              <g key={tx} strokeWidth="1.6" opacity="0.7">
+                <line x1={tx} y1={GROUND} x2={tx} y2={GROUND - 30} stroke={night ? '#2a445e' : '#e6eff7'} />
+                <line x1={tx} y1={GROUND - 32} x2={tx} y2={GROUND - 46} stroke={night ? '#2a445e' : '#e6eff7'} />
+                <line x1={tx} y1={GROUND - 32} x2={tx + 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
+                <line x1={tx} y1={GROUND - 32} x2={tx - 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
+              </g>
+            ))}
+          </>
+        )}
       </svg>
+
+      {/* Skyline real de CDMX (imagen). Si existe /skyline-cdmx.png, se usa al
+          frente del suelo; si no, se muestra la ciudad dibujada de respaldo. */}
+      <img
+        src="/skyline-cdmx.png"
+        alt=""
+        aria-hidden="true"
+        onLoad={() => setSkylineOk(true)}
+        onError={() => setSkylineOk(false)}
+        className="absolute bottom-0 left-0 w-full pointer-events-none select-none"
+        style={{ display: skylineOk ? 'block' : 'none' }}
+      />
 
       {/* Reloj + categoría (arriba izq.) */}
       <div className="absolute top-3 left-3 flex items-center gap-3">

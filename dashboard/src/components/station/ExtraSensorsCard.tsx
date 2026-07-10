@@ -20,12 +20,14 @@ export function ExtraSensorsCard({ data }: { data: WeatherData }) {
       <div className="space-y-2">
         {channels.map((c) => (
           <div key={c.ch} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-            <span className="text-sm text-slate-300">Canal {c.ch}</span>
-            <span className="text-sm">
-              <span className="font-bold text-amber-300">{u.temp(c.temp)}{u.tempU}</span>
-              {c.humidity !== undefined && <span className="text-slate-400"> · {c.humidity}%</span>}
-              {c.batteryLow && <span className="text-red-300"> · ⚠ batería</span>}
+            <span className="text-sm text-slate-300">
+              Canal {c.ch}
+              {c.batteryLow && <span className="text-red-300"> ⚠</span>}
             </span>
+            <div className="flex items-center gap-4">
+              {c.temp !== undefined && <span className="text-lg font-bold text-amber-300">{u.temp(c.temp)}{u.tempU}</span>}
+              {c.humidity !== undefined && <span className="text-lg font-bold text-sky-300">{c.humidity}%</span>}
+            </div>
           </div>
         ))}
       </div>
