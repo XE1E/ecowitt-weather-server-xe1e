@@ -155,6 +155,30 @@ def daily_et0(row: Dict[str, Any], lat: float) -> Optional[float]:
     return round(et0_hargreaves(row["temp_min"], row["temp_max"], row["temp_avg"], lat, doy), 2)
 
 
+def vector_mean_dir(rows: List[Dict[str, Any]], dir_key: str = "wind_direction",
+                    weight_key: Optional[str] = "wind_speed") -> Optional[float]:
+    """Dirección dominante (media vectorial de rumbos, opcionalmente ponderada)."""
+    sx = sy = 0.0
+    n = 0
+    for r in rows:
+        d = r.get(dir_key)
+        if d is None:
+            continue
+        w = (r.get(weight_key) if weight_key else None) or 1.0
+        rad = math.radians(d)
+        sx += w * math.sin(rad)
+        sy += w * math.cos(rad)
+        n += 1
+    if n == 0 or (sx == 0 and sy == 0):
+        return None
+    return round((math.degrees(math.atan2(sx, sy)) + 360) % 360, 0)
+
+
+def _avg(rows, key):
+    vals = [r[key] for r in rows if r.get(key) is not None]
+    return round(sum(vals) / len(vals), 1) if vals else None
+
+
 def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> Dict[str, Any]:
     """Resumen agregado de un conjunto de días (mes, año, etc.)."""
     if not rows:
@@ -175,6 +199,12 @@ def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> D
         "wind_avg": round(sum(wind_avgs) / len(wind_avgs), 1) if wind_avgs else None,
         "wind_max": _best(rows, "wind_max", True),
         "gust_max": _best(rows, "gust_max", True),
+        "wind_dir": vector_mean_dir(rows, "wind_dir", "wind_max"),
+        "hum_avg": _avg(rows, "hum_avg"),
+        "dew_avg": _avg(rows, "dew_avg"),
+        "press_avg": _avg(rows, "press_avg"),
+        "uv_max": (lambda v: max(v) if v else None)([r["uv_max"] for r in rows if r.get("uv_max") is not None]),
+        "solar_max": (lambda v: max(v) if v else None)([r["solar_max"] for r in rows if r.get("solar_max") is not None]),
         "hdd": round(hdd, 1),
         "cdd": round(cdd, 1),
     }
@@ -219,6 +249,7 @@ def noaa_month(rows: List[Dict[str, Any]], year: int, month: int, lat: Optional[
             "rain": r.get("rain_total"),
             "wind_avg": r.get("wind_avg"),
             "gust_max": r.get("gust_max"), "gust_time": r.get("gust_max_time"),
+            "wind_dir": r.get("wind_dir"),
             "hum_min": r.get("hum_min"), "hum_max": r.get("hum_max"), "hum_avg": r.get("hum_avg"),
             "press_min": r.get("press_min"), "press_max": r.get("press_max"), "press_avg": r.get("press_avg"),
             "dew_avg": r.get("dew_avg"), "uv_max": r.get("uv_max"), "solar_max": r.get("solar_max"),
@@ -290,6 +321,14 @@ async def compute_and_store_day(storage, day: datetime) -> Optional[Dict[str, An
     fields = flatten_stats(stats)
     if not fields:
         return None
+    # Dirección dominante del viento (media vectorial ponderada por velocidad)
+    try:
+        wrows = await storage.query(start=start_iso, stop=stop_iso, fields=["wind_direction", "wind_speed"])
+        wd = vector_mean_dir(wrows)
+        if wd is not None:
+            fields["wind_dir"] = wd
+    except Exception:
+        pass
     date_str = day.strftime("%Y-%m-%d")
     await storage.write_daily_summary(date_str, fields, ts_utc)
     return {"date": date_str, **fields}

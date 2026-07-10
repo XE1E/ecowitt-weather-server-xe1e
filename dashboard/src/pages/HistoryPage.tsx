@@ -1,110 +1,122 @@
 import { useState, useEffect } from 'react'
-import {
-  LineChart, Line, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts'
 import { useUnits } from '../units'
 import { LOCATION } from '../config'
 import { HistoryDayDetail } from '../components/station/HistoryDayDetail'
+import { HistoryCharts, HistPoint } from '../components/station/HistoryCharts'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const MES_ABR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
+interface Rec { value: number; date: string }
 interface NoaaDay {
   date: string
   mean_temp?: number | null; high?: number | null; low?: number | null
-  rain?: number | null; wind_avg?: number | null; gust_max?: number | null
-  hum_min?: number | null; hum_max?: number | null; hum_avg?: number | null
-  press_min?: number | null; press_max?: number | null; press_avg?: number | null
-  dew_avg?: number | null; uv_max?: number | null; solar_max?: number | null
+  rain?: number | null; wind_avg?: number | null; gust_max?: number | null; wind_dir?: number | null
+  hum_avg?: number | null; dew_avg?: number | null; press_avg?: number | null
+  uv_max?: number | null; solar_max?: number | null
 }
-interface Rec { value: number; date: string }
-interface NoaaMonth {
-  year: number; month: number; days: NoaaDay[]
-  summary: {
-    days: number; mean_temp?: number | null; high?: Rec | null; low?: Rec | null
-    rain_total?: number; rain_days?: number; wind_max?: Rec | null; gust_max?: Rec | null
-  }
+interface Period {
+  days: number; mean_temp?: number | null; high?: Rec | null; low?: Rec | null
+  rain_total?: number; rain_days?: number; wind_max?: Rec | null; gust_max?: Rec | null; wind_dir?: number | null
+  wind_avg?: number | null; hum_avg?: number | null; dew_avg?: number | null; press_avg?: number | null
+  uv_max?: number | null; solar_max?: number | null
 }
+interface YearMonth extends Period { month: number }
+interface MonthData { year: number; month: number; days: NoaaDay[]; summary: Period }
+interface YearData { year: number; months: YearMonth[]; summary: Period }
+
+type Gran = 'day' | 'month' | 'year'
 
 export function HistoryPage() {
   const u = useUnits()
   const now = new Date()
+  const todayIso = now.toISOString().slice(0, 10)
+
+  const [gran, setGran] = useState<Gran>('month')
+  const [pDay, setPDay] = useState(todayIso)
   const [pMonth, setPMonth] = useState(now.getMonth() + 1)
   const [pYear, setPYear] = useState(now.getFullYear())
-  const [sel, setSel] = useState({ month: now.getMonth() + 1, year: now.getFullYear() })
-  const [data, setData] = useState<NoaaMonth | null>(null)
+  const [sel, setSel] = useState<{ gran: Gran; day: string; month: number; year: number }>({
+    gran: 'month', day: todayIso, month: now.getMonth() + 1, year: now.getFullYear(),
+  })
+  const [month, setMonth] = useState<MonthData | null>(null)
+  const [year, setYear] = useState<YearData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [detailDate, setDetailDate] = useState<string | null>(null)
 
   useEffect(() => {
     let cancel = false
+    if (sel.gran === 'day') { setLoading(false); return }
     setLoading(true)
-    fetch(`/api/climate/noaa?year=${sel.year}&month=${sel.month}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (!cancel) { setData(j); setLoading(false) } })
-      .catch(() => !cancel && setLoading(false))
+    const url = sel.gran === 'month'
+      ? `/api/climate/noaa?year=${sel.year}&month=${sel.month}`
+      : `/api/climate/noaa?year=${sel.year}`
+    fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (cancel) return
+      if (sel.gran === 'month') { setMonth(j); setYear(null) } else { setYear(j); setMonth(null) }
+      setLoading(false)
+    }).catch(() => !cancel && setLoading(false))
     return () => { cancel = true }
   }, [sel])
 
-  const s = data?.summary
-  const hasData = !!s && s.days > 0
-  const days = data?.days ?? []
-
+  // Conversores a unidades de visualización (numéricos)
   const tN = (v?: number | null) => (v == null ? null : Math.round(u.tempN(v) * 10) / 10)
   const wN = (v?: number | null) => (v == null ? null : +u.wind(v))
   const pN = (v?: number | null) => (v == null ? null : +u.press(v))
   const rN = (v?: number | null) => (v == null ? 0 : +u.rain(v))
 
-  const chartData = days.map((d) => ({
-    dia: d.date.slice(8),
+  const apply = () => setSel({ gran, day: pDay, month: pMonth, year: pYear })
+
+  // --- Vista de DÍA: delega en el detalle diario ---
+  if (sel.gran === 'day') {
+    return (
+      <div className="space-y-4">
+        <Header gran={gran} setGran={setGran} pDay={pDay} setPDay={setPDay} pMonth={pMonth} setPMonth={setPMonth}
+          pYear={pYear} setPYear={setPYear} apply={apply} maxYear={now.getFullYear()} />
+        <HistoryDayDetail key={sel.day} date={sel.day} onBack={() => { setGran('month'); setSel({ ...sel, gran: 'month' }) }} />
+      </div>
+    )
+  }
+
+  const isMonth = sel.gran === 'month'
+  const s = isMonth ? month?.summary : year?.summary
+  const hasData = !!s && s.days > 0
+
+  // Puntos para las gráficas
+  const monthPoints: HistPoint[] = (month?.days ?? []).map((d) => ({
+    x: d.date.slice(8),
     max: tN(d.high), min: tN(d.low), prom: tN(d.mean_temp),
-    vmed: wN(d.wind_avg), vmax: wN(d.gust_max),
+    vmed: wN(d.wind_avg), vmax: wN(d.gust_max), dir: d.wind_dir ?? null,
     hum: d.hum_avg ?? null, dew: tN(d.dew_avg),
     uv: d.uv_max ?? null, solar: d.solar_max ?? null,
-    pprom: pN(d.press_avg),
-    lluvia: rN(d.rain),
+    pprom: pN(d.press_avg), lluvia: rN(d.rain),
+  }))
+  const yearPoints: HistPoint[] = (year?.months ?? []).map((m) => ({
+    x: MES_ABR[m.month - 1],
+    max: tN(m.high?.value), min: tN(m.low?.value), prom: tN(m.mean_temp),
+    vmed: wN(m.wind_avg), vmax: wN(m.gust_max?.value), dir: m.wind_dir ?? null,
+    hum: m.hum_avg ?? null, dew: tN(m.dew_avg),
+    uv: m.uv_max ?? null, solar: m.solar_max ?? null,
+    pprom: pN(m.press_avg), lluvia: rN(m.rain_total),
   }))
 
-  const nf = (v: number) => Number(v).toLocaleString('es-MX', { maximumFractionDigits: 1 })
-  const tipCommon = {
-    contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
-    labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
-    labelFormatter: (l: string) => `${l} de ${MESES[sel.month - 1].toLowerCase()} ${sel.year}`,
-  }
-  const lineCursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
-
-  // Tarjeta de gráfica de líneas reutilizable
-  const LineCard = ({ title, unit, series }: {
-    title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[]
-  }) => (
-    <div className="card">
-      <p className="card-title">{title}</p>
-      <div className="h-60">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 12, left: -8, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-            <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
-            <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-            <Tooltip cursor={lineCursor} {...tipCommon} formatter={(v: number, n: string) => [`${nf(v)} ${unit}`, n]} />
-            <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-            {series.map((se) => (
-              <Line key={se.key} type="monotone" dataKey={se.key} name={se.name}
-                stroke={se.color} strokeWidth={2} strokeDasharray={se.dash} dot={false} connectNulls />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  )
+  const points = isMonth ? monthPoints : yearPoints
+  const labelFmt = isMonth
+    ? (l: string) => `${l} de ${MESES[sel.month - 1].toLowerCase()} ${sel.year}`
+    : (l: string) => `${l} ${sel.year}`
 
   const downloadCsv = () => {
-    if (!days.length) return
-    const header = 'fecha,temp_max,temp_min,temp_prom,hum_prom,lluvia_mm,viento_med,viento_max,presion_prom'
-    const body = days.map((d) => [d.date, d.high ?? '', d.low ?? '', d.mean_temp ?? '', d.hum_avg ?? '', d.rain ?? '', d.wind_avg ?? '', d.gust_max ?? '', d.press_avg ?? ''].join(','))
-    const csv = [header, ...body].join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    let header: string, body: string[]
+    if (isMonth) {
+      header = 'fecha,temp_max,temp_min,temp_prom,hum_prom,lluvia,viento_max,presion_prom,uv_max,solar_max'
+      body = (month?.days ?? []).map((d) => [d.date, d.high ?? '', d.low ?? '', d.mean_temp ?? '', d.hum_avg ?? '', d.rain ?? '', d.gust_max ?? '', d.press_avg ?? '', d.uv_max ?? '', d.solar_max ?? ''].join(','))
+    } else {
+      header = 'mes,temp_max,temp_min,temp_prom,lluvia_total,dias_lluvia,viento_max'
+      body = (year?.months ?? []).map((m) => [MESES[m.month - 1], m.high?.value ?? '', m.low?.value ?? '', m.mean_temp ?? '', m.rain_total ?? '', m.rain_days ?? '', m.gust_max?.value ?? ''].join(','))
+    }
+    const url = URL.createObjectURL(new Blob([[header, ...body].join('\n')], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = `historia_xe1e_${sel.year}-${String(sel.month).padStart(2, '0')}.csv`
+    a.download = `historia_xe1e_${sel.year}${isMonth ? '-' + String(sel.month).padStart(2, '0') : ''}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -116,42 +128,23 @@ export function HistoryPage() {
     </div>
   )
 
-  if (detailDate) return <HistoryDayDetail date={detailDate} onBack={() => setDetailDate(null)} />
+  const heading = isMonth ? `${MESES[sel.month - 1]} ${sel.year}` : `Año ${sel.year}`
 
   return (
     <div className="space-y-4">
-      {/* Cabecera (estilo del modelo) */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-300">Historia</h2>
-          <p className="text-xs text-slate-400">Historial meteorológico para {LOCATION.label}. Datos de {sel.year}.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm px-3 py-1.5 rounded-lg bg-white/10 text-slate-300">Mes</span>
-          <select value={pMonth} onChange={(e) => setPMonth(Number(e.target.value))}
-            className="bg-white/5 border border-white/10 rounded-lg text-sm px-2 py-1.5 text-slate-200">
-            {MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </select>
-          <input type="number" value={pYear} min={2020} max={now.getFullYear()}
-            onChange={(e) => setPYear(Number(e.target.value))}
-            className="w-20 bg-white/5 border border-white/10 rounded-lg text-sm px-2 py-1.5 text-slate-200" />
-          <button onClick={() => setSel({ month: pMonth, year: pYear })}
-            className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white">Ver</button>
-        </div>
-      </div>
+      <Header gran={gran} setGran={setGran} pDay={pDay} setPDay={setPDay} pMonth={pMonth} setPMonth={setPMonth}
+        pYear={pYear} setPYear={setPYear} apply={apply} maxYear={now.getFullYear()} />
 
-      <div className="card"><p className="text-lg font-semibold">{MESES[sel.month - 1]} {sel.year}</p></div>
+      <div className="card"><p className="text-lg font-semibold">{heading}</p></div>
 
       {loading ? (
         <div className="h-40 flex items-center justify-center text-slate-400">Cargando…</div>
       ) : !hasData ? (
         <div className="card text-slate-400">
-          No hay datos registrados para {MESES[sel.month - 1]} {sel.year}. El histórico se irá llenando
-          conforme la estación acumule lecturas.
+          No hay datos registrados para {heading}. El histórico se irá llenando conforme la estación acumule lecturas.
         </div>
       ) : (
         <>
-          {/* Resumen */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {stat('Temperatura máxima', s!.high ? `${u.temp(s!.high.value)} ${u.tempU}` : '--', 'text-orange-300')}
             {stat('Temperatura mínima', s!.low ? `${u.temp(s!.low.value)} ${u.tempU}` : '--', 'text-sky-300')}
@@ -161,108 +154,95 @@ export function HistoryPage() {
             {stat('Días lluviosos', String(s!.rain_days ?? 0), 'text-blue-300')}
           </div>
 
-          {/* Gráficas por tema (mismas que el modelo; hover para ver valores) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <LineCard title="Temperatura" unit={u.tempU} series={[
-              { key: 'max', name: 'Máxima', color: '#f97316' },
-              { key: 'prom', name: 'Promedio', color: '#94a3b8' },
-              { key: 'min', name: 'Mínima', color: '#38bdf8' },
-            ]} />
-            <LineCard title="Viento" unit={u.windU} series={[
-              { key: 'vmed', name: 'Viento medio', color: '#38bdf8' },
-              { key: 'vmax', name: 'Viento máximo', color: '#f97316' },
-            ]} />
+          <HistoryCharts data={points} labelFormatter={labelFmt} onCsv={downloadCsv} />
 
-            {/* Humedad y punto de rocío (doble eje) */}
-            <div className="card">
-              <p className="card-title">Humedad y punto de rocío</p>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
-                    <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-                    <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-                    <Tooltip cursor={lineCursor} {...tipCommon} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                    <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Radiación UV y solar (doble eje) */}
-            <div className="card">
-              <p className="card-title">Radiación UV y solar</p>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
-                    <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-                    <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
-                    <Tooltip cursor={lineCursor} {...tipCommon} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
-                    <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Precipitación y presión (doble eje) */}
-            <div className="card lg:col-span-2">
-              <div className="flex items-center justify-between">
-                <p className="card-title mb-0">Precipitación y presión</p>
-                <button onClick={downloadCsv} className="px-3 py-1 rounded-lg text-xs bg-white/5 text-slate-300 hover:bg-white/10">⬇ CSV</button>
-              </div>
-              <div className="h-64 mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
-                    <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-                    <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
-                    <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tipCommon} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rainU}`, n]} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#60a5fa" radius={[3, 3, 0, 0]} />
-                    <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabla diaria */}
+          {/* Tabla: días del mes (clic → detalle) o meses del año (clic → mes) */}
           <div className="card overflow-x-auto">
-            <table className="w-full text-sm min-w-[520px] tabular-nums">
-              <thead>
-                <tr className="text-slate-400 text-xs border-b border-white/10">
-                  <th className="text-left py-1.5">Día</th>
-                  <th className="text-right">Máx</th><th className="text-right">Mín</th><th className="text-right">Prom</th>
-                  <th className="text-right">Humedad</th><th className="text-right">Lluvia</th><th className="text-right">Viento máx</th>
-                </tr>
-              </thead>
-              <tbody>
-                {days.map((d) => (
-                  <tr key={d.date} onClick={() => setDetailDate(d.date)}
-                    className="border-b border-white/5 cursor-pointer hover:bg-white/5">
-                    <td className="py-1.5 text-slate-300">{d.date.slice(8)} ›</td>
-                    <td className="text-right text-orange-300">{d.high != null ? u.temp(d.high) : '--'}</td>
-                    <td className="text-right text-sky-300">{d.low != null ? u.temp(d.low) : '--'}</td>
-                    <td className="text-right">{d.mean_temp != null ? u.temp(d.mean_temp) : '--'}</td>
-                    <td className="text-right text-cyan-300">{d.hum_avg != null ? `${Math.round(d.hum_avg)}%` : '--'}</td>
-                    <td className="text-right text-blue-300">{d.rain != null ? u.rain(d.rain) : '--'}</td>
-                    <td className="text-right text-emerald-300">{d.gust_max != null ? u.wind(d.gust_max) : '--'}</td>
+            {isMonth ? (
+              <table className="w-full text-sm min-w-[520px] tabular-nums">
+                <thead>
+                  <tr className="text-slate-400 text-xs border-b border-white/10">
+                    <th className="text-left py-1.5">Día</th><th className="text-right">Máx</th><th className="text-right">Mín</th>
+                    <th className="text-right">Prom</th><th className="text-right">Humedad</th><th className="text-right">Lluvia</th><th className="text-right">Viento máx</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(month?.days ?? []).map((d) => (
+                    <tr key={d.date} onClick={() => { setPDay(d.date); setGran('day'); setSel({ ...sel, gran: 'day', day: d.date }) }}
+                      className="border-b border-white/5 cursor-pointer hover:bg-white/5">
+                      <td className="py-1.5 text-slate-300">{d.date.slice(8)} ›</td>
+                      <td className="text-right text-orange-300">{d.high != null ? u.temp(d.high) : '--'}</td>
+                      <td className="text-right text-sky-300">{d.low != null ? u.temp(d.low) : '--'}</td>
+                      <td className="text-right">{d.mean_temp != null ? u.temp(d.mean_temp) : '--'}</td>
+                      <td className="text-right text-cyan-300">{d.hum_avg != null ? `${Math.round(d.hum_avg)}%` : '--'}</td>
+                      <td className="text-right text-blue-300">{d.rain != null ? u.rain(d.rain) : '--'}</td>
+                      <td className="text-right text-emerald-300">{d.gust_max != null ? u.wind(d.gust_max) : '--'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-sm min-w-[520px] tabular-nums">
+                <thead>
+                  <tr className="text-slate-400 text-xs border-b border-white/10">
+                    <th className="text-left py-1.5">Mes</th><th className="text-right">Máx</th><th className="text-right">Mín</th>
+                    <th className="text-right">Prom</th><th className="text-right">Lluvia</th><th className="text-right">Días lluvia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(year?.months ?? []).map((m) => (
+                    <tr key={m.month} onClick={() => { setPMonth(m.month); setGran('month'); setSel({ ...sel, gran: 'month', month: m.month }) }}
+                      className="border-b border-white/5 cursor-pointer hover:bg-white/5">
+                      <td className="py-1.5 text-slate-300">{MESES[m.month - 1]} ›</td>
+                      <td className="text-right text-orange-300">{m.high ? u.temp(m.high.value) : '--'}</td>
+                      <td className="text-right text-sky-300">{m.low ? u.temp(m.low.value) : '--'}</td>
+                      <td className="text-right">{m.mean_temp != null ? u.temp(m.mean_temp) : '--'}</td>
+                      <td className="text-right text-blue-300">{m.rain_total != null ? u.rain(m.rain_total) : '--'}</td>
+                      <td className="text-right">{m.rain_days ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}
-      <p className="text-xs text-slate-500">Datos de la estación (InfluxDB) · temperaturas en {u.tempU}. Pasa el cursor sobre las gráficas para ver los valores de cada día.</p>
+      <p className="text-xs text-slate-500">Datos de la estación (InfluxDB) · temperaturas en {u.tempU}. Pasa el cursor sobre las gráficas para ver los valores.</p>
+    </div>
+  )
+}
+
+// Cabecera con selector de granularidad + controles
+function Header(props: {
+  gran: Gran; setGran: (g: Gran) => void
+  pDay: string; setPDay: (v: string) => void
+  pMonth: number; setPMonth: (v: number) => void
+  pYear: number; setPYear: (v: number) => void
+  apply: () => void; maxYear: number
+}) {
+  const { gran, setGran, pDay, setPDay, pMonth, setPMonth, pYear, setPYear, apply, maxYear } = props
+  const gbtn = (g: Gran, label: string) =>
+    <button onClick={() => setGran(g)} className={`px-3 py-1.5 rounded-lg text-sm ${gran === g ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/15'}`}>{label}</button>
+  const inp = 'bg-white/5 border border-white/10 rounded-lg text-sm px-2 py-1.5 text-slate-200'
+  return (
+    <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-300">Historia</h2>
+        <p className="text-xs text-slate-400">Historial meteorológico para {LOCATION.label}.</p>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1">{gbtn('day', 'Día')}{gbtn('month', 'Mes')}{gbtn('year', 'Año')}</div>
+        {gran === 'day' && <input type="date" value={pDay} onChange={(e) => setPDay(e.target.value)} className={inp} />}
+        {gran === 'month' && (
+          <select value={pMonth} onChange={(e) => setPMonth(Number(e.target.value))} className={inp}>
+            {MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+        )}
+        {gran !== 'day' && (
+          <input type="number" value={pYear} min={2020} max={maxYear} onChange={(e) => setPYear(Number(e.target.value))} className={`w-20 ${inp}`} />
+        )}
+        <button onClick={apply} className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white">Ver</button>
+      </div>
     </div>
   )
 }
