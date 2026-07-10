@@ -157,11 +157,11 @@ export function AeronauticaPage() {
           <div className="card">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
-                <p className="text-base font-bold text-slate-100">METAR · {icao} {name !== icao ? `· ${name}` : ''}</p>
-                {metar?.observed && <p className="text-xs text-slate-400">Observado: {tstr(metar.observed)}</p>}
+                <p className="text-lg font-bold text-slate-100">METAR · {icao} {name !== icao ? `· ${name}` : ''}</p>
+                {metar?.observed && <p className="text-sm text-slate-400">Observado: {tstr(metar.observed)}</p>}
               </div>
               {cat && (
-                <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: cat.color + '22', color: cat.color }}>
+                <span className="px-2.5 py-1 rounded-lg text-sm font-bold" style={{ backgroundColor: cat.color + '22', color: cat.color }}>
                   {cat.es} · {cat.desc}
                 </span>
               )}
@@ -170,7 +170,7 @@ export function AeronauticaPage() {
               <p className="text-slate-400 text-sm mt-3">Sin METAR disponible para {icao}. Verifica el código ICAO.</p>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm mt-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 mt-3">
                   <Field label="Viento" value={windText(metar.wind_dir, metar.wind_speed_kt, metar.wind_gust_kt)} />
                   <Field label="Visibilidad" value={visText(metar.visibility)} />
                   <Field label="Nubes" value={cloudsText(metar.clouds)} />
@@ -178,7 +178,7 @@ export function AeronauticaPage() {
                   <Field label="Presión (QNH)" value={metar.altimeter_hpa != null ? `${metar.altimeter_hpa} hPa` : '--'} />
                   {decodeWx(metar.wx) && <Field label="Fenómenos" value={decodeWx(metar.wx)!} />}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-3 font-mono break-all bg-black/20 rounded-lg px-3 py-2">{metar.raw}</p>
+                <p className="text-xs text-slate-500 mt-3 font-mono break-all bg-black/20 rounded-lg px-3 py-2">{metar.raw}</p>
               </>
             )}
           </div>
@@ -240,8 +240,8 @@ export function AeronauticaPage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] text-slate-400">{label}</p>
-      <p className="text-slate-100">{value}</p>
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-lg font-semibold text-slate-100">{value}</p>
     </div>
   )
 }

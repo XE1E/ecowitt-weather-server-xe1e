@@ -60,10 +60,10 @@ export function ForecastPage() {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-4 text-center shrink-0">
-            <div><p className="text-xs text-slate-400">Máx</p><p className="text-xl font-bold text-orange-300">{T(forecast.days[0].tempMax)}°</p></div>
-            <div><p className="text-xs text-slate-400">Mín</p><p className="text-xl font-bold text-sky-300">{T(forecast.days[0].tempMin)}°</p></div>
-            <div><p className="text-xs text-slate-400">Precip.</p><p className="text-xl font-bold text-violet-300">{forecast.days[0].precipSum != null ? u.rain(forecast.days[0].precipSum) : '--'}<span className="text-sm text-slate-500"> {u.rainU}</span></p></div>
-            <div><p className="text-xs text-slate-400">Viento</p><p className="text-xl font-bold text-emerald-300">{forecast.days[0].windMax != null ? u.wind(forecast.days[0].windMax) : '--'}<span className="text-sm text-slate-500"> {u.windU}</span></p></div>
+            <div><p className="text-xs text-slate-400">Máx</p><p className="text-2xl font-bold text-orange-300">{T(forecast.days[0].tempMax)}<span className="text-base font-semibold text-slate-400">°</span></p></div>
+            <div><p className="text-xs text-slate-400">Mín</p><p className="text-2xl font-bold text-sky-300">{T(forecast.days[0].tempMin)}<span className="text-base font-semibold text-slate-400">°</span></p></div>
+            <div><p className="text-xs text-slate-400">Precip.</p><p className="text-2xl font-bold text-violet-300">{forecast.days[0].precipSum != null ? u.rain(forecast.days[0].precipSum) : '--'}<span className="text-base font-semibold text-slate-400"> {u.rainU}</span></p></div>
+            <div><p className="text-xs text-slate-400">Viento</p><p className="text-2xl font-bold text-emerald-300">{forecast.days[0].windMax != null ? u.wind(forecast.days[0].windMax) : '--'}<span className="text-base font-semibold text-slate-400"> {u.windU}</span></p></div>
           </div>
         </div>
       )}

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Avisos de batería baja y de sensor sin contacto
     alert_battery_enabled: bool = True
     alert_sensor_lost_enabled: bool = True
+    # Avisos de calidad del aire (ICA/AQI e IMECA); se revisan cada ~30 min
+    alert_air_enabled: bool = False
+    alert_aqi_threshold: float = 100.0
+    alert_imeca_threshold: float = 100.0
 
     # Telegram notifications
     telegram_enabled: bool = False

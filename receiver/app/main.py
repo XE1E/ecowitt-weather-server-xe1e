@@ -5,7 +5,7 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException, Header
+from fastapi import FastAPI, Request, HTTPException, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
@@ -29,6 +29,7 @@ from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
 from .services.almanac import get_almanac
+from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import admin as adminsvc
 from .services import settings_store
@@ -90,6 +91,34 @@ async def station_watchdog():
         await asyncio.sleep(60)
 
 
+async def air_quality_watchdog():
+    """Revisa AQI (WAQI) e IMECA (Open-Meteo) cada 30 min y dispara alertas."""
+    await asyncio.sleep(150)  # gracia inicial
+    while True:
+        try:
+            if settings.alerts_enabled and getattr(settings, "alert_air_enabled", False):
+                lat = getattr(settings, "cwop_latitude", 19.380359)
+                lon = getattr(settings, "cwop_longitude", -99.174564)
+                aqi = None
+                try:
+                    aq = await get_air_quality(lat, lon, settings.waqi_token)
+                    if aq and isinstance(aq.get("aqi"), (int, float)):
+                        aqi = aq["aqi"]
+                except Exception:
+                    pass
+                imeca_val = None
+                try:
+                    im = await imeca.get_imeca(lat, lon)
+                    if im and im.get("available"):
+                        imeca_val = im.get("imeca")
+                except Exception:
+                    pass
+                await alert_service.check_air(aqi, imeca_val)
+        except Exception as e:
+            logger.error(f"Air quality watchdog error: {e}")
+        await asyncio.sleep(1800)  # 30 min
+
+
 async def daily_rollup_task():
     """
     Mantiene el resumen diario (weather_daily). Al arrancar rellena los últimos
@@ -147,6 +176,10 @@ async def startup_event():
     # Vigilante de estación caída (solo si las alertas están activas)
     if settings.alerts_enabled:
         asyncio.create_task(station_watchdog())
+
+    # Vigilante de calidad del aire (se auto-guarda con los flags; permite
+    # activarlo desde el panel sin reiniciar)
+    asyncio.create_task(air_quality_watchdog())
 
     # Acumuladores: resumen diario (Dayfile) para récords/climatología
     asyncio.create_task(daily_rollup_task())
@@ -470,6 +503,17 @@ async def get_taf_data(station: str = "MMMX"):
     except Exception as e:
         logger.error(f"Error getting TAF: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/satellite")
+async def get_satellite(layer: str = "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+                        date: str = "", lat: float = 19.380359, lon: float = -99.174564):
+    """Imagen satelital NASA GIBS (proxy servido desde el backend, con caché)."""
+    data = await satellite.get_snapshot(layer, date, lat, lon)
+    if not data:
+        raise HTTPException(status_code=502, detail="Imagen satelital no disponible")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=1800"})
 
 
 @app.get("/api/airquality")

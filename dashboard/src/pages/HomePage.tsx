@@ -48,6 +48,7 @@ export function HomePage() {
           <StationTempChart history={history} forecast={forecast} />
           <PrecipitationCard data={data} forecast={forecast} />
           <UvSolarCard data={data} />
+          <ExtraSensorsCard data={data} />
         </div>
         <div className="space-y-4">
           <SunMoonCard astro={forecast?.astro ?? null} />
@@ -56,7 +57,6 @@ export function HomePage() {
           <EarthquakesCard />
           <AlertsPanel />
           <SkyEventsCard />
-          <ExtraSensorsCard data={data} />
         </div>
       </div>
 

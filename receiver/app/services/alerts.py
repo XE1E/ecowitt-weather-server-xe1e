@@ -164,6 +164,32 @@ class AlertService:
                 self.active.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}")
 
+    async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
+        """
+        Evalúa la calidad del aire (ICA/AQI e IMECA) contra los umbrales
+        configurables y notifica en las transiciones (dispara al superar,
+        normaliza al volver por debajo). Los umbrales se leen en vivo de settings.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_air_enabled", False):
+            return
+        aqi_th = getattr(s, "alert_aqi_threshold", 100.0)
+        imeca_th = getattr(s, "alert_imeca_threshold", 100.0)
+        checks = []
+        if aqi is not None:
+            checks.append(("aqi_high", aqi >= aqi_th,
+                           f"🌫️ Calidad del aire alta (AQI): {round(aqi)} (≥ {round(aqi_th)})"))
+        if imeca is not None:
+            checks.append(("imeca_high", imeca >= imeca_th,
+                           f"🌫️ IMECA alto: {round(imeca)} (≥ {round(imeca_th)})"))
+        for key, triggered, message in checks:
+            if triggered and key not in self.active:
+                self.active[key] = message
+                await self._safe_notify(f"⚠️ ALERTA — {message}")
+            elif not triggered and key in self.active:
+                self.active.pop(key, None)
+                await self._safe_notify(f"✅ Normalizado — {message}")
+
     async def send(self, text: str) -> None:
         """Enviar una notificación suelta."""
         await self._safe_notify(text)

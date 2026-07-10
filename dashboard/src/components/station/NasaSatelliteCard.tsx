@@ -27,9 +27,9 @@ export function NasaSatelliteCard() {
   const [error, setError] = useState(false)
 
   const dLat = 6, dLon = 9
-  const bbox = `${(latitude - dLat).toFixed(2)},${(longitude - dLon).toFixed(2)},${(latitude + dLat).toFixed(2)},${(longitude + dLon).toFixed(2)}`
-  const layers = `${layer},Coastlines_15m,Reference_Features_15m`
-  const src = `https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&LAYERS=${layers}&CRS=EPSG:4326&BBOX=${bbox}&WIDTH=1050&HEIGHT=700&FORMAT=image/jpeg&TIME=${date}`
+  // Se sirve desde nuestro backend (mismo origen) para evitar bloqueos/latencia
+  // al pedir la imagen directo a NASA desde el navegador.
+  const src = `/api/satellite?layer=${layer}&date=${date}&lat=${latitude}&lon=${longitude}`
   const worldview = `https://worldview.earthdata.nasa.gov/?v=${(longitude - dLon).toFixed(2)},${(latitude - dLat).toFixed(2)},${(longitude + dLon).toFixed(2)},${(latitude + dLat).toFixed(2)}&l=${layer},Coastlines_15m,Reference_Features_15m&t=${date}`
 
   useEffect(() => { setLoading(true); setError(false) }, [src])

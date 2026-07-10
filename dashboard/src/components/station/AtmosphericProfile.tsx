@@ -108,12 +108,41 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           )
         })}
 
-        {/* Suelo con silueta */}
-        <rect x="0" y={GROUND} width={W} height={H - GROUND} fill={night ? '#0f2417' : '#1c3a24'} />
-        {Array.from({ length: 22 }, (_, i) => {
-          const bx = i * 46 + 6, bh = 10 + ((i * 29) % 26)
-          return <rect key={i} x={bx} y={GROUND - bh} width={26} height={bh} rx={2} fill={night ? '#16324a' : '#274b6b'} opacity={0.85} />
+        {/* ── Escena de suelo: montañas, ciudad y molinos ── */}
+        {/* Cordillera lejana (Valle de México) */}
+        <path d={`M0 ${GROUND} L0 342 L110 316 L210 340 L320 310 L450 340 L560 318 L690 344 L810 320 L930 344 L1000 328 L1000 ${GROUND} Z`}
+          fill={night ? '#1b2d4a' : '#8098bd'} opacity="0.5" />
+        {/* Cordillera cercana */}
+        <path d={`M0 ${GROUND} L0 366 L90 348 L190 368 L300 346 L420 368 L540 350 L660 370 L790 352 L900 372 L1000 356 L1000 ${GROUND} Z`}
+          fill={night ? '#14243a' : '#5d7f6b'} opacity="0.8" />
+        {/* Base de suelo */}
+        <rect x="0" y={GROUND - 2} width={W} height={H - GROUND + 2} fill={night ? '#0e2016' : '#20452b'} />
+        {/* Ciudad (rascacielos con ventanas) */}
+        {Array.from({ length: 26 }, (_, i) => {
+          const x = i * 40 + 4
+          const w = 20 + (i % 3) * 7
+          const h = 14 + ((i * 37) % 38)
+          const top = GROUND - h
+          const bld = night ? '#14304a' : '#35526f'
+          const win = night ? '#ffd27a' : '#c6d6e9'
+          const cells = []
+          const rows = Math.floor(h / 9)
+          const cols = Math.max(1, Math.floor(w / 8))
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              if ((i + r * 3 + c * 5) % 3 === 0)
+                cells.push(<rect key={`${r}-${c}`} x={x + 3 + c * 8} y={top + 4 + r * 9} width="3" height="4" fill={win} opacity={night ? 0.85 : 0.45} />)
+          return <g key={i}><rect x={x} y={top} width={w} height={h} rx="1" fill={bld} />{cells}</g>
         })}
+        {/* Molinos de viento */}
+        {[280, 700].map((tx) => (
+          <g key={tx} strokeWidth="1.6" opacity="0.7">
+            <line x1={tx} y1={GROUND} x2={tx} y2={GROUND - 30} stroke={night ? '#2a445e' : '#e6eff7'} />
+            <line x1={tx} y1={GROUND - 32} x2={tx} y2={GROUND - 46} stroke={night ? '#2a445e' : '#e6eff7'} />
+            <line x1={tx} y1={GROUND - 32} x2={tx + 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
+            <line x1={tx} y1={GROUND - 32} x2={tx - 12} y2={GROUND - 26} stroke={night ? '#2a445e' : '#e6eff7'} />
+          </g>
+        ))}
       </svg>
 
       {/* Reloj + categoría (arriba izq.) */}

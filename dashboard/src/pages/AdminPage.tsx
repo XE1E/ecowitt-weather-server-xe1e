@@ -13,6 +13,9 @@ interface Settings {
   alert_station_offline_minutes: number
   alert_battery_enabled: boolean
   alert_sensor_lost_enabled: boolean
+  alert_air_enabled: boolean
+  alert_aqi_threshold: number
+  alert_imeca_threshold: number
   telegram_enabled: boolean
   telegram_bot_token_masked: string | null
   telegram_chat_id: string | null
@@ -98,6 +101,9 @@ export function AdminPage() {
       alert_station_offline_minutes: Number(s.alert_station_offline_minutes),
       alert_battery_enabled: s.alert_battery_enabled,
       alert_sensor_lost_enabled: s.alert_sensor_lost_enabled,
+      alert_air_enabled: s.alert_air_enabled,
+      alert_aqi_threshold: Number(s.alert_aqi_threshold),
+      alert_imeca_threshold: Number(s.alert_imeca_threshold),
       telegram_enabled: s.telegram_enabled,
       telegram_chat_id: s.telegram_chat_id,
       // QC
@@ -205,6 +211,11 @@ export function AdminPage() {
           <div className="mt-2 space-y-1">
             {toggle('alert_battery_enabled', 'Avisar batería baja (WN31 / WS69)')}
             {toggle('alert_sensor_lost_enabled', 'Avisar sensor sin contacto')}
+            {toggle('alert_air_enabled', 'Avisar mala calidad del aire (ICA/AQI e IMECA)')}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+            <label className="text-xs text-slate-400">Umbral AQI (ICA){num('alert_aqi_threshold')}</label>
+            <label className="text-xs text-slate-400">Umbral IMECA{num('alert_imeca_threshold')}</label>
           </div>
         </section>
 
