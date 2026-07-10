@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
+import { ImecaCard } from '../components/station/ImecaCard'
 import { LOCATION } from '../config'
 
 interface AQ {
@@ -110,6 +111,9 @@ export function AirQualityPage() {
           <p className="text-sm text-slate-400 mt-3">{cat.advice}</p>
         </div>
       </div>
+
+      {/* IMECA estimado (índice oficial de CDMX) */}
+      <ImecaCard />
 
       <div className="card mt-4 text-sm text-slate-300 leading-relaxed">
         <p>

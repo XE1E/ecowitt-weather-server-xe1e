@@ -23,6 +23,7 @@ from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
 from .services.metar import get_metar
 from .services.air_quality import get_air_quality
+from .services import imeca
 from .services.earthquakes import get_earthquakes
 from .services.publishers import publish_all
 from .services import forecaster
@@ -468,6 +469,16 @@ async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
         return await get_air_quality(lat, lon, settings.waqi_token)
     except Exception as e:
         logger.error(f"Error getting air quality: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/airquality/imeca")
+async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
+    """IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo."""
+    try:
+        return await imeca.get_imeca(lat, lon)
+    except Exception as e:
+        logger.error(f"Error getting IMECA: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
