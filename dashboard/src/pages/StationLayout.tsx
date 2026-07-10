@@ -30,16 +30,16 @@ export function StationLayout() {
   const [now, setNow] = useState(() => new Date())
   const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
-    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+    localStorage.getItem('theme') === 'light' ? 'light' : 'dark'
   )
 
-  const toggleTheme = () =>
-    setTheme((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark'
-      localStorage.setItem('theme', next)
-      document.documentElement.dataset.theme = next
-      return next
-    })
+  // Aplica y recuerda el tema (persiste entre recargas)
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
