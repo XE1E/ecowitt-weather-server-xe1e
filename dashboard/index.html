@@ -8,9 +8,22 @@
     <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f4f7fb" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/weather.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Clima XE1E" />
     <title>Estación Clima XE1E</title>
     <script>
+      // Si la app se abre INSTALADA (standalone) en la raíz, ir a la app completa
+      // (/pro). iOS ignora el start_url del manifiesto, así se corrige.
+      (function () {
+        try {
+          var standalone = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+          if (standalone && location.pathname === '/') { location.replace('/pro'); }
+        } catch (e) {}
+      })();
       // Aplica el tema guardado antes de pintar (evita parpadeo)
       (function () {
         try {
