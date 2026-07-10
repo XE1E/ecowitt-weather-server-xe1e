@@ -64,6 +64,9 @@ def flatten_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
         "press_min": g("pressure_relative", "min"),
         "press_max": g("pressure_relative", "max"),
         "press_avg": g("pressure_relative", "avg"),
+        "dew_avg": g("dew_point", "avg"),
+        "uv_max": g("uv_index", "max"),
+        "solar_max": g("solar_radiation", "max"),
     }
     return {k: v for k, v in out.items() if v is not None}
 
@@ -216,6 +219,9 @@ def noaa_month(rows: List[Dict[str, Any]], year: int, month: int, lat: Optional[
             "rain": r.get("rain_total"),
             "wind_avg": r.get("wind_avg"),
             "gust_max": r.get("gust_max"), "gust_time": r.get("gust_max_time"),
+            "hum_min": r.get("hum_min"), "hum_max": r.get("hum_max"), "hum_avg": r.get("hum_avg"),
+            "press_min": r.get("press_min"), "press_max": r.get("press_max"), "press_avg": r.get("press_avg"),
+            "dew_avg": r.get("dew_avg"), "uv_max": r.get("uv_max"), "solar_max": r.get("solar_max"),
             "et": daily_et0(r, lat) if lat is not None else None,
         })
     return {"scope": "month", "year": year, "month": month,

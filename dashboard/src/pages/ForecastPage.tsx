@@ -42,8 +42,8 @@ export function ForecastPage() {
           <p className="text-xs text-slate-400">Pronóstico para {LOCATION.label}</p>
         </div>
         <div className="flex gap-1">
-          <button className={btn(tab === 'days')} onClick={() => setTab('days')}>Diario</button>
-          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>Cada hora</button>
+          <button className={btn(tab === 'days')} onClick={() => setTab('days')}>por día</button>
+          <button className={btn(tab === 'hourly')} onClick={() => setTab('hourly')}>por hora</button>
         </div>
       </div>
 

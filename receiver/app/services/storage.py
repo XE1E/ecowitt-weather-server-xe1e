@@ -181,10 +181,13 @@ class InfluxDBStorage:
             stats_fields = [
                 "temperature_outdoor",
                 "humidity_outdoor",
+                "dew_point",
                 "wind_speed",
                 "wind_gust",
                 "rain_daily",
-                "pressure_relative"
+                "pressure_relative",
+                "uv_index",
+                "solar_radiation",
             ]
 
             stats = {}
