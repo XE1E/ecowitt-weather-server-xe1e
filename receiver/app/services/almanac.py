@@ -14,6 +14,7 @@ devuelven en hora local de la estación (America/Mexico_City).
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 import logging
+import math
 
 import ephem
 
@@ -100,11 +101,30 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
         noon = _hhmm_local(obs.next_transit(sun), local_day)
     except Exception:
         noon = None
+    def _daylen_secs(midnight_naive_utc):
+        o = ephem.Observer()
+        o.lat, o.lon, o.elevation = str(lat), str(lon), elevation
+        o.horizon = "0"
+        o.date = midnight_naive_utc
+        try:
+            r = o.next_rising(sun, use_center=False)
+            s = o.next_setting(sun, use_center=False)
+            return (s.datetime() - r.datetime()).total_seconds()
+        except (ephem.AlwaysUpError, ephem.NeverUpError):
+            return None
+
+    today_secs = _daylen_secs(local_midnight_utc)
     day_length = None
-    if sr_e is not None and ss_e is not None:
-        secs = (ss_e.datetime() - sr_e.datetime()).total_seconds()
-        if secs > 0:
-            day_length = f"{int(secs // 3600)} h {int((secs % 3600) // 60)} min"
+    if today_secs and today_secs > 0:
+        day_length = f"{int(today_secs // 3600)} h {int((today_secs % 3600) // 60)} min"
+    # Cambio de duración del día respecto a ayer
+    daylen_change = None
+    yest_secs = _daylen_secs(local_midnight_utc - timedelta(days=1))
+    if today_secs is not None and yest_secs is not None:
+        d = today_secs - yest_secs
+        sign = "+" if d >= 0 else "-"
+        d = abs(d)
+        daylen_change = f"{sign}{int(d // 60)}m {int(d % 60)}s"
 
     # Crepúsculos (centro del sol)
     civ_dawn, civ_dusk, *_ = _rise_set(obs, sun, "-6", True, local_day)
@@ -117,7 +137,16 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
     obs_now = ephem.Observer()
     obs_now.lat, obs_now.lon, obs_now.elevation = str(lat), str(lon), elevation
     obs_now.date = now.astimezone(timezone.utc).replace(tzinfo=None)
+    sun.compute(obs_now)
+    sun_alt = round(math.degrees(float(sun.alt)), 1)
+    sun_az = round(math.degrees(float(sun.az)), 1)
     moon.compute(obs_now)
+    moon_alt = round(math.degrees(float(moon.alt)), 1)
+    moon_dist_km = round(moon.earth_distance * 149597870.7)
+    try:
+        moon_age = round(obs_now.date - ephem.previous_new_moon(obs_now.date), 1)
+    except Exception:
+        moon_age = None
     illum = round(moon.phase, 0)
     moon_tomorrow = ephem.Moon()
     obs_next = ephem.Observer()
@@ -144,7 +173,11 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
 
     return {
         "available": True,
-        "sun": {"rise": sr, "set": ss, "noon": noon, "day_length": day_length},
+        "sun": {
+            "rise": sr, "set": ss, "noon": noon, "day_length": day_length,
+            "day_length_change": daylen_change,
+            "altitude": sun_alt, "azimuth": sun_az,
+        },
         "twilight": {
             "astronomical_dawn": ast_dawn, "nautical_dawn": nau_dawn, "civil_dawn": civ_dawn,
             "civil_dusk": civ_dusk, "nautical_dusk": nau_dusk, "astronomical_dusk": ast_dusk,
@@ -154,8 +187,11 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
             "illumination": illum,
             "phase": _moon_phase_name(illum, waxing),
             "waxing": waxing,
+            "altitude": moon_alt, "age_days": moon_age, "distance_km": moon_dist_km,
             "next_new": _fecha_local(ephem.next_new_moon(obs.date)),
+            "next_first_quarter": _fecha_local(ephem.next_first_quarter_moon(obs.date)),
             "next_full": _fecha_local(ephem.next_full_moon(obs.date)),
+            "next_last_quarter": _fecha_local(ephem.next_last_quarter_moon(obs.date)),
         },
         "planets": planets,
     }

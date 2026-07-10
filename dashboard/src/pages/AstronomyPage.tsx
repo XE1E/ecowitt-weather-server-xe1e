@@ -1,24 +1,18 @@
-import { useStationData } from '../station-data'
-import { SunMoonCard } from '../components/station/SunMoonCard'
+import { SunMoonDetailCard } from '../components/station/SunMoonDetailCard'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { AlmanacCard } from '../components/station/AlmanacCard'
 import { LOCATION } from '../config'
 
 export function AstronomyPage() {
-  const { forecast } = useStationData()
-
   return (
     <div>
       <h2 className="text-2xl font-bold text-slate-100">Astronomía</h2>
-      <p className="text-xs text-slate-400 mb-4">Sol, luna, crepúsculos y planetas visibles desde {LOCATION.label}.</p>
+      <p className="text-xs text-slate-400 mb-4">Observaciones del sol, la luna y el cielo para {LOCATION.label}.</p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SunMoonCard astro={forecast?.astro ?? null} />
-        <SkyEventsCard count={8} />
-      </div>
-
-      <div className="mt-4">
+      <div className="space-y-4">
+        <SunMoonDetailCard />
         <AlmanacCard />
+        <SkyEventsCard count={8} />
       </div>
 
       <div className="card mt-4 text-sm text-slate-300 leading-relaxed">

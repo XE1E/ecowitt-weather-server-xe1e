@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Sunrise } from 'lucide-react'
 
 interface Planet {
   name: string; rise: string | null; set: string | null
@@ -8,14 +9,10 @@ interface Almanac {
   available: boolean
   sun?: { rise: string | null; set: string | null; noon: string | null; day_length: string | null }
   twilight?: Record<string, string | null>
-  moon?: {
-    rise: string | null; set: string | null; illumination: number
-    phase: string; waxing: boolean; next_new: string | null; next_full: string | null
-  }
   planets?: Planet[]
 }
 
-const val = (v?: string | null) => v ?? '--'
+const val = (v?: string | null) => v ?? '--:--'
 
 export function AlmanacCard() {
   const [a, setA] = useState<Almanac | null>(null)
@@ -26,49 +23,39 @@ export function AlmanacCard() {
 
   if (!a || !a.available) return null
   const t = a.twilight ?? {}
+  const s = a.sun
+
+  const events: { label: string; time: string | null; desc: string; color?: string }[] = [
+    { label: 'Amanecer astronómico', time: t.astronomical_dawn, desc: 'sol −18° bajo el horizonte' },
+    { label: 'Amanecer náutico', time: t.nautical_dawn, desc: 'sol −12° bajo el horizonte' },
+    { label: 'Amanecer civil', time: t.civil_dawn, desc: 'sol −6° bajo el horizonte' },
+    { label: 'Salida del sol', time: s?.rise ?? null, desc: 'sol sobre el horizonte', color: 'text-amber-300' },
+    { label: 'Puesta del sol', time: s?.set ?? null, desc: 'sol bajo el horizonte', color: 'text-orange-300' },
+    { label: 'Crepúsculo civil', time: t.civil_dusk, desc: 'sol −6° bajo el horizonte' },
+    { label: 'Crepúsculo náutico', time: t.nautical_dusk, desc: 'sol −12° bajo el horizonte' },
+    { label: 'Crepúsculo astronómico', time: t.astronomical_dusk, desc: 'oscuridad total' },
+  ]
 
   return (
-    <div className="card">
-      <p className="card-title">Almanaque</p>
-
-      {/* Sol */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-        <div><p className="text-xs text-slate-400">Amanecer ☀️</p><p className="font-semibold">{val(a.sun?.rise)}</p></div>
-        <div><p className="text-xs text-slate-400">Ocaso 🌇</p><p className="font-semibold">{val(a.sun?.set)}</p></div>
-        <div><p className="text-xs text-slate-400">Mediodía solar</p><p className="font-semibold">{val(a.sun?.noon)}</p></div>
-        <div><p className="text-xs text-slate-400">Duración</p><p className="font-semibold">{val(a.sun?.day_length)}</p></div>
-      </div>
-
-      {/* Crepúsculos */}
-      <div className="mt-3 pt-3 border-t border-white/10">
-        <p className="text-xs text-slate-400 mb-1">Crepúsculos (amanecer · anochecer)</p>
-        <div className="grid grid-cols-3 gap-2 text-sm text-center">
-          <div><p className="text-[11px] text-slate-500">Civil</p><p>{val(t.civil_dawn)}</p><p className="text-slate-400">{val(t.civil_dusk)}</p></div>
-          <div><p className="text-[11px] text-slate-500">Náutico</p><p>{val(t.nautical_dawn)}</p><p className="text-slate-400">{val(t.nautical_dusk)}</p></div>
-          <div><p className="text-[11px] text-slate-500">Astronómico</p><p>{val(t.astronomical_dawn)}</p><p className="text-slate-400">{val(t.astronomical_dusk)}</p></div>
+    <div className="space-y-4">
+      {/* Amanecer y atardecer (línea de tiempo de crepúsculos) */}
+      <div className="card">
+        <p className="card-title flex items-center gap-2"><Sunrise className="w-4 h-4 text-amber-400" /> Amanecer y atardecer</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+          {events.map((e) => (
+            <div key={e.label} className="rounded-xl bg-white/5 px-3 py-3 text-center">
+              <p className="text-[11px] text-slate-400">{e.label}</p>
+              <p className={`text-xl font-bold tabular-nums ${e.color ?? 'text-slate-100'}`}>{val(e.time)}</p>
+              <p className="text-[10px] text-slate-500">{e.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Luna */}
-      {a.moon && (
-        <div className="mt-3 pt-3 border-t border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">🌙 {a.moon.phase}</p>
-              <p className="text-xs text-slate-400">{a.moon.illumination}% iluminada · {a.moon.waxing ? 'creciente' : 'menguante'}</p>
-            </div>
-            <div className="text-right text-sm">
-              <p className="text-slate-400 text-xs">Orto {val(a.moon.rise)} · Ocaso {val(a.moon.set)}</p>
-              <p className="text-xs text-slate-500">Nueva {val(a.moon.next_new)} · Llena {val(a.moon.next_full)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Planetas */}
+      {/* Planetas visibles */}
       {a.planets && a.planets.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-white/10">
-          <p className="text-xs text-slate-400 mb-1">Planetas visibles</p>
+        <div className="card">
+          <p className="card-title">Planetas visibles</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[380px]">
               <thead>
