@@ -1,11 +1,9 @@
 import { LOCATION } from '../config'
+import { NasaSatelliteCard } from '../components/station/NasaSatelliteCard'
 
 /**
- * Radar / mapa meteorológico vía embed de Ventusky, centrado en la estación.
- * Se embebe el mapa completo (www.ventusky.com no bloquea iframes), por lo que
- * los menús de capas (radar, satélite, temperatura, viento, calidad del aire…),
- * el selector de modelo (ECMWF/GFS/ICON…) y la línea de tiempo quedan dentro de
- * la página. Muestra precipitación real para CDMX (mezcla radar + satélite/modelo).
+ * Radar / mapa meteorológico vía embed de Ventusky, centrado en la estación,
+ * más una imagen satelital diaria de NASA GIBS.
  */
 export function RadarPage() {
   const { latitude, longitude } = LOCATION
@@ -13,7 +11,8 @@ export function RadarPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-300 mb-3">Radar y mapa meteorológico</h2>
+      <h2 className="text-2xl font-bold text-slate-100">Radar y satélite</h2>
+      <p className="text-xs text-slate-400 mb-4">Radar meteorológico interactivo e imagen satelital diaria para {LOCATION.label}.</p>
 
       <div className="rounded-2xl overflow-hidden border border-white/10" style={{ height: 560 }}>
         <iframe title="Ventusky" src={src} width="100%" height="100%" frameBorder="0" loading="lazy" />
@@ -30,7 +29,13 @@ export function RadarPage() {
           general.
         </p>
       </div>
-      <p className="text-xs text-slate-500 mt-2">Mapa: Ventusky · centrado en {LOCATION.label}</p>
+
+      {/* Imagen satelital NASA GIBS */}
+      <div className="mt-6">
+        <NasaSatelliteCard />
+      </div>
+
+      <p className="text-xs text-slate-500 mt-2">Mapa: Ventusky · Satélite: NASA GIBS · centrado en {LOCATION.label}</p>
     </div>
   )
 }
