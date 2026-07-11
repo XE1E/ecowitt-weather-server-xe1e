@@ -1,125 +1,102 @@
-# Ecowitt Weather Station Server
+# Estación Clima XE1E — Ciudad de México
 
-Sistema de captura, almacenamiento y visualización de datos meteorológicos de una estación Ecowitt. La estación (WS2910) **envía sus datos por push** al servidor a través de internet; el servidor corre en un **VPS con HTTPS** y es accesible desde cualquier lugar, con integración a Home Assistant.
+Estación meteorológica propia que publica en tiempo casi real las condiciones de un punto exacto de la Ciudad de México (Benito Juárez). El hardware **Ecowitt** envía sus datos por *push* a un servidor en un **VPS con HTTPS**, que los guarda en **InfluxDB** y los muestra en un sitio web propio (React), con pronóstico, radar, astronomía, climatología, calidad del aire y meteorología aeronáutica.
 
-**🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net) · Benito Juárez, Ciudad de México
+**🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net)
 
-## 📚 Documentación
+Stack propio: **FastAPI + InfluxDB + React** (Vite · TypeScript · Tailwind). Todo el dato de las páginas de Historia, Estadísticas y Climatología proviene de la propia estación.
 
-| Documento | Contenido |
-|-----------|-----------|
-| **[Guía completa](docs/GUIA.md)** | Manual de referencia: hardware, arquitectura, cada página, API, operación y glosario |
-| [Roadmap / mejoras](docs/MEJORAS.md) | Estado del proyecto: hecho y pendiente |
-| [Artículo de blog](docs/blog-articulo.md) | Borrador divulgativo sobre el proyecto |
-| [Referencia de API](docs/api-reference.md) | Endpoints del receiver |
-| [Despliegue](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md) | Puesta en producción |
-| [Backups a R2](docs/backups-r2.md) · [Monitor de uptime](uptime-worker/README.md) | Respaldo y vigilancia |
-| [Proyecto "Todo con Cloudflare"](docs/PROYECTO-CLOUDFLARE.md) | Estudio para migrar a 100 % serverless (sin VPS) |
-| ↳ [Modelo D1 + Worker de ingesta](docs/PROYECTO-CLOUDFLARE-D1-Y-WORKER.md) · [Prueba de ingesta HTTP](docs/PRUEBA-INGESTA-CLOUDFLARE.md) | Detalle técnico y validación |
-| [Configurar el gateway](docs/setup-gateway.md) · [Estudio de viabilidad](docs/ESTUDIO_VIABILIDAD.md) | Hardware y alcance |
+---
 
-> ¿Primera vez? Empieza por la **[Guía completa](docs/GUIA.md)**.
+## El sitio
 
-## Características
+La app principal vive en `/pro` (instalable como PWA) y tiene:
 
-- Recepción de datos via protocolo Ecowitt (HTTP POST) — WS2910 o gateway
-- API REST para consultas (actual, histórico, estadísticas del día)
-- Almacenamiento en InfluxDB (series temporales)
-- **Dashboard web** con:
-  - Iconos meteorológicos animados (Meteocons/Basmilius, MIT) y efectos de clima (lluvia/nieve/rayos/niebla)
-  - Hero con condición actual, sensación, punto de rocío y máx/mín del día
-  - Tarjetas de humedad, presión, UV, viento (con brújula), lluvia e interiores
-  - Hasta 8 canales WN31 con aviso de batería baja
-  - Resumen del día (mín/máx/promedio) e histórico con selector de periodo (24h/7d/30d) y métrica
-  - Pronóstico de 7 días y astronomía (amanecer/atardecer, fase lunar) vía Open-Meteo
-  - Badges LIVE/OFFLINE según frescura del dato
-- Integración con Home Assistant (REST vía `https://clima.xe1e.net`)
+| Página | Qué muestra |
+|--------|-------------|
+| **Inicio** | Condiciones actuales, viento (con brújula que gira a la rosa de vientos), presión con tendencia, pronóstico, precipitación, UV/solar, sol y luna, calidad del aire, IMECA, sismos, interior y sensores adicionales |
+| **Mi tablero** | Tablero personalizable: elige qué tarjetas ver (se guarda por dispositivo) |
+| **Pronóstico** | Por día y por hora, con descripciones en lenguaje natural (Open-Meteo) |
+| **Historia** | Archivo de la estación con granularidad Día/Mes/Año y gráficas interactivas |
+| **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, rosa de vientos |
+| **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día" |
+| **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
+| **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
+| **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
+| **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
+| **Widget** | Generador de un `<iframe>` con las condiciones actuales para insertar en otra web |
 
-## Hardware Recomendado
+Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para editar en caliente alertas, calibración, QC, Telegram y publicación a redes públicas; **tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
 
-| Componente | Modelo | Precio Aprox |
-|------------|--------|--------------|
-| Consola + Sensor | Ecowitt WS2910_C (kit, incluye WS69) | $68 |
-| Sensor interior (opcional) | Ecowitt WN31 | $11 |
-| Accesorios | Bird Spikes, Battery Pack 10m | $25 |
-| Gateway (upgrade opcional) | Ecowitt GW3000 — API local / SD / Ethernet | $60 |
+**Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, batería baja, sensor perdido, estación caída, y calidad del aire) con notificación por **Telegram**.
 
-**Frecuencia**: 915 MHz (América) · Preferir firmware **EasyWeatherPro**
+**Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap y CWOP/APRS.
 
-> El **WS2910** envía datos al servidor por push con protocolo Ecowitt, por lo que basta por sí solo. El **GW3000** es un upgrade opcional que añade API local (pull en LAN), backup en microSD y Ethernet. Ver [Estudio de Viabilidad §5](docs/ESTUDIO_VIABILIDAD.md).
+---
+
+## Hardware
+
+| Componente | Modelo |
+|------------|--------|
+| Consola + sensor exterior | Ecowitt **WS2910** (kit con **WS69**) |
+| Sensor T/H interior o por canal | Ecowitt **WN31** (hasta 8 canales) |
+| Gateway (upgrade opcional) | Ecowitt **GW3000** — API local / microSD / Ethernet |
+
+Frecuencia 915 MHz (América). El **WS2910 basta por sí solo**: envía por *push* con protocolo Ecowitt, sin necesidad de estar en la misma red que el servidor.
+
+---
 
 ## Arquitectura
 
 ```
 WS69 (exterior)   WN31 (interior)
        │               │
-       │ RF 915MHz      │
+       │ RF 915 MHz     │
        ▼               ▼
 ┌──────────────────────────────┐
-│   WS2910 (consola + display)  │
-│   push protocolo Ecowitt      │
-└──────┬────────────────────────┘
-       │  (opcional: GW3000 en LAN → API local / SD / Ethernet)
+│  WS2910 (consola + display)  │
+│  push protocolo Ecowitt      │
+└──────┬───────────────────────┘
        │ HTTP POST /data/report/
        ▼
 ┌──────────────────────────────────┐
-│         SERVIDOR (VPS)           │
-│  ┌────────────┐  ┌────────────┐  │
-│  │  Receiver  │  │  InfluxDB  │  │
-│  │  (FastAPI) │──│  (datos)   │  │
-│  └─────┬──────┘  └─────┬──────┘  │
-│        │               │         │
-│  ┌─────▼───────────────▼──────┐  │
-│  │      API REST + Dashboard  │  │
-│  └────────────────────────────┘  │
+│          SERVIDOR (VPS)          │
+│  Receiver (FastAPI) ── InfluxDB  │
+│         │                        │
+│  API REST + Dashboard (React)    │
 └──────────────────────────────────┘
-       │
+       │ HTTPS (Cloudflare)
        ▼
-┌──────────────┐
-│Home Assistant│
-└──────────────┘
+   clima.xe1e.net · Home Assistant (REST)
 ```
 
-## Requisitos
+---
 
-- Docker & Docker Compose (en el servidor/VPS)
-- Un servidor accesible por internet (VPS) y, para HTTPS, un dominio (aquí vía Cloudflare)
-- El WS2910 con salida a internet para enviar el push al servidor (no requiere estar en la misma red)
+## Fuentes de datos externas
 
-## Instalación Rápida
+Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local).
+
+---
+
+## Puesta en marcha
+
+Requisitos: Docker y Docker Compose en un servidor accesible por internet, y (para HTTPS) un dominio.
 
 ```bash
-# Clonar repositorio
-git clone https://github.com/tu-usuario/ecowitt-weather-station.git
-cd ecowitt-weather-station
+git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
+cd ecowitt-weather-server-xe1e
 
-# Copiar configuración
-cp .env.example .env
-# Editar .env con tus valores
+cp .env.example .env      # edita tus valores (InfluxDB, admin, tokens, etc.)
 
-# Iniciar servicios
-docker-compose up -d
-
-# Verificar
+docker compose up -d --build
 curl http://localhost:8080/health
 ```
 
-## Configuración del Dispositivo (WS2910 o GW3000)
+**Configurar la estación** (app *WS View Plus* → Weather Services → Customized):
 
-1. Conectar el WS2910 (o GW3000) a la red WiFi 2.4GHz via app **WS View Plus**
-2. Ir a **Weather Services** → **Customized**
-3. Configurar:
-   - **Enable**: ON
-   - **Protocol**: Ecowitt
-   - **Server IP**: [IP de tu servidor]
-   - **Port**: 8080
-   - **Path**: /data/report/
-   - **Interval**: 60 segundos
+- Enable: ON · Protocol: **Ecowitt** · Server IP: *tu servidor* · Port: **8080** · Path: **/data/report/** · Interval: **60 s**
 
-## Configuración del Dashboard (ubicación)
-
-El pronóstico y la astronomía usan la ubicación de la estación. Ajústala en
-[`dashboard/src/config.ts`](dashboard/src/config.ts):
+**Ubicación** (pronóstico/astronomía) en [`dashboard/src/config.ts`](dashboard/src/config.ts):
 
 ```ts
 export const LOCATION = {
@@ -129,73 +106,15 @@ export const LOCATION = {
 }
 ```
 
-> Cambia `latitude`/`longitude` por las coordenadas reales de tu estación
-> (clic derecho en Google Maps → copiar). El dato del clima local (Open-Meteo)
-> es gratuito y no requiere API key.
+Detalle completo de despliegue: **[docs/DEPLOY.md](docs/DEPLOY.md)** · dominio + HTTPS: **[docs/DOMINIO-HTTPS.md](docs/DOMINIO-HTTPS.md)**.
 
-## Estructura del Proyecto
+---
 
-```
-ecowitt-weather-station/
-├── docker-compose.yml      # Orquestación de servicios
-├── .env.example            # Variables de entorno ejemplo
-│
-├── receiver/               # Servidor receptor HTTP
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── main.py        # FastAPI app
-│   │   ├── config.py      # Configuración
-│   │   ├── models.py      # Modelos de datos
-│   │   └── services/
-│   │       ├── parser.py  # Parser protocolo Ecowitt
-│   │       ├── converter.py # Conversión unidades
-│   │       └── storage.py # Escritura a InfluxDB
-│   └── tests/
-│
-├── api/                    # API REST pública
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app/
-│       ├── main.py
-│       └── routers/
-│           ├── current.py  # Datos actuales
-│           ├── history.py  # Datos históricos
-│           └── stats.py    # Estadísticas
-│
-├── dashboard/              # Frontend Web
-│   ├── package.json
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   └── hooks/
-│   └── public/
-│
-├── homeassistant/          # Configuración Home Assistant
-│   └── ecowitt.yaml
-│
-└── docs/                   # Documentación
-    ├── ESTUDIO_VIABILIDAD.md
-    ├── setup-gateway.md
-    └── api-reference.md
-```
+## Integración con Home Assistant
 
-## API Endpoints
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/data/report/` | Recibe datos del gateway |
-| GET | `/api/current` | Datos meteorológicos actuales |
-| GET | `/api/history?from=&to=` | Datos históricos |
-| GET | `/api/stats/daily` | Estadísticas diarias |
-| GET | `/health` | Estado del servicio |
-
-## Integración Home Assistant
-
-HA está en una **red remota** distinta a la estación, por lo que lee los datos desde la **API REST del VPS** (vía HTTPS con el dominio). Config lista para usar (31 sensores, integración `rest:`): [`homeassistant/ecowitt.yaml`](homeassistant/ecowitt.yaml) — cópiala a `<config>/packages/` y actívala. Ejemplo mínimo:
+HA lee los datos desde la **API REST del VPS** (por HTTPS). Config lista para usar (integración `rest:`): [`homeassistant/ecowitt.yaml`](homeassistant/ecowitt.yaml). Ejemplo mínimo:
 
 ```yaml
-# configuration.yaml
 sensor:
   - platform: rest
     name: "Temperatura Exterior"
@@ -205,48 +124,61 @@ sensor:
     scan_interval: 60
 ```
 
-> La integración nativa Ecowitt de HA (push/webhook) solo conviene si HA está en la misma red que la estación; no es el caso aquí. Ver [Estudio de Viabilidad §11](docs/ESTUDIO_VIABILIDAD.md) y [DOMINIO-HTTPS.md](docs/DOMINIO-HTTPS.md).
+Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receiver puede auto-crear las entidades. Actívalo en `.env` (`MQTT_ENABLED=true`, `HASS_DISCOVERY=true`, …).
 
-### Opción MQTT (auto-discovery)
+---
 
-Si corres un broker MQTT accesible por HA, el receiver puede publicar los datos
-y **auto-crear las entidades** en Home Assistant (MQTT Discovery). Actívalo en `.env`:
+## API (principales)
 
-```bash
-MQTT_ENABLED=true
-MQTT_BROKER=192.168.1.100
-MQTT_PORT=1883
-MQTT_USERNAME=
-MQTT_PASSWORD=
-MQTT_TOPIC=weather/ecowitt
-HASS_DISCOVERY=true
-HASS_DISCOVERY_PREFIX=homeassistant
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/data/report/` | Recibe el push de la estación |
+| GET | `/api/current` | Lectura actual |
+| GET | `/api/history` · `/api/stats/daily` | Histórico y estadísticas del día |
+| GET | `/api/climate/*` | Resúmenes diarios, récords y reporte NOAA |
+| GET | `/api/forecast` · `/api/almanac` | Pronóstico y almanaque |
+| GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
+| GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
+| GET | `/health` | Estado del servicio |
+
+Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
+
+---
+
+## Estructura del proyecto
+
+```
+├── docker-compose.yml          # Orquestación
+├── receiver/                   # Servidor (FastAPI)
+│   ├── app/
+│   │   ├── main.py             # App y endpoints
+│   │   ├── config.py
+│   │   └── services/           # parser, storage, aggregator, alerts,
+│   │                           # imeca, metar, satellite, almanac, …
+│   └── tests/
+├── dashboard/                  # Frontend (React · Vite · TS · Tailwind)
+│   ├── src/pages/ · src/components/station/
+│   └── public/                 # guía, manifiesto PWA, iconos
+├── homeassistant/              # Config para Home Assistant
+├── docs/                       # Documentación (y docs/archivo/ = estudios)
+├── caddy/ · uptime-worker/     # Reverse proxy y monitor de disponibilidad
+└── scripts/                    # Utilidades (simulador, sonda WS2910)
 ```
 
-El receiver publica el estado en `weather/ecowitt/state` y los configs de
-discovery bajo `homeassistant/...` (sensores de temperatura, humedad, presión,
-viento, lluvia, UV, radiación, canales WN31 y baterías). HA crea el dispositivo
-"Ecowitt WS2910" automáticamente.
+---
 
 ## Documentación
 
-- [Estudio de Viabilidad](docs/ESTUDIO_VIABILIDAD.md)
-- [Configuración del Gateway/Consola](docs/setup-gateway.md)
-- [Despliegue en el VPS](docs/DEPLOY.md)
-- [Dominio y HTTPS (Cloudflare)](docs/DOMINIO-HTTPS.md)
-- [Cloudflare Workers — opciones](docs/CLOUDFLARE-WORKERS.md)
-- [Plan de páginas del cintillo](docs/PLAN-PAGINAS.md)
-- [Plan de mejoras (roadmap)](docs/MEJORAS.md)
-- [Referencia API](docs/api-reference.md)
+- **[Guía completa](docs/GUIA.md)** — manual de referencia (hardware, arquitectura, cada página, API, operación)
+- [Referencia de API](docs/api-reference.md)
+- [Despliegue en el VPS](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md)
+- [Configurar el gateway/consola](docs/setup-gateway.md)
+- [Backups a R2](docs/backups-r2.md) · [Monitor de uptime](uptime-worker/README.md)
+
+> Notas de estudio y planeación (exploratorias) quedan archivadas en [`docs/archivo/`](docs/archivo/).
+
+---
 
 ## Licencia
 
-MIT License
-
-## Contribuir
-
-1. Fork el repositorio
-2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crear Pull Request
+MIT.
