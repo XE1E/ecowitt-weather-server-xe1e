@@ -14,6 +14,7 @@ import { AirQualityPage } from './pages/AirQualityPage'
 import { AeronauticaPage } from './pages/AeronauticaPage'
 import { ClimatePage } from './pages/ClimatePage'
 import { EarthquakesPage } from './pages/EarthquakesPage'
+import { RemoteStationPage } from './pages/RemoteStationPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { AdminPage } from './pages/AdminPage'
 import { EmbedWidget } from './pages/EmbedWidget'
@@ -54,6 +55,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="calidad-aire" element={<AirQualityPage />} />
                 <Route path="aeronautica" element={<AeronauticaPage />} />
                 <Route path="sismos" element={<EarthquakesPage />} />
+                <Route path="remota" element={<RemoteStationPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
                 <Route path="admin" element={<AdminPage />} />
               </Route>

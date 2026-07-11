@@ -207,6 +207,10 @@ class InfluxDBStorage:
                 "pressure_relative",
                 "uv_index",
                 "solar_radiation",
+                # Interior: necesarios para estaciones secundarias tipo GW1100
+                # (solo sensor interconstruido). Aditivo para la principal.
+                "temperature_indoor",
+                "humidity_indoor",
             ]
 
             stats = {}
