@@ -1,6 +1,8 @@
-import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
+
+const hourFmt = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit' })
 
 interface Props {
   data: WeatherData
@@ -14,11 +16,12 @@ export function PressureCard({ data, stats, history }: Props) {
   const s = stats?.pressure_relative
 
   // Serie de presión suavizada: submuestreo a ~60 puntos para una línea clara
-  const raw = history
+  const pts = history
     .filter((h) => h.pressure_relative !== undefined)
-    .map((h) => h.pressure_relative as number)
-  const step = Math.max(1, Math.floor(raw.length / 60))
-  const series = raw.filter((_, i) => i % step === 0).map((v) => ({ p: u.pressN(v) }))
+    .map((h) => ({ t: h._time, v: h.pressure_relative as number }))
+  const raw = pts.map((p) => p.v)
+  const step = Math.max(1, Math.floor(pts.length / 60))
+  const series = pts.filter((_, i) => i % step === 0).map((pt) => ({ t: pt.t, p: u.pressN(pt.v) }))
 
   // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparar con ~3h atrás
   let trend = 'Estable'
@@ -51,21 +54,22 @@ export function PressureCard({ data, stats, history }: Props) {
       </div>
 
       {series.length > 1 && (
-        <div className="mt-3">
-          <p className="text-xs text-slate-500 mb-1">Últimas 24 h</p>
-          <div className="h-24">
+        <div className="mt-3 rounded-lg bg-white/5 px-2 pt-2 pb-1">
+          <p className="text-xs text-slate-400 mb-1 px-1">Últimas 24 h</p>
+          <div className="h-28">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+              <AreaChart data={series} margin={{ top: 4, right: 6, left: 2, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
                     <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
+                <XAxis dataKey="t" tickFormatter={hourFmt} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={34} tickLine={false} axisLine={false} />
                 <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--surface, #1e293b)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
-                  labelStyle={{ display: 'none' }}
+                  labelFormatter={(l) => hourFmt(l as string)}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />
                 <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} isAnimationActive={false} />

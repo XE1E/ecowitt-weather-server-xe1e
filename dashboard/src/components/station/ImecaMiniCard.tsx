@@ -22,7 +22,7 @@ export function ImecaMiniCard() {
   return (
     <Link to="/pro/calidad-aire" className="card block no-underline" style={{ color: 'inherit' }}>
       <p className="card-title">IMECA <span className="text-[10px] text-slate-500 font-normal">(estimado)</span></p>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div
           className="w-16 h-16 rounded-full flex flex-col items-center justify-center shrink-0"
           style={{ backgroundColor: (d.color ?? '#64748b') + '22', border: `2px solid ${d.color ?? '#64748b'}` }}
@@ -30,7 +30,7 @@ export function ImecaMiniCard() {
           <span className="text-2xl font-bold leading-none" style={{ color: d.color }}>{d.imeca}</span>
           <span className="text-[9px] text-slate-400">IMECA</span>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 text-right">
           <p className="font-semibold" style={{ color: d.color }}>{d.category}</p>
           {d.dominant && <p className="text-xs text-slate-400">Principal: {d.dominant}</p>}
           <p className="text-xs text-blue-400 mt-1">Ver detalle →</p>

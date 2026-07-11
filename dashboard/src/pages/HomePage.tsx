@@ -12,6 +12,7 @@ import { UvSolarCard } from '../components/station/UvSolarCard'
 import { SunMoonCard } from '../components/station/SunMoonCard'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
+import { InteriorCard } from '../components/station/InteriorCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
@@ -48,6 +49,7 @@ export function HomePage() {
           <StationTempChart history={history} forecast={forecast} />
           <PrecipitationCard data={data} forecast={forecast} />
           <UvSolarCard data={data} />
+          <InteriorCard data={data} />
           <ExtraSensorsCard data={data} />
         </div>
         <div className="space-y-4">

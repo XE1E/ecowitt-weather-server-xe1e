@@ -17,21 +17,21 @@ export function SunMoonCard({ astro }: { astro: AstroData | null }) {
   return (
     <div className="card">
       <p className="card-title">Sol y Luna</p>
-      <div className="flex items-center justify-around text-center">
-        <div className="flex flex-col items-center">
-          <WeatherIcon name="sunrise" size={40} />
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center">
+          <WeatherIcon name="sunrise" size={34} />
           <p className="text-xs text-slate-400 mt-1">Amanecer</p>
           <p className="font-semibold">{time(astro.sunrise)}</p>
         </div>
-        <div className="flex flex-col items-center">
-          <WeatherIcon name="sunset" size={40} />
+        <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center">
+          <WeatherIcon name="sunset" size={34} />
           <p className="text-xs text-slate-400 mt-1">Atardecer</p>
           <p className="font-semibold">{time(astro.sunset)}</p>
         </div>
-        <div className="flex flex-col items-center">
-          <WeatherIcon name={astro.moonIcon} size={40} />
+        <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center">
+          <WeatherIcon name={astro.moonIcon} size={34} />
           <p className="text-xs text-slate-400 mt-1">Luna</p>
-          <p className="font-semibold text-xs">{astro.moonLabel}</p>
+          <p className="font-semibold text-xs leading-tight">{astro.moonLabel}</p>
         </div>
       </div>
       <p className="text-center text-xs text-slate-400 mt-3">

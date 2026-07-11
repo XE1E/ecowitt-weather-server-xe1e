@@ -33,7 +33,7 @@ export function AirQualityCard() {
   return (
     <Link to="/pro/calidad-aire" className="card block no-underline" style={{ color: 'inherit' }}>
       <p className="card-title">Calidad del aire</p>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div
           className="w-16 h-16 rounded-full flex flex-col items-center justify-center shrink-0"
           style={{ backgroundColor: cat.color + '22', border: `2px solid ${cat.color}` }}
@@ -41,7 +41,7 @@ export function AirQualityCard() {
           <span className="text-2xl font-bold leading-none" style={{ color: cat.color }}>{aq.aqi}</span>
           <span className="text-[9px] text-slate-400">AQI</span>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 text-right">
           <p className="font-semibold" style={{ color: cat.color }}>{cat.label}</p>
           {aq.dominant && <p className="text-xs text-slate-400">Principal: {aq.dominant.toUpperCase()}</p>}
           <p className="text-xs text-blue-400 mt-1">Ver detalle →</p>

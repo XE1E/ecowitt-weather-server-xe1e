@@ -33,22 +33,18 @@ export function LocalForecastCard({ lf }: Props) {
 
       <p className="text-slate-100 leading-snug">{lf.forecast}</p>
 
-      <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
-        <div>
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Barómetro</p>
-          <p className="font-semibold">{lf.pressure != null ? u.press(lf.pressure) : '--'}</p>
+          <p className="text-lg font-bold">{lf.pressure != null ? u.press(lf.pressure) : '--'}</p>
         </div>
-        <div>
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Tendencia</p>
-          <p className={`font-semibold ${color}`}>
-            {trend?.arrow} {trend?.label ?? '--'}
-          </p>
+          <p className={`text-lg font-bold ${color}`}>{trend?.arrow} {trend?.label ?? '--'}</p>
         </div>
-        <div>
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Cambio 3 h</p>
-          <p className="font-semibold">
-            {lf.delta_3h != null ? `${lf.delta_3h > 0 ? '+' : ''}${lf.delta_3h} hPa` : '--'}
-          </p>
+          <p className="text-lg font-bold">{lf.delta_3h != null ? `${lf.delta_3h > 0 ? '+' : ''}${lf.delta_3h} hPa` : '--'}</p>
         </div>
       </div>
       {lf.level && <p className="text-xs text-slate-500 mt-2">{LEVEL_LABEL[lf.level] ?? ''}</p>}

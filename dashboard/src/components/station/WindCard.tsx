@@ -38,7 +38,7 @@ export function WindCard({ data, onFlip }: { data: WeatherData; onFlip?: () => v
   const dir = data.wind_direction ?? 0
   const bf = beaufort(data.wind_speed ?? 0)
   return (
-    <div className="card h-full">
+    <div className="card">
       <div className="flex items-center justify-between">
         <p className="card-title">Viento</p>
         {onFlip

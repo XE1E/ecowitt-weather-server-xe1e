@@ -25,7 +25,7 @@ function RoseBack({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     let cancel = false
-    fetch('/api/wind/rose?start=-30d')
+    fetch('/api/wind/rose?start=-24h')
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => !cancel && setRose(j))
       .catch(() => {})
@@ -69,9 +69,9 @@ function RoseBack({ onBack }: { onBack: () => void }) {
   )
 
   return (
-    <div className="card h-full">
+    <div className="card">
       <div className="flex items-center justify-between mb-1">
-        <p className="card-title mb-0">Rosa de vientos <span className="text-slate-500 font-normal normal-case">· 30 días</span></p>
+        <p className="card-title mb-0">Rosa de vientos <span className="text-slate-500 font-normal normal-case">· 24 h</span></p>
         <button onClick={onBack} className="text-xs text-blue-400 hover:text-blue-300">← Atrás</button>
       </div>
       {!rose || rose.total === 0 ? (
@@ -99,18 +99,33 @@ function RoseBack({ onBack }: { onBack: () => void }) {
 }
 
 const faceStyle = (t: string): React.CSSProperties => ({
-  gridColumn: '1', gridRow: '1', transition: 'transform 0.6s', transformStyle: 'preserve-3d',
+  position: 'absolute', top: 0, left: 0, width: '100%',
+  transition: 'transform 0.6s', transformStyle: 'preserve-3d',
   backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: t,
 })
 
 export function WindFlipCard({ data }: { data: WeatherData }) {
   const [flipped, setFlipped] = useState(false)
+  const frontRef = useRef<HTMLDivElement>(null)
+  const backRef = useRef<HTMLDivElement>(null)
+  const [dims, setDims] = useState({ f: 0, b: 0 })
+
+  useEffect(() => {
+    const measure = () => setDims({ f: frontRef.current?.offsetHeight || 0, b: backRef.current?.offsetHeight || 0 })
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (frontRef.current) ro.observe(frontRef.current)
+    if (backRef.current) ro.observe(backRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  const h = flipped ? dims.b : dims.f
   return (
-    <div style={{ display: 'grid', perspective: '1400px' }}>
-      <div style={faceStyle(flipped ? 'rotateY(180deg)' : 'rotateY(0deg)')}>
+    <div style={{ position: 'relative', perspective: '1400px', height: h || undefined, transition: 'height 0.5s ease' }}>
+      <div ref={frontRef} style={faceStyle(flipped ? 'rotateY(180deg)' : 'rotateY(0deg)')}>
         <WindCard data={data} onFlip={() => setFlipped(true)} />
       </div>
-      <div style={faceStyle(flipped ? 'rotateY(360deg)' : 'rotateY(180deg)')}>
+      <div ref={backRef} style={faceStyle(flipped ? 'rotateY(360deg)' : 'rotateY(180deg)')}>
         <RoseBack onBack={() => setFlipped(false)} />
       </div>
     </div>

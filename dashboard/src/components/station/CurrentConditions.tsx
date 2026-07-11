@@ -37,16 +37,16 @@ export function CurrentConditions({ data }: { data: WeatherData }) {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/10">
-        <div>
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Humedad</p>
           <p className="text-xl font-bold text-cyan-300">{(data.humidity_outdoor ?? 0).toFixed(0)}%</p>
         </div>
-        <div>
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Índice UV</p>
           <p className="text-xl font-bold text-yellow-300">{data.uv_index ?? 0}</p>
         </div>
-        <div>
+        <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Presión</p>
           <p className="text-xl font-bold text-violet-300">{u.press(data.pressure_relative)}</p>
         </div>
