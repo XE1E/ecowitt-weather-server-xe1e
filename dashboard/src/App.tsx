@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
-import { WeatherCard } from './components/WeatherCard'
-import { WeatherIcon } from './components/WeatherIcon'
 import { WeatherFX } from './components/WeatherFX'
+import { CurrentConditions } from './components/station/CurrentConditions'
 import { WindFlipCard } from './components/station/WindFlipCard'
 import { InteriorCard } from './components/station/InteriorCard'
 import { ExtraSensorsCard } from './components/station/ExtraSensorsCard'
+import { PrecipitationCard } from './components/station/PrecipitationCard'
+import { ForecastCard } from './components/station/ForecastCard'
+import { SunMoonCard } from './components/station/SunMoonCard'
 import { TemperatureChart } from './components/TemperatureChart'
 import { StatsSummary } from './components/StatsSummary'
-import { Forecast } from './components/Forecast'
-import { Astronomy } from './components/Astronomy'
 import { WeatherData, DailyStats } from './types'
 import { deriveCondition, relativeTime, isStale } from './weather'
 import { fetchForecast, ForecastResult } from './forecast'
@@ -90,7 +90,6 @@ function App() {
 
   const cond = deriveCondition(data)
   const offline = isStale(data.received_at)
-  const tempStats = stats?.stats?.temperature_outdoor
 
   return (
     <>
@@ -114,55 +113,10 @@ function App() {
             </div>
           </header>
 
-          {/* Hero: current condition */}
-          <div className="card mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <p className="card-title">{cond.label}</p>
-                <div className="flex items-end gap-1">
-                  <span className="text-6xl md:text-7xl font-bold tracking-tight">
-                    {data.temperature_outdoor?.toFixed(1) ?? '--'}
-                  </span>
-                  <span className="text-3xl text-slate-400 mb-2">°C</span>
-                </div>
-                <p className="text-slate-400 mt-1">
-                  Sensación {data.feels_like?.toFixed(1)}°C · Punto rocío {data.dew_point?.toFixed(1)}°C
-                </p>
-                {tempStats && (
-                  <p className="text-sm mt-1">
-                    <span className="text-red-300">▲ {tempStats.max?.toFixed(1)}°C</span>
-                    <span className="text-slate-500"> · </span>
-                    <span className="text-sky-300">▼ {tempStats.min?.toFixed(1)}°C</span>
-                    <span className="text-slate-500"> hoy</span>
-                  </p>
-                )}
-              </div>
-              <WeatherIcon name={cond.icon} size={140} alt={cond.label} />
-            </div>
-          </div>
-
-          {/* Metric row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <WeatherCard
-              title="Humedad" value={data.humidity_outdoor} unit="%"
-              iconName="humidity" color="text-sky-400" offline={offline}
-              subtitle={`Punto rocío: ${data.dew_point?.toFixed(1)}°C`}
-            />
-            <WeatherCard
-              title="Presión" value={data.pressure_relative} unit="hPa"
-              iconName="barometer" color="text-violet-400" offline={offline}
-            />
-            <WeatherCard
-              title="Índice UV" value={data.uv_index} unit=""
-              iconName="uv-index" offline={offline}
-              color={data.uv_index >= 8 ? 'text-red-400' : data.uv_index >= 6 ? 'text-orange-400' : 'text-yellow-400'}
-              subtitle={`Radiación: ${data.solar_radiation} W/m²`}
-            />
-            <WeatherCard
-              title="Lluvia hoy" value={data.rain_daily} unit="mm"
-              iconName="raindrops" color="text-blue-400" offline={offline}
-              subtitle={`Tasa: ${data.rain_rate?.toFixed(1)} mm/h`}
-            />
+          {/* Condiciones actuales + precipitación (mismo estilo que /pro) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
+            <CurrentConditions data={data} />
+            <PrecipitationCard data={data} forecast={forecast} />
           </div>
 
           {/* Viento · Interior · Sensores adicionales (mismo estilo que /pro) */}
@@ -172,11 +126,11 @@ function App() {
             <ExtraSensorsCard data={data} />
           </div>
 
-          {/* 7-day forecast */}
-          {forecast && <Forecast days={forecast.days} />}
-
-          {/* Astronomy */}
-          {forecast && <Astronomy astro={forecast.astro} />}
+          {/* Pronóstico + Sol y Luna (estilo /pro) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
+            <ForecastCard forecast={forecast} />
+            {forecast && <SunMoonCard astro={forecast.astro} />}
+          </div>
 
           {/* Daily stats summary */}
           <StatsSummary stats={stats?.stats ?? null} />
