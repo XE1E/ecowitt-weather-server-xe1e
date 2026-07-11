@@ -1,5 +1,11 @@
 import { WeatherData } from '../../types'
+import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
+
+// Nombres personalizados por canal (WN31)
+const CHANNEL_NAMES: Record<number, string> = {
+  1: 'Jardín',
+}
 
 export function ExtraSensorsCard({ data }: { data: WeatherData }) {
   const u = useUnits()
@@ -17,16 +23,28 @@ export function ExtraSensorsCard({ data }: { data: WeatherData }) {
   return (
     <div className="card">
       <p className="card-title">Sensores adicionales (WN31)</p>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {channels.map((c) => (
-          <div key={c.ch} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-            <span className="text-sm text-slate-300">
-              Canal {c.ch}
-              {c.batteryLow && <span className="text-red-300"> ⚠</span>}
-            </span>
-            <div className="flex items-center gap-4">
-              {c.temp !== undefined && <span className="text-lg font-bold text-amber-300">{u.temp(c.temp)}{u.tempU}</span>}
-              {c.humidity !== undefined && <span className="text-lg font-bold text-sky-300">{c.humidity}%</span>}
+          <div key={c.ch}>
+            <p className="text-xs text-slate-400 mb-1">
+              Canal {c.ch}{CHANNEL_NAMES[c.ch] ? ` · ${CHANNEL_NAMES[c.ch]}` : ''}
+              {c.batteryLow && <span className="text-red-300"> · ⚠ batería</span>}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
+                <WeatherIcon name="thermometer" size={32} />
+                <div>
+                  <p className="text-xl font-bold text-amber-300">{c.temp !== undefined ? `${u.temp(c.temp)}${u.tempU}` : '--'}</p>
+                  <p className="text-xs text-slate-400">Temperatura</p>
+                </div>
+              </div>
+              <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
+                <WeatherIcon name="humidity" size={32} />
+                <div>
+                  <p className="text-xl font-bold text-cyan-300">{c.humidity !== undefined ? `${Math.round(c.humidity)}%` : '--'}</p>
+                  <p className="text-xs text-slate-400">Humedad</p>
+                </div>
+              </div>
             </div>
           </div>
         ))}
