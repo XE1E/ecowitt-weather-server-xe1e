@@ -33,15 +33,17 @@ function Rose({ direction }: { direction: number }) {
   )
 }
 
-export function WindCard({ data }: { data: WeatherData }) {
+export function WindCard({ data, onFlip }: { data: WeatherData; onFlip?: () => void }) {
   const u = useUnits()
   const dir = data.wind_direction ?? 0
   const bf = beaufort(data.wind_speed ?? 0)
   return (
-    <div className="card">
+    <div className="card h-full">
       <div className="flex items-center justify-between">
         <p className="card-title">Viento</p>
-        <Link to="/pro/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>
+        {onFlip
+          ? <button onClick={onFlip} className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</button>
+          : <Link to="/pro/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>}
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">

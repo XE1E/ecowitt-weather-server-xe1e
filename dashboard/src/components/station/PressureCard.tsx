@@ -1,4 +1,4 @@
-import { BarChart, Bar, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
+import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
 
@@ -12,21 +12,29 @@ export function PressureCard({ data, stats, history }: Props) {
   const u = useUnits()
   const p = data.pressure_relative
   const s = stats?.pressure_relative
-  const series = history
-    .filter((h) => h.pressure_relative !== undefined)
-    .map((h) => ({ t: h._time, p: u.pressN(h.pressure_relative as number) }))
 
-  // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparar con ~3h atrás
-  const rawP = history
+  // Serie de presión suavizada: submuestreo a ~60 puntos para una línea clara
+  const raw = history
     .filter((h) => h.pressure_relative !== undefined)
     .map((h) => h.pressure_relative as number)
+  const step = Math.max(1, Math.floor(raw.length / 60))
+  const series = raw.filter((_, i) => i % step === 0).map((v) => ({ p: u.pressN(v) }))
+
+  // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparar con ~3h atrás
   let trend = 'Estable'
   let trendColor = 'text-slate-300'
-  if (rawP.length > 6) {
-    const d = rawP[rawP.length - 1] - rawP[Math.max(0, rawP.length - 7)]
+  if (raw.length > 6) {
+    const d = raw[raw.length - 1] - raw[Math.max(0, raw.length - 7)]
     if (d > 0.6) { trend = 'Subiendo'; trendColor = 'text-emerald-300' }
     else if (d < -0.6) { trend = 'Bajando'; trendColor = 'text-red-300' }
   }
+
+  const box = (label: string, value: string, color = 'text-slate-100') => (
+    <div className="rounded-lg bg-white/5 px-3 py-2">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className={`text-lg font-bold ${color}`}>{value}</p>
+    </div>
+  )
 
   return (
     <div className="card">
@@ -36,19 +44,10 @@ export function PressureCard({ data, stats, history }: Props) {
         <span className="text-slate-400 mb-1">{u.pressU}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-3 text-sm">
-        <div>
-          <p className="text-xs text-slate-400">Mín</p>
-          <p className="font-semibold">{s?.min != null ? u.press(s.min) : '--'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-400">Máx</p>
-          <p className="font-semibold">{s?.max != null ? u.press(s.max) : '--'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-400">Tendencia</p>
-          <p className={`font-semibold ${trendColor}`}>{trend}</p>
-        </div>
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        {box('Mín', s?.min != null ? u.press(s.min) : '--', 'text-sky-300')}
+        {box('Máx', s?.max != null ? u.press(s.max) : '--', 'text-orange-300')}
+        {box('Tendencia', trend, trendColor)}
       </div>
 
       {series.length > 1 && (
@@ -56,15 +55,21 @@ export function PressureCard({ data, stats, history }: Props) {
           <p className="text-xs text-slate-500 mb-1">Últimas 24 h</p>
           <div className="h-24">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={series}>
+              <AreaChart data={series} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
                 <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
+                  contentStyle={{ backgroundColor: 'var(--surface, #1e293b)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
                   labelStyle={{ display: 'none' }}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />
-                <Bar dataKey="p" fill="#a78bfa" radius={[2, 2, 0, 0]} />
-              </BarChart>
+                <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} isAnimationActive={false} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>

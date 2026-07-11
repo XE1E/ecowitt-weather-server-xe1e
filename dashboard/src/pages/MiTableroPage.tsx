@@ -3,7 +3,7 @@ import { RefreshCw, LayoutGrid, SlidersHorizontal, Check } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
-import { WindCard } from '../components/station/WindCard'
+import { WindFlipCard } from '../components/station/WindFlipCard'
 import { PressureCard } from '../components/station/PressureCard'
 import { LocalForecastCard } from '../components/station/LocalForecastCard'
 import { ForecastCard } from '../components/station/ForecastCard'
@@ -29,7 +29,7 @@ export function MiTableroPage() {
   // Catálogo de tarjetas elegibles (la de condiciones actuales va fija aparte)
   const CARDS: { key: string; label: string; span: 1 | 2 | 3; render: () => JSX.Element }[] = [
     { key: 'ministats', label: 'Resumen rápido', span: 3, render: () => <MiniStats data={data!} stats={stats} forecast={forecast} compare={compare} /> },
-    { key: 'wind', label: 'Viento', span: 1, render: () => <WindCard data={data!} /> },
+    { key: 'wind', label: 'Viento', span: 1, render: () => <WindFlipCard data={data!} /> },
     { key: 'pressure', label: 'Presión', span: 1, render: () => <PressureCard data={data!} stats={stats} history={history} /> },
     { key: 'localforecast', label: 'Pronóstico local', span: 1, render: () => <LocalForecastCard lf={localForecast} /> },
     { key: 'forecast', label: 'Pronóstico', span: 1, render: () => <ForecastCard forecast={forecast} /> },

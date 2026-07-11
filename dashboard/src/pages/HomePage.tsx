@@ -2,7 +2,7 @@ import { RefreshCw } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
-import { WindCard } from '../components/station/WindCard'
+import { WindFlipCard } from '../components/station/WindFlipCard'
 import { PressureCard } from '../components/station/PressureCard'
 import { LocalForecastCard } from '../components/station/LocalForecastCard'
 import { ForecastCard } from '../components/station/ForecastCard'
@@ -39,7 +39,7 @@ export function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="space-y-4">
           <CurrentConditions data={data} />
-          <WindCard data={data} />
+          <WindFlipCard data={data} />
           <PressureCard data={data} stats={stats} history={history} />
           <LocalForecastCard lf={localForecast} />
         </div>
