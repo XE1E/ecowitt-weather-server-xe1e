@@ -39,9 +39,9 @@ de México, con histórico, pronóstico, radar, astronomía y climatología.
 - **Alcance:** meteorología. No es un proyecto de radios/antenas (aunque "XE1E"
   sea un indicativo de radioaficionado, aquí es solo el nombre de la estación).
 - **Dos vistas del sitio:**
-  - `/` — **Vista clásica**: tablero simple de un vistazo.
-  - `/pro` — **Vista completa** (estilo WeatherNode): 8 secciones con cintillo
-    de navegación, unidades conmutables y efectos de clima.
+  - `/` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/pro`).
+  - `/pro` — **Vista completa**: varias secciones con cintillo de navegación,
+    unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA).
 
 ---
 
@@ -150,104 +150,108 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 - **Botón FX:** activa/desactiva los **efectos de clima** (lluvia, nieve, etc.)
   animados de fondo según la condición actual.
 - **Vista clásica:** enlace a `/`.
-- **Cintillo** (8 secciones): Inicio · Pronóstico · Historia · Estadísticas ·
-  Climatología · Radar · Astronomía · Calidad del aire.
+- **Cintillo** de secciones: Inicio · Mi tablero · Pronóstico · Historia ·
+  Estadísticas · Climatología · Radar · Astronomía · Calidad del aire ·
+  Aeronáutica · Widget.
 
 ### 5.1 Inicio
-Panel principal con el estado actual. Contiene:
+Panel principal con el estado actual:
 
-- **Mini-estadísticas (barra superior):** máx de hoy, viento máx, precipitación,
-  índice UV, sensación, presión, prob. de lluvia, humedad y **"vs ayer"**.
-- **Condiciones actuales:** temperatura grande + ícono animado + descripción;
-  debajo, sensación térmica, punto de rocío, bulbo húmedo, **humidex** y
-  **base de nubes**; y humedad, UV y presión.
-- **Viento:** rosa de vientos con dirección, velocidad, ráfaga y escala Beaufort.
-- **Presión:** valor actual, mín/máx del día, **tendencia** (subiendo/estable/
-  bajando) y mini-gráfica de 24 h.
-- **Pronóstico local:** texto propio según la **tendencia del barómetro**
-  (independiente de Open-Meteo) — p. ej. "Mejorando gradualmente".
-- **Pronóstico (Open-Meteo):** tarjetas de 5 días / por hora.
-- **Gráfica de temperatura:** observado (histórico) + pronóstico.
-- **Precipitación:** tasa actual, acumulado de hoy/mes/año y prob. próximas horas.
-- **UV y radiación solar.**
-- **Sol y Luna:** amanecer/atardecer, horas de luz y fase lunar.
-- **Alertas:** avisos activos (o "desactivadas").
-- **Próximos eventos:** próximas fases lunares.
-- **Sensores extra (WN31):** temperatura/humedad de los canales activos + batería.
-- **Radar** (Ventusky) y **METAR** (MMMX) embebidos.
+- **Mini-estadísticas (barra):** máx de hoy, viento máx, precipitación, UV,
+  sensación, presión, prob. de lluvia, humedad y **"vs ayer"**.
+- **Condiciones actuales:** temperatura grande + ícono + descripción; sensación,
+  punto de rocío, bulbo húmedo, **humidex** y **base de nubes**; y humedad, UV y
+  presión (en cajas).
+- **Viento:** la tarjeta **gira** (flip) a la **rosa de vientos** al pulsar
+  "Rosa de vientos".
+- **Presión:** valor, mín/máx del día, **tendencia** y gráfica de 24 h con la hora.
+- **Pronóstico local:** texto propio según la **tendencia del barómetro**.
+- **Pronóstico (Open-Meteo)**, **gráfica de temperatura**, **precipitación**,
+  **UV/solar** y **Sol y Luna**.
+- **Calidad del aire (AQI)** e **IMECA**; **último sismo**; **alertas**;
+  **próximos eventos** (fases lunares).
+- **Interior** (temp/humedad) y **sensores adicionales WN31** (por canal, con
+  nombre configurable — p. ej. "Jardín"). Abajo, el **radar**.
 
-### 5.2 Pronóstico
-Pronóstico de **Open-Meteo** (modelo `best_match`) horario y a varios días, con
-un texto explicativo de qué son los modelos meteorológicos y por qué el
-pronóstico es una probabilidad, no una certeza.
+### 5.2 Mi tablero
+Vista **personalizable**: con el botón «Personalizar» eliges qué tarjetas mostrar
+u ocultar (las mismas del Inicio) y la selección se guarda **en tu dispositivo**.
+La tarjeta de condiciones actuales queda fija arriba.
 
-### 5.3 Historia
-Gráficas del **histórico propio** (InfluxDB). Selector de **métrica**
-(temperatura, humedad, viento, presión, lluvia…) y de **periodo**. Incluye
-**barras de lluvia diaria acumulada** y botón para **exportar CSV** del rango.
+### 5.3 Pronóstico
+Pronóstico de **Open-Meteo** (modelo `best_match`) en pestañas **por día** y
+**por hora**, con tarjeta resumen del día y **descripciones en lenguaje natural**
+(NLG), más la explicación de qué son los modelos y por qué es probabilidad, no
+certeza.
 
-### 5.4 Estadísticas
-- **Récords de siempre:** temp máx/mín, ráfaga máxima, día más lluvioso, presión
-  máx/mín — cada uno con la **fecha** en que ocurrió.
-- **Estadísticas por periodo** (7 días / 30 días / año / histórico): promedio,
-  máx y mín (con fecha/hora del extremo) de cada variable.
-- **Rosa de vientos:** distribución del viento en 16 sectores (frecuencia y
-  velocidad media por sector), con dirección dominante y % de calma; selector de
-  periodo (7 d / 30 d / año).
+### 5.4 Historia
+El **archivo de la estación** con granularidad **Día / Mes / Año** y cinco grupos
+de **gráficas interactivas** (temperatura; viento con dirección; humedad y punto
+de rocío; radiación UV/solar; precipitación y presión). Tabla de días/meses
+clicable, detalle diario y **exportación a CSV**.
 
-### 5.5 Climatología
-Construida sobre el **resumen diario**. Bloques:
-- **En este día:** qué pasó el mismo día calendario en años previos (máx/mín/
-  lluvia por año). Se muestra cuando ya hay al menos un año de histórico.
-- **Resúmenes rápidos:** Ayer · Este mes · Este año — media, máx/mín, lluvia,
-  días con lluvia, **grados-día** (calefacción/refrigeración) y
-  **evapotranspiración (ET)** del periodo.
-- **Récords por mes calendario:** p. ej. "el junio más caluroso de siempre".
-- **Reporte climatológico estilo NOAA:** selector de **año** y **mes/anual**.
-  - *Mensual:* una fila por día — media, máx/mín con hora, **grados-día**
-    (base 18.3 °C), lluvia, ráfaga y **ET** + resumen del mes.
-  - *Anual:* una fila por mes + resumen del año.
-  - "Día con lluvia" = ≥ 0.2 mm. La **ET** se calcula por el método Hargreaves
-    (solo temperaturas + latitud/día del año).
+### 5.5 Estadísticas
+Con **selector de año**: **resumen del año**, **promedios mensuales**,
+**contadores de días** (cálidos, noches frescas, con/sin lluvia), **grados-día**
+y **evapotranspiración**, **récords históricos** en pestañas por categoría (cada
+uno con su **top 5** y fecha), estadísticas por periodo y una **rosa de vientos**
+(16 sectores).
 
-### 5.6 Radar
-Mapa interactivo de **Ventusky** centrado en la CDMX, con capas (radar de
-precipitación, nubes, viento, temperatura…) y modelos seleccionables.
+### 5.6 Climatología
+**Climatología Local** sobre el resumen diario:
+- Tarjetas **Ayer / Este mes / Este año** (temperatura, humedad, viento, lluvia,
+  grados-día y ET).
+- **Climograma** anual (barras de lluvia + líneas de temperatura por mes).
+- **Récords por mes calendario**.
+- **Reporte estilo NOAA** (diario/mensual/anual, base 18.3 °C; "día con lluvia"
+  ≥ 0.2 mm; ET por Hargreaves).
+- **"En este día"** (años previos).
 
-### 5.7 Astronomía
-- **Sol y Luna** (Open-Meteo): amanecer/atardecer, horas de luz, fase.
-- **Próximas fases** lunares.
-- **Almanaque ampliado** (cálculo local con pyephem):
-  - Sol: orto, ocaso, mediodía solar, duración del día.
-  - **Crepúsculos:** civil (−6°), náutico (−12°) y astronómico (−18°), amanecer
-    y anochecer.
-  - **Luna:** orto/ocaso, fase, **% de iluminación**, próxima nueva y llena.
-  - **Planetas** (Mercurio, Venus, Marte, Júpiter, Saturno): orto/ocaso, altitud
-    actual, magnitud y si están sobre (●) o bajo (○) el horizonte.
+### 5.7 Radar y satélite
+Mapa interactivo de **Ventusky** (radar, nubes, viento, temperatura…) e **imagen
+satelital diaria de NASA GIBS** (color real, con selector de capa y fecha),
+centrados en la estación.
 
-### 5.8 Calidad del aire
-Índice de calidad del aire (AQI) y contaminantes (PM2.5, PM10, O₃, NO₂…) de la
-red **WAQI/aqicn** para la CDMX. Requiere un token gratuito (se configura en el
-panel). Si no hay token, la sección lo indica.
+### 5.8 Astronomía
+- **Sol** y **Luna** con **arco de trayectoria** y estadísticas (elevación,
+  azimut, iluminación, edad, distancia…).
+- Fila de **fases lunares**.
+- **Almanaque** (pyephem, local): los tres **crepúsculos** (civil −6°, náutico
+  −12°, astronómico −18°) y los **planetas** visibles (Mercurio…Saturno) con
+  orto/ocaso, altitud y magnitud.
 
-### 5.9 Vista clásica (`/`)
-Tablero sencillo con las condiciones actuales y una gráfica de temperatura, para
-consulta rápida.
+### 5.9 Calidad del aire
+- **AQI** (escala US EPA) de **WAQI/aqicn** (requiere token gratuito, se pone en
+  el panel).
+- **IMECA** estimado con las tablas oficiales de la norma **NADF-009-AIRE-2017**
+  a partir de concentraciones modeladas (Open-Meteo/CAMS): valor y categoría con
+  color, **medidor visual**, sub-índices por contaminante, **recomendaciones de
+  salud**, **pronóstico del IMECA por horas** y **aviso de contingencia**.
 
-### 5.10 Pie de página
+### 5.10 Aeronáutica
+**METAR** (observación) y **TAF** (pronóstico) **decodificados** al español, con
+la **categoría de vuelo** (VFR/MVFR/IFR/LIFR) y un **perfil atmosférico visual**
+(capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH;
+dibuja lluvia/rayos según el reporte). Buscador de cualquier código **ICAO** y
+accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).
+
+### 5.11 Vista clásica (`/`)
+Tablero sencillo para consulta rápida, **unificado con el estilo de `/pro`**
+(reutiliza sus tarjetas: condiciones actuales, viento, interior, sensores,
+pronóstico, sol y luna…). Incluye enlace **"App completa →"** a `/pro`.
+
+### 5.12 Pie de página
 Tres columnas (Estación / Datos / Proyecto) con hardware, ubicación, fuentes de
-datos y enlace al repositorio; un párrafo descriptivo; y enlaces discretos a
-**Compartir / insertar** y **⚙ Admin**.
+datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**.
 
-### 5.11 Compartir e instalar (PWA)
-- **Compartir / insertar** (`/pro/compartir`): elige unidades y tema, ve una
-  **vista previa en vivo** del widget y copia el **código `<iframe>`** para
-  incrustarlo en otra web o blog, o el **enlace directo**. El widget (`/embed`)
-  es una tarjeta compacta con las condiciones actuales que se actualiza cada
-  minuto y acepta `?units=` y `?theme=`.
-- **Instalable (PWA):** el sitio es una *Progressive Web App*; desde el móvil se
-  puede **"Añadir a pantalla de inicio"** y queda como una app con su ícono; el
-  "app shell" queda disponible sin conexión.
+### 5.13 Widget e instalar (PWA)
+- **Widget** (`/pro/compartir`): elige **unidades, tema y tamaño**, ve la
+  **vista previa** y copia el **código `<iframe>`** para incrustarlo. El widget
+  (`/embed`) es una tarjeta compacta que se actualiza cada minuto y acepta
+  `?units=` y `?theme=`.
+- **Instalable (PWA):** desde el móvil, «Añadir a pantalla de inicio» lo deja
+  como app; abre directo la versión completa (`/pro`) y el "app shell" funciona
+  sin conexión.
 
 ---
 
@@ -289,9 +293,10 @@ normalizarse** (no spamean). Canal: **Telegram** si está configurado, o el log.
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
+| **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
 
 **Telegram:** se crea un bot con @BotFather, se obtiene el `chat_id` y se pega
-token + chat id en el panel (o en `.env`). Ver procedimiento en `MEJORAS.md`.
+token + chat id en el panel (o en `.env`).
 
 ---
 
@@ -318,10 +323,13 @@ convierte según el protocolo de cada una.
 | Fuente | Qué aporta | Frecuencia / caché |
 |--------|-----------|--------------------|
 | **Estación Ecowitt** (push) | todo el dato local (real) | ~16–60 s |
-| **Open-Meteo** | pronóstico horario/diario y astronomía | 30 min |
+| **Open-Meteo** | pronóstico horario/diario y astronomía base | 30 min |
 | **Ventusky** | radar y mapas interactivos | en vivo (iframe) |
-| **aviationweather.gov** | METAR del aeropuerto MMMX | 10 min |
+| **NASA GIBS** | imagen satelital de color real | diaria |
+| **aviationweather.gov** (NOAA) | METAR y TAF (aeropuertos) | 10 min |
 | **WAQI / aqicn** | calidad del aire (AQI) | 10 min |
+| **Open-Meteo Air Quality** (CAMS) | concentraciones → IMECA estimado | 30 min |
+| **USGS / SSN** | sismos recientes cercanos | 10 min |
 | **pyephem** (local) | almanaque: crepúsculos, luna, planetas | 10 min |
 | **InfluxDB** (propio) | histórico, estadísticas, climatología | consultas en vivo |
 
@@ -346,8 +354,10 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/wind/rose?start=-7d` | rosa de vientos (16 sectores) |
 | `GET /api/almanac` | almanaque astronómico |
 | `GET /api/alerts` | alertas activas |
-| `GET /api/metar?station=MMMX` | METAR |
-| `GET /api/airquality` | calidad del aire (WAQI) |
+| `GET /api/metar?station=` · `GET /api/taf?station=` | METAR y TAF de un aeropuerto |
+| `GET /api/airquality` · `GET /api/airquality/imeca` | AQI e IMECA estimado (+ pronóstico) |
+| `GET /api/satellite` | imagen satelital NASA GIBS (proxy) |
+| `GET /api/earthquakes` | sismos recientes (USGS / SSN) |
 | `POST /api/admin/login` · `GET/POST /api/admin/settings` · `GET /api/admin/status` | administración |
 | `POST /data/report/` | **entrada** del push de la estación (Ecowitt) |
 
@@ -370,8 +380,9 @@ docker compose ps                 # verificar estado
 `ADMIN_PASSWORD`, `WEB_PORT`, TZ. El resto (alertas, QC, calibración, tokens,
 redes) es preferible dejarlo por defecto y ajustarlo desde el panel.
 
-**Backups:** respaldos periódicos del volumen de InfluxDB. (Pendiente: copiar
-fuera del VPS, p. ej. a R2/almacenamiento externo.)
+**Backups:** respaldos periódicos del volumen de InfluxDB, con copia externa a
+**Cloudflare R2** (ver `docs/backups-r2.md`). **Uptime:** monitor externo de
+disponibilidad (ver `uptime-worker/`).
 
 **Persistencia:** los ajustes del panel viven en el volumen `receiver-data`
 (`/data/settings.json`), así que sobreviven a reinicios y reconstrucciones.
@@ -403,30 +414,35 @@ fuera del VPS, p. ej. a R2/almacenamiento externo.)
   base (18.3 °C); útil para energía/agricultura.
 - **Crepúsculo civil/náutico/astronómico:** momentos en que el Sol está 6°/12°/18°
   bajo el horizonte (luz decreciente).
-- **AQI:** índice de calidad del aire (a mayor número, peor calidad).
-- **METAR:** reporte meteorológico aeronáutico estándar (aquí, del MMMX).
+- **AQI:** índice de calidad del aire, escala US EPA (a mayor número, peor calidad).
+- **IMECA:** Índice Metropolitano de la Calidad del Aire (CDMX); aquí *estimado*
+  desde concentraciones modeladas con las tablas de la norma NADF-009-AIRE-2017.
+- **METAR / TAF:** observación / pronóstico meteorológico aeronáutico de un aeropuerto.
+- **Categoría de vuelo:** VFR / MVFR / IFR / LIFR, de mejores a peores condiciones.
 - **Beaufort:** escala de fuerza del viento (0 calma … 12 huracán).
 
 ---
 
 ## 13. Estado y pendientes
 
-El estado detallado y el roadmap viven en **`docs/MEJORAS.md`**. Resumen:
+**Hecho:** despliegue con HTTPS; **Vista clásica** + `/pro` con todas sus
+secciones (Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Climatología,
+Radar y satélite, Astronomía, Calidad del aire, Aeronáutica y Widget);
+**tema claro/oscuro**, unidades y FX; **PWA instalable** y **widget insertable**
+(`/embed`). Alertas completas —incluida calidad del aire (AQI/IMECA)—, Telegram y
+MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas,
+pronóstico local y publicación a 5 redes. Histórico Día/Mes/Año, récords
+ampliados con **top-5**, **"en este día"**, reporte NOAA, **climograma**,
+**grados-día + ET**, **rosa de vientos** y almanaque; **IMECA** estimado;
+**satélite NASA GIBS**; **METAR/TAF** con perfil atmosférico; sismos; backups a
+R2 y monitor de uptime externo.
 
-**Hecho:** despliegue con HTTPS, vista clásica + `/pro` con 8 secciones,
-**tema claro/oscuro**, unidades y FX, **PWA instalable**, **widget insertable**
-(`/embed`) y página **Compartir**; alertas completas (temp, viento, **ráfaga**,
-lluvia, **lluvia diaria**, **presión**, estación caída, batería, sensor perdido),
-Telegram, MQTT/HA; control de calidad (rangos + picos), calibración, variables
-derivadas ampliadas, pronóstico local, publicación a 5 redes; resumen diario,
-récords ampliados, **"en este día"**, reporte NOAA, **grados-día + ET**,
-**rosa de vientos** y almanaque ampliado.
+**Pendiente:** versión en inglés (i18n); acciones del usuario (crear bot de
+Telegram, token WAQI, credenciales de las redes públicas); y poblar el histórico
+real cuando llegue el **WS2910**.
 
-**Pendiente:** i18n/inglés (decisión); monitor de uptime externo; backups fuera
-del VPS (R2); Grafana; **publicar el artículo de blog** (borrador en
-`docs/blog-articulo.md`); y las acciones del usuario (crear bot de Telegram,
-token WAQI, credenciales de las redes públicas).
+> Notas de estudio y planeación (exploratorias) quedan archivadas en `docs/archivo/`.
 
 ---
 
-*Última actualización: 2026-07-08.*
+*Última actualización: 2026-07-11.*
