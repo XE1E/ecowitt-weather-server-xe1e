@@ -3,7 +3,9 @@ import { RefreshCw } from 'lucide-react'
 import { WeatherCard } from './components/WeatherCard'
 import { WeatherIcon } from './components/WeatherIcon'
 import { WeatherFX } from './components/WeatherFX'
-import { WindCompass } from './components/WindCompass'
+import { WindFlipCard } from './components/station/WindFlipCard'
+import { InteriorCard } from './components/station/InteriorCard'
+import { ExtraSensorsCard } from './components/station/ExtraSensorsCard'
 import { TemperatureChart } from './components/TemperatureChart'
 import { StatsSummary } from './components/StatsSummary'
 import { Forecast } from './components/Forecast'
@@ -90,21 +92,6 @@ function App() {
   const offline = isStale(data.received_at)
   const tempStats = stats?.stats?.temperature_outdoor
 
-  // WN31 channels (1-8) that reported data
-  const WN31_COLORS = [
-    'text-amber-400', 'text-lime-400', 'text-teal-400', 'text-indigo-400',
-    'text-pink-400', 'text-cyan-400', 'text-emerald-400', 'text-fuchsia-400',
-  ]
-  const wn31Channels = Array.from({ length: 8 }, (_, i) => i + 1)
-    .map((ch) => ({
-      ch,
-      temp: data[`temperature_ch${ch}` as keyof WeatherData] as number | undefined,
-      humidity: data[`humidity_ch${ch}` as keyof WeatherData] as number | undefined,
-      batteryLow: (data[`battery_ch${ch}` as keyof WeatherData] as boolean | undefined) === false,
-      color: WN31_COLORS[ch - 1],
-    }))
-    .filter((c) => c.temp !== undefined || c.humidity !== undefined)
-
   return (
     <>
       <WeatherFX type={cond.fx} intensity={cond.intensity} />
@@ -178,89 +165,21 @@ function App() {
             />
           </div>
 
-          {/* Wind + Rain detail */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="card col-span-1 lg:col-span-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="card-title">
-                    <WeatherIcon name="windsock" size={22} /> Viento
-                  </p>
-                  <p className="card-value text-emerald-400">
-                    {data.wind_speed?.toFixed(1)}
-                    <span className="card-unit">km/h</span>
-                  </p>
-                  <p className="text-slate-400 mt-2">
-                    Ráfaga: {data.wind_gust?.toFixed(1)} km/h
-                    {data.wind_gust_max_daily !== undefined && ` · Máx hoy: ${data.wind_gust_max_daily.toFixed(1)} km/h`}
-                  </p>
-                </div>
-                <WindCompass direction={data.wind_direction || 0} />
-              </div>
-            </div>
-
-            <div className="card">
-              <p className="card-title">
-                <WeatherIcon name="raindrops" size={22} /> Lluvia
-              </p>
-              <p className="card-value text-blue-400">
-                {data.rain_daily?.toFixed(1)}
-                <span className="card-unit">mm</span>
-              </p>
-              <div className="mt-4 space-y-1 text-sm text-slate-400">
-                <p>Tasa: {data.rain_rate?.toFixed(1)} mm/h</p>
-                <p>Semanal: {data.rain_weekly?.toFixed(1)} mm</p>
-                <p>Mensual: {data.rain_monthly?.toFixed(1)} mm</p>
-              </div>
-            </div>
+          {/* Viento · Interior · Sensores adicionales (mismo estilo que /pro) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-start">
+            <WindFlipCard data={data} />
+            <InteriorCard data={data} />
+            <ExtraSensorsCard data={data} />
           </div>
 
-          {/* 7-day forecast (debajo de viento y lluvia) */}
+          {/* 7-day forecast */}
           {forecast && <Forecast days={forecast.days} />}
-
-          {/* Indoor */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <WeatherCard
-              title="Temperatura Interior" value={data.temperature_indoor} unit="°C"
-              iconName="thermometer" color="text-orange-400" offline={offline}
-            />
-            <WeatherCard
-              title="Humedad Interior" value={data.humidity_indoor} unit="%"
-              iconName="humidity" color="text-cyan-400" offline={offline}
-            />
-          </div>
 
           {/* Astronomy */}
           {forecast && <Astronomy astro={forecast.astro} />}
 
           {/* Daily stats summary */}
           <StatsSummary stats={stats?.stats ?? null} />
-
-          {/* WN31 extra sensors (up to 8 channels) */}
-          {wn31Channels.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-slate-300 mb-4">Sensores Adicionales (WN31)</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {wn31Channels.map(({ ch, temp, humidity, batteryLow, color }) => {
-                  const parts: string[] = []
-                  if (humidity !== undefined) parts.push(`Humedad: ${humidity}%`)
-                  if (batteryLow) parts.push('⚠ Batería baja')
-                  return (
-                    <WeatherCard
-                      key={ch}
-                      title={`Canal ${ch}`}
-                      value={temp}
-                      unit="°C"
-                      iconName="thermometer"
-                      color={color}
-                      offline={offline}
-                      subtitle={parts.length > 0 ? parts.join(' · ') : undefined}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Historical chart */}
           <div className="card">

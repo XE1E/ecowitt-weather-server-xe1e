@@ -63,7 +63,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </StationDataProvider>
       </UnitsProvider>
     ) : (
-      <App />
+      <UnitsProvider>
+        <App />
+      </UnitsProvider>
     )}
   </React.StrictMode>,
 )
