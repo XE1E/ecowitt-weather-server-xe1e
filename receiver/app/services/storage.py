@@ -16,6 +16,19 @@ from .parser import get_tags, get_fields
 logger = logging.getLogger(__name__)
 
 
+def _station_filter(station: Optional[str]) -> str:
+    """
+    Línea Flux para acotar por estación.
+
+    station=None  -> estación principal: registros SIN tag 'station' (incluye
+                     todo el histórico previo a multi-estación).
+    station="x"   -> estación secundaria concreta.
+    """
+    if station is None:
+        return '|> filter(fn: (r) => not exists r["station"])'
+    return f'|> filter(fn: (r) => r["station"] == "{station}")'
+
+
 class InfluxDBStorage:
     """InfluxDB storage handler for weather data."""
 
@@ -84,7 +97,9 @@ class InfluxDBStorage:
             logger.error(f"Error writing to InfluxDB: {e}")
             raise
 
-    async def get_latest(self, measurement: str = "weather") -> Dict[str, Any]:
+    async def get_latest(
+        self, measurement: str = "weather", station: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Return the most recent reading as a dict of field -> value.
 
@@ -96,6 +111,7 @@ class InfluxDBStorage:
                 from(bucket: "{self.bucket}")
                 |> range(start: -30d)
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
                 |> last()
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
@@ -118,7 +134,8 @@ class InfluxDBStorage:
         start: str = "-24h",
         stop: str = "now()",
         measurement: str = "weather",
-        fields: Optional[List[str]] = None
+        fields: Optional[List[str]] = None,
+        station: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Query weather data from InfluxDB.
@@ -143,6 +160,7 @@ class InfluxDBStorage:
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
                 {field_filter}
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
@@ -164,7 +182,8 @@ class InfluxDBStorage:
             raise
 
     async def get_daily_stats(
-        self, measurement: str = "weather", start: str = "-24h", stop: str = "now()"
+        self, measurement: str = "weather", start: str = "-24h", stop: str = "now()",
+        station: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get statistics (min, max, avg) for key measurements over a time range.
@@ -197,6 +216,7 @@ class InfluxDBStorage:
                     from(bucket: "{self.bucket}")
                     |> range(start: {start}, stop: {stop})
                     |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                    {_station_filter(station)}
                     |> filter(fn: (r) => r["_field"] == "{field}")
                     |> group()
                 '''
@@ -292,7 +312,8 @@ class InfluxDBStorage:
             return []
 
     async def get_field_value_ago(
-        self, field: str, start: str = "-3h", measurement: str = "weather"
+        self, field: str, start: str = "-3h", measurement: str = "weather",
+        station: Optional[str] = None
     ) -> Optional[float]:
         """Valor más antiguo del campo dentro de la ventana (p. ej. hace ~3 h)."""
         try:
@@ -300,6 +321,7 @@ class InfluxDBStorage:
                 from(bucket: "{self.bucket}")
                 |> range(start: {start})
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
                 |> filter(fn: (r) => r["_field"] == "{field}")
                 |> first()
             '''
@@ -311,13 +333,16 @@ class InfluxDBStorage:
             logger.error(f"Error fetching {field} ago: {e}")
             return None
 
-    async def get_comparison(self, measurement: str = "weather") -> Dict[str, Any]:
+    async def get_comparison(
+        self, measurement: str = "weather", station: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Promedios de las últimas 24 h vs las 24 h previas (aprox. 'vs ayer')."""
         def avg(field: str, start: str, stop: str):
             q = f'''
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
                 |> filter(fn: (r) => r["_field"] == "{field}")
                 |> mean()
             '''

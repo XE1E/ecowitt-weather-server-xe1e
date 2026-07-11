@@ -5,6 +5,7 @@ from app.services.parser import (
     describe_device,
     get_tags,
     get_fields,
+    resolve_station,
 )
 from app.services.converter import convert_to_metric
 
@@ -91,6 +92,54 @@ def test_tags_and_fields_separation():
     assert "station_type" not in fields
     # Measurements are fields
     assert "temperature_outdoor_f" in fields
+
+
+# Payload típico de un GW1100: solo sensor interconstruido (interior) +
+# presión barométrica. Sin sensores exteriores, viento, lluvia ni UV.
+GW1100_PAYLOAD = {
+    "PASSKEY": "F00DCAFEF00DCAFEF00DCAFEF00DCAFE",
+    "stationtype": "GW1100A_V2.3.4",
+    "dateutc": "2026-07-05+14:30:00",
+    "tempinf": "73.4",
+    "humidityin": "55",
+    "baromrelin": "29.90",
+    "baromabsin": "29.80",
+    "freq": "915M",
+    "model": "GW1100A",
+}
+
+STATION_MAP = {"F00DCAFEF00DCAFEF00DCAFEF00DCAFE": "gw1100"}
+
+
+def test_resolve_station_secondary():
+    """Un passkey en el mapa se resuelve a su nombre de estación secundaria."""
+    parsed = parse_ecowitt_data(GW1100_PAYLOAD)
+    assert resolve_station(parsed, STATION_MAP) == "gw1100"
+
+
+def test_resolve_station_primary_when_unknown():
+    """Un passkey desconocido (o el de la principal) resuelve a None."""
+    parsed = parse_ecowitt_data(WS2910_PAYLOAD)
+    assert resolve_station(parsed, STATION_MAP) is None
+
+
+def test_resolve_station_no_passkey():
+    """Sin passkey no hay estación secundaria (None = principal)."""
+    assert resolve_station({}, STATION_MAP) is None
+
+
+def test_station_tag_only_when_set():
+    """El tag 'station' se escribe solo si se marca (secundaria); nunca en fields."""
+    parsed = parse_ecowitt_data(GW1100_PAYLOAD)
+    # Sin marcar: la principal NO lleva tag 'station'
+    assert "station" not in get_tags(parsed)
+
+    # Marcada como secundaria (lo que hace main.py antes de escribir)
+    parsed["station"] = "gw1100"
+    tags = get_tags(parsed)
+    fields = get_fields(parsed)
+    assert tags["station"] == "gw1100"
+    assert "station" not in fields  # es tag, no measurement
 
 
 def test_full_pipeline_to_metric():

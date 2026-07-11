@@ -4,7 +4,7 @@ Ecowitt Protocol Parser
 Parses the form-encoded data sent by Ecowitt gateways.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
 
@@ -105,8 +105,11 @@ FIELD_MAPPING = {
 # Fields that are metadata (not measurements)
 METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequency"}
 
-# Fields that are tags in InfluxDB
-TAG_FIELDS = {"station_type", "model", "frequency"}
+# Fields that are tags in InfluxDB.
+# 'station' identifica una estación SECUNDARIA (p. ej. un GW1100). La estación
+# principal no lleva este tag (queda como 'not exists station' en InfluxDB), lo
+# que preserva la semántica del histórico previo a multi-estación.
+TAG_FIELDS = {"station_type", "model", "frequency", "station"}
 
 # Battery fields that report a NUMERIC voltage or 0-5 level instead of a
 # binary 0/1 OK/Low flag. These must NOT be coerced to a boolean.
@@ -219,6 +222,21 @@ def describe_device(parsed_data: Dict[str, Any]) -> str:
         details.append(f"freq={freq}")
 
     return f"{label} ({', '.join(details)})" if details else label
+
+
+def resolve_station(
+    parsed_data: Dict[str, Any], station_map: Dict[str, str]
+) -> Optional[str]:
+    """
+    Resuelve el nombre de estación secundaria a partir del passkey.
+
+    Devuelve el nombre configurado si el passkey está en el mapa de estaciones
+    secundarias; en caso contrario None (= estación principal, sin tag).
+    """
+    passkey = parsed_data.get("passkey")
+    if not passkey:
+        return None
+    return station_map.get(passkey)
 
 
 def get_tags(parsed_data: Dict[str, Any]) -> Dict[str, str]:
