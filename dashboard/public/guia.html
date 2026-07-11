@@ -281,34 +281,40 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     <section id="web">
       <span class="sec-eyebrow">05 — Sitio web</span>
       <h2>La página web (<code>/pro</code>)</h2>
-      <p><strong>Barra superior:</strong> título y ubicación, reloj en vivo, botón de <strong>unidades</strong> (métrico ↔ imperial), botón de <strong>tema</strong> (☀️/🌙), botón <strong>FX</strong> (efectos de clima animados), enlace a la vista clásica y el <strong>cintillo</strong> de 8 secciones. Tema y unidades se recuerdan entre visitas.</p>
+      <p><strong>Barra superior:</strong> título y ubicación, reloj en vivo, botón de <strong>unidades</strong> (métrico ↔ imperial), botón de <strong>tema</strong> (☀️/🌙), botón <strong>FX</strong> (efectos de clima animados), enlace a la Vista clásica y el <strong>cintillo</strong> de secciones. Tema y unidades se recuerdan entre visitas.</p>
 
       <h3>Inicio</h3>
-      <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. lluvia, humedad, «vs ayer»), <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes), <strong>viento</strong> (rosa + Beaufort), <strong>presión</strong> (tendencia + gráfica 24 h), <strong>pronóstico local</strong> (por tendencia del barómetro), pronóstico Open-Meteo, gráfica de temperatura, precipitación, UV/solar, sol y luna, alertas, próximos eventos, sensores WN31, radar y METAR.</p>
+      <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. de lluvia, humedad, «vs ayer»); <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes, con humedad/UV/presión en cajas); <strong>viento</strong> (tarjeta que <strong>gira</strong> a la rosa de vientos al pulsar); <strong>presión</strong> (mín/máx/tendencia y gráfica de 24 h con hora); <strong>pronóstico local</strong> (por tendencia del barómetro); pronóstico Open-Meteo; gráfica de temperatura; precipitación; UV/solar; sol y luna; <strong>calidad del aire (AQI) e IMECA</strong>; último sismo; alertas; próximos eventos; e <strong>interior</strong> y <strong>sensores adicionales WN31</strong>. Abajo, el radar.</p>
+
+      <h3>Mi tablero</h3>
+      <p>Una vista <strong>personalizable</strong>: con el botón «Personalizar» eliges qué tarjetas mostrar u ocultar (las mismas del Inicio) y la selección se guarda <strong>en tu dispositivo</strong>. La tarjeta de condiciones actuales queda fija arriba.</p>
 
       <h3>Pronóstico</h3>
-      <p>Pronóstico de Open-Meteo (modelo <code>best_match</code>) horario y a varios días, con explicación de qué son los modelos y por qué el pronóstico es probabilidad, no certeza.</p>
+      <p>Pronóstico de Open-Meteo (modelo <code>best_match</code>) en pestañas <strong>por día</strong> y <strong>por hora</strong>, con tarjeta resumen del día y <strong>descripciones en lenguaje natural</strong> (NLG), más la explicación de qué son los modelos y por qué el pronóstico es probabilidad, no certeza.</p>
 
       <h3>Historia</h3>
-      <p>Gráficas del histórico propio con selector de métrica y periodo, barras de lluvia diaria acumulada y <strong>exportación a CSV</strong>.</p>
+      <p>El archivo de la estación con <strong>granularidad Día / Mes / Año</strong> y cinco grupos de <strong>gráficas interactivas</strong> (temperatura; viento con dirección; humedad y punto de rocío; radiación UV/solar; y precipitación y presión), tabla de días/meses clicable, detalle diario y <strong>exportación a CSV</strong>.</p>
 
       <h3>Estadísticas</h3>
-      <p><strong>Récords de siempre</strong> (temp máx/mín, ráfaga, día más lluvioso, presión) con su fecha; <strong>estadísticas por periodo</strong> (7 d / 30 d / año / histórico) con promedio, máx y mín (con fecha/hora); y una <strong>rosa de vientos</strong> (16 sectores, dirección dominante y % de calma).</p>
+      <p>Con selector de año: <strong>resumen del año</strong>, <strong>promedios mensuales</strong>, <strong>contadores de días</strong> (cálidos, noches frescas, con/sin lluvia), <strong>grados-día y evapotranspiración</strong>, <strong>récords históricos</strong> en pestañas por categoría (cada uno con su <strong>top 5</strong> y fecha), estadísticas por periodo y una <strong>rosa de vientos</strong>.</p>
 
       <h3>Climatología</h3>
-      <p>Sobre el resumen diario: <strong>"en este día"</strong> (años previos), resúmenes rápidos (ayer / mes / año) con <strong>grados-día y ET</strong>, <strong>récords por mes calendario</strong>, y <strong>reporte estilo NOAA</strong> mensual (fila por día, con grados-día base 18.3 °C y evapotranspiración) o anual (fila por mes).</p>
+      <p><strong>Climatología Local</strong> a partir del resumen diario: tarjetas de ayer / mes / año (temperatura, humedad, viento, lluvia, grados-día y ET), un <strong>climograma</strong> (lluvia + temperatura por mes), <strong>récords por mes</strong>, el <strong>reporte estilo NOAA</strong> (diario/mensual/anual, base 18.3 °C) y <strong>«en este día»</strong> (años previos).</p>
 
-      <h3>Radar</h3>
-      <p>Mapa interactivo de Ventusky centrado en la CDMX, con capas (radar, nubes, viento, temperatura…) y modelos seleccionables.</p>
+      <h3>Radar y satélite</h3>
+      <p>Mapa interactivo de <strong>Ventusky</strong> (radar, nubes, viento, temperatura…) e <strong>imagen satelital diaria de NASA GIBS</strong> (color real, con selector de capa y fecha), ambos centrados en la estación.</p>
 
       <h3>Astronomía</h3>
-      <p>Sol y Luna (Open-Meteo), próximas fases, y el <strong>almanaque ampliado</strong> (pyephem, local): sol (orto/ocaso/mediodía/duración), los tres crepúsculos (civil −6°, náutico −12°, astronómico −18°), luna (orto/ocaso, fase, % iluminación, próxima nueva/llena) y planetas (Mercurio…Saturno: orto/ocaso, altitud, magnitud, sobre/bajo horizonte).</p>
+      <p><strong>Sol</strong> y <strong>Luna</strong> con arco de trayectoria y estadísticas (elevación, azimut, iluminación, edad, distancia…), fila de <strong>fases lunares</strong>, y el <strong>almanaque</strong> (pyephem, local): los tres crepúsculos (civil −6°, náutico −12°, astronómico −18°) y los planetas visibles (Mercurio…Saturno) con orto/ocaso, altitud y magnitud.</p>
 
       <h3>Calidad del aire</h3>
-      <p>AQI y contaminantes (PM2.5, PM10, O₃, NO₂…) de WAQI/aqicn para la CDMX. Requiere un token gratuito (se pone en el panel).</p>
+      <p><strong>AQI</strong> (escala US EPA, vía WAQI/aqicn) e <strong>IMECA</strong> estimado con las tablas oficiales de la norma <strong>NADF-009-AIRE-2017</strong> a partir de concentraciones modeladas (Open-Meteo/CAMS): valor y categoría con color, medidor visual, sub-índices por contaminante, <strong>recomendaciones de salud</strong>, <strong>pronóstico del IMECA por horas</strong> y aviso de contingencia. El AQI usa un token gratuito de WAQI (se pone en el panel).</p>
 
-      <h3>Vista clásica, compartir e instalar</h3>
-      <p><code>/</code> es un tablero sencillo para consulta rápida. En <strong>Compartir / insertar</strong> (<code>/pro/compartir</code>) puedes copiar un <strong>widget <code>&lt;iframe&gt;</code></strong> con las condiciones actuales (o el enlace directo) para ponerlo en otra web. Y el sitio es una <strong>PWA instalable</strong>: desde el móvil, "Añadir a pantalla de inicio" lo deja como una app.</p>
+      <h3>Aeronáutica</h3>
+      <p><strong>METAR</strong> (observación) y <strong>TAF</strong> (pronóstico) decodificados al español, con la <strong>categoría de vuelo</strong> (VFR/MVFR/IFR/LIFR) y un <strong>perfil atmosférico visual</strong> (capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH; dibuja lluvia/rayos según el reporte). Con buscador de cualquier código ICAO y accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).</p>
+
+      <h3>Vista clásica · Widget · Instalar</h3>
+      <p>La <strong>Vista clásica</strong> (<code>/</code>) es un tablero sencillo para consulta rápida, unificado con el estilo de <code>/pro</code>. En <strong>Widget</strong> (<code>/pro/compartir</code>) generas un <strong><code>&lt;iframe&gt;</code></strong> con las condiciones actuales para insertarlo en otra web (eliges unidades, tema y tamaño). Y el sitio es una <strong>PWA instalable</strong>: en el móvil, «Añadir a pantalla de inicio» lo deja como app (y abre directo la versión completa).</p>
     </section>
 
     <section id="widget">
@@ -338,7 +344,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <h2>Panel de administración (<code>/pro/admin</code>)</h2>
       <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Permite editar en caliente, sin reiniciar, todo lo configurable:</p>
       <ul>
-        <li><strong>Alertas:</strong> umbrales de temp/viento/lluvia, minutos de «estación caída», batería baja y sensor perdido.</li>
+        <li><strong>Alertas:</strong> umbrales de temp/viento/ráfaga/lluvia/presión, minutos de «estación caída», batería baja, sensor perdido y calidad del aire (AQI/IMECA).</li>
         <li><strong>Control de calidad:</strong> QC por rangos y filtro de picos.</li>
         <li><strong>Calibración:</strong> offsets y factores por sensor.</li>
         <li><strong>Telegram, WAQI y redes públicas</strong> (WU, PWSWeather, Windy, OpenWeatherMap, CWOP).</li>
@@ -360,6 +366,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td>Estación caída</td><td>no llegan datos en N minutos</td></tr>
           <tr><td>Batería baja</td><td>un sensor (WN31/WS69/consola) reporta batería baja</td></tr>
           <tr><td>Sensor perdido</td><td>un sensor visto antes deja de reportar (se normaliza al volver)</td></tr>
+          <tr><td>Calidad del aire</td><td>el AQI o el IMECA superan su umbral (se revisa cada ~30 min)</td></tr>
         </tbody>
       </table></div>
     </section>
@@ -387,10 +394,13 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
         <thead><tr><th>Fuente</th><th>Qué aporta</th><th>Frecuencia</th></tr></thead>
         <tbody>
           <tr><td>Estación Ecowitt (push)</td><td>todo el dato local (real)</td><td>~16–60 s</td></tr>
-          <tr><td>Open-Meteo</td><td>pronóstico y astronomía</td><td>30 min</td></tr>
+          <tr><td>Open-Meteo</td><td>pronóstico y astronomía base</td><td>30 min</td></tr>
           <tr><td>Ventusky</td><td>radar y mapas interactivos</td><td>en vivo</td></tr>
-          <tr><td>aviationweather.gov</td><td>METAR del MMMX</td><td>10 min</td></tr>
-          <tr><td>WAQI / aqicn</td><td>calidad del aire</td><td>10 min</td></tr>
+          <tr><td>NASA GIBS</td><td>imagen satelital de color real</td><td>diaria</td></tr>
+          <tr><td>aviationweather.gov (NOAA)</td><td>METAR y TAF (aeropuertos)</td><td>10 min</td></tr>
+          <tr><td>WAQI / aqicn</td><td>calidad del aire (AQI)</td><td>10 min</td></tr>
+          <tr><td>Open-Meteo Air Quality (CAMS)</td><td>concentraciones → IMECA estimado</td><td>30 min</td></tr>
+          <tr><td>USGS / SSN</td><td>sismos recientes cercanos</td><td>10 min</td></tr>
           <tr><td>pyephem (local)</td><td>almanaque: crepúsculos, luna, planetas</td><td>10 min</td></tr>
           <tr><td>InfluxDB (propio)</td><td>histórico, estadísticas, climatología</td><td>en vivo</td></tr>
         </tbody>
@@ -416,8 +426,10 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td><code>GET /api/wind/rose?start=-7d</code></td><td>rosa de vientos (16 sectores)</td></tr>
           <tr><td><code>GET /api/almanac</code></td><td>almanaque astronómico</td></tr>
           <tr><td><code>GET /api/alerts</code></td><td>alertas activas</td></tr>
-          <tr><td><code>GET /api/metar?station=MMMX</code></td><td>METAR</td></tr>
-          <tr><td><code>GET /api/airquality</code></td><td>calidad del aire</td></tr>
+          <tr><td><code>GET /api/metar?station=</code> · <code>/api/taf?station=</code></td><td>METAR y TAF de un aeropuerto</td></tr>
+          <tr><td><code>GET /api/airquality</code> · <code>/api/airquality/imeca</code></td><td>AQI e IMECA estimado (+ pronóstico)</td></tr>
+          <tr><td><code>GET /api/satellite</code></td><td>imagen satelital NASA GIBS (proxy)</td></tr>
+          <tr><td><code>GET /api/earthquakes</code></td><td>sismos recientes (USGS / SSN)</td></tr>
           <tr><td><code>POST /data/report/</code></td><td><strong>entrada</strong> del push de la estación</td></tr>
         </tbody>
       </table></div>
@@ -457,8 +469,10 @@ docker compose ps                 # verificar estado</code></pre>
           <tr><td>Tendencia barométrica</td><td>cambio de presión en ~3 h; base del pronóstico local</td></tr>
           <tr><td>Grados-día</td><td>demanda de calefacción/refrigeración respecto a una base (18.3 °C)</td></tr>
           <tr><td>Crepúsculos</td><td>Sol 6°/12°/18° bajo el horizonte (civil/náutico/astronómico)</td></tr>
-          <tr><td>AQI</td><td>índice de calidad del aire (mayor = peor)</td></tr>
-          <tr><td>METAR</td><td>reporte meteorológico aeronáutico (aquí, del MMMX)</td></tr>
+          <tr><td>AQI</td><td>índice de calidad del aire, escala US EPA (mayor = peor)</td></tr>
+          <tr><td>IMECA</td><td>Índice Metropolitano de la Calidad del Aire (CDMX); aquí <em>estimado</em> desde concentraciones modeladas</td></tr>
+          <tr><td>METAR / TAF</td><td>observación / pronóstico meteorológico aeronáutico de un aeropuerto</td></tr>
+          <tr><td>Categoría de vuelo</td><td>VFR / MVFR / IFR / LIFR: de mejores a peores condiciones para volar</td></tr>
           <tr><td>Beaufort</td><td>escala de fuerza del viento (0 calma … 12 huracán)</td></tr>
         </tbody>
       </table></div>
@@ -467,12 +481,11 @@ docker compose ps                 # verificar estado</code></pre>
     <section id="estado">
       <span class="sec-eyebrow">14 — Estado</span>
       <h2>Estado y pendientes</h2>
-      <p>El roadmap detallado vive en <code>docs/archivo/MEJORAS.md</code>. Resumen:</p>
-      <p><span class="pill">Hecho</span> Despliegue con HTTPS, vista clásica + <code>/pro</code> con 8 secciones, <strong>tema claro/oscuro</strong>, unidades y FX, <strong>PWA instalable</strong>, <strong>widget insertable</strong> y página Compartir; alertas completas (temp, viento, ráfaga, lluvia, lluvia diaria, presión, estación caída, batería, sensor perdido), Telegram, MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas, pronóstico local, publicación a 5 redes; resumen diario, récords ampliados, «en este día», reporte NOAA, grados-día + ET, rosa de vientos y almanaque ampliado.</p>
-      <p><span class="pill warn">Pendiente</span> i18n/inglés (decisión); monitor de uptime externo; backups fuera del VPS (R2); Grafana; publicar el artículo de blog; y las acciones del usuario (bot de Telegram, token WAQI, credenciales de redes).</p>
+      <p><span class="pill">Hecho</span> Despliegue con HTTPS; <strong>Vista clásica</strong> + <code>/pro</code> con todas sus secciones (Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Climatología, Radar y satélite, Astronomía, Calidad del aire, Aeronáutica y Widget); <strong>tema claro/oscuro</strong>, unidades y FX; <strong>PWA instalable</strong> y <strong>widget insertable</strong>. Alertas completas —incluida calidad del aire (AQI/IMECA)—, Telegram y MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas, pronóstico local y publicación a 5 redes. Histórico Día/Mes/Año, récords ampliados con top-5, «en este día», reporte NOAA, climograma, grados-día + ET, rosa de vientos, almanaque; <strong>IMECA</strong> estimado; <strong>satélite NASA GIBS</strong>; <strong>METAR/TAF</strong> con perfil atmosférico; sismos; backups a R2 y monitor de uptime externo.</p>
+      <p><span class="pill warn">Pendiente</span> versión en inglés (i18n); acciones del usuario (bot de Telegram, token WAQI, credenciales de redes); y poblar el histórico real cuando llegue el WS2910.</p>
     </section>
 
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-08 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-11 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
   </main>
 </div>
 
