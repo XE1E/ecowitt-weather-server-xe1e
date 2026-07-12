@@ -24,6 +24,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
+| **Estación remota** | Segunda estación (p. ej. un Ecowitt **GW1100**) que envía al mismo servidor; sus datos se guardan **por separado** y se ven en su propia página, solo lectura: condiciones, tendencias, estadística e histórico |
 | **Widget** | Generador de un `<iframe>` con las condiciones actuales para insertar en otra web |
 
 Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para editar en caliente alertas, calibración, QC, Telegram y publicación a redes públicas; **tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.

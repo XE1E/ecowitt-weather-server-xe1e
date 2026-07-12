@@ -14,6 +14,7 @@ import { SunMoonCard } from '../components/station/SunMoonCard'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
 import { InteriorCard } from '../components/station/InteriorCard'
+import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { EarthquakesCard } from '../components/station/EarthquakesCard'
 import { RadarCard } from '../components/station/RadarCard'
@@ -45,6 +46,7 @@ export function MiTableroPage() {
     { key: 'sky', label: 'Próximos eventos del cielo', span: 1, render: () => <SkyEventsCard /> },
     { key: 'interior', label: 'Interior', span: 1, render: () => <InteriorCard data={data!} /> },
     { key: 'extra', label: 'Sensores adicionales', span: 1, render: () => <ExtraSensorsCard data={data!} /> },
+    { key: 'remote', label: 'Estación remota', span: 1, render: () => <RemoteStationCard /> },
     { key: 'radar', label: 'Radar', span: 3, render: () => <RadarCard /> },
   ]
   const ALL = CARDS.map((c) => c.key)
