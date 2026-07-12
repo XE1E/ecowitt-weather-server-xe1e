@@ -54,6 +54,7 @@ Kit **Ecowitt WS2910** + sensor **WS69** + termohigrómetros **WN31**.
 | **Consola WS2910** | Pantalla + puente Wi-Fi | Presión (barómetro interno), temp/humedad interior; **envía todos los datos** al servidor por Wi-Fi (protocolo Ecowitt) |
 | **WS69 (7-en-1)** | Sensor exterior integrado | Temperatura y humedad exterior, velocidad y dirección del viento, ráfaga, lluvia (tasa/evento/día/…), radiación solar e índice UV |
 | **WN31 (×8)** | Termohigrómetros de canal | Temperatura y humedad en hasta **8 canales** independientes (habitaciones, exterior secundario, etc.) |
+| **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). No dispara alertas ni publica a redes |
 
 **Baterías:** la WS69, la consola y cada canal WN31 reportan estado de batería
 (OK / baja). El sistema **avisa** cuando alguna está baja (ver §7).
@@ -152,7 +153,7 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 - **Vista clásica:** enlace a `/`.
 - **Cintillo** de secciones: Inicio · Mi tablero · Pronóstico · Historia ·
   Estadísticas · Climatología · Radar · Astronomía · Calidad del aire ·
-  Aeronáutica · Widget.
+  Aeronáutica · Estación remota · Widget.
 
 ### 5.1 Inicio
 Panel principal con el estado actual:
@@ -176,7 +177,9 @@ Panel principal con el estado actual:
 ### 5.2 Mi tablero
 Vista **personalizable**: con el botón «Personalizar» eliges qué tarjetas mostrar
 u ocultar (las mismas del Inicio) y la selección se guarda **en tu dispositivo**.
-La tarjeta de condiciones actuales queda fija arriba.
+La tarjeta de condiciones actuales queda fija arriba. Entre las tarjetas
+disponibles está la de la **Estación remota** (resumen compacto de la segunda
+estación; ver §5.11).
 
 ### 5.3 Pronóstico
 Pronóstico de **Open-Meteo** (modelo `best_match`) en pestañas **por día** y
@@ -235,16 +238,29 @@ la **categoría de vuelo** (VFR/MVFR/IFR/LIFR) y un **perfil atmosférico visual
 dibuja lluvia/rayos según el reporte). Buscador de cualquier código **ICAO** y
 accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).
 
-### 5.11 Vista clásica (`/`)
+### 5.11 Estación remota
+Página **solo lectura** para una **segunda estación** (p. ej. un Ecowitt
+**GW1100**) que envía al mismo servidor. Sus datos se guardan **separados** de la
+principal (etiqueta interna por estación), así que **no la afectan**; y esta
+estación **no dispara alertas ni publica a redes públicas**. Muestra:
+- **Condiciones actuales:** temperatura (con **tendencia** a 3 h), humedad y **punto de rocío**.
+- **Presión** con su tendencia.
+- **Estadística** (mín/prom/máx) de temperatura, humedad y presión, con selector **24 h / 7 d / 30 d**.
+- **Histórico** con selector **Temp y humedad / Presión** y el mismo rango de tiempo.
+
+Un **resumen compacto** de esta estación está disponible también como tarjeta
+opcional en **Mi tablero** (§5.2).
+
+### 5.12 Vista clásica (`/`)
 Tablero sencillo para consulta rápida, **unificado con el estilo de `/pro`**
 (reutiliza sus tarjetas: condiciones actuales, viento, interior, sensores,
 pronóstico, sol y luna…). Incluye enlace **"App completa →"** a `/pro`.
 
-### 5.12 Pie de página
+### 5.13 Pie de página
 Tres columnas (Estación / Datos / Proyecto) con hardware, ubicación, fuentes de
 datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**.
 
-### 5.13 Widget e instalar (PWA)
+### 5.14 Widget e instalar (PWA)
 - **Widget** (`/pro/compartir`): elige **unidades, tema y tamaño**, ve la
   **vista previa** y copia el **código `<iframe>`** para incrustarlo. El widget
   (`/embed`) es una tarjeta compacta que se actualiza cada minuto y acepta
@@ -361,6 +377,11 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `POST /api/admin/login` · `GET/POST /api/admin/settings` · `GET /api/admin/status` | administración |
 | `POST /data/report/` | **entrada** del push de la estación (Ecowitt) |
 
+**Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan
+`?station=<nombre>` (p. ej. `gw1100`) para consultar una **estación secundaria**;
+sin el parámetro devuelven la **principal**. Las secundarias se configuran en
+`SECONDARY_STATIONS` del `.env` con el formato `passkey:nombre`.
+
 ---
 
 ## 11. Operación y mantenimiento
@@ -435,7 +456,9 @@ pronóstico local y publicación a 5 redes. Histórico Día/Mes/Año, récords
 ampliados con **top-5**, **"en este día"**, reporte NOAA, **climograma**,
 **grados-día + ET**, **rosa de vientos** y almanaque; **IMECA** estimado;
 **satélite NASA GIBS**; **METAR/TAF** con perfil atmosférico; sismos; backups a
-R2 y monitor de uptime externo.
+R2 y monitor de uptime externo. **Multi-estación**: soporte de una **estación
+remota** secundaria (aislada por tag, con su propia página solo-lectura y tarjeta
+opcional en Mi tablero).
 
 **Pendiente:** versión en inglés (i18n); acciones del usuario (crear bot de
 Telegram, token WAQI, credenciales de las redes públicas); y poblar el histórico

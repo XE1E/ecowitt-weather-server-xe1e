@@ -42,6 +42,7 @@ Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para e
 | Consola + sensor exterior | Ecowitt **WS2910** (kit con **WS69**) |
 | Sensor T/H interior o por canal | Ecowitt **WN31** (hasta 8 canales) |
 | Gateway (upgrade opcional) | Ecowitt **GW3000** — API local / microSD / Ethernet |
+| Estación remota (opcional) | Ecowitt **GW1100** — 2ª estación que envía al mismo servidor (secundaria) |
 
 Frecuencia 915 MHz (América). El **WS2910 basta por sí solo**: envía por *push* con protocolo Ecowitt, sin necesidad de estar en la misma red que el servidor.
 
@@ -141,6 +142,8 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
 | GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
 | GET | `/health` | Estado del servicio |
+
+> **Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan `?station=<nombre>` para consultar una **estación secundaria** (p. ej. `gw1100`); sin el parámetro devuelven la **principal**.
 
 Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 
