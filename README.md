@@ -24,6 +24,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
+| **Estación remota** | Segunda estación (p. ej. un Ecowitt **GW1100**) que envía al mismo servidor; sus datos se guardan **por separado** y se ven en su propia página, solo lectura: condiciones, tendencias, estadística e histórico |
 | **Widget** | Generador de un `<iframe>` con las condiciones actuales para insertar en otra web |
 
 Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para editar en caliente alertas, calibración, QC, Telegram y publicación a redes públicas; **tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
@@ -41,6 +42,7 @@ Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para e
 | Consola + sensor exterior | Ecowitt **WS2910** (kit con **WS69**) |
 | Sensor T/H interior o por canal | Ecowitt **WN31** (hasta 8 canales) |
 | Gateway (upgrade opcional) | Ecowitt **GW3000** — API local / microSD / Ethernet |
+| Estación remota (opcional) | Ecowitt **GW1100** — 2ª estación que envía al mismo servidor (secundaria) |
 
 Frecuencia 915 MHz (América). El **WS2910 basta por sí solo**: envía por *push* con protocolo Ecowitt, sin necesidad de estar en la misma red que el servidor.
 
@@ -140,6 +142,8 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
 | GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
 | GET | `/health` | Estado del servicio |
+
+> **Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan `?station=<nombre>` para consultar una **estación secundaria** (p. ej. `gw1100`); sin el parámetro devuelven la **principal**.
 
 Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 

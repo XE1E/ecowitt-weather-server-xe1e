@@ -9,12 +9,12 @@ from fastapi import FastAPI, Request, HTTPException, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 import asyncio
 import logging
 
 from .config import settings
-from .services.parser import parse_ecowitt_data, describe_device
+from .services.parser import parse_ecowitt_data, describe_device, resolve_station
 from .services.converter import convert_to_metric, calculate_derived_values
 from .services.calibration import apply_calibration
 from .services.quality import quality_check, spike_check
@@ -65,8 +65,10 @@ storage = InfluxDBStorage(
     bucket=settings.influxdb_bucket
 )
 
-# Store latest data in memory for quick access
-latest_data: dict = {}
+# Última lectura en memoria, por estación. Clave None = estación principal;
+# clave "nombre" = estación secundaria (p. ej. un GW1100). Acceso rápido para
+# /api/current y para pasar la lectura previa al filtro de picos por estación.
+latest_by_station: Dict[Optional[str], dict] = {}
 
 # Weather alerts (Telegram / log)
 alert_service = AlertService(settings)
@@ -84,7 +86,8 @@ async def station_watchdog():
     while True:
         try:
             await alert_service.check_station(
-                latest_data.get("received_at"), datetime.utcnow(), threshold
+                latest_by_station.get(None, {}).get("received_at"),
+                datetime.utcnow(), threshold
             )
         except Exception as e:
             logger.error(f"Watchdog error: {e}")
@@ -155,12 +158,17 @@ async def startup_event():
 
     # Repopulate the in-memory latest reading from InfluxDB so /api/current
     # survives restarts (shows the last stored value instead of "no data").
-    global latest_data
+    # Se restaura la principal (None) y cada estación secundaria configurada.
     try:
         last = await storage.get_latest()
         if last:
-            latest_data = last
-            logger.info("Loaded last reading from InfluxDB into memory")
+            latest_by_station[None] = last
+            logger.info("Loaded last primary reading from InfluxDB into memory")
+        for name in set(settings.secondary_station_map.values()):
+            last_s = await storage.get_latest(station=name)
+            if last_s:
+                latest_by_station[name] = last_s
+                logger.info(f"Loaded last reading for station '{name}' from InfluxDB")
     except Exception as e:
         logger.warning(f"Could not preload last reading: {e}")
 
@@ -216,7 +224,6 @@ async def receive_ecowitt_data(request: Request):
     The station sends data as a form-encoded POST request using the
     Ecowitt protocol (Weather Services -> Customized -> Protocol: Ecowitt).
     """
-    global latest_data
     try:
         # Parse form data
         form_data = await request.form()
@@ -227,23 +234,35 @@ async def receive_ecowitt_data(request: Request):
         # Parse Ecowitt protocol
         parsed_data = parse_ecowitt_data(raw_data)
 
+        # ¿Estación principal (None) o secundaria (nombre)? Determina el tag,
+        # el aislamiento de alertas/publicación y la lectura previa para el
+        # filtro de picos.
+        station = resolve_station(parsed_data, settings.secondary_station_map)
+
         # Convert units if needed (sin derivados: se calculan tras calibración/QC)
         if settings.output_unit_system == "metric":
             parsed_data = convert_to_metric(parsed_data, compute_derived=False)
 
-        # Pipeline estilo WeeWX: calibrar -> QC rangos -> QC picos -> derivar
-        # (latest_data aún contiene la lectura PREVIA en este punto)
+        # Pipeline estilo WeeWX: calibrar -> QC rangos -> QC picos -> derivar.
+        # El filtro de picos compara contra la lectura PREVIA de ESA estación
+        # (no una global) para no generar falsos picos al mezclar estaciones.
+        prev = latest_by_station.get(station)
         parsed_data = apply_calibration(parsed_data, settings)
         parsed_data, _ = quality_check(parsed_data, settings)
-        parsed_data, _ = spike_check(parsed_data, latest_data, settings)
+        parsed_data, _ = spike_check(parsed_data, prev, settings)
         if settings.output_unit_system == "metric":
             parsed_data = calculate_derived_values(parsed_data)
 
         # Add metadata
         parsed_data["received_at"] = datetime.utcnow().isoformat()
 
-        # Store latest data in memory
-        latest_data = parsed_data.copy()
+        # Tag de estación secundaria (la principal queda SIN tag). Debe fijarse
+        # antes de escribir para que get_tags() lo incluya.
+        if station is not None:
+            parsed_data["station"] = station
+
+        # Store latest data in memory (por estación)
+        latest_by_station[station] = parsed_data.copy()
 
         # Write to InfluxDB
         await storage.write(parsed_data)
@@ -255,23 +274,26 @@ async def receive_ecowitt_data(request: Request):
             f"Wind: {parsed_data.get('wind_speed')} km/h"
         )
 
-        # Publish to MQTT (never let this break ingestion)
-        try:
-            mqtt_publisher.publish(parsed_data)
-        except Exception as e:
-            logger.error(f"MQTT publish failed: {e}")
+        # MQTT, alertas y publicación a redes públicas SOLO para la estación
+        # principal. Las secundarias (GW1100, etc.) solo registran datos.
+        if station is None:
+            # Publish to MQTT (never let this break ingestion)
+            try:
+                mqtt_publisher.publish(parsed_data)
+            except Exception as e:
+                logger.error(f"MQTT publish failed: {e}")
 
-        # Evaluate weather alerts (never let this break ingestion)
-        try:
-            await alert_service.process(parsed_data)
-        except Exception as e:
-            logger.error(f"Alert processing failed: {e}")
+            # Evaluate weather alerts (never let this break ingestion)
+            try:
+                await alert_service.process(parsed_data)
+            except Exception as e:
+                logger.error(f"Alert processing failed: {e}")
 
-        # Publicar a redes públicas (WU/PWSWeather/Windy/OWM) sin romper ingestión
-        try:
-            await publish_all(parsed_data, settings)
-        except Exception as e:
-            logger.error(f"Public publish failed: {e}")
+            # Publicar a redes públicas (WU/PWSWeather/Windy/OWM) sin romper ingestión
+            try:
+                await publish_all(parsed_data, settings)
+            except Exception as e:
+                logger.error(f"Public publish failed: {e}")
 
         return {"status": "success", "message": "Data received"}
 
@@ -281,18 +303,24 @@ async def receive_ecowitt_data(request: Request):
 
 
 @app.get("/api/current")
-async def get_current_data():
-    """Get the most recent weather data."""
-    if not latest_data:
+async def get_current_data(station: Optional[str] = None):
+    """
+    Get the most recent weather data.
+
+    station: None/omitido = estación principal; nombre = estación secundaria.
+    """
+    data = latest_by_station.get(station)
+    if not data:
         raise HTTPException(status_code=404, detail="No data available yet")
-    return latest_data
+    return data
 
 
 @app.get("/api/history")
 async def get_history(
     start: str = "-24h",
     stop: str = "now()",
-    measurement: str = "weather"
+    measurement: str = "weather",
+    station: Optional[str] = None
 ):
     """
     Get historical weather data.
@@ -301,9 +329,12 @@ async def get_history(
         start: Start time (e.g., "-24h", "-7d", "2024-01-01T00:00:00Z")
         stop: End time (e.g., "now()", "2024-01-02T00:00:00Z")
         measurement: Measurement name
+        station: None/omitido = principal; nombre = estación secundaria
     """
     try:
-        data = await storage.query(start=start, stop=stop, measurement=measurement)
+        data = await storage.query(
+            start=start, stop=stop, measurement=measurement, station=station
+        )
         return {"data": data}
     except Exception as e:
         logger.error(f"Error querying history: {e}")
@@ -311,10 +342,15 @@ async def get_history(
 
 
 @app.get("/api/stats/daily")
-async def get_daily_stats():
-    """Get daily statistics (min, max, avg)."""
+async def get_daily_stats(station: Optional[str] = None, start: str = "-24h"):
+    """
+    Get statistics (min, max, avg) over a range.
+
+    station: None/omitido = principal; nombre = estación secundaria.
+    start: ventana Flux (p. ej. "-24h", "-7d", "-30d").
+    """
     try:
-        stats = await storage.get_daily_stats()
+        stats = await storage.get_daily_stats(start=start, station=station)
         return stats
     except Exception as e:
         logger.error(f"Error getting daily stats: {e}")
@@ -375,7 +411,7 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
     _require_admin(authorization)
     return {
         "station_offline": alert_service.station_offline,
-        "last_received": latest_data.get("received_at"),
+        "last_received": latest_by_station.get(None, {}).get("received_at"),
         "active_alerts": [{"key": k, "message": m} for k, m in alert_service.active.items()],
         "alerts_enabled": settings.alerts_enabled,
         "telegram_enabled": settings.telegram_enabled,
@@ -468,7 +504,7 @@ async def get_almanac_data():
 async def get_local_forecast():
     """Pronóstico local por tendencia barométrica (datos de nuestra estación)."""
     try:
-        p_now = latest_data.get("pressure_relative")
+        p_now = latest_by_station.get(None, {}).get("pressure_relative")
         p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
         return forecaster.local_forecast(p_now, p_3h)
     except Exception as e:

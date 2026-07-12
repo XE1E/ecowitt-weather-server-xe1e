@@ -228,6 +228,7 @@
           <tr><td><strong>Consola WS2910</strong></td><td>Pantalla + puente Wi-Fi</td><td>Presión (barómetro), temp/humedad interior; <strong>envía todos los datos</strong> al servidor por Wi-Fi (protocolo Ecowitt)</td></tr>
           <tr><td><strong>WS69 (7-en-1)</strong></td><td>Sensor exterior integrado</td><td>Temp y humedad exterior, viento y dirección, ráfaga, lluvia (tasa/evento/día…), radiación solar e índice UV</td></tr>
           <tr><td><strong>WN31 (×8)</strong></td><td>Termohigrómetros de canal</td><td>Temperatura y humedad en hasta <strong>8 canales</strong> independientes</td></tr>
+          <tr><td><strong>GW1100</strong> <em>(remota, opcional)</em></td><td>Gateway Wi-Fi Ecowitt</td><td><strong>Estación secundaria</strong>: envía al mismo servidor; sus lecturas se guardan aparte y se ven en su propia página (solo lectura). No dispara alertas ni publica a redes</td></tr>
         </tbody>
       </table></div>
       <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
@@ -287,7 +288,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. de lluvia, humedad, «vs ayer»); <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes, con humedad/UV/presión en cajas); <strong>viento</strong> (tarjeta que <strong>gira</strong> a la rosa de vientos al pulsar); <strong>presión</strong> (mín/máx/tendencia y gráfica de 24 h con hora); <strong>pronóstico local</strong> (por tendencia del barómetro); pronóstico Open-Meteo; gráfica de temperatura; precipitación; UV/solar; sol y luna; <strong>calidad del aire (AQI) e IMECA</strong>; último sismo; alertas; próximos eventos; e <strong>interior</strong> y <strong>sensores adicionales WN31</strong>. Abajo, el radar.</p>
 
       <h3>Mi tablero</h3>
-      <p>Una vista <strong>personalizable</strong>: con el botón «Personalizar» eliges qué tarjetas mostrar u ocultar (las mismas del Inicio) y la selección se guarda <strong>en tu dispositivo</strong>. La tarjeta de condiciones actuales queda fija arriba.</p>
+      <p>Una vista <strong>personalizable</strong>: con el botón «Personalizar» eliges qué tarjetas mostrar u ocultar (las mismas del Inicio) y la selección se guarda <strong>en tu dispositivo</strong>. La tarjeta de condiciones actuales queda fija arriba. Entre las disponibles está la de la <strong>Estación remota</strong> (resumen compacto de la segunda estación).</p>
 
       <h3>Pronóstico</h3>
       <p>Pronóstico de Open-Meteo (modelo <code>best_match</code>) en pestañas <strong>por día</strong> y <strong>por hora</strong>, con tarjeta resumen del día y <strong>descripciones en lenguaje natural</strong> (NLG), más la explicación de qué son los modelos y por qué el pronóstico es probabilidad, no certeza.</p>
@@ -312,6 +313,9 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
 
       <h3>Aeronáutica</h3>
       <p><strong>METAR</strong> (observación) y <strong>TAF</strong> (pronóstico) decodificados al español, con la <strong>categoría de vuelo</strong> (VFR/MVFR/IFR/LIFR) y un <strong>perfil atmosférico visual</strong> (capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH; dibuja lluvia/rayos según el reporte). Con buscador de cualquier código ICAO y accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).</p>
+
+      <h3>Estación remota</h3>
+      <p>Página <strong>solo lectura</strong> para una <strong>segunda estación</strong> (p. ej. un Ecowitt <strong>GW1100</strong>) que envía al mismo servidor. Sus datos se guardan <strong>separados</strong> de la principal, así que no la afectan; y esta estación <strong>no dispara alertas ni publica a redes</strong>. Muestra condiciones actuales (temperatura con <strong>tendencia</strong> a 3 h, humedad y <strong>punto de rocío</strong>), <strong>presión</strong> con su tendencia, <strong>estadística</strong> (mín/prom/máx con selector 24 h / 7 d / 30 d) e <strong>histórico</strong> (Temp y humedad / Presión). Hay un resumen compacto como tarjeta opcional en <strong>Mi tablero</strong>.</p>
 
       <h3>Vista clásica · Widget · Instalar</h3>
       <p>La <strong>Vista clásica</strong> (<code>/</code>) es un tablero sencillo para consulta rápida, unificado con el estilo de <code>/pro</code>. En <strong>Widget</strong> (<code>/pro/compartir</code>) generas un <strong><code>&lt;iframe&gt;</code></strong> con las condiciones actuales para insertarlo en otra web (eliges unidades, tema y tamaño). Y el sitio es una <strong>PWA instalable</strong>: en el móvil, «Añadir a pantalla de inicio» lo deja como app (y abre directo la versión completa).</p>
@@ -433,6 +437,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td><code>POST /data/report/</code></td><td><strong>entrada</strong> del push de la estación</td></tr>
         </tbody>
       </table></div>
+      <p><strong>Multi-estación:</strong> <code>/api/current</code>, <code>/api/history</code> y <code>/api/stats/daily</code> aceptan <code>?station=&lt;nombre&gt;</code> (p. ej. <code>gw1100</code>) para consultar una <strong>estación secundaria</strong>; sin el parámetro devuelven la <strong>principal</strong>.</p>
     </section>
 
     <section id="operacion">

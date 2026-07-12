@@ -18,6 +18,7 @@ const NAV_ACTIVE = [
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
   { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
   { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
+  { to: '/pro/remota', label: 'Estación remota', end: false },
   { to: '/pro/compartir', label: 'Widget', end: false },
 ]
 const NAV_SOON: string[] = []

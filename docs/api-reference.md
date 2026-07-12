@@ -57,6 +57,12 @@ Obtiene los datos meteorológicos más recientes.
 GET /api/current
 ```
 
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `station` | string | *(principal)* | Nombre de una estación **secundaria** (p. ej. `gw1100`). Omitir = estación principal |
+
 **Response:**
 ```json
 {
@@ -110,6 +116,7 @@ GET /api/history
 | `start` | string | `-24h` | Inicio del rango. Formatos: `-24h`, `-7d`, `2024-01-01T00:00:00Z` |
 | `stop` | string | `now()` | Fin del rango. Formatos: `now()`, `2024-01-02T00:00:00Z` |
 | `measurement` | string | `weather` | Nombre del measurement en InfluxDB |
+| `station` | string | *(principal)* | Estación **secundaria** (p. ej. `gw1100`); omitir = principal |
 
 **Examples:**
 
@@ -153,6 +160,13 @@ Obtiene estadísticas del día (mínimo, máximo, promedio).
 ```http
 GET /api/stats/daily
 ```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `start` | string | `-24h` | Ventana Flux: `-24h`, `-7d`, `-30d`… |
+| `station` | string | *(principal)* | Estación **secundaria** (p. ej. `gw1100`); omitir = principal |
 
 **Response:**
 ```json

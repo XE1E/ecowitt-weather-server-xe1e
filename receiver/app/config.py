@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     # Units
     output_unit_system: str = "metric"  # metric or imperial
 
+    # Estaciones secundarias (solo lectura). Mapa "passkey:nombre" separado por
+    # comas, p. ej. "ABC123...:gw1100". Cualquier passkey NO listado se trata
+    # como la estación principal (sus datos NO llevan tag 'station').
+    secondary_stations: str = ""
+
     # Alerts (thresholds in metric units: °C, km/h, mm/h)
     alerts_enabled: bool = False
     alert_temp_high: float = 35.0
@@ -90,6 +95,20 @@ class Settings(BaseSettings):
 
     # Server
     debug: bool = False
+
+    @property
+    def secondary_station_map(self) -> dict:
+        """Parsea SECONDARY_STATIONS ("passkey:nombre,...") a {passkey: nombre}."""
+        result: dict = {}
+        for pair in self.secondary_stations.split(","):
+            pair = pair.strip()
+            if not pair or ":" not in pair:
+                continue
+            passkey, name = pair.split(":", 1)
+            passkey, name = passkey.strip(), name.strip()
+            if passkey and name:
+                result[passkey] = name
+        return result
 
     class Config:
         env_file = ".env"

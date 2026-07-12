@@ -1,6 +1,9 @@
 # Plan — GW1100 como segunda estación (solo lectura)
 
-> Estado: **plan aprobado, pendiente de implementar** (etapa 1).
+> Estado: **etapa 1 implementada** en la rama `feat/estacion-remota` (backend +
+> frontend + tests + script de simulación). Pendiente: apuntar el GW1100 real,
+> capturar su passkey, ponerlo en `SECONDARY_STATIONS` y desplegar. Ver
+> "Cómo probar sin hardware" más abajo.
 > Hardware: Ecowitt **GW1100** (gateway WiFi con sensor interconstruido de
 > temperatura, humedad y presión barométrica de interior). Se usará en primera
 > etapa **solo** con su sensor interconstruido, enviando al mismo VPS que la
@@ -184,6 +187,27 @@ filtro correspondiente (`not exists r["station"]` si es None,
 - Manual / skill `verify`: apuntar el GW1100, confirmar en InfluxDB dos series
   separadas, confirmar que el dashboard principal **no cambia**, y que
   `/pro/remota` muestra el interior del GW1100.
+
+## Cómo probar sin hardware
+
+Con el stack corriendo (VPS o PC nueva con Docker + `.env`):
+
+1. Registrar un passkey ficticio en `.env` y reiniciar el receiver:
+   ```
+   SECONDARY_STATIONS=F00DCAFEF00DCAFEF00DCAFEF00DCAFE:gw1100
+   ```
+2. Ejecutar el simulador (envía 12 lecturas de interior):
+   ```
+   ./scripts/simulate-gw1100.sh              # localhost:8080
+   ./scripts/simulate-gw1100.sh https://tu-dominio/data/report
+   ```
+3. Abrir `/pro/remota` en el dashboard → deben aparecer temperatura/humedad/
+   presión de interior, estadística e histórico. Confirmar que la estación
+   **principal** (`/pro`) no cambia.
+
+Cuando llegue el GW1100 real: capturar su passkey del log del receiver,
+sustituirlo en `SECONDARY_STATIONS` y listo (el nombre `gw1100` ya está cableado
+en el frontend; si usas otro nombre, ajústalo en `RemoteStationPage.tsx`).
 
 ## Orden de despliegue sugerido
 
