@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { WeatherData } from '../../types'
+import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
 import { relativeTime, isStale } from '../../weather'
 import { TrendBadge } from './TrendBadge'
@@ -76,18 +77,31 @@ export function RemoteStationCard() {
           {offline ? 'sin conexión' : 'en vivo'}
         </span>
       </div>
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="text-4xl font-bold text-amber-300 leading-none">
-            {t != null ? `${u.temp(t)}${u.tempU}` : '--'}
-          </p>
-          <div className="mt-1"><TrendBadge delta={tDelta} unit={u.tempU} threshold={0.2} /></div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+          <WeatherIcon name="thermometer" size={30} />
+          <p className="text-2xl font-bold text-amber-300 mt-1">{t != null ? `${u.temp(t)}${u.tempU}` : '--'}</p>
+          <p className="text-xs text-slate-400">Temperatura</p>
+          <TrendBadge delta={tDelta} unit={u.tempU} threshold={0.2} />
         </div>
-        <div className="text-right text-sm space-y-0.5">
-          <p className="text-slate-400">Humedad <span className="font-semibold text-cyan-300">{h != null ? `${Math.round(h)}%` : '--'}</span></p>
-          <p className="text-slate-400">Rocío <span className="font-semibold text-emerald-300">{dew != null ? `${u.temp(dew)}${u.tempU}` : '--'}</span></p>
-          <p className="text-slate-400">Presión <span className="font-semibold text-violet-300">{data.pressure_relative != null ? `${u.press(data.pressure_relative)} ${u.pressU}` : '--'}</span></p>
-          <div className="flex justify-end"><TrendBadge delta={pDelta} unit={u.pressU} threshold={u.system === 'imperial' ? 0.02 : 0.3} /></div>
+        <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+          <WeatherIcon name="humidity" size={30} />
+          <p className="text-2xl font-bold text-cyan-300 mt-1">{h != null ? `${Math.round(h)}%` : '--'}</p>
+          <p className="text-xs text-slate-400">Humedad</p>
+        </div>
+        <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+          <WeatherIcon name="thermometer" size={30} />
+          <p className="text-2xl font-bold text-emerald-300 mt-1">{dew != null ? `${u.temp(dew)}${u.tempU}` : '--'}</p>
+          <p className="text-xs text-slate-400">Punto de rocío</p>
+        </div>
+        <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+          <WeatherIcon name="barometer" size={30} />
+          <p className="text-2xl font-bold text-violet-300 mt-1">
+            {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}
+            <span className="text-xs font-normal text-slate-400"> {u.pressU}</span>
+          </p>
+          <p className="text-xs text-slate-400">Presión</p>
+          <TrendBadge delta={pDelta} unit={u.pressU} threshold={u.system === 'imperial' ? 0.02 : 0.3} />
         </div>
       </div>
       {data.received_at && (
