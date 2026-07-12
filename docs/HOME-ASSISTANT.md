@@ -131,5 +131,3 @@ Ordenado para que **cada fase aporte valor con el HA remoto de hoy** y a la vez 
 - Config REST actual: [`homeassistant/ecowitt.yaml`](../homeassistant/ecowitt.yaml)
 - Publisher MQTT: [`receiver/app/services/mqtt_publisher.py`](../receiver/app/services/mqtt_publisher.py)
 - Despliegue en el VPS: [`docs/DEPLOY.md`](DEPLOY.md) · Dominio+HTTPS: [`docs/DOMINIO-HTTPS.md`](DOMINIO-HTTPS.md)
-
-> **Nota de mantenimiento:** [`docs/oracle-vps-setup.md`](oracle-vps-setup.md) todavía describe instalar *WeatherNode* (PHP/Laravel), que ya se descartó en favor del stack propio (FastAPI + InfluxDB + React). Conviene corregir o archivar ese doc.
