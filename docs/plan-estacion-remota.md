@@ -1,9 +1,9 @@
 # Plan — GW1100 como segunda estación (solo lectura)
 
-> Estado: **etapa 1 implementada** en la rama `feat/estacion-remota` (backend +
-> frontend + tests + script de simulación). Pendiente: apuntar el GW1100 real,
-> capturar su passkey, ponerlo en `SECONDARY_STATIONS` y desplegar. Ver
-> "Cómo probar sin hardware" más abajo.
+> Estado: **etapa 1 completada** y mergeada a `main`. El código está listo:
+> backend (tagging, filtro, aislamiento), frontend (`/pro/remota` + tarjeta),
+> tests y docs. **Pendiente solo**: apuntar el GW1100 real, capturar su passkey,
+> ponerlo en `SECONDARY_STATIONS` y desplegar. Ver "Cómo probar sin hardware".
 > Hardware: Ecowitt **GW1100** (gateway WiFi con sensor interconstruido de
 > temperatura, humedad y presión barométrica de interior). Se usará en primera
 > etapa **solo** con su sensor interconstruido, enviando al mismo VPS que la
