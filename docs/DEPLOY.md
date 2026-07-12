@@ -121,9 +121,24 @@ En la app **WS View Plus** → Weather Services → Customized:
 
 ```bash
 docker compose logs -f receiver        # ver datos entrando
-docker compose --profile dashboard up -d --build   # actualizar tras git pull
+docker compose up -d --build           # actualizar tras git pull
 docker compose down                    # detener (conserva volúmenes/datos)
 ```
+
+> ⚠️ **Deploy tras cambios de backend (`receiver`):** `docker compose up -d --build`
+> puede **reusar una imagen cacheada** y dejar corriendo código viejo (la capa
+> `COPY` del código no siempre se invalida). Si cambiaste `receiver/app`, fuerza
+> la recreación —y ante la duda, reconstruye sin caché:
+>
+> ```bash
+> docker compose up -d --build --force-recreate receiver dashboard
+> # o, si sospechas caché vieja:
+> docker compose build --no-cache receiver dashboard
+> docker compose up -d --force-recreate receiver dashboard
+> ```
+>
+> Verifica que el contenedor trae el código esperado, p. ej.:
+> `docker compose exec receiver grep -c <algo-nuevo> app/main.py` (debe ser > 0).
 
 Los datos de InfluxDB persisten en el volumen `influxdb-data`.
 
