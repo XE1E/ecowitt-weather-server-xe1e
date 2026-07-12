@@ -1,8 +1,13 @@
-# Configuración del Dispositivo Ecowitt (WS2910 / GW3000)
+# Configuración del Dispositivo Ecowitt (WS2910 / GW3000 / GW1100)
 
 Guía paso a paso para configurar el envío de datos a tu servidor.
 
-> **¿WS2910 o GW3000?** El **WS2910** (consola con pantalla, incluye el sensor WS69) puede enviar datos a un servidor personalizado con protocolo Ecowitt por sí solo — es el dispositivo principal recomendado. El **GW3000** es un upgrade opcional que además ofrece API local en LAN, backup en microSD y Ethernet. **El Paso 4 (Servidor Personalizado) es idéntico en ambos.** Los pasos de conexión WiFi son equivalentes; en el WS2910 se usa la app **WS View Plus**.
+> **¿WS2910, GW3000 o GW1100?**
+> - **WS2910** (consola con pantalla, incluye el sensor WS69) puede enviar datos a un servidor personalizado con protocolo Ecowitt por sí solo — es el dispositivo principal recomendado.
+> - **GW3000** es un upgrade opcional que además ofrece API local en LAN, backup en microSD y Ethernet.
+> - **GW1100** es un gateway WiFi compacto con sensor de interior integrado (temperatura, humedad, presión barométrica) — ideal para estaciones remotas o monitoreo de interiores adicionales.
+>
+> **El Paso 4 (Servidor Personalizado) es idéntico en todos.** Los pasos de conexión WiFi son equivalentes; todos usan la app **WS View Plus**.
 
 ## Requisitos Previos
 
@@ -98,6 +103,114 @@ También puedes acceder a la configuración via navegador:
 2. Usuario: `admin`
 3. Contraseña: `admin` (cambiar después)
 
+---
+
+## GW1100 como Estación Remota
+
+El **GW1100** es un gateway WiFi compacto con sensor de interior integrado. Es ideal para:
+- Monitorear un segundo sitio (oficina, bodega, casa de campo)
+- Agregar sensores de interior adicionales a tu setup
+- Instalaciones donde no necesitas pantalla ni Ethernet
+
+### Características del GW1100
+
+| Característica | Valor |
+|----------------|-------|
+| Sensores integrados | Temperatura, humedad, presión barométrica (interior) |
+| Conectividad | WiFi 2.4GHz |
+| Alimentación | USB 5V |
+| Sensores externos | Soporta hasta 8 canales WH31/WN31 adicionales |
+
+### Paso 1: Conexión Inicial del GW1100
+
+1. Conecta el GW1100 a un puerto USB (cargador de celular o similar)
+2. El LED parpadeará indicando modo configuración
+3. En tu smartphone, conecta al WiFi del gateway:
+   - SSID: `GW1100-XXXX`
+   - Sin contraseña
+
+### Paso 2: Configuración WiFi
+
+1. Abre la app **WS View Plus**
+2. Selecciona "Configurar Dispositivo"
+3. La app detectará el GW1100 automáticamente
+4. Selecciona la red WiFi del sitio remoto
+5. Ingresa la contraseña y guarda
+
+### Paso 3: Configurar Servidor Personalizado (VPS Remoto)
+
+Esta es la configuración para enviar datos al mismo servidor que tu estación principal.
+
+1. En la app, selecciona tu GW1100
+2. Ve a **Weather Services** → **Customized**
+3. Configura:
+
+| Campo | Valor |
+|-------|-------|
+| Enable | ON |
+| Protocol Type | Ecowitt |
+| Server IP/Hostname | `tu-dominio.com` o IP pública del VPS |
+| Port | `443` (HTTPS via Caddy) o `8080` (directo) |
+| Upload Interval | `60` segundos |
+| Path | `/data/report/` |
+
+4. Guarda la configuración
+
+> **Nota:** Si usas HTTPS con Caddy, el puerto es `443`. Si apuntas directo al receiver (sin Caddy), usa `8080`.
+
+### Paso 4: Capturar el Passkey
+
+Para que el servidor identifique al GW1100 como estación secundaria, necesitas su **passkey**:
+
+1. Apunta el GW1100 al servidor y espera a que envíe datos
+2. Revisa los logs del receiver:
+   ```bash
+   docker logs ecowitt-receiver | grep -i passkey
+   ```
+3. Busca una línea como:
+   ```
+   INFO - Device: GW1100A_V2.3.5 | passkey: ABC123DEF456...
+   ```
+4. Copia el passkey (32 caracteres hexadecimales)
+
+### Paso 5: Registrar como Estación Secundaria
+
+1. Edita el archivo `.env` del servidor:
+   ```bash
+   SECONDARY_STATIONS=<passkey_capturado>:gw1100
+   ```
+
+2. Reinicia el receiver:
+   ```bash
+   docker compose restart receiver
+   ```
+
+3. Verifica que los datos llegan separados:
+   ```bash
+   curl "http://localhost:8080/api/current?station=gw1100"
+   ```
+
+### Paso 6: Verificar en el Dashboard
+
+- Los datos del GW1100 aparecen en `/pro/remota`
+- La estación principal (`/pro`) **no se ve afectada**
+- El GW1100 no dispara alertas ni publica a redes públicas (WU, etc.)
+
+### Probar sin Hardware (Simulador)
+
+Si aún no tienes el GW1100 físico, puedes simular datos:
+
+```bash
+# Registrar passkey ficticio en .env
+SECONDARY_STATIONS=F00DCAFEF00DCAFEF00DCAFEF00DCAFE:gw1100
+
+# Ejecutar simulador
+./scripts/simulate-gw1100.sh                    # localhost
+./scripts/simulate-gw1100.sh https://tu-dominio/data/report  # VPS
+```
+
+---
+
 ## Solución de Problemas
 
 ### El gateway no aparece en la app
@@ -141,6 +254,39 @@ También puedes acceder a la configuración via navegador:
 - Revisa la orientación del sensor (norte magnético)
 - Verifica que no haya obstrucciones para el panel solar
 - El pluviómetro debe estar nivelado (usa la burbuja)
+
+### El GW1100 no envía datos al VPS remoto
+
+1. Verifica conectividad desde el sitio remoto:
+   ```bash
+   curl -X POST https://tu-dominio/data/report/ -d "test=1"
+   ```
+
+2. Verifica que el puerto esté abierto en el VPS:
+   - Puerto 443 si usas Caddy (HTTPS)
+   - Puerto 8080 si apuntas directo al receiver
+
+3. Revisa los logs del receiver:
+   ```bash
+   docker logs -f ecowitt-receiver
+   ```
+
+4. Si usas dominio, verifica que resuelva correctamente:
+   ```bash
+   nslookup tu-dominio.com
+   ```
+
+### Los datos del GW1100 aparecen mezclados con la estación principal
+
+- Verifica que el passkey esté registrado en `SECONDARY_STATIONS`
+- El passkey debe coincidir exactamente (32 caracteres hex)
+- Reinicia el receiver después de modificar `.env`
+
+### El GW1100 aparece offline pero tiene WiFi
+
+- El GW1100 no tiene LED de actividad de red; usa los logs del servidor para verificar
+- Verifica que el Upload Interval no sea muy largo (recomendado: 60s)
+- Algunos routers bloquean conexiones salientes; verifica el firewall del sitio remoto
 
 ## Configuración de Servicios en la Nube (Opcional)
 
