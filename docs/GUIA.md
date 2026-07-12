@@ -484,4 +484,4 @@ real cuando llegue el **WS2910**.
 
 ---
 
-*Última actualización: 2026-07-11.*
+*Última actualización: 2026-07-12.*
