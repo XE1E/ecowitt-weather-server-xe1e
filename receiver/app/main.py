@@ -342,14 +342,15 @@ async def get_history(
 
 
 @app.get("/api/stats/daily")
-async def get_daily_stats(station: Optional[str] = None):
+async def get_daily_stats(station: Optional[str] = None, start: str = "-24h"):
     """
-    Get daily statistics (min, max, avg).
+    Get statistics (min, max, avg) over a range.
 
     station: None/omitido = principal; nombre = estación secundaria.
+    start: ventana Flux (p. ej. "-24h", "-7d", "-30d").
     """
     try:
-        stats = await storage.get_daily_stats(station=station)
+        stats = await storage.get_daily_stats(start=start, station=station)
         return stats
     except Exception as e:
         logger.error(f"Error getting daily stats: {e}")
