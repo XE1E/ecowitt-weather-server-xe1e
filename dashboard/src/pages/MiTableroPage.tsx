@@ -1,5 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { RefreshCw, LayoutGrid, SlidersHorizontal, Check } from 'lucide-react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor,
+  useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, arrayMove, useSortable, rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useStationData } from '../station-data'
 import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
@@ -23,6 +32,29 @@ import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { PageInfo } from '../components/station/PageInfo'
 
 const STORAGE_KEY = 'mi_tablero_cards'
+
+// Envoltura arrastrable de cada tarjeta. Solo arrastra en modo edición
+// (toda la tarjeta es el "agarre"); fuera de edición se comporta normal.
+function SortableCard({ id, spanClass, editing, children }: {
+  id: string
+  spanClass: string
+  editing: boolean
+  children: ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id, disabled: !editing })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${spanClass} ${editing ? 'cursor-move rounded-2xl ring-2 ring-blue-500/40' : ''} ${isDragging ? 'relative z-20 opacity-80 shadow-2xl' : ''}`}
+      {...(editing ? { ...attributes, ...listeners } : {})}
+    >
+      {children}
+    </div>
+  )
+}
 
 export function MiTableroPage() {
   const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
@@ -67,12 +99,31 @@ export function MiTableroPage() {
   const toggle = (k: string) =>
     setVisible((v) => (v.includes(k) ? v.filter((x) => x !== k) : [...v, k]))
 
+  // Drag & drop para reordenar (táctil incluido). distance/delay evitan que un
+  // toque simple dispare un arrastre.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (over && active.id !== over.id) {
+      setVisible((v) => {
+        const from = v.indexOf(String(active.id))
+        const to = v.indexOf(String(over.id))
+        return from === -1 || to === -1 ? v : arrayMove(v, from, to)
+      })
+    }
+  }
+
   if (loading && !data) {
     return <div className="h-64 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
   }
   if (!data) return <p className="text-slate-400">Sin datos disponibles.</p>
 
-  const shown = CARDS.filter((c) => visible.includes(c.key))
+  // Orden = el del array `visible` (lo que el usuario reordena), no el catálogo.
+  const shown = visible.map((k) => CARDS.find((c) => c.key === k)).filter(Boolean) as typeof CARDS
   const spanCls = (s: 1 | 2 | 3) => (s === 3 ? 'md:col-span-2 xl:col-span-3' : s === 2 ? 'xl:col-span-2' : '')
 
   return (
@@ -80,7 +131,7 @@ export function MiTableroPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2"><LayoutGrid className="w-6 h-6 text-sky-400" /> Mi tablero</h2>
-          <p className="text-xs text-slate-400">Tu vista personalizada: elige qué tarjetas ver. Se guarda en este dispositivo.</p>
+          <p className="text-xs text-slate-400">Tu vista personalizada: elige qué tarjetas ver y arrástralas para ordenarlas. Se guarda en este dispositivo.</p>
         </div>
         <button
           onClick={() => setEditing((e) => !e)}
@@ -93,6 +144,7 @@ export function MiTableroPage() {
       {editing && (
         <div className="card mb-4">
           <p className="card-title">Elige tus tarjetas</p>
+          <p className="text-xs text-slate-400 -mt-1 mb-2">Toca para mostrar/ocultar. Con este modo activo, <span className="text-slate-200">arrastra las tarjetas</span> del tablero para reordenarlas.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {CARDS.map((c) => {
               const on = visible.includes(c.key)
@@ -127,11 +179,17 @@ export function MiTableroPage() {
           No tienes tarjetas seleccionadas. Pulsa <span className="font-semibold text-slate-200">Personalizar</span> para elegir.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 grid-flow-dense">
-          {shown.map((c) => (
-            <div key={c.key} className={spanCls(c.span)}>{c.render()}</div>
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={shown.map((c) => c.key)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {shown.map((c) => (
+                <SortableCard key={c.key} id={c.key} spanClass={spanCls(c.span)} editing={editing}>
+                  {c.render()}
+                </SortableCard>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <PageInfo>
@@ -139,7 +197,9 @@ export function MiTableroPage() {
           <span className="font-semibold">Mi tablero</span> es una vista a tu medida con las mismas tarjetas del Inicio.
           Pulsa <span className="font-semibold">Personalizar</span> para mostrar u ocultar cada una; la selección se
           guarda en <span className="font-semibold">este dispositivo/navegador</span> (no afecta a otros visitantes).
-          La tarjeta de <span className="font-semibold">condiciones actuales</span> queda siempre fija arriba.
+          Con el modo activo también puedes <span className="font-semibold">arrastrar las tarjetas</span> para
+          reordenarlas a tu gusto. La tarjeta de <span className="font-semibold">condiciones actuales</span> queda
+          siempre fija arriba.
         </p>
       </PageInfo>
     </div>
