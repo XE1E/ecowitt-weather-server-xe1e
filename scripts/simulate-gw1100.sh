@@ -25,11 +25,19 @@ N="${N:-12}"
 echo "[sim] POST -> $URL   passkey=$PASSKEY   lecturas=$N"
 
 for i in $(seq 1 "$N"); do
-  # Valores plausibles de interior (imperial, como manda Ecowitt) con variación.
-  tempinf="$(awk -v i="$i" 'BEGIN{printf "%.1f", 72 + (i % 5) * 0.6}')"
-  humidityin="$(awk -v i="$i" 'BEGIN{printf "%d", 50 + (i % 7)}')"
-  baromrel="$(awk -v i="$i" 'BEGIN{printf "%.2f", 29.90 + (i % 3) * 0.02}')"
-  baromabs="$(awk -v i="$i" 'BEGIN{printf "%.2f", 29.80 + (i % 3) * 0.02}')"
+  # Valores realistas de interior. Varían según la HORA DEL DÍA (curva suave)
+  # para que sirvan tanto en modo cron (N=1, una lectura por minuto) como en
+  # ráfaga manual. 10# fuerza base 10 (evita el error octal con "08"/"09").
+  now_min="$(( 10#$(date +%H) * 60 + 10#$(date +%M) ))"
+  phase="$(( now_min + i ))"
+  PI=3.14159265
+
+  # Interior: base ~22 °C, ±1.5 °C a lo largo del día + rizo fino.
+  tempc="$(awk -v p="$phase" -v pi="$PI" 'BEGIN{printf "%.2f", 22 + 1.5*sin(2*pi*(p-360)/1440) + 0.2*sin(p/3.0)}')"
+  tempinf="$(awk -v c="$tempc" 'BEGIN{printf "%.1f", c*9/5+32}')"        # Ecowitt manda °F
+  humidityin="$(awk -v p="$phase" -v pi="$PI" 'BEGIN{printf "%d", 52 + 6*sin(2*pi*(p+200)/1440)}')"
+  baromrel="$(awk -v p="$phase" -v pi="$PI" 'BEGIN{printf "%.2f", 29.90 + 0.06*sin(2*pi*p/1440)}')"
+  baromabs="$(awk -v b="$baromrel" 'BEGIN{printf "%.2f", b-0.10}')"
   dateutc="$(date -u +'%Y-%m-%d+%H:%M:%S')"
 
   code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL" \
