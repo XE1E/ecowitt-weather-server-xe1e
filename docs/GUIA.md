@@ -29,15 +29,30 @@
 
 ## 1. El proyecto
 
-Es un **proyecto personal sobre el clima**: una estación meteorológica propia
-que publica en tiempo casi real las condiciones de un punto exacto de la Ciudad
-de México, con histórico, pronóstico, radar, astronomía y climatología.
+Es un **proyecto personal sobre el clima**: una estación meteorológica propia,
+instalada en un punto exacto de la Ciudad de México (Benito Juárez), que publica
+en tiempo casi real las condiciones de ese lugar y las conserva para consultar su
+histórico, estadísticas y climatología.
+
+Lo que lo distingue es que **todo está hecho a la medida**: el servidor que recibe
+los datos, la base de series de tiempo, la API y el sitio web se desarrollaron
+específicamente para esta estación y viven en un **VPS propio** —no una plataforma
+comercial "de caja"—. Eso permite decidir qué se mide, cómo se calcula y cómo se
+presenta, y hacer crecer la plataforma a voluntad.
 
 - **Objetivo principal:** aprovechar al máximo el **dato local** de la estación
-  (real y cercano = información precisa del sitio), y además compartirlo con
-  redes públicas.
-- **Alcance:** meteorología. No es un proyecto de radios/antenas (aunque "XE1E"
-  sea un indicativo de radioaficionado, aquí es solo el nombre de la estación).
+  —real, cercano y del sitio exacto, no la interpolación de un modelo— y, a la par,
+  **desarrollar y evolucionar una plataforma propia** (servidor + API + web) hecha
+  a la medida en el VPS, además de compartir el dato con redes públicas.
+- **Alcance:** meteorología en sentido amplio —condiciones actuales, histórico,
+  estadísticas y climatología, pronóstico, radar y satélite— más los campos vecinos
+  que enriquecen la lectura del cielo: **astronomía** (sol, luna, almanaque),
+  **calidad del aire** (AQI e IMECA), **meteorología aeronáutica** (METAR/TAF) y
+  **sismos** de la región.
+- **Más de un sitio:** además de la estación principal, el servidor admite una
+  **estación remota** (p. ej. un GW1100 en otra ubicación) que envía al mismo VPS;
+  sus datos se guardan por separado y tienen su propia página, para comparar el
+  clima de dos puntos distintos.
 - **Dos vistas del sitio:**
   - `/` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/pro`).
   - `/pro` — **Vista completa**: varias secciones con cintillo de navegación,

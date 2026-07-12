@@ -210,10 +210,12 @@
     <section id="proyecto">
       <span class="sec-eyebrow">01 — Proyecto</span>
       <h2>El proyecto</h2>
-      <p>Es un <strong>proyecto personal sobre el clima</strong>: una estación meteorológica propia que publica en tiempo casi real las condiciones de un punto exacto de la Ciudad de México, con histórico, pronóstico, radar, astronomía y climatología.</p>
+      <p>Es un <strong>proyecto personal sobre el clima</strong>: una estación meteorológica propia, instalada en un punto exacto de la Ciudad de México (Benito Juárez), que publica en tiempo casi real las condiciones de ese lugar y las conserva para consultar su histórico, estadísticas y climatología.</p>
+      <p>Lo que lo distingue es que <strong>todo está hecho a la medida</strong>: el servidor que recibe los datos, la base de series de tiempo, la API y el sitio web se desarrollaron específicamente para esta estación y viven en un <strong>VPS propio</strong> —no una plataforma comercial «de caja»—. Eso permite decidir qué se mide, cómo se calcula y cómo se presenta, y hacer crecer la plataforma a voluntad.</p>
       <ul>
-        <li><strong>Objetivo principal:</strong> aprovechar al máximo el <strong>dato local</strong> de la estación (real y cercano = información precisa del sitio), y además compartirlo con redes públicas.</li>
-        <li><strong>Alcance:</strong> meteorología. No es un proyecto de radios/antenas (aunque «XE1E» sea un indicativo de radioaficionado, aquí es solo el nombre de la estación).</li>
+        <li><strong>Objetivo principal:</strong> aprovechar al máximo el <strong>dato local</strong> de la estación —real, cercano y del sitio exacto, no la interpolación de un modelo— y, a la par, <strong>desarrollar y evolucionar una plataforma propia</strong> (servidor + API + web) hecha a la medida en el VPS, además de compartir el dato con redes públicas.</li>
+        <li><strong>Alcance:</strong> meteorología en sentido amplio —condiciones actuales, histórico, estadísticas y climatología, pronóstico, radar y satélite— más los campos vecinos que enriquecen la lectura del cielo: <strong>astronomía</strong> (sol, luna, almanaque), <strong>calidad del aire</strong> (AQI e IMECA), <strong>meteorología aeronáutica</strong> (METAR/TAF) y <strong>sismos</strong> de la región.</li>
+        <li><strong>Más de un sitio:</strong> además de la estación principal, el servidor admite una <strong>estación remota</strong> (p. ej. un GW1100 en otra ubicación) que envía al mismo VPS; sus datos se guardan por separado y tienen su propia página, para comparar el clima de dos puntos distintos.</li>
       </ul>
       <p>El sitio tiene dos vistas: <code>/</code> — <strong>vista clásica</strong> (tablero simple de un vistazo, unificado con el estilo de <code>/pro</code>) — y <code>/pro</code> — <strong>vista completa</strong>, con sus secciones, unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA).</p>
     </section>
