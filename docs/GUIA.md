@@ -176,10 +176,11 @@ Panel principal con el estado actual:
 
 ### 5.2 Mi tablero
 Vista **personalizable**: con el botón «Personalizar» eliges qué tarjetas mostrar
-u ocultar (las mismas del Inicio) y la selección se guarda **en tu dispositivo**.
-La tarjeta de condiciones actuales queda fija arriba. Entre las tarjetas
-disponibles está la de la **Estación remota** (resumen compacto de la segunda
-estación; ver §5.11).
+u ocultar (las mismas del Inicio) y, con ese modo activo, puedes **arrastrarlas
+para reordenarlas** a tu gusto (con soporte táctil). Tanto la selección como el
+orden se guardan **en tu dispositivo**. La tarjeta de condiciones actuales queda
+fija arriba. Entre las tarjetas disponibles está la de la **Estación remota**
+(resumen compacto de la segunda estación; ver §5.11).
 
 ### 5.3 Pronóstico
 Pronóstico de **Open-Meteo** (modelo `best_match`) en pestañas **por día** y

@@ -15,7 +15,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | Página | Qué muestra |
 |--------|-------------|
 | **Inicio** | Condiciones actuales, viento (con brújula que gira a la rosa de vientos), presión con tendencia, pronóstico, precipitación, UV/solar, sol y luna, calidad del aire, IMECA, sismos, interior y sensores adicionales |
-| **Mi tablero** | Tablero personalizable: elige qué tarjetas ver (se guarda por dispositivo) |
+| **Mi tablero** | Tablero personalizable: elige qué tarjetas ver y **arrástralas para reordenarlas** a tu gusto (se guarda por dispositivo) |
 | **Pronóstico** | Por día y por hora, con descripciones en lenguaje natural (Open-Meteo) |
 | **Historia** | Archivo de la estación con granularidad Día/Mes/Año y gráficas interactivas |
 | **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, rosa de vientos |
