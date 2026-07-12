@@ -232,11 +232,330 @@ en el frontend; si usas otro nombre, ajústalo en `RemoteStationPage.tsx`).
 | `dashboard/src/components/*Chart*.tsx` | prop `station` para el fetch |
 | `.env.example`, `docs/GUIA.md`, `tests/test_parser.py` | config, docs, tests |
 
-## Notas para etapa 2 (futuro, fuera de alcance ahora)
+---
 
-- Alertas y publicación configurables por estación.
-- Vigilancia offline (`station_watchdog`) también para secundarias.
-- Resumen diario (`weather_daily`) por estación.
-- Selector de estación en el dashboard y panel admin del mapa passkey→nombre.
-- Soporte para sensores externos del GW1100 (si más adelante se le añaden T/H
-  exterior, viento, lluvia, etc.).
+# Etapa 2 — Multi-Estación Completa
+
+> Estado: **planificada**. Requiere etapa 1 funcionando con hardware real.
+
+## Objetivo
+
+Convertir el sistema de "principal + una secundaria aislada" en una plataforma
+**multi-estación completa**: alertas, publicación, watchdog y climatología
+configurables por estación; gestión desde el panel admin; vistas comparativas
+en el dashboard.
+
+---
+
+## Fase 2.1: Infraestructura Multi-Estación
+
+### A. API de Estaciones (`/api/stations`)
+
+Nuevo endpoint para listar y consultar estaciones:
+
+```
+GET /api/stations
+```
+
+Respuesta:
+```json
+{
+  "stations": [
+    {
+      "name": null,
+      "label": "Principal (WS2910)",
+      "passkey_hint": "...a1b2",
+      "last_received": "2026-07-12T22:14:59Z",
+      "status": "online",
+      "sensors": ["WS69", "WN31x8"]
+    },
+    {
+      "name": "gw1100",
+      "label": "Oficina (GW1100)",
+      "passkey_hint": "...c3d4",
+      "last_received": "2026-07-12T22:10:32Z",
+      "status": "online",
+      "sensors": ["interior"]
+    }
+  ]
+}
+```
+
+- `GET /api/stations/{name}/status` — estado detallado de una estación
+- Útil para el panel admin y monitoreo externo (uptime checks)
+
+**Archivos:** `main.py` (endpoints), `config.py` (registro de estaciones)
+
+### B. Vigilancia offline por estación (`station_watchdog`)
+
+Actualmente el watchdog solo vigila la principal. Extender para todas:
+
+1. **Configuración por estación** en `settings.json`:
+   ```json
+   {
+     "stations": {
+       "gw1100": {
+         "label": "Oficina",
+         "watchdog_enabled": true,
+         "watchdog_minutes": 10
+       }
+     }
+   }
+   ```
+
+2. **Alertas específicas:**
+   - Disparo: "⚠️ Estación **Oficina** sin datos hace 10 minutos"
+   - Normalización: "✅ Estación **Oficina** de vuelta online"
+
+3. **Lógica:** en el loop del watchdog, iterar `latest_by_station` y verificar
+   cada estación con watchdog habilitado.
+
+**Archivos:** `main.py` (watchdog loop), `alerts.py` (mensajes), `settings_store.py`
+
+### C. Resumen diario por estación (`weather_daily`)
+
+El aggregator actualmente solo procesa la principal. Extender:
+
+1. En `rebuild_daily_summaries()` y el cron de resumen:
+   - Obtener lista de estaciones desde config
+   - Para cada estación: `get_daily_stats(station=name)` → `write_daily_summary(station=name)`
+
+2. El tag `station` ya existe en el schema; solo hay que pasarlo.
+
+3. **Habilita:** climatología, récords y reporte NOAA por estación.
+
+**Archivos:** `aggregator.py`, `storage.py` (ya tiene el param)
+
+---
+
+## Fase 2.2: Panel Admin Multi-Estación
+
+### A. Gestión de estaciones (`/pro/admin` → sección "Estaciones")
+
+Tabla de estaciones con acciones:
+
+| Nombre | Label | Passkey | Última lectura | Estado | Acciones |
+|--------|-------|---------|----------------|--------|----------|
+| *(principal)* | Casa | ...a1b2 | hace 32s | 🟢 | Editar |
+| gw1100 | Oficina | ...c3d4 | hace 2m | 🟢 | Editar · Eliminar |
+
+**Funcionalidades:**
+- **Agregar estación:** ingresar passkey + nombre + label (sin tocar `.env`)
+- **Editar:** cambiar label, configuración de alertas/publicación
+- **Eliminar:** quita del registro (datos históricos permanecen en InfluxDB)
+- **Auto-descubrir:** listar passkeys vistos que no están registrados
+
+**Persistencia:** en `settings.json`, no en `.env` (más flexible).
+
+```json
+{
+  "stations": {
+    "gw1100": {
+      "label": "Oficina",
+      "passkey": "ABC123...",
+      "alerts_enabled": false,
+      "publish_enabled": false,
+      "mqtt_enabled": false,
+      "watchdog_enabled": true,
+      "watchdog_minutes": 10
+    }
+  }
+}
+```
+
+**Archivos:** `admin.py` (CRUD), `AdminPage.tsx` (UI), `settings_store.py`
+
+### B. Configuración por estación
+
+En la pantalla de edición de cada estación:
+
+**Alertas:**
+- [ ] Alertas habilitadas
+- Umbrales: heredar de principal / personalizar
+  - Temp alta/baja, viento, lluvia, presión
+
+**Publicación:**
+- [ ] Weather Underground
+- [ ] Windy
+- [ ] PWSWeather
+- [ ] OpenWeatherMap
+- [ ] CWOP/APRS
+- (cada uno con sus credenciales propias o compartidas)
+
+**MQTT:**
+- [ ] Publicar a MQTT
+- Topic prefix: `weather/{station}/` (default) o personalizado
+
+**Watchdog:**
+- [ ] Vigilar conexión
+- Timeout: ___ minutos
+
+### C. Vista de estado / salud
+
+Dashboard de monitoreo (en admin o página dedicada):
+
+- **Tarjetas** por estación: estado, última lectura, latencia
+- **Gráfica de uptime** (últimos 7/30 días): barras verdes/rojas por hora
+- **Gaps detectados:** periodos sin datos > 5 min
+- **Métricas:** lecturas/día, % válidas, latencia promedio
+
+---
+
+## Fase 2.3: Frontend Multi-Estación
+
+### A. Selector de estación global
+
+En la barra superior del dashboard, junto al reloj:
+
+```
+[ Principal ▾ ]  →  despliega lista de estaciones
+```
+
+- Al seleccionar otra estación, la vista actual recarga con sus datos
+- Persiste en `localStorage` (recordar última selección)
+- Algunas páginas no aplican (Aeronáutica, Sismos) → selector deshabilitado
+
+**Archivos:** `StationLayout.tsx`, nuevo hook `useStationSelector()`
+
+### B. Página multi-estación (`/pro/estaciones`)
+
+Vista resumen de todas las estaciones en tarjetas lado a lado:
+
+```
+┌─────────────────┐  ┌─────────────────┐
+│ 🏠 Casa         │  │ 🏢 Oficina      │
+│ 24.5°C  58% HR  │  │ 22.1°C  48% HR  │
+│ 1014.6 hPa      │  │ 1014.8 hPa      │
+│ hace 32s  🟢    │  │ hace 2m  🟢     │
+└─────────────────┘  └─────────────────┘
+```
+
+- Click en tarjeta → navega a `/pro` o `/pro/remota` según corresponda
+- Muestra diferencia de temperatura entre estaciones
+- Útil como "home" cuando hay múltiples sitios
+
+**Archivos:** nuevo `MultiStationPage.tsx`, ruta en `main.tsx`
+
+### C. Comparación entre estaciones (`/pro/comparar`)
+
+Seleccionar 2-4 estaciones y ver gráficas superpuestas:
+
+- **Temperatura:** líneas de colores distintos, mismo eje Y
+- **Humedad:** ídem
+- **Presión:** ídem (útil para validar sensores)
+
+Tabla de diferencias actuales:
+| Métrica | Casa | Oficina | Δ |
+|---------|------|---------|---|
+| Temp | 24.5°C | 22.1°C | -2.4°C |
+| Humedad | 58% | 48% | -10% |
+
+Casos de uso:
+- Detectar microclimas entre ubicaciones
+- Validar calibración de sensores
+- Ver desfase temporal de frentes de clima
+
+**Archivos:** nuevo `ComparePage.tsx`, componentes de gráficas compartidos
+
+### D. Widget por estación
+
+Actualizar el sistema de widgets para soportar cualquier estación:
+
+- URL: `/embed?station=gw1100&units=metric&theme=dark`
+- En `/pro/compartir`: selector de estación antes de generar código
+- El widget muestra el nombre/label de la estación
+
+**Archivos:** `EmbedWidget.tsx`, `ShareEmbedPage.tsx`
+
+---
+
+## Fase 2.4: Sensores Externos del GW1100
+
+### A. Parseo de sensores adicionales
+
+El GW1100 puede conectar sensores externos vía RF 433/915 MHz:
+- **WN31/WH31** (hasta 8 canales): temp + humedad
+- **WS69/WH65** (sensor 7-en-1): temp, humedad, viento, lluvia, UV, solar
+
+Campos a detectar en el payload:
+```
+temp1, humidity1, batt1  →  canal 1
+temp2, humidity2, batt2  →  canal 2
+...
+tempf, humidity, windspeed, windgust, winddir, rainrate, uv, solarradiation  →  exterior
+```
+
+**Parser:** detectar estos campos y mapearlos igual que en la principal.
+
+**Archivos:** `parser.py` (ya soporta la mayoría), verificar edge cases
+
+### B. UI para sensores remotos
+
+En `/pro/remota`, mostrar dinámicamente según sensores detectados:
+
+- **Solo interior** (default GW1100): tarjeta de interior actual
+- **+ Canales WN31:** tarjetas de sensores adicionales (como en principal)
+- **+ Exterior:** tarjetas de viento, lluvia, UV/solar
+
+Detectar qué campos tiene `latest_by_station["gw1100"]` y renderizar
+componentes correspondientes.
+
+**Archivos:** `RemoteStationPage.tsx`, reutilizar componentes existentes
+
+### C. Alertas de clima para estación remota
+
+Si la estación remota tiene sensores exteriores, habilitar alertas de:
+- Temperatura exterior alta/baja
+- Viento fuerte / ráfaga
+- Lluvia intensa
+
+Configurables en el panel admin por estación (Fase 2.2).
+
+---
+
+## Fase 2.5: Extras (baja prioridad)
+
+Funcionalidades opcionales para considerar después:
+
+- **Exportación por estación:** en Historia, selector de estación para CSV/JSON
+- **Notificaciones diferenciadas:** canal de Telegram distinto por estación
+- **Métricas de calidad:** dashboard con % lecturas válidas, gaps, latencia
+- **Soporte N estaciones:** el código ya está preparado; solo UI para > 2
+- **Nombres de canales por estación:** en admin, nombrar "Canal 1" → "Jardín"
+  de forma independiente por estación
+
+---
+
+## Resumen de archivos a tocar (Etapa 2)
+
+| Archivo | Cambios |
+|---------|---------|
+| `receiver/app/config.py` | Cargar estaciones desde settings.json + .env |
+| `receiver/app/main.py` | `/api/stations`, watchdog multi-estación |
+| `receiver/app/services/alerts.py` | Alertas configurables por estación |
+| `receiver/app/services/aggregator.py` | Resumen diario para todas las estaciones |
+| `receiver/app/services/mqtt_publisher.py` | MQTT configurable por estación |
+| `receiver/app/services/publishers.py` | Publicación configurable por estación |
+| `receiver/app/services/admin.py` | CRUD de estaciones, config por estación |
+| `receiver/app/services/settings_store.py` | Schema de estaciones en settings |
+| `dashboard/src/pages/StationLayout.tsx` | Selector de estación global |
+| `dashboard/src/pages/AdminPage.tsx` | Sección gestión de estaciones |
+| `dashboard/src/pages/RemoteStationPage.tsx` | Sensores adicionales dinámicos |
+| `dashboard/src/pages/MultiStationPage.tsx` | **Nuevo:** vista multi-estación |
+| `dashboard/src/pages/ComparePage.tsx` | **Nuevo:** comparación de estaciones |
+| `dashboard/src/pages/ShareEmbedPage.tsx` | Selector de estación para widget |
+| `dashboard/src/components/station/EmbedWidget.tsx` | Soporte `?station=` |
+| `dashboard/src/main.tsx` | Nuevas rutas |
+| `tests/` | Tests para nuevas funcionalidades |
+
+---
+
+## Orden de implementación sugerido
+
+1. **Fase 2.1** (infraestructura): API de estaciones, watchdog, resumen diario
+2. **Fase 2.2** (admin): gestión y configuración por estación
+3. **Fase 2.3** (frontend): selector, multi-estación, comparación
+4. **Fase 2.4** (sensores): soporte de sensores externos del GW1100
+5. **Fase 2.5** (extras): según necesidad
+
+Cada fase es deployable de forma independiente y añade valor incremental.
