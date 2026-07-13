@@ -116,6 +116,9 @@ function SensorIndicator({ sensor }: { sensor: SensorDetail }) {
           {sensor.humidity !== undefined && (
             <span>{formatHum(sensor.humidity)}</span>
           )}
+          {sensor.pressure !== undefined && (
+            <span>{sensor.pressure.toFixed(0)} hPa</span>
+          )}
           {sensor.wind_speed !== undefined && (
             <span>{sensor.wind_speed.toFixed(1)} km/h</span>
           )}
