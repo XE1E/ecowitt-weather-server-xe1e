@@ -1,12 +1,33 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '../../admin-auth'
 
+interface SensorDetail {
+  id: string
+  type: string
+  category: string
+  channel?: number
+  label: string
+  temperature?: number
+  humidity?: number
+  pressure?: number
+  wind_speed?: number
+  wind_gust?: number
+  wind_direction?: number
+  rain_rate?: number
+  rain_daily?: number
+  uv_index?: number
+  solar_radiation?: number
+  battery_ok: boolean
+  active: boolean
+}
+
 interface Station {
   name: string | null
   label: string
   last_received: string | null
   status: 'online' | 'offline' | 'unknown'
   sensors: string[]
+  sensors_detail: SensorDetail[]
   model: string | null
   passkey_hint?: string
   config: {
@@ -63,20 +84,69 @@ function timeAgo(isoString: string | null): string {
   return `hace ${days}d`
 }
 
-function StationCard({ station }: { station: Station }) {
-  const isPrincipal = station.name === null
-  const sensorGroups = {
-    exterior: station.sensors.filter(s => ['exterior', 'viento', 'lluvia', 'UV', 'solar'].includes(s)),
-    interior: station.sensors.filter(s => s === 'interior'),
-    canales: station.sensors.filter(s => s.startsWith('WN31')),
+function SensorIndicator({ sensor }: { sensor: SensorDetail }) {
+  const categoryIcons: Record<string, string> = {
+    exterior: '🌡️',
+    interior: '🏠',
+    canal: '📍',
+    viento: '💨',
+    lluvia: '🌧️',
+    solar: '☀️',
   }
 
-  // Determinar el hardware basado en sensores y modelo
+  const formatTemp = (t?: number) => t !== undefined ? `${t.toFixed(1)}°` : '--'
+  const formatHum = (h?: number) => h !== undefined ? `${Math.round(h)}%` : '--'
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+      sensor.active ? 'bg-slate-700/50' : 'bg-slate-800/50 opacity-50'
+    }`}>
+      <span className="text-base">{categoryIcons[sensor.category] || '📡'}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium truncate">{sensor.label}</span>
+          {sensor.type === 'WN31' && (
+            <span className="text-xs text-slate-500">ch{sensor.channel}</span>
+          )}
+        </div>
+        <div className="text-xs text-slate-400 flex items-center gap-2">
+          {sensor.temperature !== undefined && (
+            <span>{formatTemp(sensor.temperature)}</span>
+          )}
+          {sensor.humidity !== undefined && (
+            <span>{formatHum(sensor.humidity)}</span>
+          )}
+          {sensor.wind_speed !== undefined && (
+            <span>{sensor.wind_speed.toFixed(1)} km/h</span>
+          )}
+          {sensor.rain_daily !== undefined && (
+            <span>{sensor.rain_daily.toFixed(1)} mm</span>
+          )}
+          {sensor.uv_index !== undefined && (
+            <span>UV {sensor.uv_index}</span>
+          )}
+        </div>
+      </div>
+      <span title={sensor.battery_ok ? 'Batería OK' : 'Batería baja'}>
+        {sensor.battery_ok ? '🔋' : '🪫'}
+      </span>
+    </div>
+  )
+}
+
+function StationCard({ station }: { station: Station }) {
+  const isPrincipal = station.name === null
+  const sensors = station.sensors_detail || []
+
+  const ws69Sensors = sensors.filter(s => s.type === 'WS69')
+  const wn31Sensors = sensors.filter(s => s.type === 'WN31')
+  const consoleSensor = sensors.find(s => s.type === 'console')
+
   const getHardwareDescription = () => {
     if (isPrincipal) {
       const parts = []
-      if (sensorGroups.exterior.length > 0) parts.push('WS69')
-      if (sensorGroups.canales.length > 0) parts.push(`WN31 (${sensorGroups.canales.length} ch)`)
+      if (ws69Sensors.length > 0) parts.push('WS69')
+      if (wn31Sensors.length > 0) parts.push(`WN31 (${wn31Sensors.length} ch)`)
       return parts.length > 0 ? parts.join(' + ') : station.model || 'Sin sensores'
     }
     return station.model || 'GW1100'
@@ -100,57 +170,43 @@ function StationCard({ station }: { station: Station }) {
       </div>
 
       <div className="space-y-3">
-        {/* Sensores exteriores (WS69) */}
-        {sensorGroups.exterior.length > 0 && (
+        {/* Consola / Interior */}
+        {consoleSensor && (
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">WS69 (Exterior)</p>
-            <div className="flex flex-wrap gap-1">
-              {sensorGroups.exterior.map(s => (
-                <span key={s} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-xs">
-                  ✓ {s}
-                </span>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">
+              {isPrincipal ? 'Consola' : 'Gateway'}
+            </p>
+            <SensorIndicator sensor={consoleSensor} />
+          </div>
+        )}
+
+        {/* WS69 - Sensores exteriores */}
+        {ws69Sensors.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">WS69 Exterior</p>
+            <div className="space-y-1">
+              {ws69Sensors.map(s => (
+                <SensorIndicator key={s.id} sensor={s} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Interior */}
-        {sensorGroups.interior.length > 0 && (
+        {/* WN31 - Canales */}
+        {wn31Sensors.length > 0 && (
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
-              {isPrincipal ? 'Consola (Interior)' : 'GW1100 (Interior)'}
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">
+              WN31 Sensores ({wn31Sensors.length})
             </p>
-            <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 rounded text-xs">
-              ✓ temp/humedad/presión
-            </span>
-          </div>
-        )}
-
-        {/* Canales WN31 */}
-        {isPrincipal && (
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">WN31 (Canales)</p>
-            <div className="flex flex-wrap gap-1">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(ch => {
-                const active = sensorGroups.canales.some(s => s.includes(`ch${ch}`))
-                return (
-                  <span
-                    key={ch}
-                    className={`w-8 text-center py-0.5 rounded text-xs ${
-                      active
-                        ? 'bg-amber-500/10 text-amber-400'
-                        : 'bg-slate-700/50 text-slate-600'
-                    }`}
-                  >
-                    {ch}
-                  </span>
-                )
-              })}
+            <div className="space-y-1">
+              {wn31Sensors.map(s => (
+                <SensorIndicator key={s.id} sensor={s} />
+              ))}
             </div>
           </div>
         )}
 
-        {station.sensors.length === 0 && (
+        {sensors.length === 0 && (
           <p className="text-slate-500 text-sm italic">Sin sensores detectados</p>
         )}
       </div>

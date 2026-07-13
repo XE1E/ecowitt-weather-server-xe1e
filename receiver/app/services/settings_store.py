@@ -153,3 +153,53 @@ def mask_passkey(passkey: str) -> str:
     if not passkey or len(passkey) <= 4:
         return "****"
     return f"...{passkey[-4:]}"
+
+
+# ---------------------------------------------------------------------------
+# Labels de sensores (WN31, etc.)
+# ---------------------------------------------------------------------------
+
+def get_sensor_labels(path: str, station: Optional[str] = None) -> Dict[str, str]:
+    """
+    Obtiene los labels personalizados de sensores para una estación.
+
+    Args:
+        path: Ruta al archivo settings.json
+        station: Nombre de la estación (None para principal)
+
+    Returns:
+        Dict con sensor_id -> label, ej: {"ch1": "Sala", "ch2": "Recámara"}
+    """
+    data = load_all_settings(path)
+    station_key = station or "_principal"
+    stations = data.get("stations", {})
+    station_data = stations.get(station_key, {})
+    return station_data.get("sensor_labels", {})
+
+
+def save_sensor_label(path: str, sensor_id: str, label: str, station: Optional[str] = None) -> None:
+    """
+    Guarda el label de un sensor específico.
+
+    Args:
+        path: Ruta al archivo settings.json
+        sensor_id: ID del sensor (ej: "ch1", "ch2")
+        label: Nombre personalizado
+        station: Nombre de la estación (None para principal)
+    """
+    data = load_all_settings(path)
+    station_key = station or "_principal"
+
+    if "stations" not in data:
+        data["stations"] = {}
+    if station_key not in data["stations"]:
+        data["stations"][station_key] = {}
+    if "sensor_labels" not in data["stations"][station_key]:
+        data["stations"][station_key]["sensor_labels"] = {}
+
+    if label:
+        data["stations"][station_key]["sensor_labels"][sensor_id] = label
+    else:
+        data["stations"][station_key]["sensor_labels"].pop(sensor_id, None)
+
+    save_all_settings(path, data)

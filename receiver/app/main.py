@@ -480,6 +480,101 @@ def _detect_sensors(data: dict) -> list:
     return sensors
 
 
+def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
+    """
+    Detecta sensores con información detallada: lecturas actuales, batería, labels.
+
+    Returns:
+        Lista de dicts con info de cada sensor detectado.
+    """
+    sensors = []
+
+    # Sensor exterior (WS69)
+    if data.get("temperature_outdoor") is not None:
+        sensors.append({
+            "id": "outdoor",
+            "type": "WS69",
+            "category": "exterior",
+            "label": sensor_labels.get("outdoor", "Exterior"),
+            "temperature": data.get("temperature_outdoor"),
+            "humidity": data.get("humidity_outdoor"),
+            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "active": True,
+        })
+
+    # Sensor interior (consola o GW1100)
+    if data.get("temperature_indoor") is not None:
+        sensors.append({
+            "id": "indoor",
+            "type": "console",
+            "category": "interior",
+            "label": sensor_labels.get("indoor", "Interior"),
+            "temperature": data.get("temperature_indoor"),
+            "humidity": data.get("humidity_indoor"),
+            "pressure": data.get("pressure_relative"),
+            "battery_ok": True,  # Consola siempre con corriente
+            "active": True,
+        })
+
+    # Sensores WN31 (canales 1-8)
+    for i in range(1, 9):
+        temp = data.get(f"temperature_ch{i}")
+        if temp is not None:
+            sensors.append({
+                "id": f"ch{i}",
+                "type": "WN31",
+                "category": "canal",
+                "channel": i,
+                "label": sensor_labels.get(f"ch{i}", f"Canal {i}"),
+                "temperature": temp,
+                "humidity": data.get(f"humidity_ch{i}"),
+                "battery_ok": data.get(f"battery_ch{i}", True),
+                "active": True,
+            })
+
+    # Viento (parte del WS69)
+    if data.get("wind_speed") is not None:
+        sensors.append({
+            "id": "wind",
+            "type": "WS69",
+            "category": "viento",
+            "label": sensor_labels.get("wind", "Viento"),
+            "wind_speed": data.get("wind_speed"),
+            "wind_gust": data.get("wind_gust"),
+            "wind_direction": data.get("wind_direction"),
+            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "active": True,
+        })
+
+    # Lluvia (parte del WS69)
+    if data.get("rain_daily") is not None:
+        sensors.append({
+            "id": "rain",
+            "type": "WS69",
+            "category": "lluvia",
+            "label": sensor_labels.get("rain", "Lluvia"),
+            "rain_rate": data.get("rain_rate"),
+            "rain_daily": data.get("rain_daily"),
+            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "active": True,
+        })
+
+    # UV/Solar (parte del WS69)
+    if data.get("uv_index") is not None or data.get("solar_radiation") is not None:
+        sensors.append({
+            "id": "solar",
+            "type": "WS69",
+            "category": "solar",
+            "label": sensor_labels.get("solar", "Solar/UV"),
+            "uv_index": data.get("uv_index"),
+            "solar_radiation": data.get("solar_radiation"),
+            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "active": True,
+        })
+
+    return sensors
+
+
 def _station_status(last_received: Optional[str], timeout_minutes: int = 15) -> str:
     """Determina si una estación está online u offline."""
     if not last_received:
@@ -509,12 +604,14 @@ async def list_stations():
     principal_data = latest_by_station.get(None, {})
     principal_config = stations_config.get("_principal", {})
     principal_timeout = principal_config.get("watchdog_minutes", settings.alert_station_offline_minutes)
+    principal_sensor_labels = settings_store.get_sensor_labels(settings.settings_file, None)
     result.append({
         "name": None,
         "label": principal_config.get("label", "Principal"),
         "last_received": principal_data.get("received_at"),
         "status": _station_status(principal_data.get("received_at"), principal_timeout),
         "sensors": _detect_sensors(principal_data),
+        "sensors_detail": _detect_sensors_detail(principal_data, principal_sensor_labels),
         "model": principal_data.get("model"),
         "config": {
             "alerts_enabled": settings.alerts_enabled,
@@ -535,6 +632,7 @@ async def list_stations():
         station_data = latest_by_station.get(name, {})
         station_config = settings_store.get_station_config(settings.settings_file, name)
         timeout = station_config.get("watchdog_minutes", 15)
+        station_sensor_labels = settings_store.get_sensor_labels(settings.settings_file, name)
         result.append({
             "name": name,
             "label": station_config.get("label") or name,
@@ -542,6 +640,7 @@ async def list_stations():
             "last_received": station_data.get("received_at"),
             "status": _station_status(station_data.get("received_at"), timeout),
             "sensors": _detect_sensors(station_data),
+            "sensors_detail": _detect_sensors_detail(station_data, station_sensor_labels),
             "model": station_data.get("model"),
             "config": station_config,
         })
@@ -563,6 +662,10 @@ async def get_station(name: str):
 
     station_data = latest_by_station.get(name_key, {})
     timeout = config.get("watchdog_minutes", 15)
+    sensor_labels = settings_store.get_sensor_labels(
+        settings.settings_file,
+        None if name == "_principal" or name == "principal" else name
+    )
 
     return {
         "name": name_key,
@@ -570,6 +673,7 @@ async def get_station(name: str):
         "last_received": station_data.get("received_at"),
         "status": _station_status(station_data.get("received_at"), timeout),
         "sensors": _detect_sensors(station_data),
+        "sensors_detail": _detect_sensors_detail(station_data, sensor_labels),
         "model": station_data.get("model"),
         "config": config,
         "current_data": station_data if station_data else None,
