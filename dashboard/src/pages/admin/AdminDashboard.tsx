@@ -64,10 +64,22 @@ function timeAgo(isoString: string | null): string {
 }
 
 function StationCard({ station }: { station: Station }) {
+  const isPrincipal = station.name === null
   const sensorGroups = {
     exterior: station.sensors.filter(s => ['exterior', 'viento', 'lluvia', 'UV', 'solar'].includes(s)),
     interior: station.sensors.filter(s => s === 'interior'),
     canales: station.sensors.filter(s => s.startsWith('WN31')),
+  }
+
+  // Determinar el hardware basado en sensores y modelo
+  const getHardwareDescription = () => {
+    if (isPrincipal) {
+      const parts = []
+      if (sensorGroups.exterior.length > 0) parts.push('WS69')
+      if (sensorGroups.canales.length > 0) parts.push(`WN31 (${sensorGroups.canales.length} ch)`)
+      return parts.length > 0 ? parts.join(' + ') : station.model || 'Sin sensores'
+    }
+    return station.model || 'GW1100'
   }
 
   return (
@@ -75,12 +87,10 @@ function StationCard({ station }: { station: Station }) {
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-semibold text-lg flex items-center gap-2">
-            <span>{station.name ? '🏢' : '🏠'}</span>
-            {station.label}
+            <span>{isPrincipal ? '🏠' : '📡'}</span>
+            {isPrincipal ? 'Principal' : 'Remota'}
           </h3>
-          {station.model && (
-            <p className="text-slate-500 text-sm">{station.model}</p>
-          )}
+          <p className="text-slate-500 text-sm">{getHardwareDescription()}</p>
         </div>
         <StatusBadge status={station.status} />
       </div>
@@ -90,9 +100,10 @@ function StationCard({ station }: { station: Station }) {
       </div>
 
       <div className="space-y-3">
+        {/* Sensores exteriores (WS69) */}
         {sensorGroups.exterior.length > 0 && (
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Exterior</p>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">WS69 (Exterior)</p>
             <div className="flex flex-wrap gap-1">
               {sensorGroups.exterior.map(s => (
                 <span key={s} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-xs">
@@ -103,18 +114,22 @@ function StationCard({ station }: { station: Station }) {
           </div>
         )}
 
+        {/* Interior */}
         {sensorGroups.interior.length > 0 && (
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Interior</p>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
+              {isPrincipal ? 'Consola (Interior)' : 'GW1100 (Interior)'}
+            </p>
             <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 rounded text-xs">
-              ✓ interior
+              ✓ temp/humedad/presión
             </span>
           </div>
         )}
 
-        {sensorGroups.canales.length > 0 && (
+        {/* Canales WN31 */}
+        {isPrincipal && (
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Canales WN31</p>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">WN31 (Canales)</p>
             <div className="flex flex-wrap gap-1">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(ch => {
                 const active = sensorGroups.canales.some(s => s.includes(`ch${ch}`))
@@ -127,7 +142,7 @@ function StationCard({ station }: { station: Station }) {
                         : 'bg-slate-700/50 text-slate-600'
                     }`}
                   >
-                    {active ? '✓' : '—'} {ch}
+                    {ch}
                   </span>
                 )
               })}
@@ -240,19 +255,76 @@ export function AdminDashboard() {
         <p className="text-slate-400">Estado general del sistema</p>
       </div>
 
-      {/* Alertas activas */}
-      {activeAlerts.length > 0 && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-          <h2 className="font-semibold text-red-400 flex items-center gap-2 mb-2">
-            <span>🚨</span> Alertas Activas
-          </h2>
-          <ul className="space-y-1">
-            {activeAlerts.map((a, i) => (
-              <li key={i} className="text-sm text-red-300">{a.message}</li>
+      {/* Alertas */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>🔔</span> Alertas
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            adminStatus?.alerts_enabled
+              ? 'bg-emerald-500/20 text-emerald-400'
+              : 'bg-slate-500/20 text-slate-400'
+          }`}>
+            {adminStatus?.alerts_enabled ? 'Habilitadas' : 'Deshabilitadas'}
+          </span>
+          <a href="/admin/alertas" className="text-sky-400 text-sm font-normal ml-auto">
+            Configurar →
+          </a>
+        </h2>
+
+        {/* Alertas activas */}
+        {activeAlerts.length > 0 ? (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+            <h3 className="font-medium text-red-400 flex items-center gap-2 mb-2">
+              <span>🚨</span> Activas ahora ({activeAlerts.length})
+            </h3>
+            <ul className="space-y-1">
+              {activeAlerts.map((a, i) => (
+                <li key={i} className="text-sm text-red-300">{a.message}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-4">
+            <p className="text-emerald-400 flex items-center gap-2">
+              <span>✓</span> Sin alertas activas
+            </p>
+          </div>
+        )}
+
+        {/* Tipos de alertas configuradas */}
+        <div className="bg-slate-800/30 rounded-xl border border-white/5 p-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Monitoreando</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {[
+              { key: 'temp', label: 'Temperatura', icon: '🌡️' },
+              { key: 'wind', label: 'Viento', icon: '💨' },
+              { key: 'rain', label: 'Lluvia', icon: '🌧️' },
+              { key: 'pressure', label: 'Presión', icon: '📊' },
+              { key: 'offline', label: 'Estación caída', icon: '🔌' },
+              { key: 'battery', label: 'Batería baja', icon: '🔋' },
+              { key: 'sensor', label: 'Sensor perdido', icon: '📡' },
+              { key: 'air', label: 'Calidad del aire', icon: '🌫️' },
+            ].map(alert => (
+              <div
+                key={alert.key}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                  adminStatus?.alerts_enabled
+                    ? 'bg-slate-700/50 text-slate-300'
+                    : 'bg-slate-800/50 text-slate-500'
+                }`}
+              >
+                <span>{alert.icon}</span>
+                <span>{alert.label}</span>
+              </div>
             ))}
-          </ul>
+          </div>
+          {adminStatus?.telegram_enabled && (
+            <p className="text-slate-500 text-sm mt-3 flex items-center gap-2">
+              <span>💬</span> Notificaciones vía Telegram activas
+            </p>
+          )}
         </div>
-      )}
+      </section>
 
       {/* Estaciones */}
       <section>
@@ -270,6 +342,9 @@ export function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <span>🔌</span> Servicios
+          <a href="/admin/integraciones" className="text-sky-400 text-sm font-normal ml-auto">
+            Configurar →
+          </a>
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ServiceCard
@@ -285,14 +360,14 @@ export function AdminDashboard() {
             detail={adminStatus?.telegram_enabled ? 'Activo' : 'No configurado'}
           />
           <ServiceCard
-            icon="🔔"
-            name="Alertas"
-            status={adminStatus?.alerts_enabled ? 'ok' : 'off'}
-            detail={adminStatus?.alerts_enabled ? 'Habilitadas' : 'Deshabilitadas'}
+            icon="🏠"
+            name="MQTT / HA"
+            status="off"
+            detail="No configurado"
           />
           <ServiceCard
             icon="🌡️"
-            name="WAQI"
+            name="WAQI (AQI)"
             status={adminStatus?.waqi_configured ? 'ok' : 'off'}
             detail={adminStatus?.waqi_configured ? 'Configurado' : 'Sin token'}
           />
