@@ -5,7 +5,7 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException, Header, Response
+from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
