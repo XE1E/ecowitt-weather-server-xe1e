@@ -121,7 +121,7 @@ export function AdminAlertas() {
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Temperatura */}
           <div>
-            <p className="text-xs text-slate-500 mb-1">🌡️ Temperatura</p>
+            <p className="text-sm font-medium mb-1">🌡️ Temperatura</p>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Alta</span>
               <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} />
@@ -133,7 +133,7 @@ export function AdminAlertas() {
 
           {/* Viento */}
           <div>
-            <p className="text-xs text-slate-500 mb-1">💨 Viento</p>
+            <p className="text-sm font-medium mb-1">💨 Viento</p>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Vel</span>
               <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} />
@@ -145,7 +145,7 @@ export function AdminAlertas() {
 
           {/* Lluvia */}
           <div>
-            <p className="text-xs text-slate-500 mb-1">🌧️ Lluvia</p>
+            <p className="text-sm font-medium mb-1">🌧️ Lluvia</p>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Int</span>
               <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} />
@@ -158,7 +158,7 @@ export function AdminAlertas() {
 
           {/* Presion */}
           <div>
-            <p className="text-xs text-slate-500 mb-1">📊 Presion</p>
+            <p className="text-sm font-medium mb-1">📊 Presion</p>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-400">Alta</span>
               <NumField value={settings.alert_pressure_high} onChange={(v) => update('alert_pressure_high', v)} min={900} max={1100} />
