@@ -36,7 +36,7 @@ function LoginForm() {
           <div className="text-center mb-6">
             <div className="text-4xl mb-2">🔐</div>
             <h1 className="text-xl font-semibold text-white">Panel de Administración</h1>
-            <p className="text-slate-400 text-sm mt-1">Estación Meteorológica XE1E</p>
+            <p className="text-slate-400 text-sm mt-1">Estación Clima XE1E</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,7 +113,7 @@ export function AdminLayout() {
           <span className="text-xl">⚙️</span>
           <span className="font-semibold">Admin</span>
           <span className="text-slate-500">|</span>
-          <span className="text-slate-400 text-sm">Estación XE1E</span>
+          <span className="text-slate-400 text-sm">Estación Clima XE1E</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <a
