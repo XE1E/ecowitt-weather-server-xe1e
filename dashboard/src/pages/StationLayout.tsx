@@ -174,7 +174,7 @@ export function StationLayout() {
             <p className="text-center text-slate-600 mt-6">
               © 2026 Estación XE1E · {LOCATION.name} ·{' '}
               <NavLink to="/pro/compartir" className="hover:text-slate-400">Widget para tu sitio</NavLink> ·{' '}
-              <NavLink to="/pro/admin" className="hover:text-slate-400">⚙ Admin</NavLink>
+              <a href="/admin" className="hover:text-slate-400">⚙ Admin</a>
             </p>
           </footer>
         </div>

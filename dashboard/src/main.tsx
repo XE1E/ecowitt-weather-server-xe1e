@@ -16,8 +16,19 @@ import { ClimatePage } from './pages/ClimatePage'
 import { EarthquakesPage } from './pages/EarthquakesPage'
 import { RemoteStationPage } from './pages/RemoteStationPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
-import { AdminPage } from './pages/AdminPage'
 import { EmbedWidget } from './pages/EmbedWidget'
+import {
+  AdminLayout,
+  AdminDashboard,
+  AdminEstaciones,
+  AdminAlertas,
+  AdminCalibracion,
+  AdminPublicacion,
+  AdminNotificaciones,
+  AdminIntegraciones,
+  AdminSistema,
+} from './pages/admin'
+import { AdminAuthProvider } from './admin-auth'
 import { UnitsProvider } from './units'
 import { StationDataProvider } from './station-data'
 import './index.css'
@@ -29,15 +40,39 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-// /embed -> widget compacto para incrustar; /pro* -> app de la estación; / -> clásico
+// Detectar tipo de página:
+// /embed -> widget compacto
+// /admin -> panel de administración
+// /pro   -> app de la estación
+// /      -> vista clásica
 const path = window.location.pathname
 const isEmbed = path.startsWith('/embed')
+const isAdmin = path.startsWith('/admin')
 const isStation = path.startsWith('/pro')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {isEmbed ? (
       <EmbedWidget />
+    ) : isAdmin ? (
+      <AdminAuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="estaciones" element={<AdminEstaciones />} />
+              <Route path="estaciones/:name" element={<AdminEstaciones />} />
+              <Route path="alertas" element={<AdminAlertas />} />
+              <Route path="calibracion" element={<AdminCalibracion />} />
+              <Route path="publicacion" element={<AdminPublicacion />} />
+              <Route path="notificaciones" element={<AdminNotificaciones />} />
+              <Route path="integraciones" element={<AdminIntegraciones />} />
+              <Route path="sistema" element={<AdminSistema />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AdminAuthProvider>
     ) : isStation ? (
       <UnitsProvider>
         <StationDataProvider>
@@ -57,7 +92,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="sismos" element={<EarthquakesPage />} />
                 <Route path="remota" element={<RemoteStationPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
-                <Route path="admin" element={<AdminPage />} />
+                {/* Redirigir /pro/admin al nuevo panel */}
+                <Route path="admin" element={<Navigate to="/admin" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/pro" replace />} />
             </Routes>
