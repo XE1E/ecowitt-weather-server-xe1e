@@ -105,6 +105,13 @@ def public_settings(settings) -> Dict[str, Any]:
         "cwop_passcode_masked": mask(settings.cwop_passcode),
         "cwop_latitude": settings.cwop_latitude,
         "cwop_longitude": settings.cwop_longitude,
+        # MQTT / Home Assistant
+        "mqtt_enabled": settings.mqtt_enabled,
+        "mqtt_broker": settings.mqtt_broker,
+        "mqtt_port": settings.mqtt_port,
+        "mqtt_username": settings.mqtt_username,
+        "mqtt_password_masked": mask(settings.mqtt_password),
+        "mqtt_topic": settings.mqtt_topic,
     }
 
 

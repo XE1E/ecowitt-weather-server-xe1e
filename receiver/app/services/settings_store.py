@@ -49,6 +49,9 @@ EDITABLE_KEYS = {
     "owm_enabled", "owm_api_key", "owm_station_id",
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
     "cwop_latitude", "cwop_longitude",
+    # MQTT / Home Assistant
+    "mqtt_enabled", "mqtt_broker", "mqtt_port",
+    "mqtt_username", "mqtt_password", "mqtt_topic",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
@@ -58,6 +61,7 @@ SECRET_KEYS = {
     "wu_station_key",
     "pws_password",
     "windy_api_key",
+    "mqtt_password",
     "owm_api_key",
     "cwop_passcode",
 }
