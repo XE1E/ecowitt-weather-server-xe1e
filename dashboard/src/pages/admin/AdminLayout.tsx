@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, NavLink, Navigate } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 
 const NAV_ITEMS = [
