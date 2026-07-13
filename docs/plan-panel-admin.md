@@ -282,31 +282,180 @@ Paso 5: Listo
 
 ---
 
-## 7. Preguntas por Resolver
+## 7. Decisiones Tomadas
 
-1. **¿Wizard de primera configuración?** — ¿Vale la pena implementarlo o es suficiente con documentación?
-
-2. **¿Estructura del panel?** — ¿Opción A (plana), B (básico/avanzado), o C (por flujo)?
-
-3. **¿Configuración por estación en el mismo panel o página separada?** — Al editar una estación secundaria, ¿se abre modal, página nueva, o sección expandible?
-
-4. **¿Roles futuros?** — ¿Planear para multi-admin o mantenerlo simple con un solo admin?
-
-5. **¿Separar `/admin` de `/pro`?** — Actualmente es `/pro/admin`. ¿Mejor tenerlo en `/admin` completamente separado?
-
-6. **¿Indicadores visuales de estado?** — En el panel, ¿mostrar estado de conexión a servicios (InfluxDB, Telegram, redes) en tiempo real?
+| Pregunta | Decisión |
+|----------|----------|
+| Wizard de primera configuración | **Sí** — Guiar al usuario en el setup inicial |
+| Estructura del panel | **Opción A** — Tabs planos (simple, todo visible) |
+| Config por estación | **Página separada** — `/admin/estaciones/{name}` |
+| Roles | **Un solo admin** — Mantener simple |
+| Ruta del panel | **`/admin`** — Separado completamente de `/pro` |
+| Indicadores en vivo | **Sí** — Dashboard con estado de servicios |
 
 ---
 
-## 8. Siguiente Paso
+## 8. Diseño del Dashboard
 
-Definir respuestas a las preguntas del punto 7 y elegir:
-1. Estructura del panel (A, B, o C)
-2. Si incluir wizard
-3. Alcance de la Fase 2.2 (qué implementar primero)
+El dashboard será la página principal del panel admin, visualmente atractivo
+con indicadores en tiempo real.
 
-Una vez definido, crear mockups o wireframes simples y luego implementar.
+### 8.1 Indicadores de Estaciones
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ESTACIONES                                                     │
+├─────────────────────────────┬───────────────────────────────────┤
+│  🏠 Principal               │  🏢 Oficina (GW1100)              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━  │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Estado: 🟢 Online          │  Estado: 🟢 Online                │
+│  Última lectura: hace 32s   │  Última lectura: hace 1m 15s      │
+│  Modelo: WS2910             │  Modelo: GW1100A                  │
+│                             │                                   │
+│  Sensores:                  │  Sensores:                        │
+│  ✓ Exterior (WS69)          │  ✓ Interior                       │
+│  ✓ Interior                 │                                   │
+│  ✓ Viento                   │  Canales WN31: —                  │
+│  ✓ Lluvia                   │                                   │
+│  ✓ UV/Solar                 │                                   │
+│                             │                                   │
+│  Canales WN31:              │                                   │
+│  CH1 ✓  CH2 ✓  CH3 ✓        │                                   │
+│  CH4 —  CH5 —  CH6 —        │                                   │
+│  CH7 —  CH8 —               │                                   │
+│                             │                                   │
+│  [Configurar]               │  [Configurar]                     │
+└─────────────────────────────┴───────────────────────────────────┘
+```
+
+### 8.2 Estado de Servicios
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SERVICIOS                                                      │
+├─────────────────┬─────────────────┬─────────────────────────────┤
+│  InfluxDB       │  Telegram       │  MQTT / Home Assistant      │
+│  🟢 Conectado   │  🟢 Activo      │  🟡 No configurado          │
+│  Bucket: eco... │  Bot: @XE1E...  │                             │
+├─────────────────┼─────────────────┼─────────────────────────────┤
+│  Cloudflare     │  VPS Oracle     │  Uptime                     │
+│  🟢 Activo      │  🟢 Online      │  99.8% (30d)                │
+│  SSL válido     │  163.192.147... │  Último reinicio: 3d        │
+└─────────────────┴─────────────────┴─────────────────────────────┘
+```
+
+### 8.3 Alertas Activas
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ALERTAS                                           [Configurar] │
+├─────────────────────────────────────────────────────────────────┤
+│  🟢 Sin alertas activas                                         │
+│                                                                 │
+│  Últimas 24h:                                                   │
+│  • 14:32 — Temperatura alta: 35.2°C (normalizada 15:10)         │
+│  • 08:15 — Batería baja: Canal 3 (resuelta)                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 8.4 Publicación a Redes
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PUBLICACIÓN                                       [Configurar] │
+├─────────────┬─────────────┬─────────────┬─────────────┬─────────┤
+│  WU         │  Windy      │  PWS        │  OWM        │  CWOP   │
+│  🟢 Activo  │  🟢 Activo  │  ⚪ Off     │  ⚪ Off     │  ⚪ Off │
+│  ID: XE1E.. │  Key: ...   │             │             │         │
+└─────────────┴─────────────┴─────────────┴─────────────┴─────────┘
+```
+
+### 8.5 Resumen del Sistema
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SISTEMA                                                        │
+├───────────────────────┬─────────────────────────────────────────┤
+│  Versión              │  1.0.0                                  │
+│  Última actualización │  2026-07-12 18:30                       │
+│  Lecturas hoy         │  1,247 (principal) + 89 (remota)        │
+│  Espacio InfluxDB     │  2.3 GB / 50 GB                         │
+│  Último backup        │  2026-07-12 03:00 → R2                  │
+└───────────────────────┴─────────────────────────────────────────┘
+```
+
+---
+
+## 9. Estructura de Rutas
+
+```
+/admin
+├── /                    → Dashboard (estado general)
+├── /estaciones          → Lista de estaciones
+│   └── /{name}          → Configuración de una estación
+├── /alertas             → Configuración de alertas
+├── /calibracion         → Calibración de sensores
+├── /publicacion         → Redes públicas
+├── /notificaciones      → Telegram y canales
+├── /integraciones       → MQTT, WAQI, etc.
+└── /sistema             → QC, logs, info del sistema
+
+/admin/wizard            → Setup inicial (si no está configurado)
+```
+
+---
+
+## 10. Plan de Implementación
+
+### Fase 2.2.1: Estructura base
+- [ ] Crear `/admin` como ruta separada con autenticación
+- [ ] Layout con sidebar/tabs para las secciones
+- [ ] Migrar `/pro/admin` actual a `/admin`
+- [ ] Redireccionar `/pro/admin` → `/admin`
+
+### Fase 2.2.2: Dashboard
+- [ ] Indicadores de estaciones (estado, sensores, canales)
+- [ ] Estado de servicios (InfluxDB, Telegram, MQTT)
+- [ ] Alertas activas y recientes
+- [ ] Estado de publicación a redes
+- [ ] Resumen del sistema
+
+### Fase 2.2.3: Gestión de estaciones
+- [ ] Lista de estaciones en `/admin/estaciones`
+- [ ] Página de configuración por estación
+- [ ] Agregar/eliminar estaciones secundarias
+- [ ] Configuración específica (alertas, publicación, watchdog)
+
+### Fase 2.2.4: Wizard
+- [ ] Detección de primera configuración
+- [ ] Flujo paso a paso
+- [ ] Verificación de estación
+- [ ] Setup de Telegram
+- [ ] Setup de redes públicas
+
+### Fase 2.2.5: Refinamiento
+- [ ] Indicadores en tiempo real (WebSocket o polling)
+- [ ] Historial de alertas
+- [ ] Logs del sistema
+- [ ] Acciones rápidas desde dashboard
+
+---
+
+## 11. Endpoints de API Necesarios
+
+Nuevos endpoints para soportar el dashboard:
+
+```
+GET  /api/admin/dashboard      → Estado completo para el dashboard
+GET  /api/admin/services       → Estado de servicios (InfluxDB, Telegram, etc.)
+GET  /api/admin/alerts/history → Historial de alertas recientes
+POST /api/admin/stations       → Agregar estación
+PUT  /api/admin/stations/{name}→ Actualizar configuración de estación
+DELETE /api/admin/stations/{name} → Eliminar estación
+GET  /api/admin/system         → Info del sistema (versión, espacio, etc.)
+```
 
 ---
 
 *Documento creado: 2026-07-12*
+*Decisiones tomadas: 2026-07-13*
