@@ -1,6 +1,7 @@
 export { AdminLayout } from './AdminLayout'
 export { AdminDashboard } from './AdminDashboard'
 export { AdminEstaciones } from './AdminEstaciones'
+export { AdminEstacionConfig } from './AdminEstacionConfig'
 export { AdminAlertas } from './AdminAlertas'
 export { AdminCalibracion } from './AdminCalibracion'
 export { AdminPublicacion } from './AdminPublicacion'

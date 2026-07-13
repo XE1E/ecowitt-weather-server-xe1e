@@ -676,8 +676,35 @@ async def get_station(name: str):
         "sensors_detail": _detect_sensors_detail(station_data, sensor_labels),
         "model": station_data.get("model"),
         "config": config,
+        "sensor_labels": sensor_labels,
         "current_data": station_data if station_data else None,
     }
+
+
+@app.put("/api/stations/{name}")
+async def update_station(name: str, body: dict = Body(...)):
+    """Actualiza la configuración de una estación."""
+    if name == "_principal" or name == "principal":
+        station_key = "_principal"
+    else:
+        if name not in settings.secondary_station_map.values():
+            raise HTTPException(status_code=404, detail=f"Estación '{name}' no encontrada")
+        station_key = name
+
+    # Actualizar config general de la estación
+    if "config" in body:
+        new_config = body["config"]
+        settings_store.save_station_config(settings.settings_file, station_key, new_config)
+
+    # Actualizar labels de sensores
+    if "sensor_labels" in body:
+        station_for_labels = None if station_key == "_principal" else station_key
+        for sensor_id, label in body["sensor_labels"].items():
+            settings_store.save_sensor_label(
+                settings.settings_file, sensor_id, label, station_for_labels
+            )
+
+    return {"ok": True, "message": "Configuración actualizada"}
 
 
 @app.get("/api/compare")
