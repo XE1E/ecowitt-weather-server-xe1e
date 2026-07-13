@@ -455,6 +455,19 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
     }
 
 
+@app.post("/api/admin/test-telegram")
+async def admin_test_telegram(authorization: Optional[str] = Header(default=None)):
+    """Envía un mensaje de prueba a Telegram."""
+    _require_admin(authorization)
+    if not settings.telegram_enabled or not settings.telegram_bot_token or not settings.telegram_chat_id:
+        raise HTTPException(status_code=400, detail="Telegram no configurado")
+    try:
+        await alert_service._notifier.send("🧪 Mensaje de prueba desde Estacion Clima XE1E")
+        return {"status": "ok", "message": "Mensaje enviado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---------------------------------------------------------------------------
 # API de Estaciones (Etapa 2)
 # ---------------------------------------------------------------------------
