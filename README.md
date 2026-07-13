@@ -27,7 +27,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Estación remota** | Segunda estación (p. ej. un Ecowitt **GW1100**) que envía al mismo servidor; sus datos se guardan **por separado** y se ven en su propia página, solo lectura: condiciones, tendencias, estadística e histórico |
 | **Widget** | Generador de un `<iframe>` con las condiciones actuales para insertar en otra web |
 
-Además: **panel de administración** (`/pro/admin`, usuario/contraseña) para editar en caliente alertas, calibración, QC, Telegram y publicación a redes públicas; **tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
+Además: **panel de administración** (`/admin`, usuario/contraseña) con 8 páginas: Dashboard, Estaciones (nombres de sensores WN31), Alertas (umbrales), Calibración (offsets/multiplicadores), Publicación (redes públicas), Notificaciones (Telegram con test), Integraciones (MQTT/HA, WAQI) y Sistema (QC, info). Todo editable en caliente sin reiniciar. **Tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
 
 **Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, batería baja, sensor perdido, estación caída, y calidad del aire) con notificación por **Telegram**.
 

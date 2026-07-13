@@ -287,19 +287,23 @@ datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**
 
 ---
 
-## 6. Panel de administración (`/pro/admin`)
+## 6. Panel de administración (`/admin`)
 
-Acceso **usuario/contraseña** (sesión de 12 h). Permite **editar en caliente**
-(sin reiniciar el contenedor) y de forma segura todo lo configurable:
+Acceso **usuario/contraseña** (sesión de 12 h). Diseño compacto en columnas.
+Permite **editar en caliente** (sin reiniciar) todo lo configurable.
 
-- **Alertas:** activar; umbrales de temp alta/baja, viento y lluvia; minutos para
-  "estación caída"; **batería baja** y **sensor perdido**.
-- **Control de calidad:** activar QC por rangos y filtro de picos.
-- **Calibración:** offsets (temp/humedad/presión) y factores (viento/lluvia).
-- **Telegram:** activar + token del bot + chat id.
-- **Calidad del aire:** token WAQI.
-- **Redes públicas:** activar y credenciales de WU, PWSWeather, Windy,
-  OpenWeatherMap y CWOP/APRS.
+### Páginas del panel
+
+| Página | Qué configura |
+|--------|---------------|
+| **Dashboard** | Vista general: última lectura, estaciones detectadas, estado de servicios (InfluxDB, Telegram, WAQI) |
+| **Estaciones** | Configuración por estación: sensores con batería, presión, **nombres personalizados** para canales WN31 (ej. «Sala», «Recámara») |
+| **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA) |
+| **Calibración** | Toggle global. Offsets: temp (°C), humedad (%), presión (hPa). Multiplicadores: viento y lluvia (factor) |
+| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS |
+| **Notificaciones** | Toggle de Telegram, Bot Token, Chat ID y botón **«Probar»** para verificar |
+| **Integraciones** | MQTT/Home Assistant (broker, puerto, topic, auth) con auto-discovery; token WAQI para calidad del aire |
+| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
 dejan **en blanco al guardar, se conservan**. Los ajustes se guardan en
@@ -484,4 +488,4 @@ real cuando llegue el **WS2910**.
 
 ---
 
-*Última actualización: 2026-07-12.*
+*Última actualización: 2026-07-13.*
