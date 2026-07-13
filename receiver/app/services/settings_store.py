@@ -7,7 +7,7 @@ sin tocar el .env ni reiniciar. Solo se persiste una lista blanca de claves.
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,16 @@ SECRET_KEYS = {
     "cwop_passcode",
 }
 
+# Configuración por defecto para una estación
+DEFAULT_STATION_CONFIG = {
+    "label": "",
+    "alerts_enabled": False,
+    "publish_enabled": False,
+    "mqtt_enabled": False,
+    "watchdog_enabled": True,
+    "watchdog_minutes": 15,
+}
+
 
 def load_overrides(path: str) -> Dict[str, Any]:
     try:
@@ -79,3 +89,67 @@ def save_overrides(path: str, overrides: Dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(clean, f, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Gestión de estaciones (Etapa 2)
+# ---------------------------------------------------------------------------
+
+def load_all_settings(path: str) -> Dict[str, Any]:
+    """Carga todo el archivo de settings (no solo EDITABLE_KEYS)."""
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"No se pudo leer settings: {e}")
+    return {}
+
+
+def save_all_settings(path: str, data: Dict[str, Any]) -> None:
+    """Guarda todo el archivo de settings."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def get_stations_config(path: str) -> Dict[str, Dict[str, Any]]:
+    """Obtiene la configuración de todas las estaciones."""
+    data = load_all_settings(path)
+    return data.get("stations", {})
+
+
+def get_station_config(path: str, name: str) -> Dict[str, Any]:
+    """Obtiene la configuración de una estación específica."""
+    stations = get_stations_config(path)
+    config = stations.get(name, {})
+    return {**DEFAULT_STATION_CONFIG, **config}
+
+
+def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
+    """Guarda la configuración de una estación."""
+    data = load_all_settings(path)
+    if "stations" not in data:
+        data["stations"] = {}
+    data["stations"][name] = {
+        k: v for k, v in config.items()
+        if k in DEFAULT_STATION_CONFIG
+    }
+    save_all_settings(path, data)
+
+
+def delete_station_config(path: str, name: str) -> bool:
+    """Elimina la configuración de una estación. Retorna True si existía."""
+    data = load_all_settings(path)
+    if "stations" in data and name in data["stations"]:
+        del data["stations"][name]
+        save_all_settings(path, data)
+        return True
+    return False
+
+
+def mask_passkey(passkey: str) -> str:
+    """Enmascara un passkey mostrando solo los últimos 4 caracteres."""
+    if not passkey or len(passkey) <= 4:
+        return "****"
+    return f"...{passkey[-4:]}"

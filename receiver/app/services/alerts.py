@@ -40,10 +40,21 @@ class AlertService:
         # Rule keys currently triggered -> their message (dict so /api/alerts
         # can expose the active alerts; `key in self.active` still works)
         self.active: Dict[str, str] = {}
-        # Estado de "estación caída" (sin datos)
-        self.station_offline: bool = False
+        # Estado de "estación caída" por estación: {station_name: bool}
+        # None = principal, "gw1100" = secundaria, etc.
+        self.stations_offline: Dict[Optional[str], bool] = {}
         # Sensores vistos alguna vez (para detectar "sensor perdido")
         self.known_sensors: set = set()
+
+    @property
+    def station_offline(self) -> bool:
+        """Retrocompatibilidad: estado offline de la estación principal."""
+        return self.stations_offline.get(None, False)
+
+    @station_offline.setter
+    def station_offline(self, value: bool):
+        """Retrocompatibilidad: estado offline de la estación principal."""
+        self.stations_offline[None] = value
 
     # Etiquetas legibles por sensor (batería / contacto)
     _SENSOR_LABELS = {
@@ -194,11 +205,24 @@ class AlertService:
         """Enviar una notificación suelta."""
         await self._safe_notify(text)
 
-    async def check_station(self, last_iso, now, threshold_s: float):
+    async def check_station(
+        self,
+        last_iso,
+        now,
+        threshold_s: float,
+        station: Optional[str] = None,
+        label: str = "XE1E"
+    ):
         """
-        Evalúa si la estación está caída (sin datos) o se recuperó, y notifica en
-        las transiciones. Devuelve el texto enviado o None. `now` y `last_iso` se
-        pasan como argumentos para que sea testeable.
+        Evalúa si una estación está caída (sin datos) o se recuperó, y notifica
+        en las transiciones. Devuelve el texto enviado o None.
+
+        Args:
+            last_iso: timestamp ISO de la última lectura
+            now: datetime actual
+            threshold_s: umbral en segundos para considerar offline
+            station: None para principal, nombre para secundarias
+            label: etiqueta legible de la estación para el mensaje
         """
         if not last_iso:
             return None
@@ -206,16 +230,21 @@ class AlertService:
             age = (now - datetime.fromisoformat(last_iso)).total_seconds()
         except (ValueError, TypeError):
             return None
-        if age > threshold_s and not self.station_offline:
-            self.station_offline = True
-            msg = f"🔌 La estación XE1E no envía datos desde hace {int(age // 60)} min."
+
+        was_offline = self.stations_offline.get(station, False)
+
+        if age > threshold_s and not was_offline:
+            self.stations_offline[station] = True
+            msg = f"🔌 La estación **{label}** no envía datos desde hace {int(age // 60)} min."
             await self._safe_notify(msg)
             return msg
-        if age <= threshold_s and self.station_offline:
-            self.station_offline = False
-            msg = "✅ La estación XE1E volvió a enviar datos."
+
+        if age <= threshold_s and was_offline:
+            self.stations_offline[station] = False
+            msg = f"✅ La estación **{label}** volvió a enviar datos."
             await self._safe_notify(msg)
             return msg
+
         return None
 
     async def _safe_notify(self, text: str) -> None:

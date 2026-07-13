@@ -372,34 +372,49 @@ def build_records(rows: List[Dict[str, Any]], today: Optional[datetime] = None,
     }
 
 
-async def compute_and_store_day(storage, day: datetime) -> Optional[Dict[str, Any]]:
-    """Calcula el resumen de un día local y lo guarda en weather_daily."""
+async def compute_and_store_day(
+    storage, day: datetime, station: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Calcula el resumen de un día local y lo guarda en weather_daily.
+
+    station: None para principal, nombre para secundarias.
+    """
     start_iso, stop_iso, ts_utc = local_day_bounds_utc(day)
-    stats = await storage.get_daily_stats(start=start_iso, stop=stop_iso)
+    stats = await storage.get_daily_stats(start=start_iso, stop=stop_iso, station=station)
     fields = flatten_stats(stats)
     if not fields:
         return None
     # Dirección dominante del viento (media vectorial ponderada por velocidad)
     try:
-        wrows = await storage.query(start=start_iso, stop=stop_iso, fields=["wind_direction", "wind_speed"])
+        wrows = await storage.query(
+            start=start_iso, stop=stop_iso,
+            fields=["wind_direction", "wind_speed"],
+            station=station
+        )
         wd = vector_mean_dir(wrows)
         if wd is not None:
             fields["wind_dir"] = wd
     except Exception:
         pass
     date_str = day.strftime("%Y-%m-%d")
-    await storage.write_daily_summary(date_str, fields, ts_utc)
+    await storage.write_daily_summary(date_str, fields, ts_utc, station=station)
     return {"date": date_str, **fields}
 
 
-async def backfill(storage, days: int = 90) -> int:
+async def backfill(storage, days: int = 90, station: Optional[str] = None) -> int:
     """
     Rellena los resúmenes de los últimos `days` días locales que falten.
     Hoy y ayer se recalculan siempre (pueden estar incompletos).
     Devuelve cuántos días se (re)escribieron.
+
+    station: None para principal, nombre para secundarias.
     """
     today = datetime.now(_TZ)
-    existing = {r.get("date") for r in await storage.query_daily_summaries(start=f"-{days + 2}d")}
+    existing = {
+        r.get("date")
+        for r in await storage.query_daily_summaries(start=f"-{days + 2}d", station=station)
+    }
     written = 0
     for i in range(days):
         day = today - timedelta(days=i)
@@ -407,10 +422,32 @@ async def backfill(storage, days: int = 90) -> int:
         if date_str in existing and i > 1:
             continue  # ya existe y no es hoy/ayer
         try:
-            if await compute_and_store_day(storage, day):
+            if await compute_and_store_day(storage, day, station=station):
                 written += 1
         except Exception as e:
-            logger.error(f"Backfill {date_str} falló: {e}")
+            logger.error(f"Backfill {date_str} (station={station}) falló: {e}")
+    station_label = station or "principal"
     if written:
-        logger.info(f"Resumen diario: {written} día(s) (re)calculados")
+        logger.info(f"Resumen diario [{station_label}]: {written} día(s) (re)calculados")
     return written
+
+
+async def backfill_all_stations(
+    storage, secondary_stations: Dict[str, str], days: int = 90
+) -> Dict[Optional[str], int]:
+    """
+    Ejecuta backfill para la estación principal y todas las secundarias.
+
+    secondary_stations: mapa {passkey: nombre} de estaciones secundarias.
+    Devuelve {station_name: días_escritos}.
+    """
+    results: Dict[Optional[str], int] = {}
+
+    # Principal
+    results[None] = await backfill(storage, days=days, station=None)
+
+    # Secundarias
+    for name in set(secondary_stations.values()):
+        results[name] = await backfill(storage, days=days, station=name)
+
+    return results

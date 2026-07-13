@@ -78,17 +78,47 @@ mqtt_publisher = MqttPublisher(settings)
 
 
 async def station_watchdog():
-    """Avisa (Telegram/log) si la estación deja de enviar datos, y cuando vuelve."""
-    if not settings.alerts_enabled:
-        return
-    threshold = settings.alert_station_offline_minutes * 60
+    """
+    Avisa (Telegram/log) si alguna estación deja de enviar datos, y cuando vuelve.
+    Verifica la principal y todas las secundarias con watchdog habilitado.
+    """
     await asyncio.sleep(90)  # gracia inicial tras el arranque
     while True:
         try:
+            if not settings.alerts_enabled:
+                await asyncio.sleep(60)
+                continue
+
+            now = datetime.utcnow()
+            stations_config = settings_store.get_stations_config(settings.settings_file)
+
+            # Estación principal
+            principal_config = stations_config.get("_principal", {})
+            principal_timeout = principal_config.get(
+                "watchdog_minutes", settings.alert_station_offline_minutes
+            ) * 60
+            principal_label = principal_config.get("label", "Principal")
             await alert_service.check_station(
                 latest_by_station.get(None, {}).get("received_at"),
-                datetime.utcnow(), threshold
+                now, principal_timeout,
+                station=None, label=principal_label
             )
+
+            # Estaciones secundarias
+            for name in settings.secondary_station_map.values():
+                station_config = settings_store.get_station_config(
+                    settings.settings_file, name
+                )
+                if not station_config.get("watchdog_enabled", True):
+                    continue
+                timeout = station_config.get("watchdog_minutes", 15) * 60
+                label = station_config.get("label") or name
+                await alert_service.check_station(
+                    latest_by_station.get(name, {}).get("received_at"),
+                    now, timeout,
+                    station=name, label=label
+                )
+
         except Exception as e:
             logger.error(f"Watchdog error: {e}")
         await asyncio.sleep(60)
@@ -124,18 +154,23 @@ async def air_quality_watchdog():
 
 async def daily_rollup_task():
     """
-    Mantiene el resumen diario (weather_daily). Al arrancar rellena los últimos
-    ~90 días que falten; luego refresca hoy/ayer cada hora.
+    Mantiene el resumen diario (weather_daily) para todas las estaciones.
+    Al arrancar rellena los últimos ~90 días que falten; luego refresca
+    hoy/ayer cada hora.
     """
     await asyncio.sleep(120)  # gracia inicial
     try:
-        await aggregator.backfill(storage, days=90)
+        await aggregator.backfill_all_stations(
+            storage, settings.secondary_station_map, days=90
+        )
     except Exception as e:
         logger.error(f"Backfill inicial de resumen diario falló: {e}")
     while True:
         await asyncio.sleep(3600)
         try:
-            await aggregator.backfill(storage, days=2)  # hoy y ayer
+            await aggregator.backfill_all_stations(
+                storage, settings.secondary_station_map, days=2
+            )
         except Exception as e:
             logger.error(f"Refresco de resumen diario falló: {e}")
 
@@ -417,6 +452,127 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
         "telegram_enabled": settings.telegram_enabled,
         "waqi_configured": bool(settings.waqi_token),
         "admin_enabled": adminsvc.admin_enabled(settings),
+    }
+
+
+# ---------------------------------------------------------------------------
+# API de Estaciones (Etapa 2)
+# ---------------------------------------------------------------------------
+
+def _detect_sensors(data: dict) -> list:
+    """Detecta qué sensores están presentes en los datos de una estación."""
+    sensors = []
+    if data.get("temperature_outdoor") is not None:
+        sensors.append("exterior")
+    if data.get("temperature_indoor") is not None:
+        sensors.append("interior")
+    if data.get("wind_speed") is not None:
+        sensors.append("viento")
+    if data.get("rain_daily") is not None:
+        sensors.append("lluvia")
+    if data.get("uv_index") is not None:
+        sensors.append("UV")
+    if data.get("solar_radiation") is not None:
+        sensors.append("solar")
+    for i in range(1, 9):
+        if data.get(f"temperature_ch{i}") is not None:
+            sensors.append(f"WN31-ch{i}")
+    return sensors
+
+
+def _station_status(last_received: Optional[str], timeout_minutes: int = 15) -> str:
+    """Determina si una estación está online u offline."""
+    if not last_received:
+        return "unknown"
+    try:
+        last_dt = datetime.fromisoformat(last_received.replace("Z", "+00:00"))
+        now = datetime.now(last_dt.tzinfo)
+        delta = (now - last_dt).total_seconds() / 60
+        return "online" if delta < timeout_minutes else "offline"
+    except Exception:
+        return "unknown"
+
+
+@app.get("/api/stations")
+async def list_stations():
+    """
+    Lista todas las estaciones registradas con su estado actual.
+
+    Incluye la estación principal (name=null) y todas las secundarias
+    configuradas en SECONDARY_STATIONS o en settings.json.
+    """
+    stations_config = settings_store.get_stations_config(settings.settings_file)
+    secondary_map = settings.secondary_station_map
+    result = []
+
+    # Estación principal (siempre presente)
+    principal_data = latest_by_station.get(None, {})
+    principal_config = stations_config.get("_principal", {})
+    principal_timeout = principal_config.get("watchdog_minutes", settings.alert_station_offline_minutes)
+    result.append({
+        "name": None,
+        "label": principal_config.get("label", "Principal"),
+        "last_received": principal_data.get("received_at"),
+        "status": _station_status(principal_data.get("received_at"), principal_timeout),
+        "sensors": _detect_sensors(principal_data),
+        "model": principal_data.get("model"),
+        "config": {
+            "alerts_enabled": settings.alerts_enabled,
+            "publish_enabled": any([
+                settings.wu_enabled, settings.pws_enabled,
+                settings.windy_enabled, settings.owm_enabled, settings.cwop_enabled
+            ]),
+            "mqtt_enabled": settings.mqtt_enabled,
+            "watchdog_enabled": True,
+            "watchdog_minutes": principal_timeout,
+        }
+    })
+
+    # Estaciones secundarias (desde .env y/o settings.json)
+    all_secondary_names = set(secondary_map.values())
+    for name in all_secondary_names:
+        passkey = next((k for k, v in secondary_map.items() if v == name), None)
+        station_data = latest_by_station.get(name, {})
+        station_config = settings_store.get_station_config(settings.settings_file, name)
+        timeout = station_config.get("watchdog_minutes", 15)
+        result.append({
+            "name": name,
+            "label": station_config.get("label") or name,
+            "passkey_hint": settings_store.mask_passkey(passkey) if passkey else None,
+            "last_received": station_data.get("received_at"),
+            "status": _station_status(station_data.get("received_at"), timeout),
+            "sensors": _detect_sensors(station_data),
+            "model": station_data.get("model"),
+            "config": station_config,
+        })
+
+    return {"stations": result, "count": len(result)}
+
+
+@app.get("/api/stations/{name}")
+async def get_station(name: str):
+    """Obtiene el estado detallado de una estación específica."""
+    if name == "_principal" or name == "principal":
+        name_key = None
+        config = settings_store.get_station_config(settings.settings_file, "_principal")
+    else:
+        name_key = name
+        if name not in settings.secondary_station_map.values():
+            raise HTTPException(status_code=404, detail=f"Estación '{name}' no encontrada")
+        config = settings_store.get_station_config(settings.settings_file, name)
+
+    station_data = latest_by_station.get(name_key, {})
+    timeout = config.get("watchdog_minutes", 15)
+
+    return {
+        "name": name_key,
+        "label": config.get("label") or name or "Principal",
+        "last_received": station_data.get("received_at"),
+        "status": _station_status(station_data.get("received_at"), timeout),
+        "sensors": _detect_sensors(station_data),
+        "model": station_data.get("model"),
+        "config": config,
+        "current_data": station_data if station_data else None,
     }
 
 

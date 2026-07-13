@@ -270,15 +270,20 @@ class InfluxDBStorage:
             raise
 
     async def write_daily_summary(
-        self, date_str: str, fields: Dict[str, Any], ts: datetime
+        self, date_str: str, fields: Dict[str, Any], ts: datetime,
+        station: Optional[str] = None
     ) -> None:
         """
         Escribe/actualiza el resumen de un día en el measurement 'weather_daily'.
         Un punto por día (tag date=YYYY-MM-DD), timestamp al inicio del día (UTC).
         Reescribir el mismo día sobrescribe (mismo measurement+tag+time).
+
+        station: None para principal, nombre para secundarias (se guarda como tag).
         """
         try:
             point = Point("weather_daily").tag("date", date_str)
+            if station is not None:
+                point.tag("station", station)
             for k, v in fields.items():
                 if v is None:
                     continue
@@ -295,14 +300,22 @@ class InfluxDBStorage:
             raise
 
     async def query_daily_summaries(
-        self, start: str = "-365d", stop: str = "now()"
+        self, start: str = "-365d", stop: str = "now()",
+        station: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """Devuelve los resúmenes diarios (weather_daily) en el rango dado."""
+        """
+        Devuelve los resúmenes diarios (weather_daily) en el rango dado.
+
+        station: None para principal (sin tag o tag inexistente),
+                 nombre para secundarias.
+        """
         try:
+            station_filter = _station_filter(station)
             query = f'''
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
                 |> filter(fn: (r) => r["_measurement"] == "weather_daily")
+                |> filter(fn: (r) => {station_filter})
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
             rows = []
