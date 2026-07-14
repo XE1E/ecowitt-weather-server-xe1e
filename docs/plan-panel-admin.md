@@ -441,21 +441,37 @@ con indicadores en tiempo real.
 
 ---
 
-## 11. Endpoints de API Necesarios
+## 11. Endpoints de API
 
-Nuevos endpoints para soportar el dashboard:
+### Implementados ✅
 
 ```
-GET  /api/admin/dashboard      → Estado completo para el dashboard
-GET  /api/admin/services       → Estado de servicios (InfluxDB, Telegram, etc.)
-GET  /api/admin/alerts/history → Historial de alertas recientes
-POST /api/admin/stations       → Agregar estación
-PUT  /api/admin/stations/{name}→ Actualizar configuración de estación
-DELETE /api/admin/stations/{name} → Eliminar estación
-GET  /api/admin/system         → Info del sistema (versión, espacio, etc.)
+POST /api/admin/login              → Autenticación (user/pass → token)
+GET  /api/admin/settings           → Obtener configuración actual
+POST /api/admin/settings           → Guardar configuración
+GET  /api/admin/status             → Estado general (alertas, última lectura)
+POST /api/admin/test-telegram      → Probar envío de Telegram
+
+GET  /api/admin/stations           → Lista de estaciones
+PUT  /api/admin/stations/{name}    → Actualizar configuración de estación
+DELETE /api/admin/stations/{name}  → Eliminar estación
+GET  /api/admin/stations/{name}/sensors → Sensores de una estación
+PUT  /api/admin/sensors/{id}/label → Cambiar label de un sensor
+
+GET  /api/admin/setup-status       → ¿Wizard completado?
+POST /api/admin/setup-complete     → Marcar wizard como completado
+POST /api/admin/wizard/test-telegram → Probar Telegram sin guardar
+```
+
+### Pendientes ⏳
+
+```
+GET  /api/admin/alerts/history     → Historial de alertas recientes
+GET  /api/admin/system/logs        → Logs del sistema
 ```
 
 ---
 
 *Documento creado: 2026-07-12*
 *Decisiones tomadas: 2026-07-13*
+*Última actualización: 2026-07-13*
