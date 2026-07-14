@@ -59,18 +59,45 @@ def build_state_payload(data: Dict[str, Any]) -> Dict[str, Any]:
 
 class MqttPublisher:
     def __init__(self, settings, client=None):
-        self.enabled: bool = settings.mqtt_enabled
-        self.base_topic: str = settings.mqtt_topic
-        self.state_topic: str = f"{self.base_topic}/state"
-        self.hass: bool = settings.hass_discovery
-        self.prefix: str = settings.hass_discovery_prefix
         self._settings = settings
         self._client = client
         self._discovery_sent = False
+        self._connected = False
+        self._last_error: Optional[str] = None
+        self._sync_settings()
 
-    def connect(self) -> None:
+    def _sync_settings(self) -> None:
+        """Sync instance attributes with current settings."""
+        self.enabled: bool = self._settings.mqtt_enabled
+        self.base_topic: str = self._settings.mqtt_topic
+        self.state_topic: str = f"{self.base_topic}/state"
+        self.hass: bool = self._settings.hass_discovery
+        self.prefix: str = self._settings.hass_discovery_prefix
+
+    @property
+    def connected(self) -> bool:
+        return self._connected and self._client is not None
+
+    @property
+    def last_error(self) -> Optional[str]:
+        return self._last_error
+
+    def get_status(self) -> Dict[str, Any]:
+        """Return current MQTT connection status."""
+        return {
+            "enabled": self.enabled,
+            "connected": self.connected,
+            "broker": self._settings.mqtt_broker if self.enabled else None,
+            "port": self._settings.mqtt_port if self.enabled else None,
+            "topic": self.base_topic if self.enabled else None,
+            "hass_discovery": self.hass,
+            "last_error": self._last_error,
+        }
+
+    def connect(self) -> bool:
+        """Connect to MQTT broker. Returns True on success."""
         if not self.enabled:
-            return
+            return False
         try:
             import paho.mqtt.client as mqtt
 
@@ -79,15 +106,61 @@ class MqttPublisher:
                 client.username_pw_set(
                     self._settings.mqtt_username, self._settings.mqtt_password
                 )
+            client.on_connect = self._on_connect
+            client.on_disconnect = self._on_disconnect
             client.connect(self._settings.mqtt_broker, self._settings.mqtt_port)
             client.loop_start()
             self._client = client
+            self._connected = True
+            self._last_error = None
             logger.info(
                 f"Connected to MQTT broker {self._settings.mqtt_broker}:{self._settings.mqtt_port}"
             )
+            return True
         except Exception as e:
+            self._last_error = str(e)
             logger.error(f"MQTT connection failed: {e}")
             self._client = None
+            self._connected = False
+            return False
+
+    def _on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            self._connected = True
+            self._last_error = None
+            logger.info("MQTT connected successfully")
+        else:
+            self._connected = False
+            self._last_error = f"Connection refused (code {rc})"
+            logger.error(f"MQTT connection refused: {rc}")
+
+    def _on_disconnect(self, client, userdata, rc):
+        self._connected = False
+        if rc != 0:
+            self._last_error = f"Unexpected disconnect (code {rc})"
+            logger.warning(f"MQTT unexpected disconnect: {rc}")
+
+    def reconnect(self) -> bool:
+        """Reconnect with current settings. Call after settings change."""
+        self.close()
+        self._sync_settings()
+        self._discovery_sent = False
+        if self.enabled:
+            return self.connect()
+        return True
+
+    def test_connection(self, broker: str, port: int, username: Optional[str], password: Optional[str]) -> Dict[str, Any]:
+        """Test MQTT connection without affecting the main client."""
+        try:
+            import paho.mqtt.client as mqtt
+            test_client = mqtt.Client()
+            if username:
+                test_client.username_pw_set(username, password)
+            test_client.connect(broker, port, keepalive=5)
+            test_client.disconnect()
+            return {"success": True, "message": f"Conexión exitosa a {broker}:{port}"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
 
     def publish(self, data: Dict[str, Any]) -> None:
         if not self.enabled or self._client is None:

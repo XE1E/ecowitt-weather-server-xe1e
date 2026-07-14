@@ -462,6 +462,11 @@ async def admin_save_settings(body: dict, authorization: Optional[str] = Header(
     current.update(incoming)
     settings_store.save_overrides(settings.settings_file, current)
     adminsvc.apply_overrides(settings, alert_service, current)
+    # Reconectar MQTT si cambió alguna configuración relacionada
+    mqtt_keys = {"mqtt_enabled", "mqtt_broker", "mqtt_port", "mqtt_username",
+                 "mqtt_password", "mqtt_topic", "hass_discovery", "hass_discovery_prefix"}
+    if mqtt_keys & set(incoming.keys()):
+        mqtt_publisher.reconnect()
     return {"status": "ok", "applied": list(incoming.keys())}
 
 
@@ -521,6 +526,33 @@ async def admin_logs(
     _require_admin(authorization)
     logs = memory_log_handler.get_logs(limit=min(limit, 500))
     return {"logs": logs}
+
+
+@app.get("/api/admin/mqtt/status")
+async def admin_mqtt_status(authorization: Optional[str] = Header(default=None)):
+    """Retorna el estado de la conexión MQTT."""
+    _require_admin(authorization)
+    return mqtt_publisher.get_status()
+
+
+@app.post("/api/admin/mqtt/test")
+async def admin_mqtt_test(body: dict, authorization: Optional[str] = Header(default=None)):
+    """Prueba la conexión MQTT con los parámetros dados."""
+    _require_admin(authorization)
+    broker = body.get("broker") or settings.mqtt_broker
+    port = body.get("port") or settings.mqtt_port
+    username = body.get("username") or settings.mqtt_username
+    password = body.get("password") or settings.mqtt_password
+    result = mqtt_publisher.test_connection(broker, port, username, password)
+    return result
+
+
+@app.post("/api/admin/mqtt/reconnect")
+async def admin_mqtt_reconnect(authorization: Optional[str] = Header(default=None)):
+    """Fuerza reconexión MQTT con la configuración actual."""
+    _require_admin(authorization)
+    success = mqtt_publisher.reconnect()
+    return {"success": success, "status": mqtt_publisher.get_status()}
 
 
 @app.post("/api/admin/setup-complete")

@@ -9,8 +9,20 @@ interface IntegSettings {
   mqtt_password: string | null
   mqtt_password_masked: string | null
   mqtt_topic: string
+  hass_discovery: boolean
+  hass_discovery_prefix: string
   waqi_token: string | null
   waqi_token_masked: string | null
+}
+
+interface MqttStatus {
+  enabled: boolean
+  connected: boolean
+  broker: string | null
+  port: number | null
+  topic: string | null
+  hass_discovery: boolean
+  last_error: string | null
 }
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
@@ -55,21 +67,58 @@ function NumField({ value, onChange, min, max }: { value: number; onChange: (v: 
 export function AdminIntegraciones() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<IntegSettings | null>(null)
+  const [mqttStatus, setMqttStatus] = useState<MqttStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
+  const loadMqttStatus = async () => {
+    try {
+      const r = await fetchWithAuth('/api/admin/mqtt/status')
+      if (r.ok) setMqttStatus(await r.json())
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
-    fetchWithAuth('/api/admin/settings')
-      .then((r) => r.json())
-      .then(setSettings)
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetchWithAuth('/api/admin/settings').then((r) => r.json()),
+      fetchWithAuth('/api/admin/mqtt/status').then((r) => r.ok ? r.json() : null),
+    ]).then(([s, m]) => {
+      setSettings(s)
+      setMqttStatus(m)
+    }).finally(() => setLoading(false))
   }, [fetchWithAuth])
+
+  const testMqtt = async () => {
+    if (!settings) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const r = await fetchWithAuth('/api/admin/mqtt/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broker: settings.mqtt_broker,
+          port: settings.mqtt_port,
+          username: settings.mqtt_username,
+          password: settings.mqtt_password,
+        }),
+      })
+      const result = await r.json()
+      setTestResult(result)
+    } catch {
+      setTestResult({ success: false, message: 'Error de conexión' })
+    }
+    setTesting(false)
+  }
 
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
     setMessage(null)
+    setTestResult(null)
     try {
       const res = await fetchWithAuth('/api/admin/settings', {
         method: 'POST',
@@ -79,6 +128,8 @@ export function AdminIntegraciones() {
       if (res.ok) {
         setMessage({ type: 'ok', text: 'Guardado' })
         setTimeout(() => setMessage(null), 2000)
+        // Reload MQTT status after save (reconnection may have happened)
+        setTimeout(loadMqttStatus, 500)
       } else {
         setMessage({ type: 'error', text: 'Error' })
       }
@@ -115,30 +166,84 @@ export function AdminIntegraciones() {
         <div className="flex items-center gap-3 mb-3">
           <Toggle enabled={settings.mqtt_enabled} onChange={(v) => update('mqtt_enabled', v)} />
           <span className="text-sm font-medium">🏠 MQTT / Home Assistant</span>
-          <span className="text-xs text-slate-500">Auto-discovery habilitado</span>
+          {settings.mqtt_enabled && mqttStatus && (
+            <span className={`text-xs px-2 py-0.5 rounded ${
+              mqttStatus.connected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+            }`}>
+              {mqttStatus.connected ? '● Conectado' : '○ Desconectado'}
+            </span>
+          )}
         </div>
 
         {settings.mqtt_enabled && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-14">Broker</span>
-              <TextField value={settings.mqtt_broker} onChange={(v) => update('mqtt_broker', v)} placeholder="localhost" className="flex-1" />
+          <div className="space-y-4">
+            {/* Connection settings */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-14">Broker</span>
+                <TextField value={settings.mqtt_broker} onChange={(v) => update('mqtt_broker', v)} placeholder="localhost" className="flex-1" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-14">Puerto</span>
+                <NumField value={settings.mqtt_port} onChange={(v) => update('mqtt_port', v)} min={1} max={65535} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-14">Topic</span>
+                <TextField value={settings.mqtt_topic} onChange={(v) => update('mqtt_topic', v)} placeholder="weather/ecowitt" className="flex-1" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-14">Usuario</span>
+                <TextField value={settings.mqtt_username} onChange={(v) => update('mqtt_username', v)} placeholder="(opcional)" className="flex-1" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-14">Password</span>
+                <TextField value={settings.mqtt_password} onChange={(v) => update('mqtt_password', v)} placeholder="(opcional)" type="password" masked={settings.mqtt_password_masked} className="flex-1" />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-14">Puerto</span>
-              <NumField value={settings.mqtt_port} onChange={(v) => update('mqtt_port', v)} min={1} max={65535} />
+
+            {/* Home Assistant Discovery */}
+            <div className="border-t border-white/5 pt-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.hass_discovery}
+                    onChange={(e) => update('hass_discovery', e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                  />
+                  <span className="text-sm">Home Assistant Auto-Discovery</span>
+                </label>
+                {settings.hass_discovery && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Prefijo:</span>
+                    <TextField
+                      value={settings.hass_discovery_prefix}
+                      onChange={(v) => update('hass_discovery_prefix', v)}
+                      placeholder="homeassistant"
+                      className="w-36"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-14">Topic</span>
-              <TextField value={settings.mqtt_topic} onChange={(v) => update('mqtt_topic', v)} placeholder="weather/ecowitt" className="flex-1" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-14">Usuario</span>
-              <TextField value={settings.mqtt_username} onChange={(v) => update('mqtt_username', v)} placeholder="(opcional)" className="flex-1" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-14">Password</span>
-              <TextField value={settings.mqtt_password} onChange={(v) => update('mqtt_password', v)} placeholder="(opcional)" type="password" masked={settings.mqtt_password_masked} className="flex-1" />
+
+            {/* Test connection */}
+            <div className="border-t border-white/5 pt-3 flex items-center gap-3 flex-wrap">
+              <button
+                onClick={testMqtt}
+                disabled={testing || !settings.mqtt_broker}
+                className="text-sm text-sky-400 hover:text-sky-300 disabled:text-slate-500"
+              >
+                {testing ? 'Probando...' : '🔌 Probar conexión'}
+              </button>
+              {testResult && (
+                <span className={`text-xs ${testResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {testResult.message}
+                </span>
+              )}
+              {mqttStatus?.last_error && !testResult && (
+                <span className="text-xs text-red-400">Último error: {mqttStatus.last_error}</span>
+              )}
             </div>
           </div>
         )}
@@ -159,8 +264,11 @@ export function AdminIntegraciones() {
 
       {/* Info */}
       <div className="bg-slate-800/30 rounded-xl border border-white/5 p-4 text-xs text-slate-500">
-        <p><span className="text-slate-400">MQTT:</span> Los sensores aparecen automaticamente en Home Assistant via discovery · Topic base: <span className="text-slate-300">{settings.mqtt_topic}</span></p>
-        <p className="mt-1"><span className="text-slate-400">WAQI:</span> Los datos se consultan cada 15 minutos · Se usan para alertas, no se almacenan</p>
+        <p><span className="text-slate-400">MQTT:</span> Publica datos en <span className="text-slate-300">{settings.mqtt_topic}/state</span> como JSON · Se reconecta automáticamente al guardar</p>
+        {settings.hass_discovery && (
+          <p className="mt-1"><span className="text-slate-400">HA Discovery:</span> Sensores en <span className="text-slate-300">{settings.hass_discovery_prefix}/sensor/ecowitt/*/config</span> · Aparecen automáticamente en Home Assistant</p>
+        )}
+        <p className="mt-1"><span className="text-slate-400">WAQI:</span> Consulta calidad del aire cada 15 min para alertas (AQI/IMECA)</p>
       </div>
     </div>
   )

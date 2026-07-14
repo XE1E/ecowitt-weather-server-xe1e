@@ -112,6 +112,8 @@ def public_settings(settings) -> Dict[str, Any]:
         "mqtt_username": settings.mqtt_username,
         "mqtt_password_masked": mask(settings.mqtt_password),
         "mqtt_topic": settings.mqtt_topic,
+        "hass_discovery": settings.hass_discovery,
+        "hass_discovery_prefix": settings.hass_discovery_prefix,
     }
 
 
