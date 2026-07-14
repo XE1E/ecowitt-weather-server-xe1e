@@ -292,18 +292,32 @@ datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**
 Acceso **usuario/contraseña** (sesión de 12 h). Diseño compacto en columnas.
 Permite **editar en caliente** (sin reiniciar) todo lo configurable.
 
+### Wizard de configuración inicial
+
+La primera vez que se accede al panel, un **asistente de 5 pasos** guía la
+configuración:
+1. **Bienvenida** — introducción al panel
+2. **Estación** — verifica que la consola esté enviando datos
+3. **Alertas y Telegram** — configura umbrales y notificaciones (con botón
+   «Probar» para validar las credenciales antes de guardar)
+4. **Publicación** — activa las redes públicas (WU, Windy, etc.)
+5. **Resumen** — muestra lo configurado y finaliza
+
+El wizard puede saltarse y reaccederse más tarde si es necesario.
+
 ### Páginas del panel
 
 | Página | Qué configura |
 |--------|---------------|
-| **Dashboard** | Vista general: última lectura, estaciones detectadas, estado de servicios (InfluxDB, Telegram, WAQI) |
-| **Estaciones** | Configuración por estación: sensores con batería, presión, **nombres personalizados** para canales WN31 (ej. «Sala», «Recámara») |
+| **Dashboard** | Vista general con **indicador en tiempo real** (pulso verde que parpadea), **historial de alertas** de las últimas 24 h (muestra estado activo/resuelto con timestamp), y **acciones rápidas** (activar/desactivar alertas, probar Telegram, refrescar manualmente). Estado de servicios (InfluxDB, Telegram, WAQI) |
+| **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
+| **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara») |
 | **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA) |
 | **Calibración** | Toggle global. Offsets: temp (°C), humedad (%), presión (hPa). Multiplicadores: viento y lluvia (factor) |
-| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS |
+| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS. Muestra cuáles redes están **activas** |
 | **Notificaciones** | Toggle de Telegram, Bot Token, Chat ID y botón **«Probar»** para verificar |
-| **Integraciones** | MQTT/Home Assistant (broker, puerto, topic, auth) con auto-discovery; token WAQI para calidad del aire |
-| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). Enlaces útiles y stack |
+| **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, toggle de auto-discovery y prefijo. **Indicador de conexión** (conectado/desconectado con último error), botón **«Probar conexión»** (sin afectar la conexión activa) y **«Reconectar»** para forzar reconexión en caliente. **WAQI**: token API para calidad del aire |
+| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
 dejan **en blanco al guardar, se conservan**. Los ajustes se guardan en

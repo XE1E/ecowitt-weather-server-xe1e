@@ -348,13 +348,19 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     <section id="admin">
       <span class="sec-eyebrow">07 — Administración</span>
       <h2>Panel de administración (<code>/admin</code>)</h2>
-      <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Diseño compacto en columnas. Permite editar en caliente, sin reiniciar, todo lo configurable. Páginas:</p>
+      <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Diseño compacto en columnas. Permite editar en caliente, sin reiniciar, todo lo configurable.</p>
+
+      <h3>Wizard de configuración inicial</h3>
+      <p>La primera vez que se accede al panel, un <strong>asistente de 5 pasos</strong> guía la configuración: <strong>1)</strong> Bienvenida, <strong>2)</strong> Verificación de estación, <strong>3)</strong> Alertas y Telegram (con botón «Probar»), <strong>4)</strong> Publicación a redes, <strong>5)</strong> Resumen final. Se puede saltar y reacceder más tarde.</p>
 
       <h3>Dashboard</h3>
-      <p>Vista general: <strong>última lectura</strong> (hace cuánto), <strong>estaciones</strong> detectadas, botón para abrir el sitio público; y estado de <strong>servicios</strong> (InfluxDB, Telegram y WAQI con indicador verde/rojo).</p>
+      <p>Vista general con <strong>indicador en tiempo real</strong> (pulso verde), <strong>historial de alertas</strong> de las últimas 24 h (muestra estado activo/resuelto), y <strong>acciones rápidas</strong> (activar/desactivar alertas, probar Telegram, refrescar). Estado de servicios (InfluxDB, Telegram, WAQI).</p>
 
       <h3>Estaciones</h3>
-      <p>Configuración de cada estación detectada. <strong>Estación principal</strong> (consola): sensores con estado de batería (●), presión y etiqueta editable. <strong>Sensores WN31</strong> (hasta 8 canales): temperatura/humedad en vivo, batería y <strong>nombre personalizado</strong> por canal (ej. «Sala», «Recámara»). <strong>Estación remota</strong> (GW1100): sensores interiores y de presión.</p>
+      <p>Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. Botón <strong>«+ Agregar estación»</strong> para crear secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden <strong>eliminarse</strong> (con confirmación). Cada fila enlaza a su configuración individual.</p>
+
+      <h3>Configuración por estación</h3>
+      <p>Nombre/etiqueta, <strong>watchdog</strong> (activar/desactivar y timeout en minutos). <strong>Servicios individuales</strong>: activar alertas, publicación a redes y MQTT <strong>por estación</strong> (secundarias por defecto solo almacenan datos). <strong>Sensores WN31</strong> con nombres personalizados (ej. «Sala», «Recámara»).</p>
 
       <h3>Alertas</h3>
       <p>Toggle global y por tipo. Umbrales en línea: <strong>Temperatura</strong> (alta/baja °C), <strong>Viento</strong> (sostenido/ráfaga km/h), <strong>Lluvia</strong> (tasa/diaria mm), <strong>Presión</strong> (alta/baja hPa). Activar <strong>batería baja</strong>, <strong>sensor perdido</strong>, <strong>estación offline</strong> (minutos) y <strong>calidad del aire</strong> (AQI/IMECA).</p>
@@ -363,16 +369,16 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p>Toggle global. <strong>Offsets</strong>: temperatura (°C), humedad (%), presión (hPa). <strong>Multiplicadores</strong>: viento y lluvia (factor). Se aplican antes de guardar en InfluxDB.</p>
 
       <h3>Publicación</h3>
-      <p>Activar y configurar credenciales de redes públicas: <strong>Weather Underground</strong> (Station ID + Key), <strong>PWSWeather</strong> (ID + Password), <strong>Windy</strong> (API Key), <strong>OpenWeatherMap</strong> (API Key + Station ID) y <strong>CWOP/APRS</strong> (Callsign + Passcode + coordenadas).</p>
+      <p>Activar y configurar credenciales de redes públicas: <strong>Weather Underground</strong> (Station ID + Key), <strong>PWSWeather</strong> (ID + Password), <strong>Windy</strong> (API Key), <strong>OpenWeatherMap</strong> (API Key + Station ID) y <strong>CWOP/APRS</strong> (Callsign + Passcode + coordenadas). Muestra cuáles redes están <strong>activas</strong>.</p>
 
       <h3>Notificaciones</h3>
       <p>Toggle de Telegram. Campos: <strong>Bot Token</strong> y <strong>Chat ID</strong>. Botón <strong>«Probar»</strong> para enviar un mensaje de prueba y verificar la configuración.</p>
 
       <h3>Integraciones</h3>
-      <p><strong>MQTT / Home Assistant</strong>: toggle, broker, puerto, topic, usuario y contraseña. Auto-discovery habilitado. <strong>WAQI</strong>: token API para calidad del aire (AQI), con enlace para obtenerlo gratis.</p>
+      <p><strong>MQTT / Home Assistant</strong>: broker, puerto, topic, usuario y contraseña. Toggle de <strong>auto-discovery</strong> y prefijo. <strong>Indicador de conexión</strong> (conectado/desconectado con último error), botón <strong>«Probar conexión»</strong> (sin afectar la activa) y <strong>«Reconectar»</strong> para forzar reconexión en caliente. <strong>WAQI</strong>: token API para calidad del aire (AQI), con enlace para obtenerlo gratis.</p>
 
       <h3>Sistema</h3>
-      <p><strong>Información</strong>: versión, número de estaciones, última lectura, estado de InfluxDB. <strong>Control de calidad (QC)</strong>: toggle de QC habilitado y filtro de picos. <strong>Enlaces</strong> útiles (sitio público, guía, GitHub, API). Stack tecnológico.</p>
+      <p><strong>Información</strong>: versión, número de estaciones, última lectura, estado de InfluxDB. <strong>Control de calidad (QC)</strong>: toggle de QC habilitado y filtro de picos. <strong>Visor de logs</strong>: filtra por nivel (todos/warning/error) con refresco en tiempo real. <strong>Enlaces</strong> útiles (sitio público, guía, GitHub, API). Stack tecnológico.</p>
 
       <p style="margin-top:18px">Los tokens/claves se muestran <strong>enmascarados</strong> y si se dejan en blanco al guardar, se conservan. Todo se guarda en <code>/data/settings.json</code> y se aplica al instante. Si <code>ADMIN_USER</code>/<code>ADMIN_PASSWORD</code> están vacíos, el panel queda deshabilitado.</p>
     </section>
