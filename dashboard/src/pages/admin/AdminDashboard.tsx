@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
 
 interface SensorDetail {
@@ -13,10 +13,30 @@ interface Station {
   status: 'online' | 'offline' | 'unknown'; sensors_detail: SensorDetail[]; model: string | null
 }
 
+interface AlertHistoryItem {
+  key: string
+  message: string
+  timestamp: string
+  resolved_at?: string
+}
+
+interface PublicationStatus {
+  wu: boolean
+  windy: boolean
+  pws: boolean
+  owm: boolean
+  cwop: boolean
+}
+
 interface AdminStatus {
   last_received: string | null
   active_alerts: { key: string; message: string }[]
-  alerts_enabled: boolean; telegram_enabled: boolean; waqi_configured: boolean
+  alert_history: AlertHistoryItem[]
+  alerts_enabled: boolean
+  telegram_enabled: boolean
+  waqi_configured: boolean
+  mqtt_enabled: boolean
+  publication: PublicationStatus
 }
 
 function timeAgo(iso: string | null): string {
@@ -90,35 +110,118 @@ function StationCard({ station }: { station: Station }) {
   )
 }
 
+function LiveIndicator({ lastUpdate }: { lastUpdate: Date | null }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const i = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(i)
+  }, [])
+  const ago = lastUpdate ? Math.floor((Date.now() - lastUpdate.getTime()) / 1000) : null
+  const isRecent = ago !== null && ago < 15
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className={`w-2 h-2 rounded-full ${isRecent ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+      <span className="text-slate-400">
+        {ago === null ? 'Conectando...' : ago < 5 ? 'Actualizado' : `Hace ${ago}s`}
+      </span>
+    </div>
+  )
+}
+
+function AlertHistory({ history }: { history: AlertHistoryItem[] }) {
+  if (history.length === 0) return null
+  return (
+    <div className="mt-3 pt-3 border-t border-white/5">
+      <p className="text-xs text-slate-500 mb-2">Últimas 24h</p>
+      <div className="space-y-1 max-h-32 overflow-y-auto">
+        {history.slice(0, 10).map((a, i) => {
+          const time = new Date(a.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+          const resolved = a.resolved_at ? ` → ${new Date(a.resolved_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : ''
+          return (
+            <div key={i} className="text-xs text-slate-400 flex gap-2">
+              <span className="text-slate-500 tabular-nums">{time}{resolved}</span>
+              <span className={a.resolved_at ? 'line-through text-slate-600' : ''}>{a.message}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function AdminDashboard() {
   const { fetchWithAuth } = useAdminAuth()
   const [stations, setStations] = useState<Station[]>([])
   const [status, setStatus] = useState<AdminStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const [sRes, aRes] = await Promise.all([fetch('/api/stations'), fetchWithAuth('/api/admin/status')])
+      if (sRes.ok) setStations((await sRes.json()).stations)
+      if (aRes.ok) setStatus(await aRes.json())
+      setLastUpdate(new Date())
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }, [fetchWithAuth])
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [sRes, aRes] = await Promise.all([fetch('/api/stations'), fetchWithAuth('/api/admin/status')])
-        if (sRes.ok) setStations((await sRes.json()).stations)
-        if (aRes.ok) setStatus(await aRes.json())
-      } catch (e) { console.error(e) }
-      finally { setLoading(false) }
-    }
     load()
-    const i = setInterval(load, 30000)
+    const i = setInterval(load, 10000)
     return () => clearInterval(i)
-  }, [fetchWithAuth])
+  }, [load])
+
+  const toggleAlerts = async () => {
+    if (!status) return
+    setActionLoading('alerts')
+    try {
+      await fetchWithAuth('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerts_enabled: !status.alerts_enabled }),
+      })
+      await load()
+    } catch (e) { console.error(e) }
+    setActionLoading(null)
+  }
+
+  const testTelegram = async () => {
+    setActionLoading('telegram')
+    try {
+      const r = await fetchWithAuth('/api/admin/test-telegram', { method: 'POST' })
+      if (r.ok) alert('Mensaje enviado')
+      else alert('Error al enviar')
+    } catch { alert('Error de conexión') }
+    setActionLoading(null)
+  }
 
   if (loading) return <div className="text-slate-400">Cargando...</div>
 
   const alerts = status?.active_alerts || []
+  const history = status?.alert_history || []
+  const pub = status?.publication || { wu: false, windy: false, pws: false, owm: false, cwop: false }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold">Dashboard</h1>
-        <p className="text-slate-400 text-sm">Estado del sistema</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Dashboard</h1>
+          <p className="text-slate-400 text-sm">Estado del sistema</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <LiveIndicator lastUpdate={lastUpdate} />
+          <button
+            onClick={load}
+            className="text-slate-400 hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors"
+            title="Actualizar ahora"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Alertas */}
@@ -126,9 +229,16 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-medium flex items-center gap-2">
             <span>🔔</span> Alertas
-            <span className={`text-xs px-1.5 py-0.5 rounded ${status?.alerts_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-600 text-slate-400'}`}>
-              {status?.alerts_enabled ? 'ON' : 'OFF'}
-            </span>
+            <button
+              onClick={toggleAlerts}
+              disabled={actionLoading === 'alerts'}
+              className={`text-xs px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                status?.alerts_enabled ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-slate-600 text-slate-400 hover:bg-slate-500'
+              } disabled:opacity-50`}
+              title={status?.alerts_enabled ? 'Click para desactivar' : 'Click para activar'}
+            >
+              {actionLoading === 'alerts' ? '...' : status?.alerts_enabled ? 'ON' : 'OFF'}
+            </button>
           </h2>
           <a href="/admin/alertas" className="text-sky-400 hover:text-sky-300 text-xs">Configurar →</a>
         </div>
@@ -144,6 +254,7 @@ export function AdminDashboard() {
             <span key={t} className={`text-xs px-2 py-0.5 rounded ${status?.alerts_enabled ? 'bg-slate-700/50 text-slate-300' : 'bg-slate-800/50 text-slate-500'}`}>{t}</span>
           ))}
         </div>
+        <AlertHistory history={history} />
       </div>
 
       {/* Estaciones */}
@@ -165,27 +276,51 @@ export function AdminDashboard() {
           </div>
           <div className="border-t border-white/5 pt-3">
             <p className="text-xs text-slate-500 mb-2">Servicios</p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               <span className="text-xs text-emerald-400">● InfluxDB</span>
               <span className={`text-xs ${status?.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
                 {status?.telegram_enabled ? '●' : '○'} Telegram
+              </span>
+              <span className={`text-xs ${status?.mqtt_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                {status?.mqtt_enabled ? '●' : '○'} MQTT
               </span>
               <span className={`text-xs ${status?.waqi_configured ? 'text-emerald-400' : 'text-slate-500'}`}>
                 {status?.waqi_configured ? '●' : '○'} WAQI
               </span>
             </div>
+            {status?.telegram_enabled && (
+              <button
+                onClick={testTelegram}
+                disabled={actionLoading === 'telegram'}
+                className="mt-3 text-xs text-sky-400 hover:text-sky-300 disabled:text-slate-500"
+              >
+                {actionLoading === 'telegram' ? 'Enviando...' : '🧪 Probar Telegram'}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-medium flex items-center gap-2"><span>📤</span> Publicacion</h2>
+            <h2 className="font-medium flex items-center gap-2"><span>📤</span> Publicación</h2>
             <a href="/admin/publicacion" className="text-sky-400 hover:text-sky-300 text-xs">Configurar →</a>
           </div>
           <div className="flex flex-wrap gap-3">
-            {['Weather Underground', 'Windy', 'PWSWeather', 'OpenWeatherMap', 'CWOP'].map(n => (
-              <span key={n} className="text-xs text-slate-500">○ {n}</span>
-            ))}
+            <span className={`text-xs ${pub.wu ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.wu ? '●' : '○'} Weather Underground
+            </span>
+            <span className={`text-xs ${pub.windy ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.windy ? '●' : '○'} Windy
+            </span>
+            <span className={`text-xs ${pub.pws ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.pws ? '●' : '○'} PWSWeather
+            </span>
+            <span className={`text-xs ${pub.owm ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.owm ? '●' : '○'} OpenWeatherMap
+            </span>
+            <span className={`text-xs ${pub.cwop ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.cwop ? '●' : '○'} CWOP
+            </span>
           </div>
         </div>
       </div>

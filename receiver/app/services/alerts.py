@@ -7,8 +7,9 @@ a sustained condition notifies once on trigger and once when it clears, instead
 of spamming on every reading.
 """
 
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
-from datetime import datetime
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from collections import deque
 import logging
 
 import httpx
@@ -40,11 +41,15 @@ class AlertService:
         # Rule keys currently triggered -> their message (dict so /api/alerts
         # can expose the active alerts; `key in self.active` still works)
         self.active: Dict[str, str] = {}
+        # Tracking when alerts were triggered (for history)
+        self._active_since: Dict[str, str] = {}  # key -> ISO timestamp
         # Estado de "estación caída" por estación: {station_name: bool}
         # None = principal, "gw1100" = secundaria, etc.
         self.stations_offline: Dict[Optional[str], bool] = {}
         # Sensores vistos alguna vez (para detectar "sensor perdido")
         self.known_sensors: set = set()
+        # Alert history: deque of {key, message, timestamp, resolved_at?}
+        self._history: deque = deque(maxlen=100)
 
     @property
     def station_offline(self) -> bool:
@@ -162,6 +167,39 @@ class AlertService:
 
         return rules
 
+    def get_history(self, limit: int = 20, hours: int = 24) -> List[Dict[str, Any]]:
+        """Return recent alert history within the last N hours."""
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        result = []
+        for entry in reversed(self._history):
+            try:
+                ts = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+                if ts.replace(tzinfo=None) >= cutoff:
+                    result.append(entry)
+                if len(result) >= limit:
+                    break
+            except (KeyError, ValueError):
+                continue
+        return result
+
+    def _add_to_history(self, key: str, message: str, resolved: bool = False) -> None:
+        """Add an alert event to history."""
+        now = datetime.utcnow().isoformat() + "Z"
+        if resolved:
+            # Find the matching active alert in history and mark it resolved
+            for entry in reversed(self._history):
+                if entry["key"] == key and "resolved_at" not in entry:
+                    entry["resolved_at"] = now
+                    break
+        else:
+            # New alert triggered
+            self._active_since[key] = now
+            self._history.append({
+                "key": key,
+                "message": message,
+                "timestamp": now,
+            })
+
     async def process(self, data: Dict[str, Any]) -> None:
         """Evaluate rules and notify on state transitions."""
         if not self.enabled:
@@ -170,9 +208,12 @@ class AlertService:
         for key, (triggered, message) in self.evaluate(data).items():
             if triggered and key not in self.active:
                 self.active[key] = message
+                self._add_to_history(key, message, resolved=False)
                 await self._safe_notify(f"⚠️ ALERTA — {message}")
             elif not triggered and key in self.active:
+                self._add_to_history(key, self.active[key], resolved=True)
                 self.active.pop(key, None)
+                self._active_since.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}")
 
     async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
@@ -196,9 +237,12 @@ class AlertService:
         for key, triggered, message in checks:
             if triggered and key not in self.active:
                 self.active[key] = message
+                self._add_to_history(key, message, resolved=False)
                 await self._safe_notify(f"⚠️ ALERTA — {message}")
             elif not triggered and key in self.active:
+                self._add_to_history(key, self.active[key], resolved=True)
                 self.active.pop(key, None)
+                self._active_since.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}")
 
     async def send(self, text: str) -> None:
@@ -233,15 +277,18 @@ class AlertService:
 
         was_offline = self.stations_offline.get(station, False)
 
+        key = f"station_offline_{station or 'principal'}"
         if age > threshold_s and not was_offline:
             self.stations_offline[station] = True
             msg = f"🔌 La estación **{label}** no envía datos desde hace {int(age // 60)} min."
+            self._add_to_history(key, msg, resolved=False)
             await self._safe_notify(msg)
             return msg
 
         if age <= threshold_s and was_offline:
             self.stations_offline[station] = False
             msg = f"✅ La estación **{label}** volvió a enviar datos."
+            self._add_to_history(key, f"Estación {label} offline", resolved=True)
             await self._safe_notify(msg)
             return msg
 

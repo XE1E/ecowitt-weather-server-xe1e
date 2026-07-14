@@ -1,6 +1,6 @@
 # Plan — Panel de Administración
 
-> Estado: **implementación avanzada** (~75%). Panel funcional, wizard completado. Pendiente: gestión multi-estación y refinamiento.
+> Estado: **implementación avanzada** (~90%). Panel funcional, wizard y refinamiento completados. Pendiente: gestión multi-estación.
 
 ## Objetivo
 
@@ -433,11 +433,11 @@ con indicadores en tiempo real.
 - [x] Setup de Telegram (con prueba de envío)
 - [x] Setup de redes públicas (Weather Underground, Windy)
 
-### Fase 2.2.5: Refinamiento ⏳
-- [ ] Indicadores en tiempo real (WebSocket o polling)
-- [ ] Historial de alertas
-- [ ] Logs del sistema
-- [ ] Acciones rápidas desde dashboard
+### Fase 2.2.5: Refinamiento ✅
+- [x] Indicadores en tiempo real (polling 10s + indicador visual + botón refresh)
+- [x] Historial de alertas (últimas 24h con timestamps, resueltas marcadas)
+- [x] Logs del sistema (visor en página Sistema con filtros)
+- [x] Acciones rápidas desde dashboard (toggle alertas, probar Telegram, refresh manual)
 
 ---
 
@@ -461,13 +461,13 @@ PUT  /api/admin/sensors/{id}/label → Cambiar label de un sensor
 GET  /api/admin/setup-status       → ¿Wizard completado?
 POST /api/admin/setup-complete     → Marcar wizard como completado
 POST /api/admin/wizard/test-telegram → Probar Telegram sin guardar
+GET  /api/admin/logs               → Últimos logs del sistema (in-memory)
 ```
 
 ### Pendientes ⏳
 
 ```
-GET  /api/admin/alerts/history     → Historial de alertas recientes
-GET  /api/admin/system/logs        → Logs del sistema
+(ninguno crítico - el historial de alertas se incluye en /api/admin/status)
 ```
 
 ---

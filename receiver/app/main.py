@@ -9,7 +9,8 @@ from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+from collections import deque
 import asyncio
 import logging
 
@@ -40,6 +41,29 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+# In-memory log buffer for admin panel
+class MemoryLogHandler(logging.Handler):
+    def __init__(self, maxlen: int = 500):
+        super().__init__()
+        self.buffer: deque = deque(maxlen=maxlen)
+
+    def emit(self, record: logging.LogRecord):
+        self.buffer.append({
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+        })
+
+    def get_logs(self, limit: int = 100) -> List[Dict]:
+        return list(self.buffer)[-limit:]
+
+
+memory_log_handler = MemoryLogHandler(maxlen=500)
+memory_log_handler.setLevel(logging.INFO)
+logging.getLogger().addHandler(memory_log_handler)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -448,10 +472,19 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
         "station_offline": alert_service.station_offline,
         "last_received": latest_by_station.get(None, {}).get("received_at"),
         "active_alerts": [{"key": k, "message": m} for k, m in alert_service.active.items()],
+        "alert_history": alert_service.get_history(limit=20),
         "alerts_enabled": settings.alerts_enabled,
         "telegram_enabled": settings.telegram_enabled,
+        "mqtt_enabled": settings.mqtt_enabled,
         "waqi_configured": bool(settings.waqi_token),
         "admin_enabled": adminsvc.admin_enabled(settings),
+        "publication": {
+            "wu": settings.wu_enabled,
+            "windy": settings.windy_enabled,
+            "pws": settings.pws_enabled,
+            "owm": settings.owm_enabled,
+            "cwop": settings.cwop_enabled,
+        },
     }
 
 
@@ -477,6 +510,17 @@ async def admin_setup_status(authorization: Optional[str] = Header(default=None)
     """Retorna si el wizard de configuración inicial se ha completado."""
     _require_admin(authorization)
     return {"setup_completed": settings_store.get_setup_completed(settings.settings_file)}
+
+
+@app.get("/api/admin/logs")
+async def admin_logs(
+    limit: int = 100,
+    authorization: Optional[str] = Header(default=None)
+):
+    """Retorna los últimos logs del sistema."""
+    _require_admin(authorization)
+    logs = memory_log_handler.get_logs(limit=min(limit, 500))
+    return {"logs": logs}
 
 
 @app.post("/api/admin/setup-complete")

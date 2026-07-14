@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
 
 interface SysSettings {
@@ -12,6 +12,12 @@ interface SysInfo {
   last_received: string | null
   uptime: string
   influxdb: { status: string; url: string }
+}
+
+interface LogEntry {
+  timestamp: string
+  level: string
+  message: string
 }
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -42,9 +48,24 @@ export function AdminSistema() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<SysSettings | null>(null)
   const [info, setInfo] = useState<SysInfo | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsFilter, setLogsFilter] = useState<'all' | 'warning' | 'error'>('all')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true)
+    try {
+      const r = await fetchWithAuth('/api/admin/logs?limit=100')
+      if (r.ok) {
+        const data = await r.json()
+        setLogs(data.logs || [])
+      }
+    } catch (e) { console.error(e) }
+    setLogsLoading(false)
+  }, [fetchWithAuth])
 
   useEffect(() => {
     Promise.all([
@@ -61,7 +82,8 @@ export function AdminSistema() {
         influxdb: { status: 'connected', url: 'http://influxdb:8086' },
       })
     }).finally(() => setLoading(false))
-  }, [fetchWithAuth])
+    loadLogs()
+  }, [fetchWithAuth, loadLogs])
 
   const handleSave = async () => {
     if (!settings) return
@@ -138,6 +160,58 @@ export function AdminSistema() {
           <Toggle enabled={settings.qc_spike_enabled} onChange={(v) => update('qc_spike_enabled', v)} label="Filtro de picos" />
         </div>
         <p className="text-xs text-slate-500 mt-2">Filtra lecturas anomalas (picos, valores fuera de rango) antes de almacenar</p>
+      </div>
+
+      {/* Logs del sistema */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium">Logs del sistema</h2>
+          <div className="flex items-center gap-2">
+            <select
+              value={logsFilter}
+              onChange={(e) => setLogsFilter(e.target.value as typeof logsFilter)}
+              className="text-xs bg-slate-700 border border-white/10 rounded px-2 py-1 text-slate-300"
+            >
+              <option value="all">Todos</option>
+              <option value="warning">Warning+</option>
+              <option value="error">Solo errores</option>
+            </select>
+            <button
+              onClick={loadLogs}
+              disabled={logsLoading}
+              className="text-xs text-sky-400 hover:text-sky-300 disabled:text-slate-500"
+            >
+              {logsLoading ? 'Cargando...' : '↻ Actualizar'}
+            </button>
+          </div>
+        </div>
+        <div className="bg-slate-900/50 rounded-lg p-2 max-h-64 overflow-y-auto font-mono text-xs">
+          {logs.length === 0 ? (
+            <p className="text-slate-500 italic">Sin logs recientes</p>
+          ) : (
+            logs
+              .filter(l => {
+                if (logsFilter === 'all') return true
+                if (logsFilter === 'warning') return l.level === 'WARNING' || l.level === 'ERROR'
+                return l.level === 'ERROR'
+              })
+              .map((log, i) => (
+                <div key={i} className="flex gap-2 py-0.5 border-b border-white/5 last:border-0">
+                  <span className="text-slate-500 shrink-0">
+                    {new Date(log.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                  <span className={`shrink-0 ${
+                    log.level === 'ERROR' ? 'text-red-400' :
+                    log.level === 'WARNING' ? 'text-yellow-400' :
+                    log.level === 'INFO' ? 'text-sky-400' : 'text-slate-400'
+                  }`}>
+                    {log.level.slice(0, 4)}
+                  </span>
+                  <span className="text-slate-300 break-all">{log.message}</span>
+                </div>
+              ))
+          )}
+        </div>
       </div>
 
       {/* Links utiles */}
