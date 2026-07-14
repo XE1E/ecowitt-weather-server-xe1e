@@ -28,6 +28,7 @@ import {
   AdminNotificaciones,
   AdminIntegraciones,
   AdminSistema,
+  AdminWizard,
 } from './pages/admin'
 import { AdminAuthProvider } from './admin-auth'
 import { UnitsProvider } from './units'
@@ -70,6 +71,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="integraciones" element={<AdminIntegraciones />} />
               <Route path="sistema" element={<AdminSistema />} />
             </Route>
+            <Route path="/admin/wizard" element={<AdminWizard />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </BrowserRouter>

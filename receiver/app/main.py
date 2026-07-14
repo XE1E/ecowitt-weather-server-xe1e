@@ -469,6 +469,53 @@ async def admin_test_telegram(authorization: Optional[str] = Header(default=None
 
 
 # ---------------------------------------------------------------------------
+# Wizard de configuración inicial
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/setup-status")
+async def admin_setup_status(authorization: Optional[str] = Header(default=None)):
+    """Retorna si el wizard de configuración inicial se ha completado."""
+    _require_admin(authorization)
+    return {"setup_completed": settings_store.get_setup_completed(settings.settings_file)}
+
+
+@app.post("/api/admin/setup-complete")
+async def admin_setup_complete(authorization: Optional[str] = Header(default=None)):
+    """Marca el wizard de configuración como completado."""
+    _require_admin(authorization)
+    settings_store.set_setup_completed(settings.settings_file, True)
+    return {"status": "ok"}
+
+
+@app.post("/api/admin/wizard/test-telegram")
+async def admin_wizard_test_telegram(
+    body: dict,
+    authorization: Optional[str] = Header(default=None)
+):
+    """Prueba credenciales de Telegram durante el wizard (sin guardarlas aún)."""
+    _require_admin(authorization)
+    bot_token = body.get("bot_token")
+    chat_id = body.get("chat_id")
+    if not bot_token or not chat_id:
+        raise HTTPException(status_code=400, detail="Faltan bot_token o chat_id")
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            r = await client.post(url, json={
+                "chat_id": chat_id,
+                "text": "🧪 Mensaje de prueba desde el wizard de Estacion Clima XE1E",
+            })
+            if r.status_code == 200:
+                return {"status": "ok", "message": "Mensaje enviado correctamente"}
+            else:
+                data = r.json()
+                return {"status": "error", "message": data.get("description", "Error desconocido")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
 # API de Estaciones (Etapa 2)
 # ---------------------------------------------------------------------------
 

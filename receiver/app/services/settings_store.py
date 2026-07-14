@@ -152,6 +152,23 @@ def delete_station_config(path: str, name: str) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Setup wizard status
+# ---------------------------------------------------------------------------
+
+def get_setup_completed(path: str) -> bool:
+    """Retorna True si el wizard de configuración inicial se ha completado."""
+    data = load_all_settings(path)
+    return data.get("setup_completed", False)
+
+
+def set_setup_completed(path: str, completed: bool = True) -> None:
+    """Marca el wizard de configuración como completado."""
+    data = load_all_settings(path)
+    data["setup_completed"] = completed
+    save_all_settings(path, data)
+
+
 def mask_passkey(passkey: str) -> str:
     """Enmascara un passkey mostrando solo los últimos 4 caracteres."""
     if not passkey or len(passkey) <= 4:

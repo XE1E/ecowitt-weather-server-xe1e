@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 
 const NAV_ITEMS = [
@@ -90,11 +90,32 @@ function LoginForm() {
 }
 
 export function AdminLayout() {
-  const { isAuthenticated, logout } = useAdminAuth()
+  const { isAuthenticated, logout, fetchWithAuth } = useAdminAuth()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [checkingSetup, setCheckingSetup] = useState(true)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    fetchWithAuth('/api/admin/setup-status')
+      .then(r => r.json())
+      .then(j => {
+        if (!j.setup_completed) navigate('/admin/wizard', { replace: true })
+      })
+      .catch(() => {})
+      .finally(() => setCheckingSetup(false))
+  }, [isAuthenticated, fetchWithAuth, navigate])
 
   if (!isAuthenticated) {
     return <LoginForm />
+  }
+
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-slate-400">Cargando...</div>
+      </div>
+    )
   }
 
   return (

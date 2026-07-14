@@ -1,6 +1,6 @@
 # Plan — Panel de Administración
 
-> Estado: **diseño en progreso**. Definir estructura antes de implementar.
+> Estado: **implementación avanzada** (~85%). Panel funcional, wizard completado.
 
 ## Objetivo
 
@@ -407,33 +407,33 @@ con indicadores en tiempo real.
 
 ## 10. Plan de Implementación
 
-### Fase 2.2.1: Estructura base
-- [ ] Crear `/admin` como ruta separada con autenticación
-- [ ] Layout con sidebar/tabs para las secciones
-- [ ] Migrar `/pro/admin` actual a `/admin`
-- [ ] Redireccionar `/pro/admin` → `/admin`
+### Fase 2.2.1: Estructura base ✅
+- [x] Crear `/admin` como ruta separada con autenticación
+- [x] Layout con sidebar/tabs para las secciones
+- [x] Migrar `/pro/admin` actual a `/admin`
+- [x] Redireccionar `/pro/admin` → `/admin`
 
-### Fase 2.2.2: Dashboard
-- [ ] Indicadores de estaciones (estado, sensores, canales)
-- [ ] Estado de servicios (InfluxDB, Telegram, MQTT)
-- [ ] Alertas activas y recientes
-- [ ] Estado de publicación a redes
-- [ ] Resumen del sistema
+### Fase 2.2.2: Dashboard ✅
+- [x] Indicadores de estaciones (estado, sensores, canales)
+- [x] Estado de servicios (InfluxDB, Telegram, MQTT)
+- [x] Alertas activas y recientes
+- [x] Estado de publicación a redes
+- [x] Resumen del sistema
 
-### Fase 2.2.3: Gestión de estaciones
-- [ ] Lista de estaciones en `/admin/estaciones`
-- [ ] Página de configuración por estación
-- [ ] Agregar/eliminar estaciones secundarias
-- [ ] Configuración específica (alertas, publicación, watchdog)
+### Fase 2.2.3: Gestión de estaciones ✅
+- [x] Lista de estaciones en `/admin/estaciones`
+- [x] Página de configuración por estación
+- [x] Agregar/eliminar estaciones secundarias
+- [x] Configuración específica (alertas, publicación, watchdog)
 
-### Fase 2.2.4: Wizard
-- [ ] Detección de primera configuración
-- [ ] Flujo paso a paso
-- [ ] Verificación de estación
-- [ ] Setup de Telegram
-- [ ] Setup de redes públicas
+### Fase 2.2.4: Wizard ✅
+- [x] Detección de primera configuración (`setup_completed` flag)
+- [x] Flujo paso a paso (5 pasos: bienvenida, estación, alertas, publicación, listo)
+- [x] Verificación de estación (sensores detectados, modelo)
+- [x] Setup de Telegram (con prueba de envío)
+- [x] Setup de redes públicas (Weather Underground, Windy)
 
-### Fase 2.2.5: Refinamiento
+### Fase 2.2.5: Refinamiento ⏳
 - [ ] Indicadores en tiempo real (WebSocket o polling)
 - [ ] Historial de alertas
 - [ ] Logs del sistema
