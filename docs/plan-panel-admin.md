@@ -1,6 +1,6 @@
 # Plan — Panel de Administración
 
-> Estado: **implementación avanzada** (~95%). Panel funcional, wizard, refinamiento e integración HA completados. Pendiente: gestión multi-estación.
+> Estado: **implementación completa** (100%). Panel funcional con todas las características implementadas.
 
 ## Objetivo
 
@@ -422,11 +422,12 @@ con indicadores en tiempo real.
 - [x] Estado de publicación a redes
 - [x] Resumen del sistema
 
-### Fase 2.2.3: Gestión de estaciones ⏳
+### Fase 2.2.3: Gestión de estaciones ✅
 - [x] Lista de estaciones en `/admin/estaciones`
 - [x] Página de configuración por estación (labels de sensores)
-- [ ] Agregar/eliminar estaciones secundarias
-- [ ] Configuración específica por estación (alertas, publicación, watchdog propios)
+- [x] Agregar estaciones secundarias (modal con nombre y passkey opcional)
+- [x] Eliminar estaciones secundarias (confirmación, preserva datos históricos)
+- [x] Configuración específica por estación (alertas, publicación, MQTT, watchdog)
 
 ### Fase 2.2.4: Wizard ✅
 - [x] Detección de primera configuración (`setup_completed` flag)
@@ -455,8 +456,9 @@ GET  /api/admin/status             → Estado general (alertas, última lectura)
 POST /api/admin/test-telegram      → Probar envío de Telegram
 
 GET  /api/admin/stations           → Lista de estaciones
+POST /api/admin/stations           → Crear estación secundaria
 PUT  /api/admin/stations/{name}    → Actualizar configuración de estación
-DELETE /api/admin/stations/{name}  → Eliminar estación
+DELETE /api/admin/stations/{name}  → Eliminar estación secundaria
 GET  /api/admin/stations/{name}/sensors → Sensores de una estación
 PUT  /api/admin/sensors/{id}/label → Cambiar label de un sensor
 
