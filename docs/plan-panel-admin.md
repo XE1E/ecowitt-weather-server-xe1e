@@ -1,6 +1,6 @@
 # Plan — Panel de Administración
 
-> Estado: **implementación avanzada** (~90%). Panel funcional, wizard y refinamiento completados. Pendiente: gestión multi-estación.
+> Estado: **implementación avanzada** (~95%). Panel funcional, wizard, refinamiento e integración HA completados. Pendiente: gestión multi-estación.
 
 ## Objetivo
 
@@ -74,15 +74,17 @@ el administrador controla el funcionamiento del sistema.
 | OpenWeatherMap | API Key, Station ID | Inicial |
 | CWOP/APRS | Callsign, Passcode, Lat/Lon | Inicial |
 
-### 1.7 Integraciones
+### 1.7 Integraciones ✅
 
-| Configuración | Descripción | Frecuencia |
-|---------------|-------------|------------|
-| MQTT habilitado | On/off | Inicial |
-| Broker, puerto, user/pass | Conexión MQTT | Inicial |
-| Topic base | Prefijo de topics | Inicial |
-| Home Assistant discovery | On/off | Inicial |
-| Token WAQI | Para calidad del aire | Inicial |
+| Configuración | Descripción | Estado |
+|---------------|-------------|--------|
+| MQTT habilitado | On/off con reconexión en caliente | ✅ |
+| Broker, puerto, user/pass | Conexión MQTT | ✅ |
+| Topic base | Prefijo de topics | ✅ |
+| Home Assistant discovery | On/off + prefijo configurable | ✅ |
+| Test de conexión MQTT | Botón para probar | ✅ |
+| Estado de conexión | Indicador conectado/desconectado | ✅ |
+| Token WAQI | Para calidad del aire | ✅ |
 
 ### 1.8 Sistema (solo .env, no editable en panel)
 
@@ -462,12 +464,16 @@ GET  /api/admin/setup-status       → ¿Wizard completado?
 POST /api/admin/setup-complete     → Marcar wizard como completado
 POST /api/admin/wizard/test-telegram → Probar Telegram sin guardar
 GET  /api/admin/logs               → Últimos logs del sistema (in-memory)
+
+GET  /api/admin/mqtt/status        → Estado conexión MQTT
+POST /api/admin/mqtt/test          → Probar conexión MQTT
+POST /api/admin/mqtt/reconnect     → Forzar reconexión MQTT
 ```
 
 ### Pendientes ⏳
 
 ```
-(ninguno crítico - el historial de alertas se incluye en /api/admin/status)
+(ninguno crítico)
 ```
 
 ---
