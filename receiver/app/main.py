@@ -843,6 +843,86 @@ async def update_station(name: str, body: dict = Body(...)):
     return {"ok": True, "message": "Configuración actualizada"}
 
 
+@app.post("/api/admin/stations")
+async def create_station(body: dict = Body(...), authorization: Optional[str] = Header(default=None)):
+    """Crea una nueva estación secundaria."""
+    _require_admin(authorization)
+    name = body.get("name", "").strip().lower()
+    passkey = body.get("passkey", "").strip() or None
+
+    if not name:
+        raise HTTPException(status_code=400, detail="El nombre es requerido")
+    if not name.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(status_code=400, detail="El nombre solo puede contener letras, números, guiones y guiones bajos")
+    if name in ("principal", "_principal"):
+        raise HTTPException(status_code=400, detail="Nombre reservado")
+    if name in settings.secondary_station_map.values():
+        raise HTTPException(status_code=400, detail=f"Ya existe una estación con nombre '{name}'")
+
+    # Register passkey mapping if provided
+    if passkey:
+        if passkey in settings.secondary_station_map:
+            raise HTTPException(status_code=400, detail="Este passkey ya está asignado a otra estación")
+        settings.secondary_station_map[passkey] = name
+
+    # Create default config
+    settings_store.save_station_config(settings.settings_file, name, {
+        "label": name.title(),
+        "watchdog_enabled": True,
+        "watchdog_minutes": 15,
+        "alerts_enabled": False,
+        "publish_enabled": False,
+        "mqtt_enabled": False,
+    })
+
+    # Save passkey mapping to settings file
+    all_settings = settings_store.load_all_settings(settings.settings_file)
+    if "station_passkeys" not in all_settings:
+        all_settings["station_passkeys"] = {}
+    if passkey:
+        all_settings["station_passkeys"][passkey] = name
+    settings_store.save_all_settings(settings.settings_file, all_settings)
+
+    return {"ok": True, "name": name, "message": f"Estación '{name}' creada"}
+
+
+@app.delete("/api/admin/stations/{name}")
+async def delete_station(name: str, authorization: Optional[str] = Header(default=None)):
+    """Elimina una estación secundaria (no elimina datos históricos)."""
+    _require_admin(authorization)
+
+    if name in ("principal", "_principal"):
+        raise HTTPException(status_code=400, detail="No se puede eliminar la estación principal")
+
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail=f"Estación '{name}' no encontrada")
+
+    # Remove from passkey map
+    passkey_to_remove = None
+    for pk, n in settings.secondary_station_map.items():
+        if n == name:
+            passkey_to_remove = pk
+            break
+    if passkey_to_remove:
+        del settings.secondary_station_map[passkey_to_remove]
+
+    # Remove from settings file
+    all_settings = settings_store.load_all_settings(settings.settings_file)
+    if "station_passkeys" in all_settings:
+        all_settings["station_passkeys"] = {
+            pk: n for pk, n in all_settings.get("station_passkeys", {}).items()
+            if n != name
+        }
+    if "stations" in all_settings and name in all_settings["stations"]:
+        del all_settings["stations"][name]
+    settings_store.save_all_settings(settings.settings_file, all_settings)
+
+    # Remove from latest cache
+    latest_by_station.pop(name, None)
+
+    return {"ok": True, "message": f"Estación '{name}' eliminada"}
+
+
 @app.get("/api/compare")
 async def get_compare():
     """Comparación 24h vs 24h previas (aprox. 'vs ayer')."""

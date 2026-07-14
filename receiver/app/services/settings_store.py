@@ -70,11 +70,11 @@ SECRET_KEYS = {
 # Configuración por defecto para una estación
 DEFAULT_STATION_CONFIG = {
     "label": "",
+    "watchdog_enabled": True,
+    "watchdog_minutes": 15,
     "alerts_enabled": False,
     "publish_enabled": False,
     "mqtt_enabled": False,
-    "watchdog_enabled": True,
-    "watchdog_minutes": 15,
 }
 
 

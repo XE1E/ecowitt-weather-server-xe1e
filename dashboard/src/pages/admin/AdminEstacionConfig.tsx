@@ -15,6 +15,15 @@ interface SensorDetail {
   active: boolean
 }
 
+interface StationConfig {
+  label?: string
+  watchdog_enabled: boolean
+  watchdog_minutes: number
+  alerts_enabled: boolean
+  publish_enabled: boolean
+  mqtt_enabled: boolean
+}
+
 interface StationData {
   name: string | null
   label: string
@@ -22,7 +31,7 @@ interface StationData {
   status: 'online' | 'offline' | 'unknown'
   sensors_detail: SensorDetail[]
   model: string | null
-  config: { label?: string; watchdog_enabled: boolean; watchdog_minutes: number }
+  config: StationConfig
   sensor_labels: Record<string, string>
 }
 
@@ -37,6 +46,9 @@ export function AdminEstacionConfig() {
   const [stationLabel, setStationLabel] = useState('')
   const [watchdogEnabled, setWatchdogEnabled] = useState(true)
   const [watchdogMinutes, setWatchdogMinutes] = useState(15)
+  const [alertsEnabled, setAlertsEnabled] = useState(false)
+  const [publishEnabled, setPublishEnabled] = useState(false)
+  const [mqttEnabled, setMqttEnabled] = useState(false)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -48,6 +60,9 @@ export function AdminEstacionConfig() {
         setStationLabel(data.config?.label || '')
         setWatchdogEnabled(data.config?.watchdog_enabled ?? true)
         setWatchdogMinutes(data.config?.watchdog_minutes ?? 15)
+        setAlertsEnabled(data.config?.alerts_enabled ?? false)
+        setPublishEnabled(data.config?.publish_enabled ?? false)
+        setMqttEnabled(data.config?.mqtt_enabled ?? false)
         setSensorLabels(data.sensor_labels || {})
       })
       .finally(() => setLoading(false))
@@ -62,7 +77,14 @@ export function AdminEstacionConfig() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          config: { label: stationLabel, watchdog_enabled: watchdogEnabled, watchdog_minutes: watchdogMinutes },
+          config: {
+            label: stationLabel,
+            watchdog_enabled: watchdogEnabled,
+            watchdog_minutes: watchdogMinutes,
+            alerts_enabled: alertsEnabled,
+            publish_enabled: publishEnabled,
+            mqtt_enabled: mqttEnabled,
+          },
           sensor_labels: sensorLabels,
         }),
       })
@@ -119,6 +141,7 @@ export function AdminEstacionConfig() {
 
       {/* Config general */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <h2 className="font-medium mb-3">Configuración general</h2>
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm text-slate-400 mb-1">Nombre</label>
@@ -149,6 +172,48 @@ export function AdminEstacionConfig() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Servicios por estación */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <h2 className="font-medium mb-3">Servicios para esta estación</h2>
+        <div className="flex flex-wrap gap-6">
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={alertsEnabled}
+              onChange={e => setAlertsEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
+            />
+            <span className="text-sm">🔔 Alertas</span>
+            <span className="text-xs text-slate-500">(usa umbrales globales)</span>
+          </label>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={publishEnabled}
+              onChange={e => setPublishEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
+            />
+            <span className="text-sm">📤 Publicación</span>
+            <span className="text-xs text-slate-500">(redes públicas)</span>
+          </label>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={mqttEnabled}
+              onChange={e => setMqttEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
+            />
+            <span className="text-sm">🏠 MQTT</span>
+            <span className="text-xs text-slate-500">(Home Assistant)</span>
+          </label>
+        </div>
+        <p className="text-xs text-slate-500 mt-3">
+          {isPrincipal
+            ? 'La estación principal siempre procesa alertas y publica si está habilitado globalmente.'
+            : 'Por defecto las estaciones secundarias solo almacenan datos. Activa estos servicios para incluirla.'}
+        </p>
       </div>
 
       {/* Sensores WN31 */}
