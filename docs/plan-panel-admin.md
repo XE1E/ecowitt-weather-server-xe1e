@@ -1,6 +1,6 @@
 # Plan — Panel de Administración
 
-> Estado: **implementación avanzada** (~85%). Panel funcional, wizard completado.
+> Estado: **implementación avanzada** (~75%). Panel funcional, wizard completado. Pendiente: gestión multi-estación y refinamiento.
 
 ## Objetivo
 
@@ -420,11 +420,11 @@ con indicadores en tiempo real.
 - [x] Estado de publicación a redes
 - [x] Resumen del sistema
 
-### Fase 2.2.3: Gestión de estaciones ✅
+### Fase 2.2.3: Gestión de estaciones ⏳
 - [x] Lista de estaciones en `/admin/estaciones`
-- [x] Página de configuración por estación
-- [x] Agregar/eliminar estaciones secundarias
-- [x] Configuración específica (alertas, publicación, watchdog)
+- [x] Página de configuración por estación (labels de sensores)
+- [ ] Agregar/eliminar estaciones secundarias
+- [ ] Configuración específica por estación (alertas, publicación, watchdog propios)
 
 ### Fase 2.2.4: Wizard ✅
 - [x] Detección de primera configuración (`setup_completed` flag)
