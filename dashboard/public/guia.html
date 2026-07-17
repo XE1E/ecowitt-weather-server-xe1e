@@ -233,7 +233,7 @@
           <tr><td><strong>GW1100</strong> <em>(remota, opcional)</em></td><td>Gateway Wi-Fi Ecowitt</td><td><strong>Estación secundaria</strong>: envía al mismo servidor; sus lecturas se guardan aparte y se ven en su propia página (solo lectura). No dispara alertas ni publica a redes</td></tr>
         </tbody>
       </table></div>
-      <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
+      <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Señal RF:</strong> cada sensor inalámbrico reporta su nivel de señal (0-4, mayor = mejor), disponible en la API para diagnóstico. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
       <div class="callout"><p>El hardware llega ~2026-07-17. Hasta entonces el sitio puede correr con un simulador; al instalar la estación se apaga el simulador, se limpian los datos falsos y se apunta la consola al servidor.</p></div>
     </section>
 
@@ -517,7 +517,7 @@ docker compose ps                 # verificar estado</code></pre>
       <p><span class="pill warn">Pendiente</span> versión en inglés (i18n); acciones del usuario (bot de Telegram, token WAQI, credenciales de redes); y poblar el histórico real cuando llegue el WS2910.</p>
     </section>
 
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-13 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-17 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
   </main>
 </div>
 
