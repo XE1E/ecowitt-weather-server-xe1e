@@ -1080,6 +1080,94 @@ async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/display")
+async def get_display_data():
+    """
+    Endpoint optimizado para ESP32 display.
+    Combina current, stats, almanac, forecast, compare y airquality en una sola llamada.
+    """
+    from datetime import datetime
+
+    result = {}
+    lat = getattr(settings, "cwop_latitude", 19.380359)
+    lon = getattr(settings, "cwop_longitude", -99.174564)
+
+    # 1. Current weather data
+    current = latest_by_station.get(None, {})
+    result["current"] = current
+
+    # 2. Daily stats (min/max/avg)
+    try:
+        stats = await storage.get_daily_stats(start="-24h")
+        result["stats"] = stats.get("stats", {})
+    except Exception as e:
+        logger.error(f"Display endpoint - stats error: {e}")
+        result["stats"] = {}
+
+    # 3. Comparison vs yesterday
+    try:
+        compare = await storage.get_comparison()
+        result["compare"] = compare
+    except Exception as e:
+        logger.error(f"Display endpoint - compare error: {e}")
+        result["compare"] = {}
+
+    # 4. Almanac (sun/moon)
+    try:
+        almanac = get_almanac(lat, lon)
+        result["almanac"] = {
+            "sunrise": almanac.get("sun", {}).get("rise", ""),
+            "sunset": almanac.get("sun", {}).get("set", ""),
+            "moon_phase": almanac.get("moon", {}).get("phase", ""),
+            "moon_illumination": almanac.get("moon", {}).get("illumination", 0)
+        }
+    except Exception as e:
+        logger.error(f"Display endpoint - almanac error: {e}")
+        result["almanac"] = {}
+
+    # 5. Local forecast (barometric)
+    try:
+        p_now = current.get("pressure_relative")
+        p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
+        forecast = forecaster.local_forecast(p_now, p_3h)
+        result["forecast"] = forecast
+    except Exception as e:
+        logger.error(f"Display endpoint - forecast error: {e}")
+        result["forecast"] = {}
+
+    # 6. Air quality (optional, may fail if no token)
+    try:
+        if settings.waqi_token:
+            aq = await get_air_quality(lat, lon, settings.waqi_token)
+            result["airquality"] = {
+                "aqi": aq.get("aqi", 0),
+                "pm25": aq.get("pm25", 0),
+                "dominant": aq.get("dominant", "")
+            }
+        else:
+            result["airquality"] = None
+    except Exception as e:
+        logger.error(f"Display endpoint - airquality error: {e}")
+        result["airquality"] = None
+
+    # 7. Secondary stations (ch1/WN31 and gw1100)
+    stations = {}
+    for station_id in ["ch1", "gw1100"]:
+        data = latest_by_station.get(station_id)
+        if data:
+            stations[station_id] = {
+                "temperature": data.get("temperature_outdoor") or data.get("temperature_indoor") or data.get("temperature"),
+                "humidity": data.get("humidity_outdoor") or data.get("humidity_indoor") or data.get("humidity"),
+                "battery": data.get("battery_ch1") if station_id == "ch1" else None,
+                "pressure": data.get("pressure_relative")
+            }
+    result["stations"] = stations
+
+    result["generated_at"] = datetime.utcnow().isoformat()
+
+    return result
+
+
 @app.get("/api/earthquakes")
 async def get_earthquakes_data():
     """Sismos recientes cerca de la estación (USGS)."""
