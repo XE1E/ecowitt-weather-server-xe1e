@@ -635,6 +635,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "temperature": data.get("temperature_outdoor"),
             "humidity": data.get("humidity_outdoor"),
             "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "signal": data.get("signal_wh65", data.get("signal_ws69")),
             "active": True,
         })
 
@@ -665,6 +666,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
                 "temperature": temp,
                 "humidity": data.get(f"humidity_ch{i}"),
                 "battery_ok": data.get(f"battery_ch{i}", True),
+                "signal": data.get(f"signal_ch{i}"),
                 "active": True,
             })
 
@@ -679,6 +681,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "wind_gust": data.get("wind_gust"),
             "wind_direction": data.get("wind_direction"),
             "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "signal": data.get("signal_wh65", data.get("signal_ws69")),
             "active": True,
         })
 
@@ -692,6 +695,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "rain_rate": data.get("rain_rate"),
             "rain_daily": data.get("rain_daily"),
             "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "signal": data.get("signal_wh65", data.get("signal_ws69")),
             "active": True,
         })
 
@@ -705,6 +709,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "uv_index": data.get("uv_index"),
             "solar_radiation": data.get("solar_radiation"),
             "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
+            "signal": data.get("signal_wh65", data.get("signal_ws69")),
             "active": True,
         })
 

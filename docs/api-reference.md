@@ -304,7 +304,33 @@ Todos bajo la misma base. Devuelven JSON.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `battery_ws69` | boolean | Estado batería WS69 (true=OK, false=Low) |
+| `battery_wh65` | boolean | Estado batería WH65/WS69 (true=OK, false=Low) |
+| `battery_ws69` | boolean | Alias de battery_wh65 |
+| `battery_ch1`…`ch8` | boolean | Batería WN31 canales 1-8 (true=OK, false=Low) |
+| `battery_wh40` | float | Voltaje batería WH40 (pluviómetro externo) |
+| `battery_wh57` | int | Nivel batería WH57 (0-5, sensor rayos) |
+| `battery_wh68` | float | Voltaje batería WH68 |
+| `battery_wh80` | float | Voltaje batería WH80 |
+| `battery_wh90` | float | Voltaje batería WH90 |
+
+### RF Signal Strength Fields
+
+Niveles de señal RF de sensores inalámbricos. Escala 0-4 (mayor = mejor señal).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `signal_wh65` | int (0-4) | Señal RF del sensor WH65/WS69 exterior |
+| `signal_ws69` | int (0-4) | Alias de signal_wh65 |
+| `signal_ch1`…`ch8` | int (0-4) | Señal RF de sensores WN31 canales 1-8 |
+| `signal_wh25` | int (0-4) | Señal RF del sensor WH25 |
+| `signal_wh26` | int (0-4) | Señal RF del sensor WH26 |
+| `signal_wh40` | int (0-4) | Señal RF del pluviómetro WH40 |
+| `signal_wh57` | int (0-4) | Señal RF del sensor de rayos WH57 |
+| `signal_wh68` | int (0-4) | Señal RF del sensor WH68 |
+| `signal_wh80` | int (0-4) | Señal RF del sensor WH80 |
+| `signal_wh90` | int (0-4) | Señal RF del sensor WH90 |
+
+Los campos de señal RF aparecen en `/api/current` y también en el detalle de sensores (`sensors_detail`) del endpoint `/api/stations`.
 
 ---
 

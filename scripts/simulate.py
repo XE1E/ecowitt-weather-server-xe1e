@@ -68,6 +68,9 @@ def main() -> None:
         "humidity1": round(h_in + 3),
         "wh65batt": 0,
         "batt1": 0,
+        # RF signal strength (0-4, higher = better)
+        "wh65sig": random.randint(2, 4),
+        "sig1": random.randint(2, 4),
     }
 
     data = urllib.parse.urlencode(payload).encode()

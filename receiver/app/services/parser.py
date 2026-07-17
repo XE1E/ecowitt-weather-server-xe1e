@@ -96,6 +96,27 @@ FIELD_MAPPING = {
     "batt7": "battery_ch7",
     "batt8": "battery_ch8",
 
+    # RF Signal strength (0-4 scale, higher = better)
+    "wh65sig": "signal_wh65",
+    "wh25sig": "signal_wh25",
+    "wh26sig": "signal_wh26",
+    "wh40sig": "signal_wh40",
+    "wh57sig": "signal_wh57",
+    "wh68sig": "signal_wh68",
+    "wh80sig": "signal_wh80",
+    "wh90sig": "signal_wh90",
+    "ws69sig": "signal_ws69",
+
+    # WN31 signal strength (up to 8 channels)
+    "sig1": "signal_ch1",
+    "sig2": "signal_ch2",
+    "sig3": "signal_ch3",
+    "sig4": "signal_ch4",
+    "sig5": "signal_ch5",
+    "sig6": "signal_ch6",
+    "sig7": "signal_ch7",
+    "sig8": "signal_ch8",
+
     # Lightning
     "lightning_num": "lightning_count",
     "lightning_time": "lightning_time",
@@ -173,9 +194,9 @@ def _convert_value(key: str, value: str) -> Any:
         except ValueError:
             return None
 
-    # Integer fields
+    # Integer fields (including RF signal strength 0-4)
     int_fields = {"wind_direction", "uv_index", "lightning_count", "lightning_distance"}
-    if key in int_fields:
+    if key in int_fields or key.startswith("signal_"):
         try:
             return int(float(value))
         except ValueError:
