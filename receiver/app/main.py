@@ -1092,6 +1092,10 @@ async def get_display_data():
     lat = getattr(settings, "cwop_latitude", 19.380359)
     lon = getattr(settings, "cwop_longitude", -99.174564)
 
+    # Timezone offset in hours (configurable, default UTC-6 for Mexico City)
+    tz_offset = getattr(settings, "timezone_offset", -6)
+    result["timezone_offset"] = tz_offset
+
     # 1. Current weather data
     current = latest_by_station.get(None, {})
     result["current"] = current
