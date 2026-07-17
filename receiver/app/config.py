@@ -88,6 +88,9 @@ class Settings(BaseSettings):
     cwop_latitude: float = 19.380359
     cwop_longitude: float = -99.174564
 
+    # Timezone (para sincronización con displays ESP32)
+    timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)
+
     # Panel de administración (si faltan credenciales, el panel queda deshabilitado)
     admin_user: Optional[str] = None
     admin_password: Optional[str] = None
