@@ -379,3 +379,51 @@ class InfluxDBStorage:
                 "delta": delta,
             }
         return result
+
+    async def get_rain_accumulations(
+        self, station: Optional[str] = None
+    ) -> Dict[str, Optional[float]]:
+        """
+        Calcula acumulados de lluvia (semanal, mensual, anual) desde weather_daily.
+        Usa el campo rain_total que representa el máximo de rain_daily por día.
+        """
+        from datetime import datetime, timedelta
+        import zoneinfo
+
+        try:
+            tz = zoneinfo.ZoneInfo("America/Mexico_City")
+            now = datetime.now(tz)
+
+            # Calcular fechas de inicio para cada período
+            week_start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+            month_start = now.replace(day=1).strftime("%Y-%m-%d")
+            year_start = now.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+            result = {"rain_weekly": None, "rain_monthly": None, "rain_yearly": None}
+
+            # Consulta para sumar rain_total desde weather_daily
+            async def sum_rain(start_date: str) -> Optional[float]:
+                station_filter = _station_filter(station)
+                q = f'''
+                    from(bucket: "{self.bucket}")
+                    |> range(start: {start_date}T00:00:00Z)
+                    |> filter(fn: (r) => r["_measurement"] == "weather_daily")
+                    {station_filter}
+                    |> filter(fn: (r) => r["_field"] == "rain_total")
+                    |> sum()
+                '''
+                for table in self.query_api.query(q):
+                    for record in table.records:
+                        val = record.get_value()
+                        return round(val, 1) if val is not None else None
+                return None
+
+            result["rain_weekly"] = await sum_rain(week_start)
+            result["rain_monthly"] = await sum_rain(month_start)
+            result["rain_yearly"] = await sum_rain(year_start)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error calculating rain accumulations: {e}")
+            return {"rain_weekly": None, "rain_monthly": None, "rain_yearly": None}

@@ -371,7 +371,21 @@ async def get_current_data(station: Optional[str] = None):
     data = latest_by_station.get(station)
     if not data:
         raise HTTPException(status_code=404, detail="No data available yet")
-    return data
+
+    # Calculate rain accumulations if device doesn't provide them
+    result = dict(data)
+    try:
+        rain_accum = await storage.get_rain_accumulations(station=station)
+        if result.get("rain_weekly") is None and rain_accum.get("rain_weekly") is not None:
+            result["rain_weekly"] = rain_accum["rain_weekly"]
+        if result.get("rain_monthly") is None and rain_accum.get("rain_monthly") is not None:
+            result["rain_monthly"] = rain_accum["rain_monthly"]
+        if result.get("rain_yearly") is None and rain_accum.get("rain_yearly") is not None:
+            result["rain_yearly"] = rain_accum["rain_yearly"]
+    except Exception as e:
+        logger.error(f"Rain accumulation error: {e}")
+
+    return result
 
 
 @app.get("/api/history")
@@ -1097,7 +1111,20 @@ async def get_display_data():
     result["timezone_offset"] = tz_offset
 
     # 1. Current weather data
-    current = latest_by_station.get(None, {})
+    current = latest_by_station.get(None, {}).copy()
+
+    # 1.5 Rain accumulations (calculated from weather_daily if device doesn't send them)
+    try:
+        rain_accum = await storage.get_rain_accumulations()
+        if current.get("rain_weekly") is None and rain_accum.get("rain_weekly") is not None:
+            current["rain_weekly"] = rain_accum["rain_weekly"]
+        if current.get("rain_monthly") is None and rain_accum.get("rain_monthly") is not None:
+            current["rain_monthly"] = rain_accum["rain_monthly"]
+        if current.get("rain_yearly") is None and rain_accum.get("rain_yearly") is not None:
+            current["rain_yearly"] = rain_accum["rain_yearly"]
+    except Exception as e:
+        logger.error(f"Display endpoint - rain accum error: {e}")
+
     result["current"] = current
 
     # 2. Daily stats (min/max/avg)
