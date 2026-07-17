@@ -18,7 +18,7 @@ El repo ya trae integración con HA en dos vías, no se parte de cero:
 | **MQTT Discovery (push)** | [`receiver/app/services/mqtt_publisher.py`](../receiver/app/services/mqtt_publisher.py) | ⚠️ Implementado pero **inactivo** | El receiver auto-crea entidades vía broker (`MQTT_ENABLED=false`, sin broker en `docker-compose.yml`) |
 | **Automatizaciones** | [`homeassistant/automations.yaml`](../homeassistant/automations.yaml) | Básico | — |
 
-**Cobertura actual de la vía REST** (`ecowitt.yaml`): temperatura ext/int, sensación térmica, punto de rocío, humedad ext/int, presión relativa, viento + ráfaga + dirección (grados y cardinal), tasa/acumulado de lluvia, UV, radiación solar, y canales WN31 1–8. Solo datos **medidos por la estación**.
+**Cobertura actual de la vía REST** (`ecowitt.yaml`): temperatura ext/int, sensación térmica, punto de rocío, humedad ext/int, presión relativa, viento + ráfaga + dirección (grados y cardinal), tasa/acumulado de lluvia, UV, radiación solar, canales WN31 1–8, **estado de batería** y **nivel de señal RF** (0-4) de cada sensor. Solo datos **medidos por la estación**.
 
 **Lo que falta** (aunque el backend ya lo calcula): entidad `weather` nativa, IMECA, AQI, almanaque (sol/luna), sismos, METAR/TAF, y las automatizaciones como blueprint.
 
