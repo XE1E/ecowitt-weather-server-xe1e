@@ -83,7 +83,7 @@ export function MiTableroPage() {
   ]
   const ALL = CARDS.map((c) => c.key)
   // Por defecto se muestran unas cuantas; el usuario ajusta y se guarda.
-  const DEFAULT = ['wind', 'pressure', 'forecast', 'tempchart', 'precip', 'uvsolar', 'sunmoon', 'air']
+  const DEFAULT = ['wind', 'pressure', 'forecast', 'tempchart', 'precip', 'uvsolar', 'sunmoon', 'air', 'remote']
 
   const [visible, setVisible] = useState<string[]>(() => {
     try {

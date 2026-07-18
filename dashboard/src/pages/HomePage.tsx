@@ -13,6 +13,7 @@ import { SunMoonCard } from '../components/station/SunMoonCard'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
 import { InteriorCard } from '../components/station/InteriorCard'
+import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
@@ -51,6 +52,7 @@ export function HomePage() {
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} />
+          <RemoteStationCard />
         </div>
         <div className="space-y-4">
           <SunMoonCard astro={forecast?.astro ?? null} />
