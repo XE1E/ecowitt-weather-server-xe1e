@@ -12,6 +12,9 @@ interface Station {
 
 interface WizardData {
   station_label: string
+  cwop_latitude: number
+  cwop_longitude: number
+  timezone_offset: number
   alerts_enabled: boolean
   telegram_enabled: boolean
   telegram_bot_token: string
@@ -128,6 +131,52 @@ function StationStep({
             placeholder="Ej: Casa, Oficina, Terraza"
             className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
           />
+        </div>
+
+        <div className="border-t border-white/10 pt-4 mt-4">
+          <p className="text-sm text-slate-300 mb-3">Ubicación y zona horaria</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Latitud</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={data.cwop_latitude}
+                onChange={e => onChange({ cwop_latitude: parseFloat(e.target.value) || 0 })}
+                className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Longitud</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={data.cwop_longitude}
+                onChange={e => onChange({ cwop_longitude: parseFloat(e.target.value) || 0 })}
+                className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-slate-400 mb-1">Zona horaria (UTC offset)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="-12"
+                  max="14"
+                  value={data.timezone_offset}
+                  onChange={e => onChange({ timezone_offset: parseInt(e.target.value) || 0 })}
+                  className="w-20 rounded-lg bg-slate-900/50 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500/50"
+                />
+                <span className="text-xs text-slate-500">
+                  {data.timezone_offset >= 0 ? `UTC+${data.timezone_offset}` : `UTC${data.timezone_offset}`}
+                </span>
+                <span className="text-xs text-slate-600 ml-auto">Ej: -6 México Central</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Coordenadas para calcular amanecer/atardecer y fases lunares
+          </p>
         </div>
       </div>
 
@@ -381,7 +430,10 @@ function DoneStep({
   onFinish: () => void
   onBack: () => void
 }) {
+  const tzLabel = data.timezone_offset >= 0 ? `UTC+${data.timezone_offset}` : `UTC${data.timezone_offset}`
   const features = [
+    `Ubicación: ${data.cwop_latitude.toFixed(4)}, ${data.cwop_longitude.toFixed(4)}`,
+    `Zona horaria: ${tzLabel}`,
     data.alerts_enabled && 'Alertas habilitadas',
     data.telegram_enabled && 'Notificaciones Telegram',
     data.wu_enabled && 'Weather Underground',
@@ -507,6 +559,9 @@ export function AdminWizard() {
   const [needsLogin, setNeedsLogin] = useState(!isAuthenticated)
   const [data, setData] = useState<WizardData>({
     station_label: '',
+    cwop_latitude: 19.380359,
+    cwop_longitude: -99.174564,
+    timezone_offset: -6,
     alerts_enabled: true,
     telegram_enabled: false,
     telegram_bot_token: '',
@@ -556,6 +611,9 @@ export function AdminWizard() {
       const settings: Record<string, unknown> = {
         alerts_enabled: data.alerts_enabled,
         telegram_enabled: data.telegram_enabled,
+        cwop_latitude: data.cwop_latitude,
+        cwop_longitude: data.cwop_longitude,
+        timezone_offset: data.timezone_offset,
       }
       if (data.telegram_enabled && data.telegram_bot_token) {
         settings.telegram_bot_token = data.telegram_bot_token
