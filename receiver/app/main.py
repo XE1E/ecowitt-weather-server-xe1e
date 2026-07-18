@@ -1034,6 +1034,136 @@ async def get_local_forecast():
         return {"available": False, "reason": "error"}
 
 
+@app.get("/api/display")
+async def get_display_data():
+    """
+    Endpoint optimizado para pantallas ESP32: combina todos los datos en una sola llamada.
+
+    Retorna:
+    - timezone_offset: Offset de timezone en horas (ej: -6 para México)
+    - current: Lecturas actuales de la estación principal
+    - stats: Min/max del día con timestamps
+    - compare: Comparación vs ayer
+    - almanac: Datos astronómicos (sol, luna)
+    - forecast: Pronóstico barométrico local
+    - airquality: Calidad del aire (si está configurado)
+    - stations: Estaciones secundarias (ch1/WN31, gw1100)
+    """
+    result = {}
+
+    # === TIMEZONE ===
+    # México Central = UTC-6 (sin horario de verano desde 2023)
+    result["timezone_offset"] = getattr(settings, "timezone_offset", -6)
+
+    # === CURRENT (estación principal) ===
+    current_data = latest_by_station.get(None, {})
+    if current_data:
+        result["current"] = current_data.copy()
+    else:
+        result["current"] = {}
+
+    # === STATS (min/max del día con timestamps) ===
+    try:
+        stats = await storage.get_daily_stats(start="-24h", station=None)
+        result["stats"] = stats
+    except Exception as e:
+        logger.warning(f"Error getting stats for display: {e}")
+        result["stats"] = {}
+
+    # === COMPARE (vs ayer) ===
+    try:
+        compare = await storage.get_comparison()
+        result["compare"] = compare
+    except Exception as e:
+        logger.warning(f"Error getting comparison for display: {e}")
+        result["compare"] = {}
+
+    # === ALMANAC ===
+    try:
+        lat = getattr(settings, "cwop_latitude", 19.380359)
+        lon = getattr(settings, "cwop_longitude", -99.174564)
+        almanac = get_almanac(lat, lon)
+        if almanac.get("available", False):
+            result["almanac"] = {
+                "sunrise": almanac.get("sun", {}).get("sunrise", ""),
+                "sunset": almanac.get("sun", {}).get("sunset", ""),
+                "moon_phase": almanac.get("moon", {}).get("phase_name", ""),
+                "moon_illumination": almanac.get("moon", {}).get("illumination", 0),
+                "moonrise": almanac.get("moon", {}).get("moonrise", ""),
+                "moonset": almanac.get("moon", {}).get("moonset", ""),
+            }
+        else:
+            result["almanac"] = {}
+    except Exception as e:
+        logger.warning(f"Error getting almanac for display: {e}")
+        result["almanac"] = {}
+
+    # === FORECAST (pronóstico barométrico local) ===
+    try:
+        p_now = current_data.get("pressure_relative")
+        p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
+        forecast = forecaster.local_forecast(p_now, p_3h)
+        result["forecast"] = forecast
+    except Exception as e:
+        logger.warning(f"Error getting forecast for display: {e}")
+        result["forecast"] = {"available": False}
+
+    # === AIRQUALITY (si hay token configurado) ===
+    if settings.waqi_token:
+        try:
+            lat = getattr(settings, "cwop_latitude", 19.380359)
+            lon = getattr(settings, "cwop_longitude", -99.174564)
+            aq = await get_air_quality(lat, lon, settings.waqi_token)
+            if aq and aq.get("available", False):
+                result["airquality"] = aq
+            else:
+                result["airquality"] = None
+        except Exception as e:
+            logger.warning(f"Error getting air quality for display: {e}")
+            result["airquality"] = None
+    else:
+        result["airquality"] = None
+
+    # === STATIONS (secundarias: ch1 para WN31/Jardín, gw1100 para gateway remoto) ===
+    stations = {}
+
+    # Buscar ch1 (WN31 en canal 1 - Jardín)
+    # Puede estar en la estación principal como temperature_ch1 o como estación secundaria
+    main_data = latest_by_station.get(None, {})
+    if main_data.get("temperature_ch1") is not None:
+        stations["ch1"] = {
+            "temperature": main_data.get("temperature_ch1"),
+            "humidity": main_data.get("humidity_ch1"),
+            "battery": main_data.get("battery_ch1", True),
+            "signal": main_data.get("signal_ch1"),
+        }
+
+    # Buscar gw1100 (gateway remoto)
+    gw1100_data = latest_by_station.get("gw1100")
+    if gw1100_data:
+        stations["gw1100"] = {
+            "temperature": gw1100_data.get("temperature_indoor"),
+            "humidity": gw1100_data.get("humidity_indoor"),
+            "pressure": gw1100_data.get("pressure_relative"),
+        }
+
+    # También buscar otras estaciones secundarias configuradas
+    for name in set(settings.secondary_station_map.values()):
+        if name not in stations:
+            station_data = latest_by_station.get(name)
+            if station_data:
+                stations[name] = {
+                    "temperature": station_data.get("temperature_outdoor") or station_data.get("temperature_indoor"),
+                    "humidity": station_data.get("humidity_outdoor") or station_data.get("humidity_indoor"),
+                    "pressure": station_data.get("pressure_relative"),
+                    "battery": station_data.get("battery_wh65", True),
+                }
+
+    result["stations"] = stations
+
+    return result
+
+
 @app.get("/api/alerts")
 async def get_alerts():
     """Current active weather alerts (from the alert service)."""
