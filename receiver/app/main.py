@@ -1064,8 +1064,9 @@ async def get_display_data():
 
     # === STATS (min/max del día con timestamps) ===
     try:
-        stats = await storage.get_daily_stats(start="-24h", station=None)
-        result["stats"] = stats
+        stats_response = await storage.get_daily_stats(start="-24h", station=None)
+        # Extraer solo el objeto stats interno para que ESP32 acceda directamente
+        result["stats"] = stats_response.get("stats", {})
     except Exception as e:
         logger.warning(f"Error getting stats for display: {e}")
         result["stats"] = {}
@@ -1085,12 +1086,12 @@ async def get_display_data():
         almanac = get_almanac(lat, lon)
         if almanac.get("available", False):
             result["almanac"] = {
-                "sunrise": almanac.get("sun", {}).get("sunrise", ""),
-                "sunset": almanac.get("sun", {}).get("sunset", ""),
-                "moon_phase": almanac.get("moon", {}).get("phase_name", ""),
+                "sunrise": almanac.get("sun", {}).get("rise", ""),
+                "sunset": almanac.get("sun", {}).get("set", ""),
+                "moon_phase": almanac.get("moon", {}).get("phase", ""),
                 "moon_illumination": almanac.get("moon", {}).get("illumination", 0),
-                "moonrise": almanac.get("moon", {}).get("moonrise", ""),
-                "moonset": almanac.get("moon", {}).get("moonset", ""),
+                "moonrise": almanac.get("moon", {}).get("rise", ""),
+                "moonset": almanac.get("moon", {}).get("set", ""),
             }
         else:
             result["almanac"] = {}
