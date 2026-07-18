@@ -114,6 +114,8 @@ def public_settings(settings) -> Dict[str, Any]:
         "mqtt_topic": settings.mqtt_topic,
         "hass_discovery": settings.hass_discovery,
         "hass_discovery_prefix": settings.hass_discovery_prefix,
+        # Timezone
+        "timezone_offset": settings.timezone_offset,
     }
 
 

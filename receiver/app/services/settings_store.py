@@ -53,6 +53,8 @@ EDITABLE_KEYS = {
     "mqtt_enabled", "mqtt_broker", "mqtt_port",
     "mqtt_username", "mqtt_password", "mqtt_topic",
     "hass_discovery", "hass_discovery_prefix",
+    # Timezone
+    "timezone_offset",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
