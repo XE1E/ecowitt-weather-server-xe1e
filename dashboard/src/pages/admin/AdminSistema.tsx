@@ -4,6 +4,10 @@ import { useAdminAuth } from '../../admin-auth'
 interface SysSettings {
   qc_enabled: boolean
   qc_spike_enabled: boolean
+  timezone_offset: number
+  cwop_latitude: number
+  cwop_longitude: number
+  alert_station_offline_minutes: number
 }
 
 interface SysInfo {
@@ -150,6 +154,61 @@ export function AdminSistema() {
             <span className="text-emerald-400">● Conectado</span>
           </div>
         </div>
+      </div>
+
+      {/* Ubicacion y zona horaria */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <h2 className="text-sm font-medium mb-3">Ubicacion y zona horaria</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Latitud</label>
+            <input
+              type="number"
+              step="0.000001"
+              value={settings.cwop_latitude ?? 19.380359}
+              onChange={(e) => update('cwop_latitude', parseFloat(e.target.value) || 0)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Longitud</label>
+            <input
+              type="number"
+              step="0.000001"
+              value={settings.cwop_longitude ?? -99.174564}
+              onChange={(e) => update('cwop_longitude', parseFloat(e.target.value) || 0)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Zona horaria (UTC offset)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="-12"
+                max="14"
+                value={settings.timezone_offset ?? -6}
+                onChange={(e) => update('timezone_offset', parseInt(e.target.value) || 0)}
+                className="w-20 bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200"
+              />
+              <span className="text-xs text-slate-500">
+                {(settings.timezone_offset ?? -6) >= 0 ? `UTC+${settings.timezone_offset ?? -6}` : `UTC${settings.timezone_offset ?? -6}`}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Timeout estacion offline (min)</label>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={settings.alert_station_offline_minutes ?? 15}
+              onChange={(e) => update('alert_station_offline_minutes', parseInt(e.target.value) || 15)}
+              className="w-20 bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mt-3">Coordenadas para calculos de almanac (sol/luna). Timeout define cuando se considera la estacion offline.</p>
       </div>
 
       {/* Control de calidad */}
