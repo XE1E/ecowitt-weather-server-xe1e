@@ -34,32 +34,82 @@ cd ~/ecowitt-weather-server-xe1e
 
 ### 1.2 Verificar si hay cron del simulador
 
+Hay **dos** simuladores que pueden estar corriendo por cron:
+
+- `simulate.py` → estación **Principal** (WS2910)
+- `simulate-gw1100.sh` → estación secundaria **gw1100**
+
 ```bash
-crontab -l | grep simulate
+crontab -l | grep -i simulate
 ```
 
-Si aparece una línea con `simulate.py`, hay que quitarla:
+**Quitar solo el de la Principal** (deja la gw1100 simulada mientras llega su
+hardware):
 
 ```bash
-crontab -l | grep -v simulate.py | crontab -
+crontab -l | grep -v 'simulate.py' | crontab -
+```
+
+**Quitar ambos** (recomendado si ya no quieres ninguna simulación):
+
+```bash
+crontab -l | grep -v simulate | crontab -
+```
+
+Verifica que quedó como esperas:
+
+```bash
+crontab -l | grep -i simulate
 ```
 
 ### 1.3 Borrar datos simulados de InfluxDB
 
-**IMPORTANTE:** Esto borra TODOS los datos meteorológicos. Solo hacerlo si
-no hay datos reales que conservar.
+**NO borres todo a ciegas.** Cada punto guardado lleva tags que identifican su
+origen, así que puedes borrar **solo lo simulado** y conservar el dato real:
+
+| Origen | `model` | `station_type` |
+|--------|---------|----------------|
+| Simulador Principal | `SIM` | `SIMULATOR` |
+| Simulador gw1100 (`simulate-gw1100.sh`) | `GW1100A` | `GW1100A_V2.3.4` |
+| WS2910 real | `WS2900_V2.02.06` | `EasyWeatherPro_V5.2.7` |
+| Display ESP32 (si escribe) | — | `EcowittDisplay` |
+
+> **Tags de estación:** la **Principal** se guarda **sin** tag `station`; las
+> secundarias con `station=<nombre>`. El predicado de `influx delete` **no puede**
+> filtrar "sin tag", así que para acotar a lo simulado se usa `model`/`station_type`.
 
 ```bash
 # Obtener el token de InfluxDB
 TOKEN=$(grep -E '^INFLUXDB_TOKEN=' .env | cut -d= -f2-)
 
-# Borrar datos de la medición "weather"
-docker compose exec influxdb influx delete --bucket ecowitt \
+# Borrar SOLO los datos del simulador de la Principal (conserva el WS2910 real)
+docker compose exec -T influxdb influx delete --bucket ecowitt \
   --start 2020-01-01T00:00:00Z \
   --stop 2035-01-01T00:00:00Z \
-  --predicate '_measurement="weather"' \
+  --predicate '_measurement="weather" AND model="SIM"' \
   -t "$TOKEN"
 ```
+
+**Importante — resúmenes diarios (`weather_daily`):** el crudo y los resúmenes
+son mediciones distintas. Borrar el crudo NO borra el resumen ya calculado (el
+backfill no sobrescribe un día que queda vacío). Si limpiaste días completos,
+borra también sus resúmenes y deja que el backfill los regenere:
+
+```bash
+docker compose exec -T influxdb influx delete --bucket ecowitt \
+  --start 2020-01-01T00:00:00Z \
+  --stop 2035-01-01T00:00:00Z \
+  --predicate '_measurement="weather_daily"' \
+  -t "$TOKEN"
+
+# Regenerar: el backfill corre ~120s tras arrancar el receiver
+docker compose restart receiver
+```
+
+Para un **arranque 100% limpio** (borrar cualquier resto de pruebas viejas,
+firmwares anteriores, ESP32, etc.), repite el `delete` del crudo cambiando el
+`model`/`station_type` por cada origen que quieras eliminar (p. ej.
+`station_type="EcowittDisplay"`), y luego limpia `weather_daily` y reinicia.
 
 ### 1.4 Verificar que el servidor está listo
 
@@ -100,6 +150,11 @@ En la app WS View Plus:
 | **Upload Interval** | `60` segundos |
 
 5. Guardar cambios
+
+> **IP vs dominio:** también puedes usar el dominio con HTTPS —
+> Hostname `clima.xe1e.net`, Port `443` (a través de Caddy). Si la consola falla
+> con HTTPS/443 (algunos firmwares WS2910 lo hacen), usa la IP directa
+> `163.192.147.208` con Port `8080`, que apunta al dashboard/proxy sin TLS.
 
 ### 2.3 Verificar envío de datos
 
@@ -156,6 +211,14 @@ Esto afecta:
 
 Si tienes un GW1100 u otro gateway, o sensores WN31 conectados a un gateway
 diferente.
+
+> **⚠️ No mezcles el simulador de gw1100 con el GW1100 real.** Ambos usan el mismo
+> nombre de estación (`station=gw1100`), así que sus datos quedan bajo el mismo tag
+> y **no se pueden separar** después con `influx delete` (solo difieren por tags que
+> comparten). Antes de conectar el GW1100 real, **detén** `simulate-gw1100.sh`
+> (Paso 1.2) y borra el dato simulado por `station_type="GW1100A_V2.3.4"`. Luego
+> registra el **passkey real** (Paso 4.1-4.2) y todo el dato de gw1100 será real
+> desde el inicio.
 
 ### 4.1 Obtener el Passkey
 
@@ -313,11 +376,33 @@ Ver los logs del ESP32 (monitor serial):
    curl -s http://163.192.147.208:8080/health
    ```
 
+### La temperatura exterior sale `null` justo al pasar de simulador a real
+
+Síntoma: en los logs aparece
+`QC pico rechazó 1 valor(es): temperature_outdoor=24.8 (prev 12.8)` y el exterior
+se muestra vacío, con alerta de "Sensor sin contacto".
+
+Causa: el control de calidad (`quality.py`) descarta saltos bruscos entre dos
+lecturas consecutivas. Al cambiar del simulador (p. ej. 12.8 °C) al hardware real
+(p. ej. 24.8 °C), el salto supera el umbral y se rechaza.
+
+Solución: **se corrige solo**. Una vez que el simulador deja de refrescar el valor
+previo, la siguiente lectura real toma como "previo" un `null` y el filtro se
+salta (ver `SPIKE_MAX_AGE_S` y la condición de "previo None"). Si tienes prisa,
+reinicia el receiver. Asegúrate de haber detenido el simulador (Paso 1.2); si
+sigue corriendo, seguirá reinyectando el valor viejo y el atasco no se resuelve.
+
 ### El display ESP32 no muestra datos
 
 1. Verificar conexión WiFi del ESP32
 2. Verificar URL del servidor en `my_config.h`
 3. Ver logs seriales para errores de conexión
+
+> **Nota:** si el ESP32 tiene un BME280 y está configurado para *enviar* datos
+> (no solo leer), aparecerá como `station_type=EcowittDisplay` y su lectura
+> interior se mezclará en la **Principal** (no lleva tag `station`). Si solo debe
+> leer del servidor, desactiva su envío; si quieres conservarlo, regístralo como
+> estación secundaria con su propio nombre.
 
 ### Datos de almanac incorrectos
 
