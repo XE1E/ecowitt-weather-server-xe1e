@@ -310,12 +310,11 @@ class InfluxDBStorage:
                  nombre para secundarias.
         """
         try:
-            station_filter = _station_filter(station)
             query = f'''
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
                 |> filter(fn: (r) => r["_measurement"] == "weather_daily")
-                |> filter(fn: (r) => {station_filter})
+                {_station_filter(station)}
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
             rows = []
