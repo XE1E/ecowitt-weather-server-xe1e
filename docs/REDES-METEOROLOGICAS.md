@@ -12,7 +12,7 @@ meteorológica personal (PWS - Personal Weather Station).
 | **CWOP/MADIS** | ⭐⭐⭐⭐⭐ | Baja | Media | **Altamente recomendado** |
 | **Weather Underground** | ⭐⭐⭐ | Alta | Fácil | Recomendado |
 | **Windy** | ⭐⭐⭐ | Alta | Fácil | Recomendado |
-| **PWSWeather** | ⭐⭐ | Media | Fácil | Opcional |
+| **PWSWeather** | ⭐⭐ | Media | Fácil | Recomendado |
 | **OpenWeatherMap** | ⭐⭐ | Media | Media | Opcional |
 
 **Veredicto:** Si solo vas a elegir una, elige **CWOP** - tus datos entran a
@@ -460,17 +460,12 @@ Dada la baja cobertura de estaciones de calidad en México, recomiendo:
 CWOP → Máximo impacto científico
 ```
 
-### Recomendado (2 redes)
+### Recomendado (4 redes) ✓ Configuración XE1E
 ```
-CWOP → Impacto científico
-WU   → Visibilidad pública
-```
-
-### Completo (3 redes)
-```
-CWOP  → Impacto científico
-WU    → Visibilidad pública  
-Windy → Visualización moderna
+CWOP       → Impacto científico (datos a NOAA/MADIS)
+WU         → Visibilidad pública (mayor audiencia)
+Windy      → Visualización moderna (mejores mapas)
+PWSWeather → Red adicional (mismo protocolo que WU)
 ```
 
 ### Máximo (todas)
