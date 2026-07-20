@@ -16,6 +16,7 @@ import logging
 import os
 import platform
 import shutil
+from zoneinfo import ZoneInfo
 
 from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device, resolve_station
@@ -634,6 +635,42 @@ async def admin_system_info(authorization: Optional[str] = Header(default=None))
             "influxdb_url": settings.influxdb_url,
             "data_retention": retention,
         },
+    }
+
+
+# ── Sensor local del display kiosco (BME280 del ESP32) ──
+# Se guarda APARTE de los datos meteorológicos (no toca InfluxDB ni la Principal).
+# En memoria: último valor + min/max del día local; se reinicia al cambiar de día.
+_MX_TZ = ZoneInfo("America/Mexico_City")
+_kiosk_local: Dict[str, Any] = {"latest": None, "day": None, "min": {}, "max": {}}
+
+
+@app.post("/api/kiosk/local")
+async def kiosk_local_post(body: dict = Body(...)):
+    """Recibe la lectura del BME280 del display (temperature °C, humidity %, pressure hPa)."""
+    today = datetime.now(_MX_TZ).strftime("%Y-%m-%d")
+    if _kiosk_local["day"] != today:
+        _kiosk_local.update(day=today, min={}, max={})
+    vals: Dict[str, float] = {}
+    for k in ("temperature", "humidity", "pressure"):
+        v = body.get(k)
+        if isinstance(v, (int, float)):
+            fv = round(float(v), 1)
+            vals[k] = fv
+            _kiosk_local["min"][k] = round(min(_kiosk_local["min"].get(k, fv), fv), 1)
+            _kiosk_local["max"][k] = round(max(_kiosk_local["max"].get(k, fv), fv), 1)
+    _kiosk_local["latest"] = {**vals, "received_at": datetime.utcnow().isoformat()}
+    return {"ok": True}
+
+
+@app.get("/api/kiosk/local")
+async def kiosk_local_get():
+    """Último BME280 local + min/max del día, para la página kiosco (página 2)."""
+    return {
+        "latest": _kiosk_local["latest"],
+        "min": _kiosk_local["min"],
+        "max": _kiosk_local["max"],
+        "day": _kiosk_local["day"],
     }
 
 
