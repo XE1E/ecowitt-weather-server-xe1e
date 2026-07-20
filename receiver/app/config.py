@@ -64,11 +64,38 @@ class Settings(BaseSettings):
 
     # Calibración de sensores (offsets se suman; multiplicadores escalan; 1.0 = sin cambio)
     cal_enabled: bool = False
+    # Globales (compat; se conservan pero la UI usa los por-sensor de abajo)
     cal_temp_offset: float = 0.0       # °C
     cal_humidity_offset: float = 0.0   # %
-    cal_pressure_offset: float = 0.0   # hPa
+    # Offsets de temperatura por sensor (°C)
+    cal_temp_outdoor: float = 0.0
+    cal_temp_indoor: float = 0.0
+    cal_temp_ch1: float = 0.0
+    cal_temp_ch2: float = 0.0
+    cal_temp_ch3: float = 0.0
+    cal_temp_ch4: float = 0.0
+    cal_temp_ch5: float = 0.0
+    cal_temp_ch6: float = 0.0
+    cal_temp_ch7: float = 0.0
+    cal_temp_ch8: float = 0.0
+    # Offsets de humedad por sensor (%)
+    cal_hum_outdoor: float = 0.0
+    cal_hum_indoor: float = 0.0
+    cal_hum_ch1: float = 0.0
+    cal_hum_ch2: float = 0.0
+    cal_hum_ch3: float = 0.0
+    cal_hum_ch4: float = 0.0
+    cal_hum_ch5: float = 0.0
+    cal_hum_ch6: float = 0.0
+    cal_hum_ch7: float = 0.0
+    cal_hum_ch8: float = 0.0
+    # Presión (hPa), viento, lluvia, solar/UV
+    cal_pressure_offset: float = 0.0   # hPa (rel + abs)
     cal_wind_mult: float = 1.0
+    cal_wind_dir_offset: float = 0.0   # grados (alineación de veleta)
     cal_rain_mult: float = 1.0
+    cal_solar_mult: float = 1.0        # ganancia radiación solar
+    cal_uv_offset: float = 0.0         # offset índice UV
 
     # Publicación a redes públicas (uploaders tipo WeeWX)
     wu_enabled: bool = False           # Weather Underground

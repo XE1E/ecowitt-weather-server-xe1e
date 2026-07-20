@@ -37,11 +37,17 @@ EDITABLE_KEYS = {
     "qc_spike_enabled",
     # Calibración
     "cal_enabled",
-    "cal_temp_offset",
-    "cal_humidity_offset",
+    "cal_temp_offset", "cal_humidity_offset",  # globales (compat)
+    "cal_temp_outdoor", "cal_temp_indoor",
+    "cal_temp_ch1", "cal_temp_ch2", "cal_temp_ch3", "cal_temp_ch4",
+    "cal_temp_ch5", "cal_temp_ch6", "cal_temp_ch7", "cal_temp_ch8",
+    "cal_hum_outdoor", "cal_hum_indoor",
+    "cal_hum_ch1", "cal_hum_ch2", "cal_hum_ch3", "cal_hum_ch4",
+    "cal_hum_ch5", "cal_hum_ch6", "cal_hum_ch7", "cal_hum_ch8",
     "cal_pressure_offset",
-    "cal_wind_mult",
+    "cal_wind_mult", "cal_wind_dir_offset",
     "cal_rain_mult",
+    "cal_solar_mult", "cal_uv_offset",
     # Publicación a redes públicas
     "wu_enabled", "wu_station_id", "wu_station_key",
     "pws_enabled", "pws_station_id", "pws_password",
