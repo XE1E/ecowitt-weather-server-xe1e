@@ -103,13 +103,6 @@ body {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   }
 
-  /* Celda de la rejilla modular del dashboard: la tarjeta llena la celda
-     (misma altura por fila) y las celdas cuyo contenido es null se ocultan
-     (sin dejar hueco). */
-  .cell { display: grid; }
-  .cell:empty { display: none; }
-  .cell > * { height: 100%; }
-
   .card-title {
     @apply text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-2;
     color: rgba(226, 232, 240, 0.6);
