@@ -75,7 +75,7 @@ export function KioskPage() {
       </div>
 
       {/* Cuerpo: hero + tiles */}
-      <div className="flex gap-6 px-8 mt-3" style={{ height: 372 }}>
+      <div className="flex gap-6 px-8 mt-3" style={{ height: 352 }}>
         {/* Hero */}
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center" style={{ width: 430 }}>
           <WeatherIcon name={cond.icon} size={140} />
@@ -105,17 +105,17 @@ export function KioskPage() {
 
       {/* Franja de pronóstico horario */}
       <div className="px-8 mt-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 flex justify-between" style={{ height: 118 }}>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 flex justify-between" style={{ height: 140 }}>
           {hours.length === 0 ? (
             <div className="w-full flex items-center justify-center text-slate-500 text-[15px]">Pronóstico no disponible</div>
           ) : hours.map((h, i) => {
             const d = new Date(h.time)
             return (
-              <div key={i} className="flex-1 flex flex-col items-center justify-center gap-1">
-                <span className="text-[14px] text-slate-400">{pad(d.getHours())}:00</span>
-                <WeatherIcon name={h.icon} size={40} />
-                <span className="text-[22px] font-bold">{u.temp(h.temp)}°</span>
-                <span className="text-[12px] text-sky-300">{h.precipProb ?? 0}%</span>
+              <div key={i} className="flex-1 flex flex-col items-center justify-between">
+                <span className="text-[15px] text-slate-400">{pad(d.getHours())}:00</span>
+                <WeatherIcon name={h.icon} size={38} />
+                <span className="text-[22px] font-bold leading-none">{u.temp(h.temp)}°</span>
+                <span className="text-[13px] text-sky-300 leading-none">💧 {h.precipProb ?? 0}%</span>
               </div>
             )
           })}
