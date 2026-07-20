@@ -2,7 +2,8 @@ import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'rec
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
 
-const hourFmt = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit' })
+const hourFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit' })
+const stampFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 
 interface Props {
   data: WeatherData
@@ -21,7 +22,7 @@ export function PressureCard({ data, stats, history }: Props) {
     .map((h) => ({ t: h._time, v: h.pressure_relative as number }))
   const raw = pts.map((p) => p.v)
   const step = Math.max(1, Math.floor(pts.length / 60))
-  const series = pts.filter((_, i) => i % step === 0).map((pt) => ({ t: pt.t, p: u.pressN(pt.v) }))
+  const series = pts.filter((_, i) => i % step === 0).map((pt) => ({ t: new Date(pt.t).getTime(), p: u.pressN(pt.v) }))
 
   // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparar con ~3h atrás
   let trend = 'Estable'
@@ -65,11 +66,11 @@ export function PressureCard({ data, stats, history }: Props) {
                     <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="t" tickFormatter={hourFmt} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={34} tickLine={false} axisLine={false} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={hourFmt} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={34} tickLine={false} axisLine={false} />
                 <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--surface, #1e293b)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
-                  labelFormatter={(l) => hourFmt(l as string)}
+                  labelFormatter={(l) => stampFmt(Number(l))}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />
                 <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} isAnimationActive={false} />
