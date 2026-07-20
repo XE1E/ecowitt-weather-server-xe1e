@@ -92,10 +92,15 @@ def load_overrides(path: str) -> Dict[str, Any]:
 
 
 def save_overrides(path: str, overrides: Dict[str, Any]) -> None:
+    # Merge dentro del archivo completo para NO borrar claves no editables
+    # (p. ej. "stations" con los sensor_labels/configs, o "setup_completed").
+    # Antes se reescribía el archivo solo con EDITABLE_KEYS y se perdían.
     clean = {k: v for k, v in overrides.items() if k in EDITABLE_KEYS}
+    data = load_all_settings(path)
+    data.update(clean)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(clean, f, indent=2)
+        json.dump(data, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
