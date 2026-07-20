@@ -12,6 +12,9 @@ services:
       - "8080"
     volumes:
       - receiver-data:/data
+      # SO real del host (Ubuntu) para el panel de datos técnicos; el contenedor
+      # por sí solo reportaría su imagen base (Debian). Solo lectura.
+      - /etc/os-release:/host/os-release:ro
     # Carga TODO el .env al contenedor (alertas, telegram, waqi, admin, etc.)
     env_file:
       - .env

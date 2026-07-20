@@ -13,6 +13,9 @@ from typing import Optional, Dict, List
 from collections import deque
 import asyncio
 import logging
+import os
+import platform
+import shutil
 
 from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device, resolve_station
@@ -503,6 +506,120 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
             "pws": settings.pws_enabled,
             "owm": settings.owm_enabled,
             "cwop": settings.cwop_enabled,
+        },
+    }
+
+
+def _read_meminfo() -> Dict[str, int]:
+    """Lee /proc/meminfo (compartido con el host) -> {clave: kB}."""
+    info: Dict[str, int] = {}
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                key, _, rest = line.partition(":")
+                if rest:
+                    info[key.strip()] = int(rest.strip().split()[0])  # kB
+    except OSError:
+        pass
+    return info
+
+
+def _os_pretty_name() -> str:
+    """Nombre del SO. Prefiere /host/os-release (montado desde el host, p. ej.
+    Ubuntu) sobre /etc/os-release (imagen base del contenedor, Debian)."""
+    for path in ("/host/os-release", "/etc/os-release"):
+        try:
+            with open(path) as f:
+                for line in f:
+                    if line.startswith("PRETTY_NAME="):
+                        return line.split("=", 1)[1].strip().strip('"')
+        except OSError:
+            continue
+    return platform.system()
+
+
+def _human_duration(seconds: float) -> str:
+    s = int(seconds)
+    d, rem = divmod(s, 86400)
+    h, rem = divmod(rem, 3600)
+    m, _ = divmod(rem, 60)
+    parts: List[str] = []
+    if d:
+        parts.append(f"{d}d")
+    if h:
+        parts.append(f"{h}h")
+    if not d:
+        parts.append(f"{m}m")
+    return " ".join(parts)
+
+
+@app.get("/api/admin/system-info")
+async def admin_system_info(authorization: Optional[str] = Header(default=None)):
+    """Datos técnicos del servidor: SO, disco, memoria, CPU, uptime.
+
+    Disco/memoria/CPU/uptime son del HOST: el contenedor comparte /proc y el
+    volumen /data vive sobre el disco del host. El nombre del SO se lee de
+    /host/os-release (montado desde el host) para reportar el SO real.
+    """
+    _require_admin(authorization)
+    GB = 1024 ** 3
+
+    mem = _read_meminfo()
+    mem_total = mem.get("MemTotal", 0) * 1024
+    mem_avail = mem.get("MemAvailable", 0) * 1024
+    mem_used = max(0, mem_total - mem_avail)
+
+    try:
+        du = shutil.disk_usage("/data")
+        disk_total, disk_used, disk_free = du.total, du.used, du.free
+    except OSError:
+        disk_total = disk_used = disk_free = 0
+
+    try:
+        with open("/proc/uptime") as f:
+            up = float(f.read().split()[0])
+    except OSError:
+        up = 0.0
+
+    try:
+        load1, load5, load15 = os.getloadavg()
+    except OSError:
+        load1 = load5 = load15 = 0.0
+
+    retention_days = os.environ.get("DATA_RETENTION_DAYS", "90").strip()
+    retention = "Infinita" if retention_days in ("0", "") else f"{retention_days} días"
+
+    return {
+        "os": {
+            "name": _os_pretty_name(),
+            "kernel": platform.release(),
+            "arch": platform.machine(),
+            "hostname": platform.node(),
+        },
+        "cpu": {
+            "cores": os.cpu_count(),
+            "load_1m": round(load1, 2),
+            "load_5m": round(load5, 2),
+            "load_15m": round(load15, 2),
+        },
+        "memory": {
+            "total_gb": round(mem_total / GB, 2),
+            "used_gb": round(mem_used / GB, 2),
+            "available_gb": round(mem_avail / GB, 2),
+            "used_pct": round(mem_used / mem_total * 100, 1) if mem_total else None,
+        },
+        "disk": {
+            "total_gb": round(disk_total / GB, 2),
+            "used_gb": round(disk_used / GB, 2),
+            "free_gb": round(disk_free / GB, 2),
+            "used_pct": round(disk_used / disk_total * 100, 1) if disk_total else None,
+        },
+        "uptime": {"seconds": int(up), "human": _human_duration(up)},
+        "runtime": {
+            "python": platform.python_version(),
+            "app_version": app.version,
+            "influxdb_url": settings.influxdb_url,
+            "data_retention": retention,
         },
     }
 

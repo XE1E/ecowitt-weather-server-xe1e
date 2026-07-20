@@ -18,10 +18,38 @@ interface SysInfo {
   influxdb: { status: string; url: string }
 }
 
+interface ServerInfo {
+  os: { name: string; kernel: string; arch: string; hostname: string }
+  cpu: { cores: number; load_1m: number; load_5m: number; load_15m: number }
+  memory: { total_gb: number; used_gb: number; available_gb: number; used_pct: number | null }
+  disk: { total_gb: number; used_gb: number; free_gb: number; used_pct: number | null }
+  uptime: { seconds: number; human: string }
+  runtime: { python: string; app_version: string; influxdb_url: string; data_retention: string }
+}
+
 interface LogEntry {
   timestamp: string
   level: string
   message: string
+}
+
+function UsageBar({ pct }: { pct: number | null }) {
+  const p = pct ?? 0
+  const color = p >= 90 ? 'bg-red-500' : p >= 75 ? 'bg-yellow-500' : 'bg-emerald-500'
+  return (
+    <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+      <div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(100, Math.max(0, p))}%` }} />
+    </div>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-slate-500">{label}:</span>
+      <span className="text-slate-300">{value}</span>
+    </div>
+  )
 }
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -52,6 +80,7 @@ export function AdminSistema() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<SysSettings | null>(null)
   const [info, setInfo] = useState<SysInfo | null>(null)
+  const [server, setServer] = useState<ServerInfo | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsFilter, setLogsFilter] = useState<'all' | 'warning' | 'error'>('all')
@@ -76,8 +105,10 @@ export function AdminSistema() {
       fetchWithAuth('/api/admin/settings').then(r => r.json()),
       fetchWithAuth('/api/admin/status').then(r => r.json()),
       fetch('/api/stations').then(r => r.json()),
-    ]).then(([settingsData, statusData, stationsData]) => {
+      fetchWithAuth('/api/admin/system-info').then(r => r.json()).catch(() => null),
+    ]).then(([settingsData, statusData, stationsData, serverData]) => {
       setSettings(settingsData)
+      setServer(serverData)
       setInfo({
         version: '1.0.0',
         stations: stationsData.count || 0,
@@ -155,6 +186,43 @@ export function AdminSistema() {
           </div>
         </div>
       </div>
+
+      {/* Datos tecnicos del servidor */}
+      {server && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <h2 className="text-sm font-medium mb-3">Datos tecnicos del servidor</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="flex items-center justify-between mb-1 text-sm">
+                <span className="text-slate-500">Disco</span>
+                <span className="text-slate-300">{server.disk.used_gb} / {server.disk.total_gb} GB</span>
+              </div>
+              <UsageBar pct={server.disk.used_pct} />
+              <p className="text-xs text-slate-500 mt-1">{server.disk.used_pct}% usado · {server.disk.free_gb} GB disponible</p>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1 text-sm">
+                <span className="text-slate-500">Memoria RAM</span>
+                <span className="text-slate-300">{server.memory.used_gb} / {server.memory.total_gb} GB</span>
+              </div>
+              <UsageBar pct={server.memory.used_pct} />
+              <p className="text-xs text-slate-500 mt-1">{server.memory.used_pct}% usado · {server.memory.available_gb} GB disponible</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm mt-4">
+            <Field label="Sistema operativo" value={server.os.name} />
+            <Field label="Kernel" value={server.os.kernel} />
+            <Field label="Arquitectura" value={server.os.arch} />
+            <Field label="Hostname" value={server.os.hostname} />
+            <Field label="CPU" value={`${server.cpu.cores} nucleos`} />
+            <Field label="Carga 1/5/15m" value={`${server.cpu.load_1m} / ${server.cpu.load_5m} / ${server.cpu.load_15m}`} />
+            <Field label="Uptime" value={server.uptime.human} />
+            <Field label="Python" value={server.runtime.python} />
+            <Field label="Retencion datos" value={server.runtime.data_retention} />
+            <Field label="App" value={`v${server.runtime.app_version}`} />
+          </div>
+        </div>
+      )}
 
       {/* Ubicacion y zona horaria */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
