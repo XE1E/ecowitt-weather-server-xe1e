@@ -38,34 +38,36 @@ export function HomePage() {
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="space-y-4">
-          <CurrentConditions data={data} />
-          <WindFlipCard data={data} />
-          <PressureCard data={data} stats={stats} history={history} />
-          <LocalForecastCard lf={localForecast} />
-        </div>
-        <div className="space-y-4">
-          <ForecastCard forecast={forecast} />
-          <StationTempChart history={history} forecast={forecast} />
-          <PrecipitationCard data={data} forecast={forecast} />
-          <UvSolarCard data={data} />
-          <InteriorCard data={data} />
-          <ExtraSensorsCard data={data} />
-          <RemoteStationCard />
-        </div>
-        <div className="space-y-4">
-          <SunMoonCard astro={forecast?.astro ?? null} />
-          <AirQualityCard />
-          <ImecaMiniCard />
-          <EarthquakesCard />
-          <AlertsPanel />
-          <SkyEventsCard />
-        </div>
-      </div>
+      {/*
+        Rejilla modular de 6 columnas (md+): 1/3 = 2col, 1/2 = 3col, full = 6col.
+        Cada tarjeta va en una .cell (llena su celda -> misma altura por fila; las
+        que devuelven null se ocultan sin dejar hueco). Empaque denso.
+        Las dos "mitades" (condiciones + gráfica) van arriba; el resto en tercios.
+      */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 md:grid-flow-row-dense">
+        {/* Mitades (alto natural, ambas destacadas) */}
+        <div className="cell md:col-span-3"><CurrentConditions data={data} /></div>
+        <div className="cell md:col-span-3"><StationTempChart history={history} forecast={forecast} /></div>
 
-      <div className="mt-4">
-        <RadarCard />
+        {/* Tercios */}
+        <div className="cell md:col-span-2"><ForecastCard forecast={forecast} /></div>
+        <div className="cell md:col-span-2"><PrecipitationCard data={data} forecast={forecast} /></div>
+        <div className="cell md:col-span-2"><SunMoonCard astro={forecast?.astro ?? null} /></div>
+        <div className="cell md:col-span-2"><WindFlipCard data={data} /></div>
+        <div className="cell md:col-span-2"><PressureCard data={data} stats={stats} history={history} /></div>
+        <div className="cell md:col-span-2"><UvSolarCard data={data} /></div>
+        <div className="cell md:col-span-2"><AirQualityCard /></div>
+        <div className="cell md:col-span-2"><ImecaMiniCard /></div>
+        <div className="cell md:col-span-2"><InteriorCard data={data} /></div>
+        <div className="cell md:col-span-2"><ExtraSensorsCard data={data} /></div>
+        <div className="cell md:col-span-2"><RemoteStationCard /></div>
+        <div className="cell md:col-span-2"><LocalForecastCard lf={localForecast} /></div>
+        <div className="cell md:col-span-2"><EarthquakesCard /></div>
+        <div className="cell md:col-span-2"><AlertsPanel /></div>
+        <div className="cell md:col-span-2"><SkyEventsCard /></div>
+
+        {/* Ancho completo */}
+        <div className="cell md:col-span-6"><RadarCard /></div>
       </div>
     </>
   )
