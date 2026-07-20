@@ -16,16 +16,15 @@ interface CalSettings {
   [key: string]: number | boolean
 }
 
-const SENSOR_ROWS: { label: string; t: keyof CalSettings; h: keyof CalSettings; channel?: number }[] = [
-  { label: 'Exterior', t: 'cal_temp_outdoor', h: 'cal_hum_outdoor' },
-  { label: 'Interior', t: 'cal_temp_indoor', h: 'cal_hum_indoor' },
-  ...Array.from({ length: 8 }, (_, i) => ({
-    label: `Canal ${i + 1}`,
-    t: `cal_temp_ch${i + 1}` as keyof CalSettings,
-    h: `cal_hum_ch${i + 1}` as keyof CalSettings,
-    channel: i + 1,
-  })),
+const FIXED_ROWS: { label: string; t: keyof CalSettings; h: keyof CalSettings }[] = [
+  { label: 'Exterior — WS69', t: 'cal_temp_outdoor', h: 'cal_hum_outdoor' },
+  { label: 'Interior — WS2910', t: 'cal_temp_indoor', h: 'cal_hum_indoor' },
 ]
+const CH_ROWS = Array.from({ length: 8 }, (_, i) => ({
+  t: `cal_temp_ch${i + 1}` as keyof CalSettings,
+  h: `cal_hum_ch${i + 1}` as keyof CalSettings,
+  channel: i + 1,
+}))
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -135,10 +134,24 @@ export function AdminCalibracion() {
           <span className="text-xs text-slate-500"></span>
           <span className="text-xs text-slate-500 text-center">Temp (°C)</span>
           <span className="text-xs text-slate-500 text-center">Humedad (%)</span>
-          {SENSOR_ROWS.map((row) => (
+          {FIXED_ROWS.map((row) => (
             <RowFields
               key={row.t}
-              label={row.channel && chLabels[row.channel] ? `${row.label} (${chLabels[row.channel]})` : row.label}
+              label={row.label}
+              tVal={settings[row.t] as number}
+              hVal={settings[row.h] as number}
+              onT={(v) => update(row.t, v)}
+              onH={(v) => update(row.h, v)}
+              disabled={!on}
+            />
+          ))}
+          <div className="col-span-3 mt-2 pt-2 border-t border-white/10 text-xs font-medium text-slate-400">
+            Sensor WN31 — 8 canales
+          </div>
+          {CH_ROWS.map((row) => (
+            <RowFields
+              key={row.t}
+              label={chLabels[row.channel] ? `Canal ${row.channel} (${chLabels[row.channel]})` : `Canal ${row.channel}`}
               tVal={settings[row.t] as number}
               hVal={settings[row.h] as number}
               onT={(v) => update(row.t, v)}
@@ -149,26 +162,26 @@ export function AdminCalibracion() {
         </div>
       </div>
 
-      {/* Presion, viento, lluvia, solar/UV */}
+      {/* Presion (WS2910) y viento/lluvia/solar (WS69) */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <h2 className="text-sm font-medium mb-3">Presion, viento, lluvia y solar</h2>
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-          <Item label="📊 Presion" hint="hPa">
+          <Item label="📊 Presion" src="WS2910" hint="hPa">
             <NumField value={settings.cal_pressure_offset} onChange={(v) => update('cal_pressure_offset', v)} min={-50} max={50} step={0.1} disabled={!on} />
           </Item>
-          <Item label="💨 Viento (factor)" hint="×">
+          <Item label="💨 Viento (factor)" src="WS69" hint="×">
             <NumField value={settings.cal_wind_mult} onChange={(v) => update('cal_wind_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
           </Item>
-          <Item label="🧭 Direccion viento" hint="°">
+          <Item label="🧭 Direccion viento" src="WS69" hint="°">
             <NumField value={settings.cal_wind_dir_offset} onChange={(v) => update('cal_wind_dir_offset', v)} min={-180} max={180} step={1} disabled={!on} />
           </Item>
-          <Item label="🌧️ Lluvia (factor)" hint="×">
+          <Item label="🌧️ Lluvia (factor)" src="WS69" hint="×">
             <NumField value={settings.cal_rain_mult} onChange={(v) => update('cal_rain_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
           </Item>
-          <Item label="☀️ Solar (factor)" hint="×">
+          <Item label="☀️ Solar (factor)" src="WS69" hint="×">
             <NumField value={settings.cal_solar_mult} onChange={(v) => update('cal_solar_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
           </Item>
-          <Item label="🔆 UV (offset)" hint="idx">
+          <Item label="🔆 UV (offset)" src="WS69" hint="idx">
             <NumField value={settings.cal_uv_offset} onChange={(v) => update('cal_uv_offset', v)} min={-5} max={5} step={1} disabled={!on} />
           </Item>
         </div>
@@ -196,10 +209,12 @@ function RowFields({ label, tVal, hVal, onT, onH, disabled }: {
   )
 }
 
-function Item({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
+function Item({ label, src, hint, children }: { label: string; src: string; hint: string; children: ReactNode }) {
   return (
     <div>
-      <p className="text-sm font-medium mb-1">{label}</p>
+      <p className="text-sm font-medium mb-1">
+        {label} <span className="text-xs font-normal text-slate-500">· {src}</span>
+      </p>
       <div className="flex items-center gap-2">
         {children}
         <span className="text-xs text-slate-500">{hint}</span>
