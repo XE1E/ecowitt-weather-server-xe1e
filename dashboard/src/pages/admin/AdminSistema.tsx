@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
+import { parseServerDate } from '../../weather'
 
 interface SysSettings {
   qc_enabled: boolean
@@ -67,7 +68,7 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'Nunca'
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  const s = Math.max(0, Math.floor((Date.now() - parseServerDate(iso)) / 1000))
   if (s < 60) return `hace ${s}s`
   const m = Math.floor(s / 60)
   if (m < 60) return `hace ${m}m`

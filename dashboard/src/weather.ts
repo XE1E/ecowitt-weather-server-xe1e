@@ -94,10 +94,21 @@ export function cardinal(deg: number): string {
   return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]
 }
 
+/**
+ * El backend emite timestamps (received_at, etc.) como UTC SIN zona, p. ej.
+ * "2026-07-20T00:54:41.9". `new Date()` interpretaría eso como hora LOCAL, lo
+ * que en México (UTC-6) mete un desfase de 6 h. Añadimos 'Z' si el string no
+ * trae zona para parsearlo correctamente como UTC.
+ */
+export function parseServerDate(iso: string): number {
+  const s = /[zZ]$|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + 'Z'
+  return new Date(s).getTime()
+}
+
 /** Human-friendly relative time, e.g. "hace 12 s" / "hace 3 min". */
 export function relativeTime(iso?: string): string {
   if (!iso) return '—'
-  const then = new Date(iso).getTime()
+  const then = parseServerDate(iso)
   if (Number.isNaN(then)) return '—'
   const secs = Math.max(0, Math.round((Date.now() - then) / 1000))
   if (secs < 60) return `hace ${secs} s`
@@ -112,7 +123,7 @@ export const OFFLINE_AFTER_SECONDS = 5 * 60
 
 export function isStale(iso?: string): boolean {
   if (!iso) return false
-  const then = new Date(iso).getTime()
+  const then = parseServerDate(iso)
   if (Number.isNaN(then)) return false
   return (Date.now() - then) / 1000 > OFFLINE_AFTER_SECONDS
 }
