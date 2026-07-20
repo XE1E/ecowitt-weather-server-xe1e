@@ -15,6 +15,9 @@ services:
       # SO real del host (Ubuntu) para el panel de datos técnicos; el contenedor
       # por sí solo reportaría su imagen base (Debian). Solo lectura.
       - /etc/os-release:/host/os-release:ro
+      # Hostname real del host; dentro del contenedor platform.node() devuelve
+      # el ID del contenedor, no el del servidor.
+      - /etc/hostname:/host/hostname:ro
     # Carga TODO el .env al contenedor (alertas, telegram, waqi, admin, etc.)
     env_file:
       - .env

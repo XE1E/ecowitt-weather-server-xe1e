@@ -538,6 +538,19 @@ def _os_pretty_name() -> str:
     return platform.system()
 
 
+def _host_hostname() -> str:
+    """Hostname del host (montado en /host/hostname). Dentro del contenedor
+    platform.node() devuelve el ID del contenedor, no el del servidor."""
+    try:
+        with open("/host/hostname") as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError:
+        pass
+    return platform.node()
+
+
 def _human_duration(seconds: float) -> str:
     s = int(seconds)
     d, rem = divmod(s, 86400)
@@ -594,7 +607,7 @@ async def admin_system_info(authorization: Optional[str] = Header(default=None))
             "name": _os_pretty_name(),
             "kernel": platform.release(),
             "arch": platform.machine(),
-            "hostname": platform.node(),
+            "hostname": _host_hostname(),
         },
         "cpu": {
             "cores": os.cpu_count(),
