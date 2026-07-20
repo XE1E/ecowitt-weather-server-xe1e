@@ -17,6 +17,7 @@ import { EarthquakesPage } from './pages/EarthquakesPage'
 import { RemoteStationPage } from './pages/RemoteStationPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { EmbedWidget } from './pages/EmbedWidget'
+import { KioskPage } from './pages/KioskPage'
 import {
   AdminLayout,
   AdminDashboard,
@@ -51,10 +52,17 @@ const path = window.location.pathname
 const isEmbed = path.startsWith('/embed')
 const isAdmin = path.startsWith('/admin')
 const isStation = path.startsWith('/pro')
+const isKiosk = path.startsWith('/kiosko')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {isEmbed ? (
+    {isKiosk ? (
+      <UnitsProvider>
+        <StationDataProvider>
+          <KioskPage />
+        </StationDataProvider>
+      </UnitsProvider>
+    ) : isEmbed ? (
       <EmbedWidget />
     ) : isAdmin ? (
       <AdminAuthProvider>
