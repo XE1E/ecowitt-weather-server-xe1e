@@ -32,7 +32,7 @@ const PERIODS: { key: Period; label: string; start: string }[] = [
 type ChartMetric = 'th' | 'pressure'
 
 interface ChartPoint {
-  time: string
+  t: number
   temp: number | null
   humidity: number | null
   pressure: number | null
@@ -101,14 +101,17 @@ export function RemoteStationPage() {
   }, [load])
 
   const longRange = period !== '24h'
-  const chart: ChartPoint[] = history.map((r) => ({
-    time: new Date(r._time).toLocaleString('es-MX', longRange
-      ? { day: '2-digit', month: '2-digit', hour: '2-digit' }
-      : { hour: '2-digit', minute: '2-digit' }),
-    temp: r.temperature_indoor != null ? Number(u.tempN(r.temperature_indoor).toFixed(1)) : null,
-    humidity: r.humidity_indoor ?? null,
-    pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
-  }))
+  const fmtTick = (t: number) => new Date(t).toLocaleString('es-MX', longRange
+    ? { day: '2-digit', month: '2-digit', hour: '2-digit' }
+    : { hour: '2-digit', minute: '2-digit' })
+  const chart: ChartPoint[] = history
+    .map((r) => ({
+      t: new Date(r._time).getTime(),
+      temp: r.temperature_indoor != null ? Number(u.tempN(r.temperature_indoor).toFixed(1)) : null,
+      humidity: r.humidity_indoor ?? null,
+      pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
+    }))
+    .sort((a, b) => a.t - b.t)
 
   const offline = data?.received_at ? isStale(data.received_at) : false
   const s = stats ?? {}
@@ -280,12 +283,12 @@ export function RemoteStationPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chart} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="time" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} interval="preserveStartEnd" />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} minTickGap={40} />
                     {metric === 'th' ? (
                       <>
                         <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
                         <YAxis yAxisId="humidity" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} labelFormatter={(l) => fmtTick(Number(l))} />
                         <Legend />
                         <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f59e0b" strokeWidth={2} dot={false} name={`Temperatura (${u.tempU})`} />
                         <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2} dot={false} name="Humedad (%)" />
@@ -293,7 +296,7 @@ export function RemoteStationPage() {
                     ) : (
                       <>
                         <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} labelFormatter={(l) => fmtTick(Number(l))} />
                         <Legend />
                         <Line type="monotone" dataKey="pressure" stroke="#a78bfa" strokeWidth={2} dot={false} name={`Presión (${u.pressU})`} />
                       </>
