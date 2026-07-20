@@ -163,6 +163,7 @@ class InfluxDBStorage:
                 {_station_filter(station)}
                 {field_filter}
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+                |> sort(columns: ["_time"])
             '''
 
             # Execute query

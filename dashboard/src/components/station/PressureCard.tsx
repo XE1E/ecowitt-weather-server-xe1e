@@ -20,6 +20,7 @@ export function PressureCard({ data, stats, history }: Props) {
   const pts = history
     .filter((h) => h.pressure_relative !== undefined)
     .map((h) => ({ t: h._time, v: h.pressure_relative as number }))
+    .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
   const raw = pts.map((p) => p.v)
   const step = Math.max(1, Math.floor(pts.length / 60))
   const series = pts.filter((_, i) => i % step === 0).map((pt) => ({ t: new Date(pt.t).getTime(), p: u.pressN(pt.v) }))
