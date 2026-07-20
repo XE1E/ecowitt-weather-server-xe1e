@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
 import { parseServerDate } from '../../weather'
+import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
 
 interface SensorDetail {
   id: string; type: string; category: string; channel?: number; label: string
@@ -69,7 +70,7 @@ function SensorRow({ sensor, online }: { sensor: SensorDetail; online: boolean }
       <span className="truncate">{sensor.label}{sensor.channel ? ` (${sensor.channel})` : ''}</span>
       <span className="flex-1 text-right text-slate-400 tabular-nums">{values}</span>
       <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-xs font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
-      <span title={sensor.battery_ok ? 'OK' : 'Baja'} className="text-xs">{sensor.battery_ok ? '🔋' : '🪫'}</span>
+      <BatteryIcon ok={sensor.battery_ok} size={18} />
     </div>
   )
 }
@@ -93,7 +94,7 @@ function StationCard({ station }: { station: Station }) {
           <span className={`text-xs px-1.5 py-0.5 rounded ${
             station.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
             station.status === 'offline' ? 'bg-red-500/20 text-red-400' : 'bg-slate-600 text-slate-400'
-          }`}>{station.status === 'online' ? '🟢' : station.status === 'offline' ? '🔴' : '⚪'} {station.status}</span>
+          }`}>{statusDot(station.status)} {statusLabel(station.status)}</span>
         </div>
         <span className="text-xs text-slate-500">{timeAgo(station.last_received)}</span>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
 
 interface SensorDetail {
   id: string
@@ -126,7 +127,7 @@ export function AdminEstacionConfig() {
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 station.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
                 station.status === 'offline' ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-400'
-              }`}>{station.status}</span>
+              }`}>{statusDot(station.status)} {statusLabel(station.status)}</span>
             </h1>
             <p className="text-slate-400 text-sm">{station.model || (isPrincipal ? 'Estacion principal' : 'Estacion remota')}</p>
           </div>
@@ -229,7 +230,7 @@ export function AdminEstacionConfig() {
                   <span className="text-slate-500 text-xs">CH{sensor.channel}</span>
                   <div className="flex items-center gap-1.5">
                     <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-xs font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
-                    <span title={sensor.battery_ok ? 'OK' : 'Baja'}>{sensor.battery_ok ? '🔋' : '🪫'}</span>
+                    <BatteryIcon ok={sensor.battery_ok} size={18} />
                   </div>
                 </div>
                 <div className="flex items-baseline gap-1 mb-2">
@@ -270,7 +271,7 @@ export function AdminEstacionConfig() {
                   {sensor.pressure !== undefined && ` ${sensor.pressure.toFixed(0)}hPa`}
                 </span>
                 <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-sm font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
-                <span title={sensor.battery_ok ? 'OK' : 'Baja'}>{sensor.battery_ok ? '🔋' : '🪫'}</span>
+                <BatteryIcon ok={sensor.battery_ok} size={18} />
               </div>
               )
             })}

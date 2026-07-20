@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import { parseServerDate } from '../../weather'
+import { statusLabel, statusDot } from '../../components/admin-ui'
 
 interface Station {
   name: string | null
@@ -144,7 +146,7 @@ function DeleteConfirmModal({ station, onClose, onDeleted }: { station: Station;
 
 function timeAgo(isoString: string | null): string {
   if (!isoString) return 'Nunca'
-  const diff = Date.now() - new Date(isoString).getTime()
+  const diff = Math.max(0, Date.now() - parseServerDate(isoString))
   const seconds = Math.floor(diff / 1000)
   if (seconds < 60) return `hace ${seconds}s`
   const minutes = Math.floor(seconds / 60)
@@ -219,8 +221,8 @@ export function AdminEstaciones() {
                     s.status === 'online' ? 'text-emerald-400' :
                     s.status === 'offline' ? 'text-red-400' : 'text-slate-400'
                   }`}>
-                    {s.status === 'online' ? '🟢' : s.status === 'offline' ? '🔴' : '⚪'}
-                    {s.status}
+                    {statusDot(s.status)}
+                    {statusLabel(s.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-400">{timeAgo(s.last_received)}</td>
