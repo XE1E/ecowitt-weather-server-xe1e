@@ -60,8 +60,9 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
     return () => { cancel = true }
   }, [cur])
 
+  const fmtTick = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
   const data = (rows ?? []).map((r) => ({
-    h: new Date(r._time).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    t: new Date(r._time).getTime(),
     temp: r.temperature_outdoor != null ? +u.temp(r.temperature_outdoor) : null,
     dew: r.dew_point != null ? +u.temp(r.dew_point) : null,
     feels: r.feels_like != null ? +u.temp(r.feels_like) : null,
@@ -110,9 +111,9 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-            <XAxis dataKey="h" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={30} />
+            <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
             <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-            <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [`${nf(v)} ${unit}`, n]} />
+            <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [`${nf(v)} ${unit}`, n]} />
             <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
             {series.map((se) => (
               <Line key={se.key} type="monotone" dataKey={se.key} name={se.name} stroke={se.color} strokeWidth={2} strokeDasharray={se.dash} dot={false} connectNulls />
@@ -172,11 +173,11 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="h" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="dir" orientation="right" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]}
                       tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#84cc16', fontSize: 10 }} width={28} />
-                    <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
+                    <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                     <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
                     <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
@@ -193,10 +194,10 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="h" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                     <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-                    <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
+                    <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                     <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
                     <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
@@ -212,10 +213,10 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="h" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
-                    <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
+                    <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                     <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
                     <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
@@ -231,10 +232,10 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                    <XAxis dataKey="h" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
-                    <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rateU}`, n]} />
+                    <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rateU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                     <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
                     <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
