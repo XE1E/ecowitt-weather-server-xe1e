@@ -221,11 +221,16 @@ export function AdminEstacionConfig() {
         <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
           <h2 className="font-medium mb-3">Sensores WN31 ({wn31Sensors.length})</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {wn31Sensors.map(sensor => (
+            {wn31Sensors.map(sensor => {
+              const receiving = sensor.active && station?.status === 'online'
+              return (
               <div key={sensor.id} className="bg-slate-900/50 rounded-lg p-3 border border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-slate-500 text-xs">CH{sensor.channel}</span>
-                  <span title={sensor.battery_ok ? 'OK' : 'Baja'}>{sensor.battery_ok ? '🔋' : '🪫'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-xs font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
+                    <span title={sensor.battery_ok ? 'OK' : 'Baja'}>{sensor.battery_ok ? '🔋' : '🪫'}</span>
+                  </div>
                 </div>
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-xl font-bold">{sensor.temperature?.toFixed(1) ?? '--'}°</span>
@@ -239,7 +244,8 @@ export function AdminEstacionConfig() {
                   className="w-full rounded bg-slate-800/50 border border-white/10 px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500/50"
                 />
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -249,7 +255,9 @@ export function AdminEstacionConfig() {
         <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
           <h2 className="font-medium mb-3">Otros sensores</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {otherSensors.map(sensor => (
+            {otherSensors.map(sensor => {
+              const receiving = sensor.active && station?.status === 'online'
+              return (
               <div key={sensor.id} className="flex items-center gap-3 bg-slate-900/50 rounded-lg px-3 py-2 border border-white/5">
                 <span>{sensor.category === 'exterior' ? '🌡️' : sensor.category === 'interior' ? '🏠' : sensor.category === 'viento' ? '💨' : sensor.category === 'lluvia' ? '🌧️' : sensor.category === 'solar' ? '☀️' : '📡'}</span>
                 <div className="flex-1 min-w-0">
@@ -261,9 +269,11 @@ export function AdminEstacionConfig() {
                   {sensor.humidity !== undefined && ` ${Math.round(sensor.humidity)}%`}
                   {sensor.pressure !== undefined && ` ${sensor.pressure.toFixed(0)}hPa`}
                 </span>
+                <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-sm font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
                 <span title={sensor.battery_ok ? 'OK' : 'Baja'}>{sensor.battery_ok ? '🔋' : '🪫'}</span>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

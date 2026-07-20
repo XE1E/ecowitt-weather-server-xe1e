@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
+import { parseServerDate } from '../../weather'
 
 interface SensorDetail {
   id: string; type: string; category: string; channel?: number; label: string
@@ -41,7 +42,7 @@ interface AdminStatus {
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'Nunca'
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  const s = Math.max(0, Math.floor((Date.now() - parseServerDate(iso)) / 1000))
   if (s < 60) return `${s}s`
   const m = Math.floor(s / 60)
   if (m < 60) return `${m}m`
@@ -50,8 +51,9 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(h / 24)}d`
 }
 
-function SensorRow({ sensor }: { sensor: SensorDetail }) {
+function SensorRow({ sensor, online }: { sensor: SensorDetail; online: boolean }) {
   const icon = { exterior: '🌡️', interior: '🏠', canal: '📍', viento: '💨', lluvia: '🌧️', solar: '☀️' }[sensor.category] || '📡'
+  const receiving = sensor.active && online
   const values = [
     sensor.temperature !== undefined && `${sensor.temperature.toFixed(1)}°`,
     sensor.humidity !== undefined && `${Math.round(sensor.humidity)}%`,
@@ -66,6 +68,7 @@ function SensorRow({ sensor }: { sensor: SensorDetail }) {
       <span>{icon}</span>
       <span className="truncate">{sensor.label}{sensor.channel ? ` (${sensor.channel})` : ''}</span>
       <span className="flex-1 text-right text-slate-400 tabular-nums">{values}</span>
+      <span title={receiving ? 'Recibiendo datos' : 'Sin datos recientes'} className={`text-xs font-bold ${receiving ? 'text-emerald-400' : 'text-red-400'}`}>{receiving ? '✓' : '✗'}</span>
       <span title={sensor.battery_ok ? 'OK' : 'Baja'} className="text-xs">{sensor.battery_ok ? '🔋' : '🪫'}</span>
     </div>
   )
@@ -96,9 +99,9 @@ function StationCard({ station }: { station: Station }) {
       </div>
       <p className="text-xs text-slate-500 mb-2">{hw}</p>
       <div className="space-y-1">
-        {console && <SensorRow sensor={console} />}
-        {ws69.map(s => <SensorRow key={s.id} sensor={s} />)}
-        {wn31.map(s => <SensorRow key={s.id} sensor={s} />)}
+        {console && <SensorRow sensor={console} online={station.status === 'online'} />}
+        {ws69.map(s => <SensorRow key={s.id} sensor={s} online={station.status === 'online'} />)}
+        {wn31.map(s => <SensorRow key={s.id} sensor={s} online={station.status === 'online'} />)}
         {sensors.length === 0 && <p className="text-slate-500 text-xs italic">Sin sensores</p>}
       </div>
       <div className="mt-3 pt-2 border-t border-white/5">
