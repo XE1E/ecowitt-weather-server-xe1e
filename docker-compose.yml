@@ -97,6 +97,24 @@ services:
     networks:
       - ecowitt-network
 
+  # Renderer - Chromium headless que convierte /kiosko?page=N en un JPEG 1024x600
+  # para el display ESP32-S3. El ESP32 solo baja la imagen y la pinta (sin LVGL).
+  # nginx del dashboard expone la imagen en /api/display.jpg?page=N.
+  renderer:
+    build: ./renderer
+    container_name: ecowitt-renderer
+    expose:
+      - "8090"
+    environment:
+      - DASHBOARD_URL=http://dashboard
+      - TZ=${TZ:-America/Mexico_City}   # zona horaria del reloj dibujado
+      - CACHE_TTL=45
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+    networks:
+      - ecowitt-network
+
   # Caddy - Reverse proxy con HTTPS automático (Let's Encrypt) para el dominio.
   # Producción con dominio: docker compose --profile caddy up -d
   # (el dashboard sigue publicado en 8080 para el push HTTP del WS2910 por IP)
