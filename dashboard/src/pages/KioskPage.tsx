@@ -99,9 +99,9 @@ export function KioskPage() {
     const mx = local?.max || {}
     const bigCard = (label: string, value: string, unit: string, sub: string, color: string) => (
       <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center">
-        <p className="text-[18px] uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="text-[28px] uppercase tracking-wider text-slate-300 font-semibold">{label}</p>
         <p className="text-[84px] leading-none font-bold mt-2" style={{ color }}>{value}<span className="text-[32px] text-slate-400 ml-1">{unit}</span></p>
-        <p className="text-[16px] text-slate-400 mt-3">{sub}</p>
+        <p className="text-[24px] text-slate-300 mt-3">{sub}</p>
       </div>
     )
     return shell(
