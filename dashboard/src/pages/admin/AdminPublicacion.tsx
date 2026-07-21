@@ -86,6 +86,14 @@ function IntervalField({ value, onChange }: { value: number; onChange: (v: numbe
   )
 }
 
+function CfgBadge({ ok }: { ok: boolean }) {
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+      {ok ? '✓ Configurado' : '⚠ Falta configurar'}
+    </span>
+  )
+}
+
 export function AdminPublicacion() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<PubSettings | null>(null)
@@ -150,6 +158,7 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.wu_enabled} onChange={(v) => update('wu_enabled', v)} />
             <span className="text-sm font-medium">Weather Underground</span>
+            {settings.wu_enabled && <CfgBadge ok={!!settings.wu_station_id && (!!settings.wu_station_key || !!settings.wu_station_key_masked)} />}
             <a href="https://www.wunderground.com/member/devices" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener ID →</a>
           </div>
           {settings.wu_enabled && (
@@ -172,6 +181,7 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.pws_enabled} onChange={(v) => update('pws_enabled', v)} />
             <span className="text-sm font-medium">PWSWeather</span>
+            {settings.pws_enabled && <CfgBadge ok={!!settings.pws_station_id && (!!settings.pws_password || !!settings.pws_password_masked)} />}
             <a href="https://www.pwsweather.com/register.php" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
           </div>
           {settings.pws_enabled && (
@@ -194,6 +204,7 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.windy_enabled} onChange={(v) => update('windy_enabled', v)} />
             <span className="text-sm font-medium">Windy.com</span>
+            {settings.windy_enabled && <CfgBadge ok={!!settings.windy_api_key || !!settings.windy_api_key_masked} />}
             <a href="https://stations.windy.com/" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener API →</a>
           </div>
           {settings.windy_enabled && (
@@ -212,6 +223,7 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.owm_enabled} onChange={(v) => update('owm_enabled', v)} />
             <span className="text-sm font-medium">OpenWeatherMap</span>
+            {settings.owm_enabled && <CfgBadge ok={(!!settings.owm_api_key || !!settings.owm_api_key_masked) && !!settings.owm_station_id} />}
             <a href="https://home.openweathermap.org/stations" target="_blank" className="text-sky-400 text-xs ml-auto">Crear estacion →</a>
           </div>
           {settings.owm_enabled && (
@@ -234,6 +246,7 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.cwop_enabled} onChange={(v) => update('cwop_enabled', v)} />
             <span className="text-sm font-medium">CWOP / APRS-IS</span>
+            {settings.cwop_enabled && <CfgBadge ok={!!settings.cwop_callsign} />}
             <span className="text-xs text-slate-500">(entra a MADIS/NOAA)</span>
             <a href="http://www.wxqa.com/SIGN-UP.html" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
           </div>
