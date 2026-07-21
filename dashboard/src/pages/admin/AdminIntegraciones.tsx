@@ -39,16 +39,27 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 function TextField({ value, onChange, placeholder, type = 'text', masked, className = '' }: {
   value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null; className?: string
 }) {
+  const [show, setShow] = useState(false)
   const displayValue = value || ''
   const showMasked = !value && masked
+  const isPw = type === 'password'
   return (
-    <input
-      type={type}
-      value={displayValue}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={showMasked ? `(${masked})` : placeholder}
-      className={`rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 ${className}`}
-    />
+    <div className={`relative ${className}`}>
+      <input
+        type={isPw && show ? 'text' : type}
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={showMasked ? `(${masked})` : placeholder}
+        className={`w-full rounded bg-slate-900/50 border border-white/10 px-2 py-1 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
+      />
+      {isPw && (
+        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
+          title={show ? 'Ocultar' : 'Mostrar'}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
+          {show ? '🙈' : '👁️'}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -253,6 +264,11 @@ export function AdminIntegraciones() {
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="flex items-center gap-3 mb-3">
           <span className="text-sm font-medium">🌫️ WAQI (Calidad del aire)</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+            settings.waqi_token || settings.waqi_token_masked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-600/40 text-slate-400'
+          }`}>
+            {settings.waqi_token || settings.waqi_token_masked ? '✓ Configurado' : 'Sin token'}
+          </span>
           <a href="https://aqicn.org/data-platform/token/" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener token →</a>
         </div>
         <div className="flex items-center gap-2">

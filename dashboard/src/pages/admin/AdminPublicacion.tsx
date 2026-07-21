@@ -44,16 +44,27 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 function TextField({ value, onChange, placeholder, type = 'text', masked }: {
   value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null
 }) {
+  const [show, setShow] = useState(false)
   const displayValue = value || ''
   const showMasked = !value && masked
+  const isPw = type === 'password'
   return (
-    <input
-      type={type}
-      value={displayValue}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={showMasked ? `(${masked})` : placeholder}
-      className="flex-1 min-w-0 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
-    />
+    <div className="relative flex-1 min-w-0">
+      <input
+        type={isPw && show ? 'text' : type}
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={showMasked ? `(${masked})` : placeholder}
+        className={`w-full rounded bg-slate-900/50 border border-white/10 px-2 py-1 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
+      />
+      {isPw && (
+        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
+          title={show ? 'Ocultar' : 'Mostrar'}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
+          {show ? '🙈' : '👁️'}
+        </button>
+      )}
+    </div>
   )
 }
 
