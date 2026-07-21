@@ -48,9 +48,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     const headers = new Headers(options.headers)
     if (token) headers.set('Authorization', `Bearer ${token}`)
-    const r = await fetch(url, { ...options, headers })
-    if (r.status === 401) logout()
-    return r
+    // Timeout para no colgarse indefinidamente si el servidor no responde
+    // (p.ej. mientras el contenedor se reinicia en un deploy). Respeta un
+    // signal que ya venga en las options.
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 20000)
+    try {
+      const r = await fetch(url, { ...options, headers, signal: options.signal ?? controller.signal })
+      if (r.status === 401) logout()
+      return r
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   return (

@@ -120,8 +120,28 @@ export function AdminNotificaciones() {
       .finally(() => setLoading(false))
   }, [fetchWithAuth])
 
+  // Campos obligatorios cuando un canal está habilitado. Un secreto cuenta como
+  // presente si ya hay un valor guardado (viene enmascarado del backend).
+  const validationErrors: string[] = []
+  if (settings) {
+    const has = (v: string | null) => !!(v && v.trim())
+    if (settings.telegram_enabled) {
+      if (!has(settings.telegram_bot_token) && !settings.telegram_bot_token_masked)
+        validationErrors.push('Telegram: falta el Bot Token')
+      if (!has(settings.telegram_chat_id)) validationErrors.push('Telegram: falta el Chat ID')
+    }
+    if (settings.email_enabled) {
+      if (!has(settings.smtp_host)) validationErrors.push('Correo: falta el Servidor SMTP')
+      if (!has(settings.email_to)) validationErrors.push('Correo: falta el Destinatario')
+    }
+  }
+
   const handleSave = async () => {
     if (!settings) return
+    if (validationErrors.length > 0) {
+      setMessage({ type: 'error', text: 'Completa los campos faltantes' })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
@@ -178,11 +198,27 @@ export function AdminNotificaciones() {
         </div>
         <div className="flex items-center gap-3">
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
-          <button onClick={handleSave} disabled={saving} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium">
+          <button
+            onClick={handleSave}
+            disabled={saving || validationErrors.length > 0}
+            title={validationErrors.length > 0 ? validationErrors.join(' · ') : undefined}
+            className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:cursor-not-allowed px-4 py-1.5 rounded-lg text-sm font-medium"
+          >
             {saving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
+
+      {validationErrors.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-300">
+          <span className="font-medium">Faltan datos antes de guardar:</span>
+          <ul className="list-disc list-inside mt-1 text-red-300/90">
+            {validationErrors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Telegram config */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
