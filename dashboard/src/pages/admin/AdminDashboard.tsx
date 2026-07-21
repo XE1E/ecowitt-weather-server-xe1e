@@ -81,6 +81,7 @@ function StationCard({ station }: { station: Station }) {
   const ws69 = sensors.filter(s => s.type === 'WS69')
   const wn31 = sensors.filter(s => s.type === 'WN31')
   const console = sensors.find(s => s.type === 'console')
+  const lowBatt = sensors.filter(s => s.active && !s.battery_ok).length
   const hw = isPrincipal
     ? [ws69.length > 0 && 'WS69', wn31.length > 0 && `WN31(${wn31.length})`].filter(Boolean).join('+') || station.model
     : station.model || 'GW1100'
@@ -95,6 +96,11 @@ function StationCard({ station }: { station: Station }) {
             station.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
             station.status === 'offline' ? 'bg-red-500/20 text-red-400' : 'bg-slate-600 text-slate-400'
           }`}>{statusDot(station.status)} {statusLabel(station.status)}</span>
+          {sensors.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded ${lowBatt ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+              🔋 {lowBatt ? `${lowBatt} baja${lowBatt > 1 ? 's' : ''}` : 'OK'}
+            </span>
+          )}
         </div>
         <span className="text-xs text-slate-500">{timeAgo(station.last_received)}</span>
       </div>

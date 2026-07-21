@@ -105,6 +105,14 @@ function CategoryPicker({ selected, onChange }: { selected: string[] | null; onC
   )
 }
 
+function CfgBadge({ ok }: { ok: boolean }) {
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+      {ok ? '✓ Configurado' : '⚠ Falta configurar'}
+    </span>
+  )
+}
+
 export function AdminNotificaciones() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<NotifSettings | null>(null)
@@ -224,6 +232,7 @@ export function AdminNotificaciones() {
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="flex items-center gap-4 mb-4">
           <Toggle enabled={settings.telegram_enabled} onChange={(v) => update('telegram_enabled', v)} label="Telegram" />
+          {settings.telegram_enabled && <CfgBadge ok={(!!settings.telegram_bot_token || !!settings.telegram_bot_token_masked) && !!settings.telegram_chat_id} />}
           {settings.telegram_enabled && settings.telegram_chat_id && (
             <button
               onClick={() => handleTest('telegram')}
@@ -266,6 +275,7 @@ export function AdminNotificaciones() {
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="flex items-center gap-4 mb-4">
           <Toggle enabled={settings.email_enabled} onChange={(v) => update('email_enabled', v)} label="Correo (SMTP)" />
+          {settings.email_enabled && <CfgBadge ok={!!settings.smtp_host && !!settings.email_to} />}
           {settings.email_enabled && settings.smtp_host && settings.email_to && (
             <button
               onClick={() => handleTest('email')}
