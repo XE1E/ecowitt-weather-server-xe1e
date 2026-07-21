@@ -1,4 +1,4 @@
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
 
@@ -58,23 +58,35 @@ export function PressureCard({ data, stats, history }: Props) {
       {series.length > 1 && (
         <div className="mt-3 rounded-lg bg-white/5 px-2 pt-2 pb-1">
           <p className="text-xs text-slate-400 mb-1 px-1">Últimas 24 h</p>
-          <div className="h-28">
+          <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 4, right: 6, left: 2, bottom: 0 }}>
+              <AreaChart data={series} margin={{ top: 6, right: 8, left: 2, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
                     <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={hourFmt} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={34} tickLine={false} axisLine={false} />
-                <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
+                {/* Rejilla discreta: gris muy tenue, punteada, sin robar foco a la línea */}
+                <CartesianGrid stroke="#94a3b8" strokeOpacity={0.12} strokeDasharray="3 3" vertical horizontal />
+                <XAxis
+                  dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']}
+                  tickFormatter={hourFmt} tick={{ fill: '#94a3b8', fontSize: 10 }}
+                  minTickGap={34} tickLine={false} axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.15 }}
+                />
+                <YAxis
+                  width={34} orientation="right" domain={['dataMin - 1', 'dataMax + 1']}
+                  tickCount={4} tick={{ fill: '#94a3b8', fontSize: 10 }}
+                  tickFormatter={(v: number) => v.toFixed(u.system === 'imperial' ? 2 : 0)}
+                  tickLine={false} axisLine={false}
+                />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--surface, #1e293b)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
+                  cursor={{ stroke: '#a78bfa', strokeOpacity: 0.4, strokeDasharray: '3 3' }}
                   labelFormatter={(l) => stampFmt(Number(l))}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />
-                <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} isAnimationActive={false} />
+                <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} activeDot={{ r: 3, fill: '#a78bfa', strokeWidth: 0 }} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
