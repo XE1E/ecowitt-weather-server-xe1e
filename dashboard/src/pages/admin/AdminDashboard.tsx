@@ -165,6 +165,38 @@ function AlertHistory({ history }: { history: AlertHistoryItem[] }) {
   )
 }
 
+function EcowittEndpointCard() {
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/data/report/`
+  const copy = () => {
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-medium flex items-center gap-2"><span>📡</span> Endpoint Ecowitt</h2>
+        <span className="text-xs text-slate-500">WS View Plus → Customized</span>
+      </div>
+      <p className="text-xs text-slate-400 mb-1">URL de envío (push) para configurar tu datalogger:</p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 min-w-0 truncate bg-slate-900/50 border border-white/10 rounded px-2 py-1 text-sm text-sky-300">{url}</code>
+        <button onClick={copy} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 whitespace-nowrap">
+          {copied ? '✓ Copiado' : 'Copiar'}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-xs text-slate-400">
+        <div><span className="text-slate-500">Protocolo:</span> Ecowitt (HTTP POST)</div>
+        <div><span className="text-slate-500">Path:</span> /data/report/</div>
+        <div><span className="text-slate-500">Puerto:</span> el de esta URL</div>
+        <div><span className="text-slate-500">Intervalo:</span> 60 s recomendado</div>
+      </div>
+    </div>
+  )
+}
+
 export function AdminDashboard() {
   const { fetchWithAuth } = useAdminAuth()
   const [stations, setStations] = useState<Station[]>([])
@@ -361,6 +393,9 @@ export function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Endpoint Ecowitt */}
+      <EcowittEndpointCard />
     </div>
   )
 }
