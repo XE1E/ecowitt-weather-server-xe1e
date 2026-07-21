@@ -109,6 +109,9 @@ services:
       - DASHBOARD_URL=http://dashboard
       - TZ=${TZ:-America/Mexico_City}   # zona horaria del reloj dibujado
       - CACHE_TTL=45
+      # Calidad JPEG alta: los degradados oscuros (p.ej. pagina 2 del kiosco)
+      # muestran ruido/puntitos en un panel RGB565 si la calidad es baja.
+      - JPEG_QUALITY=92
     depends_on:
       - dashboard
     restart: unless-stopped
