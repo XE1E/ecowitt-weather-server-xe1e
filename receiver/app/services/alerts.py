@@ -10,7 +10,11 @@ of spamming on every reading.
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from collections import deque
+from email.message import EmailMessage
+import asyncio
 import logging
+import smtplib
+import ssl
 
 import httpx
 
@@ -18,6 +22,30 @@ logger = logging.getLogger(__name__)
 
 # Notifier signature: async (text: str) -> None
 Notifier = Callable[[str], Awaitable[None]]
+
+# Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "station", "battery", "sensor", "air"]
+
+
+def _category_for(rule_key: str) -> str:
+    """Mapea una clave de regla (temp_high, battery_ch1, ...) a su categoría."""
+    if rule_key.startswith("temp_"):
+        return "temp"
+    if rule_key in ("wind_high", "gust_high"):
+        return "wind"
+    if rule_key.startswith("rain_"):
+        return "rain"
+    if rule_key.startswith("pressure_"):
+        return "pressure"
+    if rule_key.startswith("station_offline"):
+        return "station"
+    if rule_key.startswith("battery_"):
+        return "battery"
+    if rule_key.startswith("sensor_"):
+        return "sensor"
+    if rule_key in ("aqi_high", "imeca_high"):
+        return "air"
+    return "other"
 
 # Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
 _SENSOR_PRESENCE = {
@@ -37,6 +65,10 @@ class AlertService:
         self.rain_rate: float = settings.alert_rain_rate
 
         self._settings = settings
+        # Si no inyectan notifier usamos el propio (Telegram + correo, con
+        # enrutado por categoría). Un notifier inyectado (tests) recibe solo el
+        # texto, así que el filtro por categoría solo aplica al notifier propio.
+        self._using_default: bool = notifier is None
         self._notifier: Notifier = notifier or self._default_notifier
         # Rule keys currently triggered -> their message (dict so /api/alerts
         # can expose the active alerts; `key in self.active` still works)
@@ -206,15 +238,16 @@ class AlertService:
             return
 
         for key, (triggered, message) in self.evaluate(data).items():
+            cat = _category_for(key)
             if triggered and key not in self.active:
                 self.active[key] = message
                 self._add_to_history(key, message, resolved=False)
-                await self._safe_notify(f"⚠️ ALERTA — {message}")
+                await self._safe_notify(f"⚠️ ALERTA — {message}", category=cat)
             elif not triggered and key in self.active:
                 self._add_to_history(key, self.active[key], resolved=True)
                 self.active.pop(key, None)
                 self._active_since.pop(key, None)
-                await self._safe_notify(f"✅ Normalizado — {message}")
+                await self._safe_notify(f"✅ Normalizado — {message}", category=cat)
 
     async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
         """
@@ -238,12 +271,12 @@ class AlertService:
             if triggered and key not in self.active:
                 self.active[key] = message
                 self._add_to_history(key, message, resolved=False)
-                await self._safe_notify(f"⚠️ ALERTA — {message}")
+                await self._safe_notify(f"⚠️ ALERTA — {message}", category="air")
             elif not triggered and key in self.active:
                 self._add_to_history(key, self.active[key], resolved=True)
                 self.active.pop(key, None)
                 self._active_since.pop(key, None)
-                await self._safe_notify(f"✅ Normalizado — {message}")
+                await self._safe_notify(f"✅ Normalizado — {message}", category="air")
 
     async def send(self, text: str) -> None:
         """Enviar una notificación suelta."""
@@ -282,34 +315,114 @@ class AlertService:
             self.stations_offline[station] = True
             msg = f"🔌 La estación **{label}** no envía datos desde hace {int(age // 60)} min."
             self._add_to_history(key, msg, resolved=False)
-            await self._safe_notify(msg)
+            await self._safe_notify(msg, category="station")
             return msg
 
         if age <= threshold_s and was_offline:
             self.stations_offline[station] = False
             msg = f"✅ La estación **{label}** volvió a enviar datos."
             self._add_to_history(key, f"Estación {label} offline", resolved=True)
-            await self._safe_notify(msg)
+            await self._safe_notify(msg, category="station")
             return msg
 
         return None
 
-    async def _safe_notify(self, text: str) -> None:
+    async def _safe_notify(self, text: str, category: Optional[str] = None) -> None:
         try:
-            await self._notifier(text)
+            if self._using_default:
+                await self._default_notifier(text, category)
+            else:
+                # Notifier inyectado (tests): contrato de un solo argumento.
+                await self._notifier(text)
         except Exception as e:  # never let a notification failure break ingestion
             logger.error(f"Alert notification failed: {e}")
 
-    async def _default_notifier(self, text: str) -> None:
+    def _channel_allows(self, channel: str, category: Optional[str]) -> bool:
+        """
+        ¿El canal (`telegram`/`email`) debe recibir esta categoría?
+        category=None (mensajes sueltos/pruebas) => siempre. Lista de categorías
+        None en settings => todas; lista vacía => ninguna.
+        """
+        if category is None:
+            return True
+        cats = getattr(self._settings, f"{channel}_categories", None)
+        if cats is None:
+            return True
+        return category in cats
+
+    async def _default_notifier(self, text: str, category: Optional[str] = None) -> None:
         s = self._settings
-        if s.telegram_enabled and s.telegram_bot_token and s.telegram_chat_id:
-            url = f"https://api.telegram.org/bot{s.telegram_bot_token}/sendMessage"
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.post(
-                    url, json={"chat_id": s.telegram_chat_id, "text": text}
-                )
-                resp.raise_for_status()
-            logger.info(f"Telegram alert sent: {text}")
-        else:
-            # Telegram not configured: surface the alert in the log
+        tg_on = bool(s.telegram_enabled and s.telegram_bot_token and s.telegram_chat_id)
+        em_on = bool(getattr(s, "email_enabled", False)
+                     and getattr(s, "smtp_host", None) and getattr(s, "email_to", None))
+
+        if tg_on and self._channel_allows("telegram", category):
+            try:
+                await self._send_telegram(text)
+            except Exception as e:
+                logger.error(f"Telegram alert failed: {e}")
+
+        if em_on and self._channel_allows("email", category):
+            try:
+                await self._send_email(text)
+            except Exception as e:
+                logger.error(f"Email alert failed: {e}")
+
+        if not tg_on and not em_on:
+            # Ningún canal configurado: al menos deja rastro en el log.
             logger.warning(f"[ALERT] {text}")
+
+    async def _send_telegram(self, text: str) -> None:
+        s = self._settings
+        url = f"https://api.telegram.org/bot{s.telegram_bot_token}/sendMessage"
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json={"chat_id": s.telegram_chat_id, "text": text})
+            resp.raise_for_status()
+        logger.info(f"Telegram alert sent: {text}")
+
+    async def _send_email(self, text: str, subject: Optional[str] = None) -> None:
+        # smtplib es bloqueante: lo corremos en un hilo para no frenar el loop.
+        await asyncio.to_thread(self._send_email_sync, text, subject)
+
+    def _send_email_sync(self, text: str, subject: Optional[str] = None) -> None:
+        s = self._settings
+        recipients = [a.strip() for a in str(s.email_to).replace(";", ",").split(",") if a.strip()]
+        if not recipients:
+            logger.warning("Email sin destinatarios; omitido")
+            return
+        sender = getattr(s, "email_from", None) or s.smtp_user or recipients[0]
+
+        msg = EmailMessage()
+        # Asunto: una línea corta a partir del texto (sin saltos).
+        msg["Subject"] = subject or f"Clima XE1E — {text.splitlines()[0][:80]}"
+        msg["From"] = sender
+        msg["To"] = ", ".join(recipients)
+        msg.set_content(text)
+
+        host = s.smtp_host
+        port = int(getattr(s, "smtp_port", 587) or 587)
+        ctx = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=15, context=ctx) as srv:
+                if s.smtp_user:
+                    srv.login(s.smtp_user, s.smtp_password or "")
+                srv.send_message(msg, from_addr=sender, to_addrs=recipients)
+        else:
+            with smtplib.SMTP(host, port, timeout=15) as srv:
+                if getattr(s, "smtp_tls", True):
+                    srv.starttls(context=ctx)
+                if s.smtp_user:
+                    srv.login(s.smtp_user, s.smtp_password or "")
+                srv.send_message(msg, from_addr=sender, to_addrs=recipients)
+        logger.info(f"Email alert sent to {recipients}")
+
+    # --- Pruebas desde el panel (fuerzan el envío por un canal concreto) ---
+    async def send_test_telegram(self) -> None:
+        await self._send_telegram("🧪 Mensaje de prueba desde Estacion Clima XE1E")
+
+    async def send_test_email(self) -> None:
+        await self._send_email(
+            "Este es un mensaje de prueba desde tu Estación Clima XE1E.\n\n"
+            "Si lo recibes, las notificaciones por correo están configuradas correctamente.",
+            subject="🧪 Prueba — Clima XE1E",
+        )

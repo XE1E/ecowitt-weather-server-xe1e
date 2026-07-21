@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -53,6 +53,20 @@ class Settings(BaseSettings):
     telegram_enabled: bool = False
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
+    # Categorías de alerta que van a Telegram (None = todas). Claves válidas en
+    # alerts.ALERT_CATEGORIES: temp, wind, rain, pressure, station, battery, sensor, air
+    telegram_categories: Optional[List[str]] = None
+
+    # Notificaciones por correo (SMTP)
+    email_enabled: bool = False
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_tls: bool = True                    # STARTTLS (usa SMTP_SSL si el puerto es 465)
+    email_from: Optional[str] = None         # remitente (por defecto = smtp_user)
+    email_to: Optional[str] = None           # destinatarios separados por coma
+    email_categories: Optional[List[str]] = None  # None = todas
 
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None

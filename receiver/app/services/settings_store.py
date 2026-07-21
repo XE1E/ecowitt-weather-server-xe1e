@@ -31,6 +31,10 @@ EDITABLE_KEYS = {
     "telegram_enabled",
     "telegram_bot_token",
     "telegram_chat_id",
+    "telegram_categories",
+    # Notificaciones por correo (SMTP)
+    "email_enabled", "smtp_host", "smtp_port", "smtp_user", "smtp_password",
+    "smtp_tls", "email_from", "email_to", "email_categories",
     "waqi_token",
     # Control de calidad
     "qc_enabled",
@@ -66,6 +70,7 @@ EDITABLE_KEYS = {
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
 SECRET_KEYS = {
     "telegram_bot_token",
+    "smtp_password",
     "waqi_token",
     "wu_station_key",
     "pws_password",

@@ -3,7 +3,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from app.services.alerts import AlertService
+from app.services.alerts import AlertService, _category_for
 
 
 def make_settings(**kw):
@@ -169,6 +169,34 @@ def test_station_check_ignores_empty():
     svc = AlertService(make_settings(), notifier=c)
     asyncio.run(svc.check_station(None, datetime(2026, 7, 8), 900))
     assert c.msgs == []
+
+
+def test_category_mapping():
+    assert _category_for("temp_high") == "temp"
+    assert _category_for("temp_low") == "temp"
+    assert _category_for("gust_high") == "wind"
+    assert _category_for("wind_high") == "wind"
+    assert _category_for("rain_daily") == "rain"
+    assert _category_for("pressure_low") == "pressure"
+    assert _category_for("station_offline_principal") == "station"
+    assert _category_for("battery_ch1") == "battery"
+    assert _category_for("sensor_temperature_ch1") == "sensor"
+    assert _category_for("aqi_high") == "air"
+
+
+def test_channel_allows_by_category():
+    # None = todas las categorías; lista = solo esas; [] = ninguna.
+    svc = AlertService(make_settings(
+        telegram_categories=None,
+        email_categories=["rain", "station"],
+    ))
+    assert svc._channel_allows("telegram", "battery") is True   # None -> todas
+    assert svc._channel_allows("email", "rain") is True
+    assert svc._channel_allows("email", "battery") is False     # no está en la lista
+    assert svc._channel_allows("email", None) is True           # mensaje suelto -> siempre
+
+    svc_none = AlertService(make_settings(email_categories=[]))
+    assert svc_none._channel_allows("email", "rain") is False   # [] -> ninguna
 
 
 def test_notification_failure_does_not_raise():

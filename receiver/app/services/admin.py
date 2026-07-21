@@ -77,6 +77,17 @@ def public_settings(settings) -> Dict[str, Any]:
         "telegram_enabled": settings.telegram_enabled,
         "telegram_bot_token_masked": mask(settings.telegram_bot_token),
         "telegram_chat_id": settings.telegram_chat_id,
+        "telegram_categories": settings.telegram_categories,
+        # Notificaciones por correo (contraseña SMTP enmascarada)
+        "email_enabled": settings.email_enabled,
+        "smtp_host": settings.smtp_host,
+        "smtp_port": settings.smtp_port,
+        "smtp_user": settings.smtp_user,
+        "smtp_password_masked": mask(settings.smtp_password),
+        "smtp_tls": settings.smtp_tls,
+        "email_from": settings.email_from,
+        "email_to": settings.email_to,
+        "email_categories": settings.email_categories,
         "waqi_token_masked": mask(settings.waqi_token),
         # Control de calidad
         "qc_enabled": settings.qc_enabled,

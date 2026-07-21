@@ -681,8 +681,21 @@ async def admin_test_telegram(authorization: Optional[str] = Header(default=None
     if not settings.telegram_enabled or not settings.telegram_bot_token or not settings.telegram_chat_id:
         raise HTTPException(status_code=400, detail="Telegram no configurado")
     try:
-        await alert_service._notifier.send("🧪 Mensaje de prueba desde Estacion Clima XE1E")
+        await alert_service.send_test_telegram()
         return {"status": "ok", "message": "Mensaje enviado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/test-email")
+async def admin_test_email(authorization: Optional[str] = Header(default=None)):
+    """Envía un correo de prueba con la configuración SMTP actual."""
+    _require_admin(authorization)
+    if not settings.email_enabled or not settings.smtp_host or not settings.email_to:
+        raise HTTPException(status_code=400, detail="Correo no configurado (falta host o destinatario)")
+    try:
+        await alert_service.send_test_email()
+        return {"status": "ok", "message": "Correo enviado"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
