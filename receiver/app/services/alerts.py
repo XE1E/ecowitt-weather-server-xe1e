@@ -394,7 +394,7 @@ class AlertService:
 
         msg = EmailMessage()
         # Asunto: una línea corta a partir del texto (sin saltos).
-        msg["Subject"] = subject or f"Clima XE1E — {text.splitlines()[0][:80]}"
+        msg["Subject"] = subject or f"Estación Clima XE1E — {text.splitlines()[0][:80]}"
         msg["From"] = sender
         msg["To"] = ", ".join(recipients)
         msg.set_content(text)
@@ -424,5 +424,5 @@ class AlertService:
         await self._send_email(
             "Este es un mensaje de prueba desde tu Estación Clima XE1E.\n\n"
             "Si lo recibes, las notificaciones por correo están configuradas correctamente.",
-            subject="🧪 Prueba — Clima XE1E",
+            subject="🧪 Prueba — Estación Clima XE1E",
         )
