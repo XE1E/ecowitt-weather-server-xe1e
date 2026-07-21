@@ -13,6 +13,10 @@ interface IntegSettings {
   hass_discovery_prefix: string
   waqi_token: string | null
   waqi_token_masked: string | null
+  ecowitt_secure_enabled: boolean
+  ecowitt_secure_token: string | null
+  ecowitt_secure_token_masked: string | null
+  ecowitt_ip_allowlist: string | null
 }
 
 interface MqttStatus {
@@ -73,6 +77,12 @@ function NumField({ value, onChange, min, max }: { value: number; onChange: (v: 
       className="w-20 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
     />
   )
+}
+
+function randToken(): string {
+  const c = globalThis.crypto as Crypto | undefined
+  if (c?.randomUUID) return c.randomUUID().replace(/-/g, '')
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
 }
 
 export function AdminIntegraciones() {
@@ -276,6 +286,40 @@ export function AdminIntegraciones() {
           <TextField value={settings.waqi_token} onChange={(v) => update('waqi_token', v)} placeholder="Token API" type="password" masked={settings.waqi_token_masked} className="flex-1 max-w-md" />
         </div>
         <p className="text-xs text-slate-500 mt-2">Permite obtener datos AQI e IMECA para alertas de calidad del aire</p>
+      </div>
+
+      {/* Seguridad del endpoint de push */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Toggle enabled={settings.ecowitt_secure_enabled} onChange={(v) => update('ecowitt_secure_enabled', v)} />
+          <span className="text-sm font-medium">🔒 Seguridad del endpoint (push)</span>
+          {settings.ecowitt_secure_enabled && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+              settings.ecowitt_secure_token || settings.ecowitt_secure_token_masked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+            }`}>
+              {settings.ecowitt_secure_token || settings.ecowitt_secure_token_masked ? '✓ Token activo' : '⚠ Falta token'}
+            </span>
+          )}
+        </div>
+
+        {settings.ecowitt_secure_enabled && (
+          <div className="grid gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 w-20">Token</span>
+              <TextField value={settings.ecowitt_secure_token} onChange={(v) => update('ecowitt_secure_token', v)} placeholder="token secreto" type="password" masked={settings.ecowitt_secure_token_masked} className="flex-1 max-w-md" />
+              <button type="button" onClick={() => update('ecowitt_secure_token', randToken())} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 whitespace-nowrap">Generar</button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Con esto activo, el datalogger debe enviar a <code className="text-sky-300">/data/report/?token=…</code> (configura ese Path en WS View Plus). Deja el token en blanco para conservar el actual.
+            </p>
+          </div>
+        )}
+
+        <div className="border-t border-white/5 pt-3 flex items-center gap-2">
+          <span className="text-xs text-slate-400 w-20">IP allowlist</span>
+          <TextField value={settings.ecowitt_ip_allowlist} onChange={(v) => update('ecowitt_ip_allowlist', v)} placeholder="p.ej. 189.203.10.5 (vacío = todas)" className="flex-1 max-w-md" />
+        </div>
+        <p className="text-xs text-slate-500 mt-2">Solo acepta datos desde estas IPs (separadas por coma). Útil si tu IP pública es fija; déjala vacía si es dinámica.</p>
       </div>
 
       {/* Info */}

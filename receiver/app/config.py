@@ -135,6 +135,11 @@ class Settings(BaseSettings):
     cwop_longitude: float = -99.174564
     cwop_interval: int = 10            # CWOP recomienda 10-15 min
 
+    # Seguridad del endpoint de push /data/report/
+    ecowitt_secure_enabled: bool = False        # exige ?token= en la petición
+    ecowitt_secure_token: Optional[str] = None  # token esperado (query param)
+    ecowitt_ip_allowlist: Optional[str] = None  # IPs permitidas (coma); vacío = todas
+
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)
 

@@ -59,6 +59,8 @@ EDITABLE_KEYS = {
     "owm_enabled", "owm_api_key", "owm_station_id", "owm_interval",
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
     "cwop_latitude", "cwop_longitude", "cwop_interval",
+    # Seguridad del endpoint de push
+    "ecowitt_secure_enabled", "ecowitt_secure_token", "ecowitt_ip_allowlist",
     # MQTT / Home Assistant
     "mqtt_enabled", "mqtt_broker", "mqtt_port",
     "mqtt_username", "mqtt_password", "mqtt_topic",
@@ -71,6 +73,7 @@ EDITABLE_KEYS = {
 SECRET_KEYS = {
     "telegram_bot_token",
     "smtp_password",
+    "ecowitt_secure_token",
     "waqi_token",
     "wu_station_key",
     "pws_password",

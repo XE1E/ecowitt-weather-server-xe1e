@@ -287,6 +287,20 @@ async def receive_ecowitt_data(request: Request):
     The station sends data as a form-encoded POST request using the
     Ecowitt protocol (Weather Services -> Customized -> Protocol: Ecowitt).
     """
+    # Seguridad opcional del endpoint (token en query param + allowlist de IP).
+    # La IP real del datalogger llega en X-Real-IP (nginx la fija en /data/report).
+    client_ip = (request.headers.get("x-real-ip")
+                 or (request.client.host if request.client else "")).strip()
+    allow = (getattr(settings, "ecowitt_ip_allowlist", None) or "").replace(";", ",")
+    allowed = [x.strip() for x in allow.split(",") if x.strip()]
+    if allowed and client_ip not in allowed:
+        logger.warning("Push rechazado: IP %s no está en la allowlist", client_ip or "?")
+        raise HTTPException(status_code=403, detail="IP no permitida")
+    if getattr(settings, "ecowitt_secure_enabled", False) and getattr(settings, "ecowitt_secure_token", None):
+        if request.query_params.get("token") != settings.ecowitt_secure_token:
+            logger.warning("Push rechazado: token inválido desde %s", client_ip or "?")
+            raise HTTPException(status_code=403, detail="Token inválido")
+
     try:
         # Parse form data
         form_data = await request.form()

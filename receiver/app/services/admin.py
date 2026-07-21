@@ -144,6 +144,10 @@ def public_settings(settings) -> Dict[str, Any]:
         "cwop_latitude": settings.cwop_latitude,
         "cwop_longitude": settings.cwop_longitude,
         "cwop_interval": settings.cwop_interval,
+        # Seguridad del endpoint de push
+        "ecowitt_secure_enabled": settings.ecowitt_secure_enabled,
+        "ecowitt_secure_token_masked": mask(settings.ecowitt_secure_token),
+        "ecowitt_ip_allowlist": settings.ecowitt_ip_allowlist,
         # MQTT / Home Assistant
         "mqtt_enabled": settings.mqtt_enabled,
         "mqtt_broker": settings.mqtt_broker,
