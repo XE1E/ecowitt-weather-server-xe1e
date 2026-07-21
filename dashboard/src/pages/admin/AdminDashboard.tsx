@@ -41,6 +41,12 @@ interface AdminStatus {
   publication: PublicationStatus
 }
 
+interface SystemInfo {
+  uptime: { human: string }
+  disk: { used_gb: number; total_gb: number }
+  runtime: { app_version: string; data_retention: string }
+}
+
 function timeAgo(iso: string | null): string {
   if (!iso) return 'Nunca'
   const s = Math.max(0, Math.floor((Date.now() - parseServerDate(iso)) / 1000))
@@ -163,15 +169,21 @@ export function AdminDashboard() {
   const { fetchWithAuth } = useAdminAuth()
   const [stations, setStations] = useState<Station[]>([])
   const [status, setStatus] = useState<AdminStatus | null>(null)
+  const [sys, setSys] = useState<SystemInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const [sRes, aRes] = await Promise.all([fetch('/api/stations'), fetchWithAuth('/api/admin/status')])
+      const [sRes, aRes, iRes] = await Promise.all([
+        fetch('/api/stations'),
+        fetchWithAuth('/api/admin/status'),
+        fetchWithAuth('/api/admin/system-info'),
+      ])
       if (sRes.ok) setStations((await sRes.json()).stations)
       if (aRes.ok) setStatus(await aRes.json())
+      if (iRes.ok) setSys(await iRes.json())
       setLastUpdate(new Date())
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -234,6 +246,21 @@ export function AdminDashboard() {
         </div>
       </div>
 
+      {/* Tiles de resumen */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { icon: '🕐', label: 'Última lectura', value: timeAgo(status?.last_received || null) },
+          { icon: '⏱️', label: 'Uptime', value: sys?.uptime.human || '--' },
+          { icon: '💾', label: 'Retención', value: sys?.runtime.data_retention || '--' },
+          { icon: '🏷️', label: 'Versión', value: sys?.runtime.app_version || '--' },
+        ].map((t) => (
+          <div key={t.label} className="bg-slate-800/50 rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-slate-400 flex items-center gap-1"><span>{t.icon}</span>{t.label}</p>
+            <p className="text-lg font-bold text-slate-100 mt-1 truncate">{t.value}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Alertas */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="flex items-center justify-between mb-2">
@@ -280,7 +307,7 @@ export function AdminDashboard() {
             <a href="/admin/sistema" className="text-sky-400 hover:text-sky-300 text-xs">Ver →</a>
           </div>
           <div className="grid grid-cols-3 gap-2 text-sm mb-3">
-            <div><span className="text-slate-500">Version:</span> <span className="text-slate-300">1.0</span></div>
+            <div><span className="text-slate-500">Version:</span> <span className="text-slate-300">{sys?.runtime.app_version || '1.0'}</span></div>
             <div><span className="text-slate-500">Estaciones:</span> <span className="text-slate-300">{stations.length}</span></div>
             <div><span className="text-slate-500">Ultima:</span> <span className="text-slate-300">{timeAgo(status?.last_received || null)}</span></div>
           </div>
