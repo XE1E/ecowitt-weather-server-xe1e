@@ -98,22 +98,28 @@ class Settings(BaseSettings):
     cal_uv_offset: float = 0.0         # offset índice UV
 
     # Publicación a redes públicas (uploaders tipo WeeWX)
+    # *_interval: minutos mínimos entre envíos a esa red (0 = cada ingesta).
     wu_enabled: bool = False           # Weather Underground
     wu_station_id: Optional[str] = None
     wu_station_key: Optional[str] = None
+    wu_interval: int = 1
     pws_enabled: bool = False          # PWSWeather
     pws_station_id: Optional[str] = None
     pws_password: Optional[str] = None
+    pws_interval: int = 5
     windy_enabled: bool = False        # Windy.com
     windy_api_key: Optional[str] = None
+    windy_interval: int = 5
     owm_enabled: bool = False          # OpenWeatherMap
     owm_api_key: Optional[str] = None
     owm_station_id: Optional[str] = None
+    owm_interval: int = 5
     cwop_enabled: bool = False         # CWOP / APRS-IS (entra a MADIS/NOAA)
     cwop_callsign: Optional[str] = None    # indicativo ham (XE1E) o designador CWxxxx
     cwop_passcode: str = "-1"              # -1 para designadores CW; passcode APRS si es indicativo ham
     cwop_latitude: float = 19.380359
     cwop_longitude: float = -99.174564
+    cwop_interval: int = 10            # CWOP recomienda 10-15 min
 
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)

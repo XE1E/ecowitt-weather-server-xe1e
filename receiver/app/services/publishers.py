@@ -28,6 +28,30 @@ _TIMEOUT = 15.0
 _CWOP_HOST = "cwop.aprs.net"
 _CWOP_PORT = 14580
 
+# Último instante en que se intentó publicar en cada red, para respetar el
+# intervalo por sistema (la estación ingresa datos ~cada minuto, pero cada red
+# puede tener su propio ritmo; CWOP recomienda 10-15 min, por ejemplo).
+_last_publish: Dict[str, datetime] = {}
+
+
+def _due(name: str, interval_min: Any, now: datetime) -> bool:
+    """
+    ¿Toca publicar en `name` según su intervalo (minutos)?
+    interval <= 0 => sin límite (cada ingesta). Marca el intento al aprobarlo,
+    de modo que el espaciado se mantiene aunque el envío falle.
+    """
+    try:
+        iv = float(interval_min)
+    except (TypeError, ValueError):
+        iv = 0.0
+    if iv <= 0:
+        return True
+    last = _last_publish.get(name)
+    if last is None or (now - last).total_seconds() >= iv * 60:
+        _last_publish[name] = now
+        return True
+    return False
+
 
 # --- helpers de unidades (desde métrico) ---
 def _c_to_f(c):
@@ -236,20 +260,26 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
     Nunca lanza excepción (cada red se protege por separado).
     """
     results: Dict[str, bool] = {}
+    now = datetime.utcnow()
     async with httpx.AsyncClient() as client:
-        if getattr(settings, "wu_enabled", False) and settings.wu_station_id and settings.wu_station_key:
+        if (getattr(settings, "wu_enabled", False) and settings.wu_station_id and settings.wu_station_key
+                and _due("wunderground", getattr(settings, "wu_interval", 1), now)):
             results["wunderground"] = await _wu_like(
                 client, "https://rtupdate.wunderground.com/weatherstation/updateweatherstation.php",
                 settings.wu_station_id, settings.wu_station_key, data, "Weather Underground")
-        if getattr(settings, "pws_enabled", False) and settings.pws_station_id and settings.pws_password:
+        if (getattr(settings, "pws_enabled", False) and settings.pws_station_id and settings.pws_password
+                and _due("pwsweather", getattr(settings, "pws_interval", 5), now)):
             results["pwsweather"] = await _wu_like(
                 client, "https://pwsupdate.pwsweather.com/api/v1/submitwx",
                 settings.pws_station_id, settings.pws_password, data, "PWSWeather")
-        if getattr(settings, "windy_enabled", False) and settings.windy_api_key:
+        if (getattr(settings, "windy_enabled", False) and settings.windy_api_key
+                and _due("windy", getattr(settings, "windy_interval", 5), now)):
             results["windy"] = await _windy(client, data, settings.windy_api_key)
-        if getattr(settings, "owm_enabled", False) and settings.owm_api_key:
+        if (getattr(settings, "owm_enabled", False) and settings.owm_api_key
+                and _due("openweathermap", getattr(settings, "owm_interval", 5), now)):
             results["openweathermap"] = await _owm(client, data, settings.owm_api_key, settings.owm_station_id)
-    if getattr(settings, "cwop_enabled", False) and settings.cwop_callsign:
+    if (getattr(settings, "cwop_enabled", False) and settings.cwop_callsign
+            and _due("cwop", getattr(settings, "cwop_interval", 10), now)):
         results["cwop"] = await _cwop(
             data, settings.cwop_callsign, getattr(settings, "cwop_passcode", "-1"),
             getattr(settings, "cwop_latitude", 19.380359),

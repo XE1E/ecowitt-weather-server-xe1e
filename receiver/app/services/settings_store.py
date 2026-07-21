@@ -48,13 +48,13 @@ EDITABLE_KEYS = {
     "cal_wind_mult", "cal_wind_dir_offset",
     "cal_rain_mult",
     "cal_solar_mult", "cal_uv_offset",
-    # Publicación a redes públicas
-    "wu_enabled", "wu_station_id", "wu_station_key",
-    "pws_enabled", "pws_station_id", "pws_password",
-    "windy_enabled", "windy_api_key",
-    "owm_enabled", "owm_api_key", "owm_station_id",
+    # Publicación a redes públicas (*_interval = minutos entre envíos)
+    "wu_enabled", "wu_station_id", "wu_station_key", "wu_interval",
+    "pws_enabled", "pws_station_id", "pws_password", "pws_interval",
+    "windy_enabled", "windy_api_key", "windy_interval",
+    "owm_enabled", "owm_api_key", "owm_station_id", "owm_interval",
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
-    "cwop_latitude", "cwop_longitude",
+    "cwop_latitude", "cwop_longitude", "cwop_interval",
     # MQTT / Home Assistant
     "mqtt_enabled", "mqtt_broker", "mqtt_port",
     "mqtt_username", "mqtt_password", "mqtt_topic",

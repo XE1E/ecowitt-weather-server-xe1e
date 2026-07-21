@@ -6,23 +6,28 @@ interface PubSettings {
   wu_station_id: string | null
   wu_station_key: string | null
   wu_station_key_masked: string | null
+  wu_interval: number
   pws_enabled: boolean
   pws_station_id: string | null
   pws_password: string | null
   pws_password_masked: string | null
+  pws_interval: number
   windy_enabled: boolean
   windy_api_key: string | null
   windy_api_key_masked: string | null
+  windy_interval: number
   owm_enabled: boolean
   owm_api_key: string | null
   owm_api_key_masked: string | null
   owm_station_id: string | null
+  owm_interval: number
   cwop_enabled: boolean
   cwop_callsign: string | null
   cwop_passcode: string | null
   cwop_passcode_masked: string | null
   cwop_latitude: number
   cwop_longitude: number
+  cwop_interval: number
 }
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
@@ -61,6 +66,23 @@ function NumField({ value, onChange, step = 0.000001 }: { value: number; onChang
       step={step}
       className="w-28 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
     />
+  )
+}
+
+function IntervalField({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-slate-400 w-16">Intervalo</span>
+      <input
+        type="number"
+        min={0}
+        step={1}
+        value={value ?? 0}
+        onChange={(e) => onChange(Math.max(0, Math.round(Number(e.target.value))))}
+        className="w-16 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
+      />
+      <span className="text-xs text-slate-500">min (0 = cada dato)</span>
+    </div>
   )
 }
 
@@ -140,6 +162,7 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400 w-16">Key</span>
                 <TextField value={settings.wu_station_key} onChange={(v) => update('wu_station_key', v)} placeholder="API key" type="password" masked={settings.wu_station_key_masked} />
               </div>
+              <IntervalField value={settings.wu_interval} onChange={(v) => update('wu_interval', v)} />
             </div>
           )}
         </div>
@@ -161,6 +184,7 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400 w-16">Password</span>
                 <TextField value={settings.pws_password} onChange={(v) => update('pws_password', v)} placeholder="Password" type="password" masked={settings.pws_password_masked} />
               </div>
+              <IntervalField value={settings.pws_interval} onChange={(v) => update('pws_interval', v)} />
             </div>
           )}
         </div>
@@ -173,9 +197,12 @@ export function AdminPublicacion() {
             <a href="https://stations.windy.com/" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener API →</a>
           </div>
           {settings.windy_enabled && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-16">API Key</span>
-              <TextField value={settings.windy_api_key} onChange={(v) => update('windy_api_key', v)} placeholder="API key" type="password" masked={settings.windy_api_key_masked} />
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">API Key</span>
+                <TextField value={settings.windy_api_key} onChange={(v) => update('windy_api_key', v)} placeholder="API key" type="password" masked={settings.windy_api_key_masked} />
+              </div>
+              <IntervalField value={settings.windy_interval} onChange={(v) => update('windy_interval', v)} />
             </div>
           )}
         </div>
@@ -197,6 +224,7 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400 w-16">Station ID</span>
                 <TextField value={settings.owm_station_id} onChange={(v) => update('owm_station_id', v)} placeholder="Station ID" />
               </div>
+              <IntervalField value={settings.owm_interval} onChange={(v) => update('owm_interval', v)} />
             </div>
           )}
         </div>
@@ -227,6 +255,18 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400">Lon</span>
                 <NumField value={settings.cwop_longitude} onChange={(v) => update('cwop_longitude', v)} />
               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Intervalo</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={settings.cwop_interval ?? 10}
+                  onChange={(e) => update('cwop_interval', Math.max(0, Math.round(Number(e.target.value))))}
+                  className="w-16 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
+                />
+                <span className="text-xs text-slate-500">min</span>
+              </div>
             </div>
           )}
         </div>
@@ -234,7 +274,7 @@ export function AdminPublicacion() {
 
       {/* Info */}
       <div className="bg-slate-800/30 rounded-xl border border-white/5 p-4 text-xs text-slate-500">
-        Los datos se publican cada minuto a las redes habilitadas · Las claves se guardan encriptadas · Deja en blanco para conservar valor actual
+        Cada red se publica según su intervalo (CWOP recomienda 10-15 min; 0 = en cada dato recibido) · Las claves se guardan encriptadas · Deja en blanco para conservar valor actual
       </div>
     </div>
   )
