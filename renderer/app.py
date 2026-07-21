@@ -32,6 +32,26 @@ _lock = asyncio.Lock()
 _cache: dict[str, tuple[float, bytes]] = {}       # page -> (timestamp, jpeg bytes)
 
 
+WARM_INTERVAL = float(os.environ.get("WARM_INTERVAL", "20"))   # segundos entre ciclos
+
+
+async def _warm_loop():
+    """Pre-calienta la caché renderizando todas las páginas en segundo plano,
+    para que las peticiones del display siempre acierten caché (respuesta ~ms) y
+    no paguen el render frío de Chromium (~1.5s), sobre todo la primera vez."""
+    await asyncio.sleep(6)   # deja que el dashboard arranque
+    while True:
+        for p in sorted(VALID_PAGES):
+            try:
+                async with _lock:
+                    img = await _render(p)
+                    _cache[p] = (time.time(), img)
+            except Exception as e:
+                print(f"[warm] pagina {p} fallo: {e}", flush=True)
+            await asyncio.sleep(0.5)
+        await asyncio.sleep(WARM_INTERVAL)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Un solo navegador para todo el proceso; se crea un context por render.
@@ -41,9 +61,11 @@ async def lifespan(_app: FastAPI):
     )
     _state["playwright"] = pw
     _state["browser"] = browser
+    warm_task = asyncio.create_task(_warm_loop())
     try:
         yield
     finally:
+        warm_task.cancel()
         await browser.close()
         await pw.stop()
 
