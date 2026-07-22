@@ -65,9 +65,26 @@ class MemoryLogHandler(logging.Handler):
         return list(self.buffer)[-limit:]
 
 
-memory_log_handler = MemoryLogHandler(maxlen=500)
+memory_log_handler = MemoryLogHandler(maxlen=1500)
 memory_log_handler.setLevel(logging.INFO)
 logging.getLogger().addHandler(memory_log_handler)
+
+# Log persistente en el volumen /data (sobrevive a deploys/reinicios) con rotación.
+try:
+    from logging.handlers import RotatingFileHandler
+    _log_dir = os.environ.get("LOG_DIR", "/data/logs")
+    os.makedirs(_log_dir, exist_ok=True)
+    _file_handler = RotatingFileHandler(
+        os.path.join(_log_dir, "receiver.log"),
+        maxBytes=2_000_000, backupCount=5, encoding="utf-8",
+    )
+    _file_handler.setLevel(logging.INFO)
+    _file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+    logging.getLogger().addHandler(_file_handler)
+    logger.info("Log a archivo activo en %s/receiver.log", _log_dir)
+except Exception as _e:
+    logger.warning("No se pudo iniciar el log a archivo: %s", _e)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -773,7 +790,7 @@ async def admin_logs(
 ):
     """Retorna los últimos logs del sistema."""
     _require_admin(authorization)
-    logs = memory_log_handler.get_logs(limit=min(limit, 500))
+    logs = memory_log_handler.get_logs(limit=min(limit, 1500))
     return {"logs": logs}
 
 
