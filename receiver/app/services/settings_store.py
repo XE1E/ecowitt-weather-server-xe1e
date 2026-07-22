@@ -91,6 +91,9 @@ DEFAULT_STATION_CONFIG = {
     "alerts_enabled": False,
     "publish_enabled": False,
     "mqtt_enabled": False,
+    # Calibración propia de la estación (secundarias). Dict de claves cal_*
+    # (mismo formato que las globales). Vacío = sin calibración para esa estación.
+    "calibration": {},
 }
 
 

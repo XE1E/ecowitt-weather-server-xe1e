@@ -26,6 +26,19 @@ const CH_ROWS = Array.from({ length: 8 }, (_, i) => ({
   channel: i + 1,
 }))
 
+interface StationOpt { name: string; label: string }
+
+// Calibración vacía (para estaciones secundarias que aún no tienen ajustes).
+function emptyCal(): CalSettings {
+  const c: Record<string, number | boolean> = {
+    cal_enabled: false, cal_pressure_offset: 0, cal_wind_mult: 1, cal_wind_dir_offset: 0,
+    cal_rain_mult: 1, cal_solar_mult: 1, cal_uv_offset: 0,
+    cal_temp_outdoor: 0, cal_temp_indoor: 0, cal_hum_outdoor: 0, cal_hum_indoor: 0,
+  }
+  for (let i = 1; i <= 8; i++) { c[`cal_temp_ch${i}`] = 0; c[`cal_hum_ch${i}`] = 0 }
+  return c as CalSettings
+}
+
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
@@ -57,9 +70,24 @@ export function AdminCalibracion() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<CalSettings | null>(null)
   const [chLabels, setChLabels] = useState<Record<number, string>>({})
+  const [secondaries, setSecondaries] = useState<StationOpt[]>([])
+  const [selected, setSelected] = useState<string | null>(null)  // null = principal (global)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+
+  // Carga la calibración de la estación seleccionada (principal = settings global).
+  const loadCal = async (sel: string | null) => {
+    if (sel === null) {
+      const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
+      setSettings(s)
+    } else {
+      const partial = await fetchWithAuth(`/api/admin/stations/${sel}/calibration`)
+        .then((r) => (r.ok ? r.json() : {}))
+        .catch(() => ({}))
+      setSettings({ ...emptyCal(), ...partial })
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -67,28 +95,52 @@ export function AdminCalibracion() {
       fetch('/api/stations').then((r) => r.json()).catch(() => null),
     ]).then(([settingsData, stationsData]) => {
       setSettings(settingsData)
-      if (stationsData?.stations?.[0]) {
+      const list = stationsData?.stations || []
+      const principal = list.find((s: { name: string | null }) => s.name === null)
+      if (principal) {
         const map: Record<number, string> = {}
-        for (const s of stationsData.stations[0].sensors_detail || []) {
+        for (const s of principal.sensors_detail || []) {
           if (s.category === 'canal' && s.channel && s.label && s.label !== `Canal ${s.channel}`) {
             map[s.channel] = s.label
           }
         }
         setChLabels(map)
       }
+      setSecondaries(
+        list.filter((s: { name: string | null }) => s.name !== null)
+          .map((s: { name: string; label: string }) => ({ name: s.name, label: s.label || s.name }))
+      )
     }).finally(() => setLoading(false))
   }, [fetchWithAuth])
+
+  const onSelectStation = async (sel: string | null) => {
+    setSelected(sel)
+    setSettings(null)
+    setLoading(true)
+    try { await loadCal(sel) } finally { setLoading(false) }
+  }
 
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
     setMessage(null)
     try {
-      const res = await fetchWithAuth('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      })
+      let res: Response
+      if (selected === null) {
+        res = await fetchWithAuth('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        })
+      } else {
+        const cal: Record<string, number | boolean> = {}
+        for (const k in settings) if (k.startsWith('cal_')) cal[k] = settings[k]
+        res = await fetchWithAuth(`/api/admin/stations/${selected}/calibration`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cal),
+        })
+      }
       setMessage(res.ok ? { type: 'ok', text: 'Guardado' } : { type: 'error', text: 'Error' })
       if (res.ok) setTimeout(() => setMessage(null), 2000)
     } catch {
@@ -105,15 +157,32 @@ export function AdminCalibracion() {
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
   const on = settings.cal_enabled
+  const isPrincipal = selected === null
+  const fixedRows = isPrincipal ? FIXED_ROWS : [
+    { label: 'Exterior', t: 'cal_temp_outdoor' as keyof CalSettings, h: 'cal_hum_outdoor' as keyof CalSettings },
+    { label: 'Interior', t: 'cal_temp_indoor' as keyof CalSettings, h: 'cal_hum_indoor' as keyof CalSettings },
+  ]
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Calibracion</h1>
-          <p className="text-slate-400 text-sm">Ajustes por sensor (offsets y multiplicadores)</p>
+          <p className="text-slate-400 text-sm">Ajustes por sensor · cada estación tiene su propia calibración</p>
         </div>
         <div className="flex items-center gap-3">
+          {secondaries.length > 0 && (
+            <select
+              value={selected ?? ''}
+              onChange={(e) => onSelectStation(e.target.value || null)}
+              className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
+            >
+              <option value="">Principal (WS69)</option>
+              {secondaries.map((s) => (
+                <option key={s.name} value={s.name}>{s.label}</option>
+              ))}
+            </select>
+          )}
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
           <button onClick={handleSave} disabled={saving} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium">
             {saving ? 'Guardando...' : 'Guardar'}
@@ -134,7 +203,7 @@ export function AdminCalibracion() {
           <span className="text-xs text-slate-500"></span>
           <span className="text-xs text-slate-500 text-center">Temp (°C)</span>
           <span className="text-xs text-slate-500 text-center">Humedad (%)</span>
-          {FIXED_ROWS.map((row) => (
+          {fixedRows.map((row) => (
             <RowFields
               key={row.t}
               label={row.label}

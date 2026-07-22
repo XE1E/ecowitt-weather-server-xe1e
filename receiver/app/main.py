@@ -341,7 +341,13 @@ async def receive_ecowitt_data(request: Request):
         # El filtro de picos compara contra la lectura PREVIA de ESA estación
         # (no una global) para no generar falsos picos al mezclar estaciones.
         prev = latest_by_station.get(station)
-        parsed_data = apply_calibration(parsed_data, settings)
+        # Calibración: la principal usa la global; las secundarias usan la SUYA
+        # (independiente, no hereda la de la principal).
+        station_cal = None
+        if station is not None:
+            station_cal = settings_store.get_station_config(
+                settings.settings_file, station).get("calibration") or {}
+        parsed_data = apply_calibration(parsed_data, settings, station_cal)
         parsed_data, _ = quality_check(parsed_data, settings)
         parsed_data, _ = spike_check(parsed_data, prev, settings)
         if settings.output_unit_system == "metric":
@@ -809,6 +815,31 @@ async def admin_updates(authorization: Optional[str] = Header(default=None)):
         "behind": behind,
         "commits": commits,
     }
+
+
+@app.get("/api/admin/stations/{name}/calibration")
+async def admin_get_station_calibration(name: str, authorization: Optional[str] = Header(default=None)):
+    """Calibración propia de una estación secundaria (dict de claves cal_*)."""
+    _require_admin(authorization)
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail="Estación no encontrada")
+    cfg = settings_store.get_station_config(settings.settings_file, name)
+    return cfg.get("calibration") or {}
+
+
+@app.post("/api/admin/stations/{name}/calibration")
+async def admin_save_station_calibration(
+    name: str, body: dict, authorization: Optional[str] = Header(default=None)
+):
+    """Guarda la calibración propia de una estación secundaria."""
+    _require_admin(authorization)
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail="Estación no encontrada")
+    clean = {k: v for k, v in body.items() if k.startswith("cal_")}
+    cfg = settings_store.get_station_config(settings.settings_file, name)
+    cfg["calibration"] = clean
+    settings_store.save_station_config(settings.settings_file, name, cfg)
+    return {"status": "ok", "calibration": clean}
 
 
 # ---------------------------------------------------------------------------
