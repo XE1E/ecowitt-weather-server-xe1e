@@ -36,8 +36,10 @@ interface AdminStatus {
   alert_history: AlertHistoryItem[]
   alerts_enabled: boolean
   telegram_enabled: boolean
+  email_enabled: boolean
   waqi_configured: boolean
   mqtt_enabled: boolean
+  ecowitt_secure_enabled: boolean
   publication: PublicationStatus
 }
 
@@ -243,16 +245,6 @@ export function AdminDashboard() {
     setActionLoading(null)
   }
 
-  const testTelegram = async () => {
-    setActionLoading('telegram')
-    try {
-      const r = await fetchWithAuth('/api/admin/test-telegram', { method: 'POST' })
-      if (r.ok) alert('Mensaje enviado')
-      else alert('Error al enviar')
-    } catch { alert('Error de conexión') }
-    setActionLoading(null)
-  }
-
   const runTestAll = async () => {
     setTestingAll(true)
     setTestAllResults(null)
@@ -386,29 +378,39 @@ export function AdminDashboard() {
             <div><span className="text-slate-500">Estaciones:</span> <span className="text-slate-300">{stations.length}</span></div>
             <div><span className="text-slate-500">Ultima:</span> <span className="text-slate-300">{timeAgo(status?.last_received || null)}</span></div>
           </div>
-          <div className="border-t border-white/5 pt-3">
-            <p className="text-xs text-slate-500 mb-2">Servicios</p>
-            <div className="flex flex-wrap gap-3 items-center">
-              <span className="text-xs text-emerald-400">● InfluxDB</span>
-              <span className={`text-xs ${status?.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
-                {status?.telegram_enabled ? '●' : '○'} Telegram
-              </span>
-              <span className={`text-xs ${status?.mqtt_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
-                {status?.mqtt_enabled ? '●' : '○'} MQTT
-              </span>
-              <span className={`text-xs ${status?.waqi_configured ? 'text-emerald-400' : 'text-slate-500'}`}>
-                {status?.waqi_configured ? '●' : '○'} WAQI
-              </span>
+          <div className="border-t border-white/5 pt-3 space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-slate-500">Notificaciones</p>
+                <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-xs">Configurar →</a>
+              </div>
+              <div className="flex flex-wrap gap-3 items-center">
+                <span className="text-xs text-emerald-400">● InfluxDB</span>
+                <span className={`text-xs ${status?.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {status?.telegram_enabled ? '●' : '○'} Telegram
+                </span>
+                <span className={`text-xs ${status?.email_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {status?.email_enabled ? '●' : '○'} Correo
+                </span>
+              </div>
             </div>
-            {status?.telegram_enabled && (
-              <button
-                onClick={testTelegram}
-                disabled={actionLoading === 'telegram'}
-                className="mt-3 text-xs text-sky-400 hover:text-sky-300 disabled:text-slate-500"
-              >
-                {actionLoading === 'telegram' ? 'Enviando...' : '🧪 Probar Telegram'}
-              </button>
-            )}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-slate-500">Integraciones</p>
+                <a href="/admin/integraciones" className="text-sky-400 hover:text-sky-300 text-xs">Configurar →</a>
+              </div>
+              <div className="flex flex-wrap gap-3 items-center">
+                <span className={`text-xs ${status?.mqtt_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {status?.mqtt_enabled ? '●' : '○'} MQTT
+                </span>
+                <span className={`text-xs ${status?.waqi_configured ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {status?.waqi_configured ? '●' : '○'} WAQI
+                </span>
+                <span className={`text-xs ${status?.ecowitt_secure_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {status?.ecowitt_secure_enabled ? '●' : '○'} Seguridad endpoint
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

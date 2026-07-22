@@ -512,8 +512,10 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
         "alert_history": alert_service.get_history(limit=20),
         "alerts_enabled": settings.alerts_enabled,
         "telegram_enabled": settings.telegram_enabled,
+        "email_enabled": settings.email_enabled,
         "mqtt_enabled": settings.mqtt_enabled,
         "waqi_configured": bool(settings.waqi_token),
+        "ecowitt_secure_enabled": settings.ecowitt_secure_enabled,
         "admin_enabled": adminsvc.admin_enabled(settings),
         "publication": {
             "wu": settings.wu_enabled,
