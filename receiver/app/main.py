@@ -402,7 +402,8 @@ async def receive_ecowitt_data(request: Request):
                 scfg = settings_store.get_station_config(settings.settings_file, station)
                 if scfg.get("alerts_enabled"):
                     await alert_service.process(
-                        parsed_data, station=station, label=scfg.get("label") or station)
+                        parsed_data, station=station, label=scfg.get("label") or station,
+                        thresholds=scfg.get("alert_thresholds") or None)
             except Exception as e:
                 logger.error(f"Alert processing (secundaria {station}) failed: {e}")
 
@@ -851,6 +852,31 @@ async def admin_save_station_calibration(
     cfg["calibration"] = clean
     settings_store.save_station_config(settings.settings_file, name, cfg)
     return {"status": "ok", "calibration": clean}
+
+
+@app.get("/api/admin/stations/{name}/alerts")
+async def admin_get_station_alerts(name: str, authorization: Optional[str] = Header(default=None)):
+    """Umbrales de alerta propios de una estación secundaria (claves alert_*)."""
+    _require_admin(authorization)
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail="Estación no encontrada")
+    cfg = settings_store.get_station_config(settings.settings_file, name)
+    return cfg.get("alert_thresholds") or {}
+
+
+@app.post("/api/admin/stations/{name}/alerts")
+async def admin_save_station_alerts(
+    name: str, body: dict, authorization: Optional[str] = Header(default=None)
+):
+    """Guarda los umbrales de alerta propios de una estación secundaria."""
+    _require_admin(authorization)
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail="Estación no encontrada")
+    clean = {k: v for k, v in body.items() if k.startswith("alert_")}
+    cfg = settings_store.get_station_config(settings.settings_file, name)
+    cfg["alert_thresholds"] = clean
+    settings_store.save_station_config(settings.settings_file, name, cfg)
+    return {"status": "ok", "alert_thresholds": clean}
 
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,13 @@ interface AlertSettings {
   email_enabled: boolean
 }
 
+const THRESHOLD_KEYS = [
+  'alert_temp_high', 'alert_temp_low', 'alert_wind_high', 'alert_gust_high',
+  'alert_rain_rate', 'alert_rain_daily', 'alert_pressure_high', 'alert_pressure_low',
+] as const
+
+interface StationOpt { name: string; label: string }
+
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
@@ -52,27 +59,65 @@ function NumField({ value, onChange, min, max, step = 1, w = 'w-16' }: {
 export function AdminAlertas() {
   const { fetchWithAuth } = useAdminAuth()
   const [settings, setSettings] = useState<AlertSettings | null>(null)
+  const [globalCache, setGlobalCache] = useState<AlertSettings | null>(null)
+  const [secondaries, setSecondaries] = useState<StationOpt[]>([])
+  const [selected, setSelected] = useState<string | null>(null)  // null = principal
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
-    fetchWithAuth('/api/admin/settings')
-      .then((r) => r.json())
-      .then(setSettings)
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetchWithAuth('/api/admin/settings').then((r) => r.json()),
+      fetch('/api/stations').then((r) => r.json()).catch(() => null),
+    ]).then(([s, st]) => {
+      setSettings(s); setGlobalCache(s)
+      const list = st?.stations || []
+      setSecondaries(
+        list.filter((x: { name: string | null }) => x.name !== null)
+          .map((x: { name: string; label: string }) => ({ name: x.name, label: x.label || x.name }))
+      )
+    }).finally(() => setLoading(false))
   }, [fetchWithAuth])
+
+  const onSelectStation = async (sel: string | null) => {
+    setSelected(sel); setMessage(null); setLoading(true)
+    try {
+      if (sel === null) {
+        const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
+        setSettings(s); setGlobalCache(s)
+      } else {
+        const ov = await fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
+          .then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+        // Sembrar con los umbrales globales y sobreponer los propios de la estación.
+        const base: Record<string, number> = {}
+        for (const k of THRESHOLD_KEYS) base[k] = (globalCache as unknown as Record<string, number>)?.[k] ?? 0
+        setSettings({ ...base, ...ov } as AlertSettings)
+      }
+    } finally { setLoading(false) }
+  }
 
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
     setMessage(null)
     try {
-      const res = await fetchWithAuth('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      })
+      let res: Response
+      if (selected === null) {
+        res = await fetchWithAuth('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        })
+      } else {
+        const th: Record<string, number> = {}
+        for (const k of THRESHOLD_KEYS) th[k] = (settings as unknown as Record<string, number>)[k]
+        res = await fetchWithAuth(`/api/admin/stations/${selected}/alerts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(th),
+        })
+      }
       if (res.ok) {
         setMessage({ type: 'ok', text: 'Guardado' })
         setTimeout(() => setMessage(null), 2000)
@@ -92,14 +137,29 @@ export function AdminAlertas() {
 
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
+  const isPrincipal = selected === null
+  const selLabel = isPrincipal ? 'Principal (WS69)' : (secondaries.find((s) => s.name === selected)?.label || selected)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Alertas</h1>
-          <p className="text-slate-400 text-sm">Umbrales de la estación principal · WS69</p>
+          <p className="text-slate-400 text-sm">
+            {isPrincipal ? 'Umbrales de la estación principal · WS69' : `Umbrales de ${selLabel}`}
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          {secondaries.length > 0 && (
+            <select
+              value={selected ?? ''}
+              onChange={(e) => onSelectStation(e.target.value || null)}
+              className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
+            >
+              <option value="">Principal (WS69)</option>
+              {secondaries.map((s) => (<option key={s.name} value={s.name}>{s.label}</option>))}
+            </select>
+          )}
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
           <button onClick={handleSave} disabled={saving} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium">
             {saving ? 'Guardando...' : 'Guardar'}
@@ -107,22 +167,29 @@ export function AdminAlertas() {
         </div>
       </div>
 
-      {/* Master + Telegram */}
-      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Toggle enabled={settings.alerts_enabled} onChange={(v) => update('alerts_enabled', v)} label="Alertas habilitadas" />
-        <div className="h-4 w-px bg-white/10" />
-        <span className={`text-sm ${settings.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
-          {settings.telegram_enabled ? '✓ Telegram activo' : '○ Telegram no configurado'}
-        </span>
-        <span className={`text-sm ${settings.email_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
-          {settings.email_enabled ? '✓ Correo activo' : '○ Correo no configurado'}
-        </span>
-        <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
-      </div>
-
-      <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-        ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS69)</span>. Las alertas para la estación secundaria (GW1100) están en desarrollo.
-      </div>
+      {isPrincipal ? (
+        <>
+          {/* Master + Telegram */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <Toggle enabled={settings.alerts_enabled} onChange={(v) => update('alerts_enabled', v)} label="Alertas habilitadas" />
+            <div className="h-4 w-px bg-white/10" />
+            <span className={`text-sm ${settings.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {settings.telegram_enabled ? '✓ Telegram activo' : '○ Telegram no configurado'}
+            </span>
+            <span className={`text-sm ${settings.email_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {settings.email_enabled ? '✓ Correo activo' : '○ Correo no configurado'}
+            </span>
+            <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
+          </div>
+          <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
+            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS69)</span>. Elige otra estación arriba para editar sus umbrales propios.
+          </div>
+        </>
+      ) : (
+        <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
+          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido, offline y aire usan la configuración global.
+        </div>
+      )}
 
       {/* Umbrales en grid compacto */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
@@ -178,39 +245,43 @@ export function AdminAlertas() {
         </div>
       </div>
 
-      {/* Estacion, sensores, calidad aire */}
-      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">📡 Offline despues de</span>
-            <NumField value={settings.alert_station_offline_minutes} onChange={(v) => update('alert_station_offline_minutes', v)} min={1} max={60} />
-            <span className="text-xs text-slate-500">min</span>
-          </div>
-          <div className="h-4 w-px bg-white/10" />
-          <Toggle enabled={settings.alert_battery_enabled} onChange={(v) => update('alert_battery_enabled', v)} label="🔋 Bateria baja" />
-          <Toggle enabled={settings.alert_sensor_lost_enabled} onChange={(v) => update('alert_sensor_lost_enabled', v)} label="📡 Sensor perdido" />
-        </div>
-      </div>
-
-      {/* Calidad del aire */}
-      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <Toggle enabled={settings.alert_air_enabled} onChange={(v) => update('alert_air_enabled', v)} label="🌫️ Alertas calidad aire" />
-          {settings.alert_air_enabled && (
-            <>
+      {isPrincipal && (
+        <>
+          {/* Estacion, sensores */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">📡 Offline despues de</span>
+                <NumField value={settings.alert_station_offline_minutes} onChange={(v) => update('alert_station_offline_minutes', v)} min={1} max={60} />
+                <span className="text-xs text-slate-500">min</span>
+              </div>
               <div className="h-4 w-px bg-white/10" />
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">AQI ≥</span>
-                <NumField value={settings.alert_aqi_threshold} onChange={(v) => update('alert_aqi_threshold', v)} min={0} max={500} step={10} />
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">IMECA ≥</span>
-                <NumField value={settings.alert_imeca_threshold} onChange={(v) => update('alert_imeca_threshold', v)} min={0} max={500} step={10} />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+              <Toggle enabled={settings.alert_battery_enabled} onChange={(v) => update('alert_battery_enabled', v)} label="🔋 Bateria baja" />
+              <Toggle enabled={settings.alert_sensor_lost_enabled} onChange={(v) => update('alert_sensor_lost_enabled', v)} label="📡 Sensor perdido" />
+            </div>
+          </div>
+
+          {/* Calidad del aire */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Toggle enabled={settings.alert_air_enabled} onChange={(v) => update('alert_air_enabled', v)} label="🌫️ Alertas calidad aire" />
+              {settings.alert_air_enabled && (
+                <>
+                  <div className="h-4 w-px bg-white/10" />
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-slate-400">AQI ≥</span>
+                    <NumField value={settings.alert_aqi_threshold} onChange={(v) => update('alert_aqi_threshold', v)} min={0} max={500} step={10} />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-slate-400">IMECA ≥</span>
+                    <NumField value={settings.alert_imeca_threshold} onChange={(v) => update('alert_imeca_threshold', v)} min={0} max={500} step={10} />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

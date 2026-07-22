@@ -111,72 +111,60 @@ class AlertService:
             return f"canal {name[2:]} (WN31)"
         return name
 
-    def evaluate(self, data: Dict[str, Any], station: Optional[str] = None) -> Dict[str, Tuple[bool, str]]:
+    def evaluate(self, data: Dict[str, Any], station: Optional[str] = None,
+                 thresholds: Optional[Dict[str, Any]] = None) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply.
 
         `station` aísla el estado de "sensor perdido" (known_sensors) por estación.
+        `thresholds` sobreescribe los umbrales globales (por estación); las claves
+        sin definir caen al valor global de settings.
         """
         rules: Dict[str, Tuple[bool, str]] = {}
+        ov = thresholds or {}
+
+        def T(key: str, default: float) -> float:
+            v = ov.get(key)
+            return v if v is not None else getattr(self._settings, key, default)
 
         temp = data.get("temperature_outdoor")
         if temp is not None:
-            rules["temp_high"] = (
-                temp >= self.temp_high,
-                f"🌡️ Temperatura alta: {temp}°C (≥ {self.temp_high}°C)",
-            )
-            rules["temp_low"] = (
-                temp <= self.temp_low,
-                f"🥶 Temperatura baja: {temp}°C (≤ {self.temp_low}°C)",
-            )
+            t_hi = T("alert_temp_high", 35.0)
+            t_lo = T("alert_temp_low", 0.0)
+            rules["temp_high"] = (temp >= t_hi, f"🌡️ Temperatura alta: {temp}°C (≥ {t_hi}°C)")
+            rules["temp_low"] = (temp <= t_lo, f"🥶 Temperatura baja: {temp}°C (≤ {t_lo}°C)")
 
         # Viento sostenido
         wind = data.get("wind_speed")
         if wind is None:
             wind = data.get("wind_gust")
         if wind is not None:
-            rules["wind_high"] = (
-                wind >= self.wind_high,
-                f"💨 Viento fuerte: {wind} km/h (≥ {self.wind_high} km/h)",
-            )
+            w_hi = T("alert_wind_high", 50.0)
+            rules["wind_high"] = (wind >= w_hi, f"💨 Viento fuerte: {wind} km/h (≥ {w_hi} km/h)")
 
         # Ráfaga (pico de viento)
         gust = data.get("wind_gust")
-        gust_hi = getattr(self._settings, "alert_gust_high", 70.0)
         if gust is not None:
-            rules["gust_high"] = (
-                gust >= gust_hi,
-                f"🌬️ Ráfaga fuerte: {gust} km/h (≥ {gust_hi} km/h)",
-            )
+            g_hi = T("alert_gust_high", 70.0)
+            rules["gust_high"] = (gust >= g_hi, f"🌬️ Ráfaga fuerte: {gust} km/h (≥ {g_hi} km/h)")
 
         rain = data.get("rain_rate")
         if rain is not None:
-            rules["rain_rate"] = (
-                rain >= self.rain_rate,
-                f"🌧️ Lluvia intensa: {rain} mm/h (≥ {self.rain_rate} mm/h)",
-            )
+            r_hi = T("alert_rain_rate", 10.0)
+            rules["rain_rate"] = (rain >= r_hi, f"🌧️ Lluvia intensa: {rain} mm/h (≥ {r_hi} mm/h)")
 
         # Lluvia acumulada del día
         rain_day = data.get("rain_daily")
-        rain_day_hi = getattr(self._settings, "alert_rain_daily", 40.0)
         if rain_day is not None:
-            rules["rain_daily"] = (
-                rain_day >= rain_day_hi,
-                f"🌧️ Lluvia acumulada alta: {rain_day} mm hoy (≥ {rain_day_hi} mm)",
-            )
+            rd_hi = T("alert_rain_daily", 40.0)
+            rules["rain_daily"] = (rain_day >= rd_hi, f"🌧️ Lluvia acumulada alta: {rain_day} mm hoy (≥ {rd_hi} mm)")
 
         # Presión alta / baja (a nivel del mar)
         press = data.get("pressure_relative")
         if press is not None:
-            p_hi = getattr(self._settings, "alert_pressure_high", 1030.0)
-            p_lo = getattr(self._settings, "alert_pressure_low", 1000.0)
-            rules["pressure_high"] = (
-                press >= p_hi,
-                f"📈 Presión alta: {press} hPa (≥ {p_hi} hPa)",
-            )
-            rules["pressure_low"] = (
-                press <= p_lo,
-                f"📉 Presión baja: {press} hPa (≤ {p_lo} hPa)",
-            )
+            p_hi = T("alert_pressure_high", 1030.0)
+            p_lo = T("alert_pressure_low", 1000.0)
+            rules["pressure_high"] = (press >= p_hi, f"📈 Presión alta: {press} hPa (≥ {p_hi} hPa)")
+            rules["pressure_low"] = (press <= p_lo, f"📉 Presión baja: {press} hPa (≤ {p_lo} hPa)")
 
         # Batería baja: campos battery_* binarios (True=OK / False=baja).
         if getattr(self._settings, "alert_battery_enabled", True):
@@ -240,18 +228,20 @@ class AlertService:
             })
 
     async def process(self, data: Dict[str, Any], station: Optional[str] = None,
-                      label: Optional[str] = None) -> None:
+                      label: Optional[str] = None,
+                      thresholds: Optional[Dict[str, Any]] = None) -> None:
         """
         Evalúa reglas y notifica en las transiciones, POR ESTACIÓN.
         El estado (active/historial) se namespacea por estación y el mensaje se
-        etiqueta con la estación cuando no es la principal.
+        etiqueta con la estación cuando no es la principal. `thresholds` permite
+        umbrales propios por estación (caen a los globales si no se definen).
         """
         if not self.enabled:
             return
 
         prefix = "" if station is None else f"{station}:"
         tag = "" if station is None else f"[{label or station}] "
-        for key, (triggered, message) in self.evaluate(data, station=station).items():
+        for key, (triggered, message) in self.evaluate(data, station=station, thresholds=thresholds).items():
             nkey = f"{prefix}{key}"
             cat = _category_for(key)
             if triggered and nkey not in self.active:

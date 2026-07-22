@@ -94,6 +94,9 @@ DEFAULT_STATION_CONFIG = {
     # Calibración propia de la estación (secundarias). Dict de claves cal_*
     # (mismo formato que las globales). Vacío = sin calibración para esa estación.
     "calibration": {},
+    # Umbrales de alerta propios (secundarias). Dict de claves alert_* (temp/viento/
+    # lluvia/presión). Las no definidas caen a los umbrales globales.
+    "alert_thresholds": {},
 }
 
 
