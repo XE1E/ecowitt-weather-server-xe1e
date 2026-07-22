@@ -19,6 +19,7 @@ interface AlertSettings {
   alert_imeca_threshold: number
   telegram_enabled: boolean
   telegram_chat_id: string | null
+  email_enabled: boolean
 }
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -96,7 +97,7 @@ export function AdminAlertas() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Alertas</h1>
-          <p className="text-slate-400 text-sm">Umbrales y notificaciones</p>
+          <p className="text-slate-400 text-sm">Umbrales de la estación principal · WS69</p>
         </div>
         <div className="flex items-center gap-3">
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
@@ -113,7 +114,14 @@ export function AdminAlertas() {
         <span className={`text-sm ${settings.telegram_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
           {settings.telegram_enabled ? '✓ Telegram activo' : '○ Telegram no configurado'}
         </span>
+        <span className={`text-sm ${settings.email_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
+          {settings.email_enabled ? '✓ Correo activo' : '○ Correo no configurado'}
+        </span>
         <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
+      </div>
+
+      <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
+        ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS69)</span>. Las alertas para la estación secundaria (GW1100) están en desarrollo.
       </div>
 
       {/* Umbrales en grid compacto */}
