@@ -205,6 +205,8 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [testingAll, setTestingAll] = useState(false)
+  const [testAllResults, setTestAllResults] = useState<{ service: string; ok: boolean | null; message: string }[] | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -251,6 +253,19 @@ export function AdminDashboard() {
     setActionLoading(null)
   }
 
+  const runTestAll = async () => {
+    setTestingAll(true)
+    setTestAllResults(null)
+    try {
+      const r = await fetchWithAuth('/api/admin/test-all', { method: 'POST' })
+      const j = await r.json()
+      setTestAllResults(j.results || [])
+    } catch {
+      setTestAllResults([{ service: 'Error', ok: false, message: 'Error de conexión' }])
+    }
+    setTestingAll(false)
+  }
+
   if (loading) return <div className="text-slate-400">Cargando...</div>
 
   const alerts = status?.active_alerts || []
@@ -267,6 +282,13 @@ export function AdminDashboard() {
         <div className="flex items-center gap-3">
           <LiveIndicator lastUpdate={lastUpdate} />
           <button
+            onClick={runTestAll}
+            disabled={testingAll}
+            className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 disabled:opacity-50"
+          >
+            {testingAll ? 'Probando...' : '🔌 Probar conexiones'}
+          </button>
+          <button
             onClick={load}
             className="text-slate-400 hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors"
             title="Actualizar ahora"
@@ -277,6 +299,27 @@ export function AdminDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Resultados de "Probar conexiones" */}
+      {testAllResults && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-medium flex items-center gap-2"><span>🔌</span> Prueba de conexiones</h2>
+            <button onClick={() => setTestAllResults(null)} className="text-slate-500 hover:text-slate-300 text-xs">Cerrar</button>
+          </div>
+          <div className="space-y-1">
+            {testAllResults.map((r) => (
+              <div key={r.service} className="flex items-center gap-2 text-sm">
+                <span className={`w-16 font-medium ${r.ok === true ? 'text-emerald-400' : r.ok === false ? 'text-red-400' : 'text-slate-500'}`}>
+                  {r.ok === true ? '✓ OK' : r.ok === false ? '✗ Falló' : '– N/A'}
+                </span>
+                <span className="text-slate-300 w-20">{r.service}</span>
+                <span className="text-slate-500 flex-1 truncate">{r.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tiles de resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

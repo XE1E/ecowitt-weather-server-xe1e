@@ -714,6 +714,45 @@ async def admin_test_email(authorization: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/admin/test-all")
+async def admin_test_all(authorization: Optional[str] = Header(default=None)):
+    """Prueba los canales configurados (Telegram, correo, MQTT) y devuelve el
+    resultado por servicio. ok=None significa 'no configurado' (se omite)."""
+    _require_admin(authorization)
+    results = []
+
+    async def _try(name, cond, coro_factory):
+        if not cond:
+            results.append({"service": name, "ok": None, "message": "No configurado"})
+            return
+        try:
+            await coro_factory()
+            results.append({"service": name, "ok": True, "message": "Enviado"})
+        except Exception as e:
+            results.append({"service": name, "ok": False, "message": str(e)[:150]})
+
+    await _try("Telegram",
+               settings.telegram_enabled and settings.telegram_bot_token and settings.telegram_chat_id,
+               alert_service.send_test_telegram)
+    await _try("Correo",
+               settings.email_enabled and settings.smtp_host and settings.email_to,
+               alert_service.send_test_email)
+
+    if settings.mqtt_enabled:
+        try:
+            r = mqtt_publisher.test_connection(
+                settings.mqtt_broker, settings.mqtt_port,
+                settings.mqtt_username, settings.mqtt_password)
+            results.append({"service": "MQTT", "ok": bool(r.get("success")),
+                            "message": r.get("message", "")})
+        except Exception as e:
+            results.append({"service": "MQTT", "ok": False, "message": str(e)[:150]})
+    else:
+        results.append({"service": "MQTT", "ok": None, "message": "No configurado"})
+
+    return {"results": results}
+
+
 # ---------------------------------------------------------------------------
 # Wizard de configuración inicial
 # ---------------------------------------------------------------------------
