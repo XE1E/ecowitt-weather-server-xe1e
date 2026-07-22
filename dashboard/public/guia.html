@@ -377,7 +377,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p>La primera vez que se accede al panel, un <strong>asistente de 5 pasos</strong> guía la configuración: <strong>1)</strong> Bienvenida, <strong>2)</strong> Verificación de estación, <strong>3)</strong> Alertas y Telegram (con botón «Probar»), <strong>4)</strong> Publicación a redes, <strong>5)</strong> Resumen final. Se puede saltar y reacceder más tarde.</p>
 
       <h3>Dashboard</h3>
-      <p>Vista general con <strong>indicador en tiempo real</strong> (pulso verde), <strong>historial de alertas</strong> de las últimas 24 h (muestra estado activo/resuelto), y <strong>acciones rápidas</strong> (activar/desactivar alertas, probar Telegram, refrescar). Estado de servicios (InfluxDB, Telegram, WAQI).</p>
+      <p>Vista general con <strong>indicador en tiempo real</strong> (pulso verde), <strong>tiles de resumen</strong> (última lectura, uptime, retención, versión), <strong>historial de alertas</strong> de las últimas 24 h (activo/resuelto), <strong>resumen de batería</strong> por estación y una <strong>tarjeta «Endpoint Ecowitt»</strong> con la URL de push (botón copiar). Botón <strong>«Probar conexiones»</strong> que prueba Telegram, correo y MQTT de una. Estado de servicios agrupado en <strong>Notificaciones</strong> (InfluxDB, Telegram, Correo) e <strong>Integraciones</strong> (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar».</p>
 
       <h3>Estaciones</h3>
       <p>Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. Botón <strong>«+ Agregar estación»</strong> para crear secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden <strong>eliminarse</strong> (con confirmación). Cada fila enlaza a su configuración individual.</p>
@@ -392,13 +392,13 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p>Toggle global. <strong>Offsets</strong>: temperatura (°C), humedad (%), presión (hPa). <strong>Multiplicadores</strong>: viento y lluvia (factor). Se aplican antes de guardar en InfluxDB.</p>
 
       <h3>Publicación</h3>
-      <p>Activar y configurar credenciales de redes públicas: <strong>Weather Underground</strong> (Station ID + Key), <strong>PWSWeather</strong> (ID + Password), <strong>Windy</strong> (API Key), <strong>OpenWeatherMap</strong> (API Key + Station ID) y <strong>CWOP/APRS</strong> (Callsign + Passcode + coordenadas). Muestra cuáles redes están <strong>activas</strong>.</p>
+      <p>Activar y configurar credenciales de redes públicas: <strong>Weather Underground</strong> (Station ID + Key), <strong>PWSWeather</strong> (ID + Password), <strong>Windy</strong> (API Key), <strong>OpenWeatherMap</strong> (API Key + Station ID) y <strong>CWOP/APRS</strong> (Callsign + Passcode + coordenadas). Cada red tiene un <strong>intervalo de envío</strong> propio (en minutos; CWOP recomienda 10–15; <code>0</code> = en cada dato recibido) y un <strong>badge de estado</strong> (✓ Configurado / ⚠ Falta configurar).</p>
 
       <h3>Notificaciones</h3>
-      <p>Toggle de Telegram. Campos: <strong>Bot Token</strong> y <strong>Chat ID</strong>. Botón <strong>«Probar»</strong> para enviar un mensaje de prueba y verificar la configuración.</p>
+      <p>Dos canales: <strong>Telegram</strong> (Bot Token + Chat ID) y <strong>Correo (SMTP)</strong> (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). Cada canal elige <strong>qué categorías de alerta recibe</strong> (temperatura, viento, lluvia, presión, estación offline, batería, sensor, aire) de forma independiente. Botón <strong>«Enviar prueba»</strong> por canal, badges de estado y validación que impide guardar un canal incompleto. Los campos secretos tienen ojo <strong>mostrar/ocultar</strong>.</p>
 
       <h3>Integraciones</h3>
-      <p><strong>MQTT / Home Assistant</strong>: broker, puerto, topic, usuario y contraseña. Toggle de <strong>auto-discovery</strong> y prefijo. <strong>Indicador de conexión</strong> (conectado/desconectado con último error), botón <strong>«Probar conexión»</strong> (sin afectar la activa) y <strong>«Reconectar»</strong> para forzar reconexión en caliente. <strong>WAQI</strong>: token API para calidad del aire (AQI), con enlace para obtenerlo gratis.</p>
+      <p><strong>MQTT / Home Assistant</strong>: broker, puerto, topic, usuario y contraseña. Toggle de <strong>auto-discovery</strong> y prefijo. <strong>Indicador de conexión</strong> (conectado/desconectado con último error), botón <strong>«Probar conexión»</strong> (sin afectar la activa) y <strong>«Reconectar»</strong>. <strong>WAQI</strong>: token API para calidad del aire (AQI). <strong>🔒 Seguridad del endpoint (push)</strong>: <strong>token secreto</strong> (el datalogger debe enviar a <code>/data/report/?token=…</code>) y <strong>allowlist de IP</strong> de origen; desactivado por defecto (ver sección Hardware para el detalle).</p>
 
       <h3>Sistema</h3>
       <p><strong>Información</strong>: versión, número de estaciones, última lectura, estado de InfluxDB. <strong>Control de calidad (QC)</strong>: toggle de QC habilitado y filtro de picos. <strong>Visor de logs</strong>: filtra por nivel (todos/warning/error) con refresco en tiempo real. <strong>Enlaces</strong> útiles (sitio público, guía, GitHub, API). Stack tecnológico.</p>
@@ -409,7 +409,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     <section id="alertas">
       <span class="sec-eyebrow">08 — Alertas</span>
       <h2>Alertas y notificaciones</h2>
-      <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canal: Telegram (si está configurado) o el log.</p>
+      <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canales: <strong>Telegram</strong> y/o <strong>correo</strong>, con selección por canal de qué categorías recibe cada uno; si ninguno está configurado, quedan en el log. Los umbrales actuales aplican a la <strong>estación principal (WS69)</strong>; las alertas para la secundaria (GW1100) están en desarrollo.</p>
       <div class="tablewrap"><table>
         <thead><tr><th>Alerta</th><th>Se dispara cuando…</th></tr></thead>
         <tbody>

@@ -314,14 +314,14 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 
 | Página | Qué configura |
 |--------|---------------|
-| **Dashboard** | Vista general con **indicador en tiempo real** (pulso verde que parpadea), **historial de alertas** de las últimas 24 h (muestra estado activo/resuelto con timestamp), y **acciones rápidas** (activar/desactivar alertas, probar Telegram, refrescar manualmente). Estado de servicios (InfluxDB, Telegram, WAQI) |
+| **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
 | **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara») |
-| **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA) |
+| **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). Indica estado de **Telegram** y **Correo**. Los umbrales aplican a la **estación principal (WS69)** (GW1100 en desarrollo) |
 | **Calibración** | Toggle global. Offsets: temp (°C), humedad (%), presión (hPa). Multiplicadores: viento y lluvia (factor) |
-| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS. Muestra cuáles redes están **activas** |
-| **Notificaciones** | Toggle de Telegram, Bot Token, Chat ID y botón **«Probar»** para verificar |
-| **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, toggle de auto-discovery y prefijo. **Indicador de conexión** (conectado/desconectado con último error), botón **«Probar conexión»** (sin afectar la conexión activa) y **«Reconectar»** para forzar reconexión en caliente. **WAQI**: token API para calidad del aire |
+| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
+| **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
+| **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
 | **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
@@ -335,7 +335,10 @@ Si `ADMIN_USER`/`ADMIN_PASSWORD` están vacíos, el panel queda **deshabilitado*
 ## 7. Alertas y notificaciones
 
 Se evalúan en cada lectura y avisan **una vez al activarse** y otra **al
-normalizarse** (no spamean). Canal: **Telegram** si está configurado, o el log.
+normalizarse** (no spamean). Canales: **Telegram** y/o **correo (SMTP)**, con
+**selección por canal** de qué categorías recibe cada uno; si ninguno está
+configurado, van al log. Los umbrales aplican a la **estación principal (WS69)**;
+las alertas para la secundaria (GW1100) están en desarrollo.
 
 | Alerta | Se dispara cuando… |
 |--------|--------------------|
@@ -370,6 +373,13 @@ se activen, con sus credenciales, desde el panel:
 
 Filosofía: aportar a todas las útiles. Cada red usa sus unidades; el servidor
 convierte según el protocolo de cada una.
+
+Cada red tiene un **intervalo de envío** configurable en minutos (CWOP recomienda
+10–15 min; `0` = reenviar en cada dato recibido, ~60 s). Así se respeta el ritmo
+sugerido por cada red aunque la estación reporte cada minuto.
+
+> Seguridad del endpoint de entrada (`/data/report/`) y su configuración completa:
+> ver **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)**.
 
 ---
 
