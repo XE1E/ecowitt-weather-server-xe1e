@@ -1,7 +1,10 @@
 services:
   # Receiver - Receives data from Ecowitt gateway
   receiver:
-    build: ./receiver
+    build:
+      context: ./receiver
+      args:
+        GIT_SHA: ${GIT_SHA:-}
     container_name: ecowitt-receiver
     # No host port: the dashboard (nginx) is the single public entrypoint and
     # proxies /api and /data/report to receiver:8080 over the internal network.

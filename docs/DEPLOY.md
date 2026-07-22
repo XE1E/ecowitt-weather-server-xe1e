@@ -121,7 +121,8 @@ En la app **WS View Plus** → Weather Services → Customized:
 
 ```bash
 docker compose logs -f receiver        # ver datos entrando
-docker compose up -d --build           # actualizar tras git pull
+# Actualizar tras git pull (hornea el commit actual para /admin/updates):
+GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build
 docker compose down                    # detener (conserva volúmenes/datos)
 ```
 
