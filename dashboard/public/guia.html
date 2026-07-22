@@ -235,6 +235,29 @@
       </table></div>
       <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Señal RF:</strong> cada sensor inalámbrico reporta su nivel de señal (0-4, mayor = mejor), disponible en la API para diagnóstico. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
       <div class="callout"><p>El hardware llega ~2026-07-17. Hasta entonces el sitio puede correr con un simulador; al instalar la estación se apaga el simulador, se limpian los datos falsos y se apunta la consola al servidor.</p></div>
+
+      <h3>Endpoint Ecowitt (configurar el datalogger)</h3>
+      <p>La consola o gateway envía por <strong>HTTP POST</strong> (protocolo Ecowitt) al servidor. En <em>WS View Plus → Weather Services → Customized</em>:</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+        <tbody>
+          <tr><td>Protocol Type</td><td><strong>Ecowitt</strong></td></tr>
+          <tr><td>Server IP / Hostname</td><td><code>163.192.147.208</code></td></tr>
+          <tr><td>Port</td><td><code>8080</code></td></tr>
+          <tr><td>Path</td><td><code>/data/report/</code></td></tr>
+          <tr><td>Upload Interval</td><td>60 s</td></tr>
+        </tbody>
+      </table></div>
+      <p>URL completa: <code>http://163.192.147.208:8080/data/report/</code> (o <code>https://clima.xe1e.net/data/report/</code> por dominio). Las unidades de entrada son imperiales (°F, mph, inHg); el servidor las convierte a métrico.</p>
+
+      <h3>Seguridad del endpoint</h3>
+      <p>Opcional, desde <em>Admin → Integraciones → Seguridad del endpoint</em> (desactivado por defecto):</p>
+      <ul>
+        <li><strong>Token secreto:</strong> el push debe incluir <code>?token=…</code> en el Path (<code>/data/report/?token=EL_TOKEN</code>); si no coincide, el servidor responde <code>403</code>.</li>
+        <li><strong>Allowlist de IP:</strong> solo acepta datos desde ciertas IPs de origen. Útil solo con IP pública <strong>fija</strong>; con IP doméstica dinámica no conviene (te bloquearías).</li>
+      </ul>
+      <p><strong>Principal vs. secundarias:</strong> cada dispositivo manda un <code>PASSKEY</code>. La estación principal es cualquier PASSKEY no mapeado; las secundarias (p. ej. GW1100) se registran mapeando su PASSKEY a un nombre en <em>Admin → Estaciones</em>.</p>
+      <div class="callout"><p>Referencia completa (payload de ejemplo y comandos de verificación) en <code>docs/ENDPOINT-ECOWITT.md</code> del repositorio.</p></div>
     </section>
 
     <section id="arquitectura">
