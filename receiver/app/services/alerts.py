@@ -78,8 +78,9 @@ class AlertService:
         # Estado de "estación caída" por estación: {station_name: bool}
         # None = principal, "gw1100" = secundaria, etc.
         self.stations_offline: Dict[Optional[str], bool] = {}
-        # Sensores vistos alguna vez (para detectar "sensor perdido")
-        self.known_sensors: set = set()
+        # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
+        # None = principal. Aísla la detección entre estaciones.
+        self.known_sensors: Dict[Optional[str], set] = {}
         # Alert history: deque of {key, message, timestamp, resolved_at?}
         self._history: deque = deque(maxlen=100)
 
@@ -110,8 +111,11 @@ class AlertService:
             return f"canal {name[2:]} (WN31)"
         return name
 
-    def evaluate(self, data: Dict[str, Any]) -> Dict[str, Tuple[bool, str]]:
-        """Return {rule_key: (triggered, message)} for the rules that apply."""
+    def evaluate(self, data: Dict[str, Any], station: Optional[str] = None) -> Dict[str, Tuple[bool, str]]:
+        """Return {rule_key: (triggered, message)} for the rules that apply.
+
+        `station` aísla el estado de "sensor perdido" (known_sensors) por estación.
+        """
         rules: Dict[str, Tuple[bool, str]] = {}
 
         temp = data.get("temperature_outdoor")
@@ -185,13 +189,14 @@ class AlertService:
                     f"🔋 Batería baja: {self._sensor_label(name)}",
                 )
 
-        # Sensor perdido: un sensor visto antes que deja de reportar.
+        # Sensor perdido: un sensor visto antes que deja de reportar (por estación).
         if getattr(self._settings, "alert_sensor_lost_enabled", True):
+            known = self.known_sensors.setdefault(station, set())
             for skey in list(_SENSOR_PRESENCE):
                 present = data.get(skey) is not None
                 if present:
-                    self.known_sensors.add(skey)
-                if skey in self.known_sensors:
+                    known.add(skey)
+                if skey in known:
                     rules[f"sensor_{skey}"] = (
                         not present,
                         f"📡 Sensor sin contacto: {self._sensor_label(_SENSOR_PRESENCE[skey])}",
@@ -214,7 +219,8 @@ class AlertService:
                 continue
         return result
 
-    def _add_to_history(self, key: str, message: str, resolved: bool = False) -> None:
+    def _add_to_history(self, key: str, message: str, resolved: bool = False,
+                        station: Optional[str] = None) -> None:
         """Add an alert event to history."""
         now = datetime.utcnow().isoformat() + "Z"
         if resolved:
@@ -230,24 +236,33 @@ class AlertService:
                 "key": key,
                 "message": message,
                 "timestamp": now,
+                "station": station,
             })
 
-    async def process(self, data: Dict[str, Any]) -> None:
-        """Evaluate rules and notify on state transitions."""
+    async def process(self, data: Dict[str, Any], station: Optional[str] = None,
+                      label: Optional[str] = None) -> None:
+        """
+        Evalúa reglas y notifica en las transiciones, POR ESTACIÓN.
+        El estado (active/historial) se namespacea por estación y el mensaje se
+        etiqueta con la estación cuando no es la principal.
+        """
         if not self.enabled:
             return
 
-        for key, (triggered, message) in self.evaluate(data).items():
+        prefix = "" if station is None else f"{station}:"
+        tag = "" if station is None else f"[{label or station}] "
+        for key, (triggered, message) in self.evaluate(data, station=station).items():
+            nkey = f"{prefix}{key}"
             cat = _category_for(key)
-            if triggered and key not in self.active:
-                self.active[key] = message
-                self._add_to_history(key, message, resolved=False)
-                await self._safe_notify(f"⚠️ ALERTA — {message}", category=cat)
-            elif not triggered and key in self.active:
-                self._add_to_history(key, self.active[key], resolved=True)
-                self.active.pop(key, None)
-                self._active_since.pop(key, None)
-                await self._safe_notify(f"✅ Normalizado — {message}", category=cat)
+            if triggered and nkey not in self.active:
+                self.active[nkey] = tag + message
+                self._add_to_history(nkey, tag + message, resolved=False, station=station)
+                await self._safe_notify(f"⚠️ ALERTA — {tag}{message}", category=cat)
+            elif not triggered and nkey in self.active:
+                self._add_to_history(nkey, self.active[nkey], resolved=True, station=station)
+                self.active.pop(nkey, None)
+                self._active_since.pop(nkey, None)
+                await self._safe_notify(f"✅ Normalizado — {tag}{message}", category=cat)
 
     async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
         """

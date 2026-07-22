@@ -199,6 +199,23 @@ def test_channel_allows_by_category():
     assert svc_none._channel_allows("email", "rain") is False   # [] -> ninguna
 
 
+def test_alerts_isolated_per_station():
+    # La principal y una secundaria evalúan la misma regla de forma INDEPENDIENTE:
+    # estado namespaced por estación y mensaje etiquetado para la secundaria.
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    asyncio.run(svc.process({"temperature_outdoor": 40}))                                  # principal
+    asyncio.run(svc.process({"temperature_outdoor": 41}, station="gw1100", label="Remota"))  # secundaria
+    assert "temp_high" in svc.active            # principal (sin prefijo)
+    assert "gw1100:temp_high" in svc.active     # secundaria (namespaced)
+    assert len(c.msgs) == 2
+    assert any("[Remota]" in m for m in c.msgs)
+    # Normalizar la secundaria no afecta a la principal
+    asyncio.run(svc.process({"temperature_outdoor": 20}, station="gw1100", label="Remota"))
+    assert "gw1100:temp_high" not in svc.active
+    assert "temp_high" in svc.active
+
+
 def test_notification_failure_does_not_raise():
     async def boom(_text):
         raise RuntimeError("network down")

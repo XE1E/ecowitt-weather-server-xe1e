@@ -374,8 +374,9 @@ async def receive_ecowitt_data(request: Request):
             f"Wind: {parsed_data.get('wind_speed')} km/h"
         )
 
-        # MQTT, alertas y publicación a redes públicas SOLO para la estación
-        # principal. Las secundarias (GW1100, etc.) solo registran datos.
+        # MQTT y publicación a redes son SOLO de la principal. Las alertas corren
+        # para la principal y, si tienen su flag activo, también para secundarias
+        # (estado aislado por estación, umbrales globales por ahora).
         if station is None:
             # Publish to MQTT (never let this break ingestion)
             try:
@@ -394,6 +395,16 @@ async def receive_ecowitt_data(request: Request):
                 await publish_all(parsed_data, settings)
             except Exception as e:
                 logger.error(f"Public publish failed: {e}")
+        else:
+            # Estación secundaria: alertas propias solo si están habilitadas en su
+            # configuración (Admin → Estaciones → config). Estado por estación.
+            try:
+                scfg = settings_store.get_station_config(settings.settings_file, station)
+                if scfg.get("alerts_enabled"):
+                    await alert_service.process(
+                        parsed_data, station=station, label=scfg.get("label") or station)
+            except Exception as e:
+                logger.error(f"Alert processing (secundaria {station}) failed: {e}")
 
         return {"status": "success", "message": "Data received"}
 
