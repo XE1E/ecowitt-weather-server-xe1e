@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/admin/notificaciones', label: 'Notificaciones', icon: '💬' },
   { to: '/admin/integraciones', label: 'Integraciones', icon: '🔌' },
   { to: '/admin/sistema', label: 'Sistema', icon: '⚙️' },
+  { to: '/admin/updates', label: 'Actualizaciones', icon: '🔄' },
 ]
 
 function LoginForm() {

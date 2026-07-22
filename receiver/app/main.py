@@ -772,6 +772,45 @@ async def admin_test_all(authorization: Optional[str] = Header(default=None)):
     return {"results": results}
 
 
+_GITHUB_REPO = os.environ.get("GITHUB_REPO", "XE1E/ecowitt-weather-server-xe1e")
+
+
+@app.get("/api/admin/updates")
+async def admin_updates(authorization: Optional[str] = Header(default=None)):
+    """Consulta los últimos commits de la rama main en GitHub (repo público).
+    Si GIT_SHA está horneado en la imagen, calcula cuántos commits de atraso hay."""
+    _require_admin(authorization)
+    import httpx
+    url = f"https://api.github.com/repos/{_GITHUB_REPO}/commits?sha=main&per_page=15"
+    current = os.environ.get("GIT_SHA")  # se hornea en build (incremento 2); puede faltar
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(url, headers={"Accept": "application/vnd.github+json"})
+            r.raise_for_status()
+            data = r.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"No se pudo consultar GitHub: {e}")
+    commits = [{
+        "sha": c["sha"][:7],
+        "message": (c.get("commit", {}).get("message", "") or "").splitlines()[0][:120],
+        "date": c.get("commit", {}).get("author", {}).get("date"),
+        "url": c.get("html_url"),
+    } for c in data]
+    latest = commits[0] if commits else None
+    behind = None
+    if current and commits:
+        shas = [c["sha"] for c in commits]
+        if current[:7] in shas:
+            behind = shas.index(current[:7])   # nº de commits más nuevos que el actual
+    return {
+        "repo": _GITHUB_REPO,
+        "current_sha": current[:7] if current else None,
+        "latest": latest,
+        "behind": behind,
+        "commits": commits,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Wizard de configuración inicial
 # ---------------------------------------------------------------------------

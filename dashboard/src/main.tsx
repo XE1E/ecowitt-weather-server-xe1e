@@ -29,6 +29,7 @@ import {
   AdminNotificaciones,
   AdminIntegraciones,
   AdminSistema,
+  AdminUpdates,
   AdminWizard,
 } from './pages/admin'
 import { AdminAuthProvider } from './admin-auth'
@@ -78,6 +79,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="notificaciones" element={<AdminNotificaciones />} />
               <Route path="integraciones" element={<AdminIntegraciones />} />
               <Route path="sistema" element={<AdminSistema />} />
+              <Route path="updates" element={<AdminUpdates />} />
             </Route>
             <Route path="/admin/wizard" element={<AdminWizard />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
