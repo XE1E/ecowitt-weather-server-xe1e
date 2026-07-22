@@ -25,6 +25,7 @@ HEIGHT = int(os.environ.get("KIOSK_HEIGHT", "600"))
 CACHE_TTL = float(os.environ.get("CACHE_TTL", "45"))              # segundos
 READY_TIMEOUT_MS = float(os.environ.get("READY_TIMEOUT_MS", "15000"))
 JPEG_QUALITY = int(os.environ.get("JPEG_QUALITY", "80"))
+GOTO_RETRIES = int(os.environ.get("GOTO_RETRIES", "3"))           # reintentos de page.goto
 VALID_PAGES = {"1", "2", "3", "4", "5"}
 
 _state: dict = {"browser": None, "playwright": None}
@@ -83,7 +84,21 @@ async def _render(page_num: str) -> bytes:
     try:
         page = await context.new_page()
         url = f"{DASHBOARD_URL}/kiosko?page={page_num}"
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        # Reintentar el goto ante fallos de red transitorios (p. ej.
+        # ERR_NAME_NOT_RESOLVED justo tras recrear el contenedor dashboard:
+        # el Chromium de larga vida conserva DNS viejo unos segundos).
+        last_err = None
+        for attempt in range(GOTO_RETRIES):
+            try:
+                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                print(f"[render] goto pagina {page_num} intento {attempt + 1} falló: {e}", flush=True)
+                await asyncio.sleep(1.5 * (attempt + 1))
+        if last_err is not None:
+            raise last_err
         try:
             # La página avisa cuándo tiene datos y es seguro capturar.
             await page.wait_for_selector(
