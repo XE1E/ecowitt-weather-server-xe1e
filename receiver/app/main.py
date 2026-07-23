@@ -37,6 +37,7 @@ from .services.almanac import get_almanac
 from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import smn
+from .services import svitrix
 from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
@@ -1453,6 +1454,25 @@ async def get_smn_forecast(ides: str = "9", idmun: str = "14", hourly: int = 1):
     except Exception as e:
         logger.error(f"Error SMN: {e}")
         raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico del SMN")
+
+
+@app.get("/api/svitrix")
+async def get_svitrix():
+    """Dato real de la estación con forma WeatherAPI `current.json` (+ solar_radiation)
+    para el firmware SVITRIX del reloj Ulanzi. Apunta la URL del reloj aquí."""
+    data = latest_by_station.get(None) or {}
+    lat = getattr(settings, "cwop_latitude", 19.380359)
+    lon = getattr(settings, "cwop_longitude", -99.174564)
+    aq = im = None
+    try:
+        aq = await get_air_quality(lat, lon, settings.waqi_token)
+    except Exception as e:
+        logger.error(f"svitrix aq: {e}")
+    try:
+        im = await imeca.get_imeca(lat, lon)
+    except Exception as e:
+        logger.error(f"svitrix imeca: {e}")
+    return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon)
 
 
 @app.get("/api/smn/municipios")
