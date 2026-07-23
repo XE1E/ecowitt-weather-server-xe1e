@@ -74,10 +74,12 @@ Kit **Ecowitt WS2910** + sensor **WS69** + termohigrómetros **WN31**.
 **Baterías:** la WS69, la consola y cada canal WN31 reportan estado de batería
 (OK / baja). El sistema **avisa** cuando alguna está baja (ver §7).
 
-**Señal RF:** cada sensor inalámbrico reporta su **nivel de señal** (escala 0-4,
-mayor = mejor). Se expone en `/api/current` (`signal_wh65`, `signal_ch1`…) y en
-el detalle de sensores de `/api/stations`. Útil para diagnosticar ubicación o
-interferencias.
+**Señal RF:** el sistema **soporta** el nivel de señal por sensor (escala 0-4,
+mayor = mejor; campos `signal_wh65`, `signal_ch1`… en `/api/current` y en el
+detalle de `/api/stations`) **si el dispositivo lo envía**. La consola **WS2910**
+(firmware EasyWeatherPro) **no incluye** estos campos en su push —solo el estado
+de **batería**—, así que aparecen vacíos; los **gateways** tipo GW1100 / GW3000
+sí los reportan.
 
 **Envío:** la consola se configura en *Weather Services → Customized* con
 protocolo **Ecowitt**, apuntando a `clima.xe1e.net` (o la IP/host del servidor),
