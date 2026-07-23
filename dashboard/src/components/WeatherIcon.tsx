@@ -22,6 +22,18 @@ import humidity from '@meteocons/svg/fill/humidity.svg'
 import barometer from '@meteocons/svg/fill/barometer.svg'
 import windsock from '@meteocons/svg/fill/windsock.svg'
 import uvIndex from '@meteocons/svg/fill/uv-index.svg'
+import uvIndex1 from '@meteocons/svg/fill/uv-index-1.svg'
+import uvIndex2 from '@meteocons/svg/fill/uv-index-2.svg'
+import uvIndex3 from '@meteocons/svg/fill/uv-index-3.svg'
+import uvIndex4 from '@meteocons/svg/fill/uv-index-4.svg'
+import uvIndex5 from '@meteocons/svg/fill/uv-index-5.svg'
+import uvIndex6 from '@meteocons/svg/fill/uv-index-6.svg'
+import uvIndex7 from '@meteocons/svg/fill/uv-index-7.svg'
+import uvIndex8 from '@meteocons/svg/fill/uv-index-8.svg'
+import uvIndex9 from '@meteocons/svg/fill/uv-index-9.svg'
+import uvIndex10 from '@meteocons/svg/fill/uv-index-10.svg'
+import uvIndex11 from '@meteocons/svg/fill/uv-index-11.svg'
+import uvIndex11Plus from '@meteocons/svg/fill/uv-index-11-plus.svg'
 import raindrops from '@meteocons/svg/fill/raindrops.svg'
 import compass from '@meteocons/svg/fill/compass.svg'
 import notAvailable from '@meteocons/svg/fill/not-available.svg'
@@ -64,6 +76,18 @@ const ICONS: Record<string, string> = {
   barometer,
   windsock,
   'uv-index': uvIndex,
+  'uv-index-1': uvIndex1,
+  'uv-index-2': uvIndex2,
+  'uv-index-3': uvIndex3,
+  'uv-index-4': uvIndex4,
+  'uv-index-5': uvIndex5,
+  'uv-index-6': uvIndex6,
+  'uv-index-7': uvIndex7,
+  'uv-index-8': uvIndex8,
+  'uv-index-9': uvIndex9,
+  'uv-index-10': uvIndex10,
+  'uv-index-11': uvIndex11,
+  'uv-index-11-plus': uvIndex11Plus,
   raindrops,
   compass,
   'partly-cloudy-day-drizzle': partlyCloudyDayDrizzle,
