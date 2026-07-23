@@ -10,7 +10,8 @@ interface Props {
 export function PrecipitationCard({ data, forecast }: Props) {
   const u = useUnits()
   const next = forecast?.hours?.slice(0, 8) ?? []
-  const maxProb = Math.max(1, ...next.map((h) => h.precipProb))
+  const peakProb = next.length ? Math.max(...next.map((h) => h.precipProb ?? 0)) : 0
+  const maxProb = Math.max(1, peakProb)
 
   return (
     <div className="card">
@@ -36,21 +37,30 @@ export function PrecipitationCard({ data, forecast }: Props) {
 
       {next.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs text-slate-500 mb-2">Prob. de lluvia próximas horas</p>
-          <div className="flex items-end gap-1 h-16">
-            {next.map((h) => (
-              <div key={h.time} className="flex-1 flex flex-col items-center justify-end h-full">
-                <div
-                  className="w-full rounded-t bg-sky-500/70"
-                  style={{ height: `${(h.precipProb / maxProb) * 100}%`, minHeight: h.precipProb > 0 ? 2 : 0 }}
-                  title={`${h.precipProb}%`}
-                />
-                <span className="text-[9px] text-slate-500 mt-1">
-                  {new Date(h.time).toLocaleTimeString('es-MX', { hour: '2-digit' })}
-                </span>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-slate-500 mb-2">
+            Prob. de lluvia próximas horas
+            {peakProb > 0 && <span className="text-slate-400"> · máx {peakProb}%</span>}
+          </p>
+          {peakProb > 0 ? (
+            <div className="flex items-end gap-1 h-16">
+              {next.map((h) => (
+                <div key={h.time} className="flex-1 flex flex-col items-center justify-end h-full">
+                  <div
+                    className="w-full rounded-t bg-sky-500/70"
+                    style={{ height: `${(h.precipProb / maxProb) * 100}%`, minHeight: h.precipProb > 0 ? 2 : 0 }}
+                    title={`${h.precipProb}%`}
+                  />
+                  <span className="text-[9px] text-slate-500 mt-1">
+                    {new Date(h.time).toLocaleTimeString('es-MX', { hour: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400 flex items-center gap-1.5 py-3">
+              <span>☀️</span> Sin lluvia prevista en las próximas horas
+            </p>
+          )}
         </div>
       )}
     </div>
