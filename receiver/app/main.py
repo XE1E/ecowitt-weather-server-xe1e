@@ -36,6 +36,7 @@ from .services import aggregator
 from .services.almanac import get_almanac
 from .services import satellite
 from .services.windrose import compute_wind_rose
+from .services import smn
 from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
@@ -1441,6 +1442,16 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
     except Exception as e:
         logger.error(f"Error building NOAA report: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/smn")
+async def get_smn_forecast():
+    """Pronóstico oficial del SMN (CONAGUA) para Benito Juárez, CDMX (4 días + 48 h)."""
+    try:
+        return await smn.get_forecast()
+    except Exception as e:
+        logger.error(f"Error SMN: {e}")
+        raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico del SMN")
 
 
 @app.get("/api/wind/rose")
