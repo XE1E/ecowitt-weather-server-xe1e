@@ -8,18 +8,24 @@ import { PageInfo } from '../components/station/PageInfo'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const MES_ABR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+// Día de la semana de una fecha "YYYY-MM-DD" (interpretada como fecha local).
+function weekdayName(dateIso: string): string {
+  const [y, mo, da] = dateIso.split('-').map(Number)
+  return DIAS[new Date(y, mo - 1, da).getDay()]
+}
 
 interface Rec { value: number; date: string }
 interface NoaaDay {
   date: string
   mean_temp?: number | null; high?: number | null; low?: number | null
-  rain?: number | null; wind_avg?: number | null; gust_max?: number | null; wind_dir?: number | null
+  rain?: number | null; rain_rate_max?: number | null; wind_avg?: number | null; gust_max?: number | null; wind_dir?: number | null
   hum_avg?: number | null; dew_avg?: number | null; press_avg?: number | null
   uv_max?: number | null; solar_max?: number | null
 }
 interface Period {
   days: number; mean_temp?: number | null; high?: Rec | null; low?: Rec | null
-  rain_total?: number; rain_days?: number; wind_max?: Rec | null; gust_max?: Rec | null; wind_dir?: number | null
+  rain_total?: number; rain_rate_max?: Rec | null; rain_days?: number; wind_max?: Rec | null; gust_max?: Rec | null; wind_dir?: number | null
   wind_avg?: number | null; hum_avg?: number | null; dew_avg?: number | null; press_avg?: number | null
   uv_max?: number | null; solar_max?: number | null
 }
@@ -65,6 +71,7 @@ export function HistoryPage() {
   const wN = (v?: number | null) => (v == null ? null : +u.wind(v))
   const pN = (v?: number | null) => (v == null ? null : +u.press(v))
   const rN = (v?: number | null) => (v == null ? 0 : +u.rain(v))
+  const rrN = (v?: number | null) => (v == null ? null : +u.rate(v))   // tasa de lluvia
 
   const apply = () => setSel({ gran, day: pDay, month: pMonth, year: pYear })
 
@@ -90,7 +97,7 @@ export function HistoryPage() {
     vmed: wN(d.wind_avg), vmax: wN(d.gust_max), dir: d.wind_dir ?? null,
     hum: d.hum_avg ?? null, dew: tN(d.dew_avg),
     uv: d.uv_max ?? null, solar: d.solar_max ?? null,
-    pprom: pN(d.press_avg), lluvia: rN(d.rain),
+    pprom: pN(d.press_avg), lluvia: rN(d.rain), rrate: rrN(d.rain_rate_max),
   }))
   const yearPoints: HistPoint[] = (year?.months ?? []).map((m) => ({
     x: MES_ABR[m.month - 1],
@@ -98,7 +105,7 @@ export function HistoryPage() {
     vmed: wN(m.wind_avg), vmax: wN(m.gust_max?.value), dir: m.wind_dir ?? null,
     hum: m.hum_avg ?? null, dew: tN(m.dew_avg),
     uv: m.uv_max ?? null, solar: m.solar_max ?? null,
-    pprom: pN(m.press_avg), lluvia: rN(m.rain_total),
+    pprom: pN(m.press_avg), lluvia: rN(m.rain_total), rrate: rrN(m.rain_rate_max?.value),
   }))
 
   const points = isMonth ? monthPoints : yearPoints
@@ -109,8 +116,8 @@ export function HistoryPage() {
   const downloadCsv = () => {
     let header: string, body: string[]
     if (isMonth) {
-      header = 'fecha,temp_max,temp_min,temp_prom,hum_prom,lluvia,viento_max,presion_prom,uv_max,solar_max'
-      body = (month?.days ?? []).map((d) => [d.date, d.high ?? '', d.low ?? '', d.mean_temp ?? '', d.hum_avg ?? '', d.rain ?? '', d.gust_max ?? '', d.press_avg ?? '', d.uv_max ?? '', d.solar_max ?? ''].join(','))
+      header = 'fecha,temp_max,temp_min,temp_prom,hum_prom,lluvia,tasa_lluvia_max,viento_max,presion_prom,uv_max,solar_max'
+      body = (month?.days ?? []).map((d) => [d.date, d.high ?? '', d.low ?? '', d.mean_temp ?? '', d.hum_avg ?? '', d.rain ?? '', d.rain_rate_max ?? '', d.gust_max ?? '', d.press_avg ?? '', d.uv_max ?? '', d.solar_max ?? ''].join(','))
     } else {
       header = 'mes,temp_max,temp_min,temp_prom,lluvia_total,dias_lluvia,viento_max'
       body = (year?.months ?? []).map((m) => [MESES[m.month - 1], m.high?.value ?? '', m.low?.value ?? '', m.mean_temp ?? '', m.rain_total ?? '', m.rain_days ?? '', m.gust_max?.value ?? ''].join(','))
@@ -161,48 +168,67 @@ export function HistoryPage() {
           {/* Tabla: días del mes (clic → detalle) o meses del año (clic → mes) */}
           <div className="card overflow-x-auto">
             {isMonth ? (
-              <table className="w-full text-sm min-w-[520px] tabular-nums">
+              <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="text-slate-400 text-xs border-b border-white/10">
-                    <th className="text-left py-1.5">Día</th><th className="text-right">Máx</th><th className="text-right">Mín</th>
-                    <th className="text-right">Prom</th><th className="text-right">Humedad</th><th className="text-right">Lluvia</th><th className="text-right">Viento máx</th>
+                    <th className="text-left py-2 pl-1 font-medium">Fecha</th>
+                    <th className="text-right font-medium">Máx</th><th className="text-right font-medium">Mín</th>
+                    <th className="text-right font-medium">Prom</th><th className="text-right font-medium">Precipitación</th>
+                    <th className="text-right pr-1 font-medium">Viento máx</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(month?.days ?? []).map((d) => (
-                    <tr key={d.date} onClick={() => { setPDay(d.date); setGran('day'); setSel({ ...sel, gran: 'day', day: d.date }) }}
-                      className="border-b border-white/5 cursor-pointer hover:bg-white/5">
-                      <td className="py-1.5 text-slate-300">{d.date.slice(8)} ›</td>
-                      <td className="text-right text-orange-300">{d.high != null ? u.temp(d.high) : '--'}</td>
-                      <td className="text-right text-sky-300">{d.low != null ? u.temp(d.low) : '--'}</td>
-                      <td className="text-right">{d.mean_temp != null ? u.temp(d.mean_temp) : '--'}</td>
-                      <td className="text-right text-cyan-300">{d.hum_avg != null ? `${Math.round(d.hum_avg)}%` : '--'}</td>
-                      <td className="text-right text-blue-300">{d.rain != null ? u.rain(d.rain) : '--'}</td>
-                      <td className="text-right text-emerald-300">{d.gust_max != null ? u.wind(d.gust_max) : '--'}</td>
-                    </tr>
-                  ))}
+                  {(month?.days ?? []).map((d) => {
+                    const rain = d.rain ?? 0
+                    return (
+                      <tr key={d.date} onClick={() => { setPDay(d.date); setGran('day'); setSel({ ...sel, gran: 'day', day: d.date }) }}
+                        className="border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/5 transition-colors">
+                        <td className="py-2">
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-xs font-bold tabular-nums text-slate-300">{d.date.slice(8)}</span>
+                            <span className="text-slate-200">{weekdayName(d.date)}</span>
+                          </div>
+                        </td>
+                        <td className="text-right font-semibold text-orange-300 tabular-nums">{d.high != null ? `${u.temp(d.high)} ${u.tempU}` : '--'}</td>
+                        <td className="text-right font-semibold text-sky-300 tabular-nums">{d.low != null ? `${u.temp(d.low)} ${u.tempU}` : '--'}</td>
+                        <td className="text-right tabular-nums">{d.mean_temp != null ? `${u.temp(d.mean_temp)} ${u.tempU}` : '--'}</td>
+                        <td className={`text-right tabular-nums ${rain > 0 ? 'text-violet-300' : 'text-slate-500'}`}>{d.rain != null ? `${u.rain(d.rain)} ${u.rainU}` : '--'}</td>
+                        <td className="text-right pr-1 tabular-nums text-emerald-300">{d.gust_max != null ? `${u.wind(d.gust_max)} ${u.windU}` : '--'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             ) : (
-              <table className="w-full text-sm min-w-[520px] tabular-nums">
+              <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="text-slate-400 text-xs border-b border-white/10">
-                    <th className="text-left py-1.5">Mes</th><th className="text-right">Máx</th><th className="text-right">Mín</th>
-                    <th className="text-right">Prom</th><th className="text-right">Lluvia</th><th className="text-right">Días lluvia</th>
+                    <th className="text-left py-2 pl-1 font-medium">Mes</th>
+                    <th className="text-right font-medium">Máx</th><th className="text-right font-medium">Mín</th>
+                    <th className="text-right font-medium">Prom</th><th className="text-right font-medium">Precipitación</th>
+                    <th className="text-right pr-1 font-medium">Viento máx</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(year?.months ?? []).map((m) => (
-                    <tr key={m.month} onClick={() => { setPMonth(m.month); setGran('month'); setSel({ ...sel, gran: 'month', month: m.month }) }}
-                      className="border-b border-white/5 cursor-pointer hover:bg-white/5">
-                      <td className="py-1.5 text-slate-300">{MESES[m.month - 1]} ›</td>
-                      <td className="text-right text-orange-300">{m.high ? u.temp(m.high.value) : '--'}</td>
-                      <td className="text-right text-sky-300">{m.low ? u.temp(m.low.value) : '--'}</td>
-                      <td className="text-right">{m.mean_temp != null ? u.temp(m.mean_temp) : '--'}</td>
-                      <td className="text-right text-blue-300">{m.rain_total != null ? u.rain(m.rain_total) : '--'}</td>
-                      <td className="text-right">{m.rain_days ?? 0}</td>
-                    </tr>
-                  ))}
+                  {(year?.months ?? []).map((m) => {
+                    const rain = m.rain_total ?? 0
+                    return (
+                      <tr key={m.month} onClick={() => { setPMonth(m.month); setGran('month'); setSel({ ...sel, gran: 'month', month: m.month }) }}
+                        className="border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/5 transition-colors">
+                        <td className="py-2">
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-xs font-bold tabular-nums text-slate-300">{String(m.month).padStart(2, '0')}</span>
+                            <span className="text-slate-200">{MESES[m.month - 1]}</span>
+                          </div>
+                        </td>
+                        <td className="text-right font-semibold text-orange-300 tabular-nums">{m.high ? `${u.temp(m.high.value)} ${u.tempU}` : '--'}</td>
+                        <td className="text-right font-semibold text-sky-300 tabular-nums">{m.low ? `${u.temp(m.low.value)} ${u.tempU}` : '--'}</td>
+                        <td className="text-right tabular-nums">{m.mean_temp != null ? `${u.temp(m.mean_temp)} ${u.tempU}` : '--'}</td>
+                        <td className={`text-right tabular-nums ${rain > 0 ? 'text-violet-300' : 'text-slate-500'}`}>{m.rain_total != null ? `${u.rain(m.rain_total)} ${u.rainU}` : '--'}</td>
+                        <td className="text-right pr-1 tabular-nums text-emerald-300">{m.gust_max ? `${u.wind(m.gust_max.value)} ${u.windU}` : '--'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}

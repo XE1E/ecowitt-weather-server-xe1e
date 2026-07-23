@@ -10,7 +10,7 @@ export interface HistPoint {
   vmed?: number | null; vmax?: number | null; dir?: number | null
   hum?: number | null; dew?: number | null
   uv?: number | null; solar?: number | null
-  pprom?: number | null; lluvia?: number
+  pprom?: number | null; lluvia?: number; rrate?: number | null
 }
 
 const CARDINAL = ['N', 'E', 'S', 'O', 'N']
@@ -121,9 +121,11 @@ export function HistoryCharts({ data, labelFormatter, onCsv }: {
               {grid}{xax}
               <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
               <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
-              <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rainU}`, n]} />
+              <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [
+                n === 'Presión' ? `${nf(v)} ${u.pressU}` : n === 'Tasa máx' ? `${nf(v)} ${u.rateU}` : `${nf(v)} ${u.rainU}`, n]} />
               <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
               <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+              <Line yAxisId="r" type="monotone" dataKey="rrate" name="Tasa máx" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

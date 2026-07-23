@@ -217,6 +217,7 @@ class InfluxDBStorage:
                 "wind_speed",
                 "wind_gust",
                 "rain_daily",
+                "rain_rate",
                 "pressure_relative",
                 "uv_index",
                 "solar_radiation",
