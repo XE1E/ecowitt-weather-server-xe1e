@@ -12,6 +12,7 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from .parser import get_tags, get_fields
+from .security import validate_station, validate_measurement, validate_flux_time
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,11 @@ def _station_filter(station: Optional[str]) -> str:
     station=None  -> estación principal: registros SIN tag 'station' (incluye
                      todo el histórico previo a multi-estación).
     station="x"   -> estación secundaria concreta.
+
+    Valida el nombre (anti-inyección Flux) ya que este es el único punto donde
+    'station' se interpola en la consulta.
     """
+    station = validate_station(station)
     if station is None:
         return '|> filter(fn: (r) => not exists r["station"])'
     return f'|> filter(fn: (r) => r["station"] == "{station}")'
@@ -149,6 +154,10 @@ class InfluxDBStorage:
         Returns:
             List of data points
         """
+        # Validación anti-inyección de los parámetros que se interpolan en Flux.
+        validate_measurement(measurement)
+        validate_flux_time(start, "start")
+        validate_flux_time(stop, "stop")
         try:
             # Build Flux query
             field_filter = ""
@@ -197,6 +206,9 @@ class InfluxDBStorage:
         Returns:
             Dictionary with statistics for each field
         """
+        validate_measurement(measurement)
+        validate_flux_time(start, "start")
+        validate_flux_time(stop, "stop")
         try:
             stats_fields = [
                 "temperature_outdoor",
@@ -310,6 +322,8 @@ class InfluxDBStorage:
         station: None para principal (sin tag o tag inexistente),
                  nombre para secundarias.
         """
+        validate_flux_time(start, "start")
+        validate_flux_time(stop, "stop")
         try:
             query = f'''
                 from(bucket: "{self.bucket}")

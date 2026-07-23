@@ -187,15 +187,25 @@ fail2ban (jail de sshd); aplicar los parches de seguridad pendientes del SO.
 > requiere que la consola soporte HTTPS); (c) dejarlo y compensar con token+allowlist
 > a nivel app (Tanda 2). Elegir antes de tocar el firewall.
 
-### Tanda 2 — código (una sesión) + deploy
-- [ ] `_require_admin` en `PUT /api/stations/{name}` (y evaluar el GET detallado).
-- [ ] Filtrar el `passkey` (y metadatos) de `/api/current`.
-- [ ] Rate-limit + logging de fallos en `/api/admin/login`.
-- [ ] Activar por defecto `ecowitt_secure_enabled` + token + allowlist en `/data/report`.
-- [ ] Validar parámetros que entran a Flux (`station`, `measurement`, `start`, `stop`).
-- [ ] Headers de seguridad en Caddy (HSTS, X-Frame-Options SAMEORIGIN, X-Content-Type-Options,
-      CSP; excepción `frame-ancestors *` para `/embed` y `/kiosko`).
-- [ ] `client_max_body_size 32k` en el `location /data/report` de nginx.
+### Tanda 2 — código (una sesión) + deploy — hecho 2026-07-22
+- [x] `_require_admin` en `PUT /api/stations/{name}` (el frontend ya enviaba el
+      Bearer vía `fetchWithAuth`, así que no rompe el panel).
+- [x] Filtrar el `passkey`: se elimina en `/data/report` justo tras resolver la
+      estación, así que ya no entra a memoria ni se filtra por `/api/current`,
+      `/api/stations`, etc. (arreglo en el origen).
+- [x] Rate-limit (5/min por IP) + logging de fallos y éxitos en `/api/admin/login`.
+- [~] `/data/report`: **rate-limit** (60/min por IP) + `client_max_body_size 32k`.
+      La activación por defecto de token/allowlist queda **diferida**: exige
+      configurar la consola física para enviar el `?token=` (acción del operador),
+      si no, cortaría la ingesta en vivo.
+- [x] Validar parámetros que entran a Flux (`station`, `measurement`, `start`,
+      `stop`) — en el chokepoint `_station_filter` + en los endpoints (400 limpio).
+- [x] Headers de seguridad en Caddy (HSTS, X-Content-Type-Options, Referrer-Policy;
+      `X-Frame-Options: DENY` **solo** en `/admin` y `/pro/admin` para no romper el
+      widget `/embed` ni el kiosko, que deben ser incrustables).
+- [x] `client_max_body_size 32k` en el `location /data/report` de nginx.
+- [x] **Extra:** CORS restringido a `clima.xe1e.net` (sin `allow_credentials`);
+      errores 500 genéricos (sin `str(e)`) en `/data/report` e history/stats.
 
 ### Tanda 3 — endurecimiento
 - [ ] Actualizar dependencias Python (`python-multipart>=0.0.18`, `fastapi>=0.115`, resto).

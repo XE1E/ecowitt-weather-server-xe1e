@@ -11,6 +11,21 @@
 clima.xe1e.net {
 	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
 	encode gzip
+
+	# Headers de seguridad (aplican al tráfico HTTPS de navegadores).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Anti-clickjacking SOLO en el panel admin (evita que se incruste en un
+	# iframe malicioso). No se aplica globalmente porque el widget /embed y el
+	# kiosko SÍ deben poder incrustarse en otros sitios.
+	@admin path /admin /admin/* /pro/admin /pro/admin/*
+	header @admin X-Frame-Options "DENY"
+
 	reverse_proxy dashboard:80
 }
 

@@ -38,6 +38,7 @@ from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import admin as adminsvc
 from .services import settings_store
+from .services import security as secsvc
 
 # Configure logging
 logging.basicConfig(
@@ -93,12 +94,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS middleware. La API se sirve mismo-origen (el dashboard hace de proxy de
+# /api), así que restringir orígenes no afecta al sitio ni al widget /embed
+# (que corre dentro de su iframe, mismo-origen). Sin credenciales: la auth admin
+# usa header Bearer, no cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=[
+        "https://clima.xe1e.net",
+        "http://localhost:5173",  # dev (Vite)
+        "http://localhost:8080",  # dev/local
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -120,6 +128,10 @@ alert_service = AlertService(settings)
 
 # MQTT publisher (with Home Assistant discovery)
 mqtt_publisher = MqttPublisher(settings)
+
+# Limitadores de tasa (en memoria, por IP): login y endpoint de ingesta.
+_login_limiter = secsvc.RateLimiter()
+_report_limiter = secsvc.RateLimiter()
 
 
 async def station_watchdog():
@@ -318,6 +330,12 @@ async def receive_ecowitt_data(request: Request):
             logger.warning("Push rechazado: token inválido desde %s", client_ip or "?")
             raise HTTPException(status_code=403, detail="Token inválido")
 
+    # Rate-limit por IP: defensa ante flood/DoS. Muy holgado (60/min) para no
+    # afectar al datalogger legítimo, que envía ~1-4 lecturas por minuto.
+    if not _report_limiter.allow(client_ip or "?", limit=60, window_s=60):
+        logger.warning("Push rechazado: rate-limit excedido desde %s", client_ip or "?")
+        raise HTTPException(status_code=429, detail="Demasiadas peticiones")
+
     try:
         # Parse form data
         form_data = await request.form()
@@ -332,6 +350,11 @@ async def receive_ecowitt_data(request: Request):
         # el aislamiento de alertas/publicación y la lectura previa para el
         # filtro de picos.
         station = resolve_station(parsed_data, settings.secondary_station_map)
+
+        # El passkey ya cumplió su función (resolver la estación). Se elimina para
+        # que NUNCA quede en la copia en memoria ni se filtre por /api/current,
+        # /api/stations, etc. (no se usa en el resto del pipeline).
+        parsed_data.pop("passkey", None)
 
         # Convert units if needed (sin derivados: se calculan tras calibración/QC)
         if settings.output_unit_system == "metric":
@@ -409,9 +432,12 @@ async def receive_ecowitt_data(request: Request):
 
         return {"status": "success", "message": "Data received"}
 
+    except HTTPException:
+        raise
     except Exception as e:
+        # No filtrar detalles internos al cliente (el detalle va solo al log).
         logger.error(f"Error processing data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")
 
 
 @app.get("/api/current")
@@ -458,13 +484,20 @@ async def get_history(
         station: None/omitido = principal; nombre = estación secundaria
     """
     try:
+        secsvc.validate_flux_time(start, "start")
+        secsvc.validate_flux_time(stop, "stop")
+        secsvc.validate_measurement(measurement)
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
         data = await storage.query(
             start=start, stop=stop, measurement=measurement, station=station
         )
         return {"data": data}
     except Exception as e:
         logger.error(f"Error querying history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")
 
 
 @app.get("/api/stats/daily")
@@ -476,21 +509,30 @@ async def get_daily_stats(station: Optional[str] = None, start: str = "-24h"):
     start: ventana Flux (p. ej. "-24h", "-7d", "-30d").
     """
     try:
+        secsvc.validate_flux_time(start, "start")
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
         stats = await storage.get_daily_stats(start=start, station=station)
         return stats
     except Exception as e:
         logger.error(f"Error getting daily stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")
 
 
 @app.get("/api/stats/records")
 async def get_records(start: str = "-30d"):
     """Statistics (min/max/avg) over a range (e.g. -7d, -30d, -365d, -3650d)."""
     try:
+        secsvc.validate_flux_time(start, "start")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
         return await storage.get_daily_stats(start=start)
     except Exception as e:
         logger.error(f"Error getting records: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")
 
 
 class LoginBody(BaseModel):
@@ -504,10 +546,17 @@ def _require_admin(authorization: Optional[str]) -> None:
 
 
 @app.post("/api/admin/login")
-async def admin_login(body: LoginBody):
+async def admin_login(body: LoginBody, request: Request):
+    ip = secsvc.client_ip(request)
+    # Anti-fuerza-bruta: máx. 5 intentos por IP por minuto.
+    if not _login_limiter.allow(ip or "?", limit=5, window_s=60):
+        logger.warning("Login admin bloqueado por rate-limit desde %s", ip or "?")
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera un momento.")
     token = adminsvc.login(settings, body.user, body.password)
     if not token:
+        logger.warning("Login admin FALLIDO (user=%r) desde %s", body.user, ip or "?")
         raise HTTPException(status_code=401, detail="Credenciales inválidas o panel deshabilitado")
+    logger.info("Login admin OK desde %s", ip or "?")
     return {"token": token}
 
 
@@ -1196,8 +1245,10 @@ async def get_station(name: str):
 
 
 @app.put("/api/stations/{name}")
-async def update_station(name: str, body: dict = Body(...)):
-    """Actualiza la configuración de una estación."""
+async def update_station(name: str, body: dict = Body(...),
+                        authorization: Optional[str] = Header(default=None)):
+    """Actualiza la configuración de una estación (requiere sesión admin)."""
+    _require_admin(authorization)
     if name == "_principal" or name == "principal":
         station_key = "_principal"
     else:
