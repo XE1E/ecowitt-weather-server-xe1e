@@ -167,11 +167,25 @@ fail2ban (jail de sshd); aplicar los parches de seguridad pendientes del SO.
 ## Plan de remediación (por tandas)
 
 ### Tanda 1 — hoy, sin tocar código (bloquea ~80 % del riesgo)
-- [ ] Restringir `:8080` por firewall (Oracle Security List + `ufw`) a la IP del datalogger.
-- [ ] `chmod 600 ~/ecowitt-weather-server-xe1e/.env`.
-- [ ] Instalar y activar **fail2ban** (jail sshd).
-- [ ] Aplicar los **12 parches de seguridad** del SO (`apt upgrade`).
-- [ ] Verificar que el password admin es fuerte y único.
+- [~] **Restringir `:8080` por firewall** — *decisión 2026-07-22: **diferido**.* Se
+      compensará en la Tanda 2 a nivel app (token secreto + allowlist + rate-limit)
+      por la IP residencial dinámica del datalogger. NB: `ufw` **no** filtra puertos
+      publicados por Docker; si se retoma, usar Oracle Security List o `DOCKER-USER`.
+- [x] `chmod 600 ~/ecowitt-weather-server-xe1e/.env` — hecho 2026-07-22 (era 0664).
+- [x] Instalar y activar **fail2ban** (jail sshd) — hecho 2026-07-22 (v0.11.2, activo;
+      ya baneó IPs de fuerza bruta SSH).
+- [x] Aplicar los **parches de seguridad** del SO — hecho 2026-07-22 vía
+      `unattended-upgrade`; reinicio realizado para activar el kernel nuevo
+      (6.8.0-1058-oracle). Docker/contenedores no afectados.
+- [ ] Verificar que el password admin es fuerte y único. *(A cargo del operador.)*
+
+> **Nota sobre `:8080` (decisión pendiente):** el datalogger WS2910 empuja desde
+> una IP residencial (`187.190.230.x`, probablemente **dinámica**). nginx sí ve la
+> IP real, así que un filtro por IP funcionaría, pero se rompería al cambiar la IP.
+> Opciones: (a) allowlist del bloque `/24` en la Oracle Security List (equilibrio);
+> (b) mover el push a HTTPS por `clima.xe1e.net` y **cerrar `:8080`** (lo más limpio,
+> requiere que la consola soporte HTTPS); (c) dejarlo y compensar con token+allowlist
+> a nivel app (Tanda 2). Elegir antes de tocar el firewall.
 
 ### Tanda 2 — código (una sesión) + deploy
 - [ ] `_require_admin` en `PUT /api/stations/{name}` (y evaluar el GET detallado).
