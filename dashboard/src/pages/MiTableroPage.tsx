@@ -29,6 +29,7 @@ import { EarthquakesCard } from '../components/station/EarthquakesCard'
 import { RadarCard } from '../components/station/RadarCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
+import { MetarCard } from '../components/station/MetarCard'
 import { PageInfo } from '../components/station/PageInfo'
 
 const STORAGE_KEY = 'mi_tablero_cards'
@@ -73,6 +74,7 @@ export function MiTableroPage() {
     { key: 'sunmoon', label: 'Sol y luna', span: 1, render: () => <SunMoonCard astro={forecast?.astro ?? null} /> },
     { key: 'air', label: 'Calidad del aire', span: 1, render: () => <AirQualityCard /> },
     { key: 'imeca', label: 'IMECA', span: 1, render: () => <ImecaMiniCard /> },
+    { key: 'metar', label: 'METAR (aeropuerto)', span: 1, render: () => <MetarCard /> },
     { key: 'quakes', label: 'Sismos', span: 1, render: () => <EarthquakesCard /> },
     { key: 'alerts', label: 'Alertas', span: 1, render: () => <AlertsPanel /> },
     { key: 'sky', label: 'Próximos eventos del cielo', span: 1, render: () => <SkyEventsCard /> },

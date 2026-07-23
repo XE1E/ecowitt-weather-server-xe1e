@@ -18,6 +18,7 @@ import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
+import { MetarCard } from '../components/station/MetarCard'
 import { EarthquakesCard } from '../components/station/EarthquakesCard'
 
 export function HomePage() {
@@ -67,6 +68,7 @@ export function HomePage() {
           <SunMoonCard astro={forecast?.astro ?? null} />
           <AirQualityCard />
           <ImecaMiniCard />
+          <MetarCard />
           <EarthquakesCard />
           <AlertsPanel />
           <SkyEventsCard />
