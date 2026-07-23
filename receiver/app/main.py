@@ -1445,13 +1445,24 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
 
 
 @app.get("/api/smn")
-async def get_smn_forecast():
-    """Pronóstico oficial del SMN (CONAGUA) para Benito Juárez, CDMX (4 días + 48 h)."""
+async def get_smn_forecast(ides: str = "9", idmun: str = "14", hourly: int = 1):
+    """Pronóstico oficial del SMN (CONAGUA) por municipio (por defecto Benito Juárez,
+    CDMX). `hourly=0` omite el horario (evita descargar el archivo grande)."""
     try:
-        return await smn.get_forecast()
+        return await smn.get_forecast(ides=ides, idmun=idmun, hourly=bool(hourly))
     except Exception as e:
         logger.error(f"Error SMN: {e}")
         raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico del SMN")
+
+
+@app.get("/api/smn/municipios")
+async def get_smn_municipios():
+    """Lista de municipios del SMN (para búsqueda/autocompletar)."""
+    try:
+        return {"municipios": await smn.municipios()}
+    except Exception as e:
+        logger.error(f"Error SMN municipios: {e}")
+        raise HTTPException(status_code=502, detail="No se pudo obtener la lista de municipios")
 
 
 @app.get("/api/wind/rose")

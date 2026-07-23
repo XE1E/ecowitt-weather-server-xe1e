@@ -16,6 +16,7 @@ import { WindFlipCard } from '../components/station/WindFlipCard'
 import { PressureCard } from '../components/station/PressureCard'
 import { LocalForecastCard } from '../components/station/LocalForecastCard'
 import { ForecastCard } from '../components/station/ForecastCard'
+import { ForecastCompareCard } from '../components/station/ForecastCompareCard'
 import { StationTempChart } from '../components/station/StationTempChart'
 import { PrecipitationCard } from '../components/station/PrecipitationCard'
 import { UvSolarCard } from '../components/station/UvSolarCard'
@@ -68,6 +69,7 @@ export function MiTableroPage() {
     { key: 'pressure', label: 'Presión', span: 1, render: () => <PressureCard data={data!} stats={stats} history={history} /> },
     { key: 'localforecast', label: 'Pronóstico local', span: 1, render: () => <LocalForecastCard lf={localForecast} /> },
     { key: 'forecast', label: 'Pronóstico', span: 1, render: () => <ForecastCard forecast={forecast} /> },
+    { key: 'forecastcmp', label: 'Pronóstico comparativa (OM vs SMN)', span: 1, render: () => <ForecastCompareCard forecast={forecast} /> },
     { key: 'tempchart', label: 'Gráfica de temperatura', span: 2, render: () => <StationTempChart history={history} forecast={forecast} /> },
     { key: 'precip', label: 'Precipitación', span: 1, render: () => <PrecipitationCard data={data!} forecast={forecast} /> },
     { key: 'uvsolar', label: 'UV y radiación solar', span: 1, render: () => <UvSolarCard data={data!} /> },

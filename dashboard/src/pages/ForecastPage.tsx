@@ -30,6 +30,7 @@ interface SmnHour {
   wind: number | null; wind_dir: string | null; gust: number | null
 }
 interface SmnData { source: string; municipio: string; fetched_at?: string; days: SmnDay[]; hours: SmnHour[] }
+interface Muni { ides: string; idmun: string; nmun: string; nes: string }
 
 // Descripción de cielo del SMN → ícono meteocons.
 function skyIcon(sky: string | null, night = false): string {
@@ -57,18 +58,32 @@ export function ForecastPage() {
   const [tab, setTab] = useState<'days' | 'hourly'>('days')
   const [smn, setSmn] = useState<SmnData | null>(null)
   const [smnErr, setSmnErr] = useState(false)
+  const [munis, setMunis] = useState<Muni[]>([])
+  const [sel, setSel] = useState<Muni>({ ides: '9', idmun: '14', nmun: 'Benito Juárez', nes: 'Ciudad de México' })
 
+  // Lista de municipios (una vez, al entrar a SMN) para el buscador.
+  useEffect(() => {
+    if (source !== 'smn' || munis.length) return
+    let cancel = false
+    fetch('/api/smn/municipios').then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (!cancel && j?.municipios) setMunis(j.municipios) })
+      .catch(() => {})
+    return () => { cancel = true }
+  }, [source, munis.length])
+
+  // Pronóstico del municipio seleccionado.
   useEffect(() => {
     if (source !== 'smn') return
     let cancel = false
-    const load = () => fetch('/api/smn')
+    setSmn(null); setSmnErr(false)
+    const load = () => fetch(`/api/smn?ides=${sel.ides}&idmun=${sel.idmun}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (!cancel) { if (j && j.days) { setSmn(j); setSmnErr(false) } else setSmnErr(true) } })
+      .then((j) => { if (!cancel) { if (j && j.days?.length) { setSmn(j); setSmnErr(false) } else setSmnErr(true) } })
       .catch(() => !cancel && setSmnErr(true))
     load()
     const i = setInterval(load, 1800000) // 30 min
     return () => { cancel = true; clearInterval(i) }
-  }, [source])
+  }, [source, sel])
 
   const T = (c: number) => Math.round(u.tempN(c))
   const btn = (a: boolean) =>
@@ -104,14 +119,50 @@ export function ForecastPage() {
           <OpenMeteoView forecast={forecast} tab={tab} u={u} T={T} />
         )
       ) : (
-        smnErr ? (
-          <div className="card text-slate-400">No se pudo obtener el pronóstico del SMN. Intenta más tarde.</div>
-        ) : !smn ? (
-          <div className="h-64 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
-        ) : (
-          <SmnView smn={smn} tab={tab} u={u} T={T} />
-        )
+        <div className="space-y-4">
+          <SmnSearch munis={munis} current={sel} onSelect={setSel} />
+          {smnErr ? (
+            <div className="card text-slate-400">No se pudo obtener el pronóstico del SMN para este municipio.</div>
+          ) : !smn ? (
+            <div className="h-64 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
+          ) : (
+            <SmnView smn={smn} tab={tab} u={u} T={T} />
+          )}
+        </div>
       )}
+    </div>
+  )
+}
+
+// Buscador de municipio (autocompletar nativo con datalist).
+function SmnSearch({ munis, current, onSelect }: { munis: Muni[]; current: Muni; onSelect: (m: Muni) => void }) {
+  const [q, setQ] = useState(`${current.nmun}, ${current.nes}`)
+  useEffect(() => { setQ(`${current.nmun}, ${current.nes}`) }, [current])
+  const pick = (val: string) => {
+    setQ(val)
+    const m = munis.find((x) => `${x.nmun}, ${x.nes}` === val)
+    if (m) onSelect(m)
+  }
+  const isHome = current.ides === '9' && current.idmun === '14'
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-sm text-slate-400 shrink-0">📍 Municipio</label>
+        <input list="smn-munis" value={q} onChange={(e) => pick(e.target.value)}
+          placeholder="Busca un municipio de México…"
+          className="flex-1 min-w-[200px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50" />
+        <datalist id="smn-munis">
+          {munis.map((m) => <option key={`${m.ides}:${m.idmun}`} value={`${m.nmun}, ${m.nes}`} />)}
+        </datalist>
+        {!isHome && (
+          <button onClick={() => onSelect({ ides: '9', idmun: '14', nmun: 'Benito Juárez', nes: 'Ciudad de México' })}
+            className="shrink-0 text-xs text-sky-400 hover:text-sky-300 whitespace-nowrap">★ Volver a Benito Juárez</button>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-500 mt-1">
+        Pronóstico oficial del SMN para cualquier municipio de México
+        {munis.length ? ` (${munis.length.toLocaleString('es-MX')} disponibles)` : ''}.
+      </p>
     </div>
   )
 }

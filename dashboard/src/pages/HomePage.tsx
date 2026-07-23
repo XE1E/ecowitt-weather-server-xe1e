@@ -6,6 +6,7 @@ import { WindFlipCard } from '../components/station/WindFlipCard'
 import { PressureCard } from '../components/station/PressureCard'
 import { LocalForecastCard } from '../components/station/LocalForecastCard'
 import { ForecastCard } from '../components/station/ForecastCard'
+import { ForecastCompareCard } from '../components/station/ForecastCompareCard'
 import { StationTempChart } from '../components/station/StationTempChart'
 import { PrecipitationCard } from '../components/station/PrecipitationCard'
 import { UvSolarCard } from '../components/station/UvSolarCard'
@@ -53,6 +54,7 @@ export function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="space-y-4">
           <ForecastCard forecast={forecast} />
+          <ForecastCompareCard forecast={forecast} />
           <WindFlipCard data={data} />
           <PressureCard data={data} stats={stats} history={history} />
           <LocalForecastCard lf={localForecast} />
