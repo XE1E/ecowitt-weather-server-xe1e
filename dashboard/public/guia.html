@@ -230,11 +230,11 @@
           <tr><td><strong>Consola WS2910</strong></td><td>Pantalla + puente Wi-Fi</td><td>Presión (barómetro), temp/humedad interior; <strong>envía todos los datos</strong> al servidor por Wi-Fi (protocolo Ecowitt)</td></tr>
           <tr><td><strong>WS69 (7-en-1)</strong></td><td>Sensor exterior integrado</td><td>Temp y humedad exterior, viento y dirección, ráfaga, lluvia (tasa/evento/día…), radiación solar e índice UV</td></tr>
           <tr><td><strong>WN31 (×8)</strong></td><td>Termohigrómetros de canal</td><td>Temperatura y humedad en hasta <strong>8 canales</strong> independientes</td></tr>
-          <tr><td><strong>GW1100</strong> <em>(remota, opcional)</em></td><td>Gateway Wi-Fi Ecowitt</td><td><strong>Estación secundaria</strong>: envía al mismo servidor; sus lecturas se guardan aparte y se ven en su propia página (solo lectura). No dispara alertas ni publica a redes</td></tr>
+          <tr><td><strong>GW1100</strong> <em>(remota, opcional)</em></td><td>Gateway Wi-Fi Ecowitt</td><td><strong>Estación secundaria</strong>: envía al mismo servidor; sus lecturas se guardan aparte y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede <strong>disparar alertas propias</strong> (y publicar/MQTT) activándolas por estación</td></tr>
         </tbody>
       </table></div>
       <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Señal RF:</strong> cada sensor inalámbrico reporta su nivel de señal (0-4, mayor = mejor), disponible en la API para diagnóstico. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
-      <div class="callout"><p>El hardware llega ~2026-07-17. Hasta entonces el sitio puede correr con un simulador; al instalar la estación se apaga el simulador, se limpian los datos falsos y se apunta la consola al servidor.</p></div>
+      <div class="callout"><p>La estación está <strong>instalada y enviando datos reales</strong> desde ~2026-07-19. El simulador que se usó durante el desarrollo ya está apagado y los datos falsos, limpiados.</p></div>
 
       <h3>Endpoint Ecowitt (configurar el datalogger)</h3>
       <p>La consola o gateway envía por <strong>HTTP POST</strong> (protocolo Ecowitt) al servidor. En <em>WS View Plus → Weather Services → Customized</em>:</p>
@@ -340,7 +340,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p><strong>METAR</strong> (observación) y <strong>TAF</strong> (pronóstico) decodificados al español, con la <strong>categoría de vuelo</strong> (VFR/MVFR/IFR/LIFR) y un <strong>perfil atmosférico visual</strong> (capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH; dibuja lluvia/rayos según el reporte). Con buscador de cualquier código ICAO y accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).</p>
 
       <h3>Estación remota</h3>
-      <p>Página <strong>solo lectura</strong> para una <strong>segunda estación</strong> (p. ej. un Ecowitt <strong>GW1100</strong>) que envía al mismo servidor. Sus datos se guardan <strong>separados</strong> de la principal, así que no la afectan; y esta estación <strong>no dispara alertas ni publica a redes</strong>. Muestra condiciones actuales (temperatura con <strong>tendencia</strong> a 3 h, humedad y <strong>punto de rocío</strong>), <strong>presión</strong> con su tendencia, <strong>estadística</strong> (mín/prom/máx con selector 24 h / 7 d / 30 d) e <strong>histórico</strong> (Temp y humedad / Presión). Hay un resumen compacto como tarjeta opcional en <strong>Mi tablero</strong>.</p>
+      <p>Página <strong>solo lectura</strong> para una <strong>segunda estación</strong> (p. ej. un Ecowitt <strong>GW1100</strong>) que envía al mismo servidor. Sus datos se guardan <strong>separados</strong> de la principal, así que no la afectan. Por defecto solo almacena datos, pero puede <strong>disparar alertas propias</strong> (con umbrales por estación) y publicar a redes si se activa desde el panel. Muestra condiciones actuales (temperatura con <strong>tendencia</strong> a 3 h, humedad y <strong>punto de rocío</strong>), <strong>presión</strong> con su tendencia, <strong>estadística</strong> (mín/prom/máx con selector 24 h / 7 d / 30 d) e <strong>histórico</strong> (Temp y humedad / Presión). Hay un resumen compacto como tarjeta opcional en <strong>Mi tablero</strong>.</p>
 
       <h3>Vista clásica · Widget · Instalar</h3>
       <p>La <strong>Vista clásica</strong> (<code>/</code>) es un tablero sencillo para consulta rápida, unificado con el estilo de <code>/pro</code>. En <strong>Widget</strong> (<code>/pro/compartir</code>) generas un <strong><code>&lt;iframe&gt;</code></strong> con las condiciones actuales para insertarlo en otra web (eliges unidades, tema y tamaño). Y el sitio es una <strong>PWA instalable</strong>: en el móvil, «Añadir a pantalla de inicio» lo deja como app (y abre directo la versión completa).</p>
@@ -409,7 +409,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     <section id="alertas">
       <span class="sec-eyebrow">08 — Alertas</span>
       <h2>Alertas y notificaciones</h2>
-      <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canales: <strong>Telegram</strong> y/o <strong>correo</strong>, con selección por canal de qué categorías recibe cada uno; si ninguno está configurado, quedan en el log. Los umbrales actuales aplican a la <strong>estación principal (WS69)</strong>; las alertas para la secundaria (GW1100) están en desarrollo.</p>
+      <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canales: <strong>Telegram</strong> y/o <strong>correo</strong>, con selección por canal de qué categorías recibe cada uno; si ninguno está configurado, quedan en el log. Los umbrales se configuran <strong>por estación</strong>: la principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in).</p>
       <div class="tablewrap"><table>
         <thead><tr><th>Alerta</th><th>Se dispara cuando…</th></tr></thead>
         <tbody>
@@ -500,12 +500,8 @@ git pull
 docker compose up -d --build      # --build al cambiar dependencias o imágenes
 docker compose ps                 # verificar estado</code></pre>
       <p>Los ajustes del panel viven en el volumen <code>receiver-data</code> (<code>/data/settings.json</code>), así que sobreviven a reinicios y reconstrucciones.</p>
-      <h3>Cuando llegue el WS2910</h3>
-      <ul>
-        <li>Apagar el simulador y limpiar los datos falsos de InfluxDB.</li>
-        <li>En la consola: <em>Weather Services → Customized → Ecowitt</em>, host <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>.</li>
-        <li>Verificar en <code>/api/current</code> y en la web que llegan lecturas reales.</li>
-      </ul>
+      <h3>Estación en operación</h3>
+      <p>El WS2910 está <strong>instalado y enviando datos reales</strong> desde ~2026-07-19; el simulador está apagado y los datos falsos, limpiados. La consola apunta a <code>clima.xe1e.net</code>, ruta <code>/data/report/</code> (<em>Weather Services → Customized → Ecowitt</em>), y las lecturas reales se ven en <code>/api/current</code> y en la web.</p>
     </section>
 
     <section id="glosario">
@@ -536,11 +532,10 @@ docker compose ps                 # verificar estado</code></pre>
     <section id="estado">
       <span class="sec-eyebrow">14 — Estado</span>
       <h2>Estado y pendientes</h2>
-      <p><span class="pill">Hecho</span> Despliegue con HTTPS; <strong>Vista clásica</strong> + <code>/pro</code> con todas sus secciones (Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Climatología, Radar y satélite, Astronomía, Calidad del aire, Aeronáutica y Widget); <strong>tema claro/oscuro</strong>, unidades y FX; <strong>PWA instalable</strong> y <strong>widget insertable</strong>. Alertas completas —incluida calidad del aire (AQI/IMECA)—, Telegram y MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas, pronóstico local y publicación a 5 redes. Histórico Día/Mes/Año, récords ampliados con top-5, «en este día», reporte NOAA, climograma, grados-día + ET, rosa de vientos, almanaque; <strong>IMECA</strong> estimado; <strong>satélite NASA GIBS</strong>; <strong>METAR/TAF</strong> con perfil atmosférico; sismos; backups a R2 y monitor de uptime externo. <strong>Multi-estación</strong>: soporte de una estación remota secundaria (aislada por tag, con su propia página solo-lectura y tarjeta opcional en Mi tablero).</p>
-      <p><span class="pill warn">Pendiente</span> versión en inglés (i18n); acciones del usuario (bot de Telegram, token WAQI, credenciales de redes); y poblar el histórico real cuando llegue el WS2910.</p>
+      <p><span class="pill warn">Pendiente</span> versión en inglés (i18n) y acciones del usuario (bot de Telegram, credenciales de redes).</p>
     </section>
 
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-17 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-22 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
   </main>
 </div>
 

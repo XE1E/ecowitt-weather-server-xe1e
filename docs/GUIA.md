@@ -69,7 +69,7 @@ Kit **Ecowitt WS2910** + sensor **WS69** + termohigrómetros **WN31**.
 | **Consola WS2910** | Pantalla + puente Wi-Fi | Presión (barómetro interno), temp/humedad interior; **envía todos los datos** al servidor por Wi-Fi (protocolo Ecowitt) |
 | **WS69 (7-en-1)** | Sensor exterior integrado | Temperatura y humedad exterior, velocidad y dirección del viento, ráfaga, lluvia (tasa/evento/día/…), radiación solar e índice UV |
 | **WN31 (×8)** | Termohigrómetros de canal | Temperatura y humedad en hasta **8 canales** independientes (habitaciones, exterior secundario, etc.) |
-| **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). No dispara alertas ni publica a redes |
+| **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede **disparar alertas propias** (y publicar/MQTT) activándolas **por estación** (ver §6) |
 
 **Baterías:** la WS69, la consola y cada canal WN31 reportan estado de batería
 (OK / baja). El sistema **avisa** cuando alguna está baja (ver §7).
@@ -83,9 +83,9 @@ interferencias.
 protocolo **Ecowitt**, apuntando a `clima.xe1e.net` (o la IP/host del servidor),
 ruta `/data/report/`. Envía una lectura cada ~16–60 s.
 
-> **Nota:** el hardware llega ~2026-07-17. Hasta entonces el sitio puede correr
-> con un simulador de datos; al instalar la estación se apaga el simulador, se
-> limpian los datos falsos y se apunta la consola al servidor.
+> **Nota:** la estación está **instalada y enviando datos reales** desde
+> ~2026-07-19. El simulador que se usó durante el desarrollo ya está apagado y
+> los datos falsos, limpiados.
 
 ---
 
@@ -262,8 +262,10 @@ accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (N
 ### 5.11 Estación remota
 Página **solo lectura** para una **segunda estación** (p. ej. un Ecowitt
 **GW1100**) que envía al mismo servidor. Sus datos se guardan **separados** de la
-principal (etiqueta interna por estación), así que **no la afectan**; y esta
-estación **no dispara alertas ni publica a redes públicas**. Muestra:
+principal (etiqueta interna por estación), así que **no la afectan**. Por
+defecto solo almacena datos, pero puede **disparar alertas propias** (con
+umbrales por estación) y publicar a redes si se activa desde el panel (ver §6).
+Muestra:
 - **Condiciones actuales:** temperatura (con **tendencia** a 3 h), humedad y **punto de rocío**.
 - **Presión** con su tendencia.
 - **Estadística** (mín/prom/máx) de temperatura, humedad y presión, con selector **24 h / 7 d / 30 d**.
@@ -317,7 +319,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
 | **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara») |
-| **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). Indica estado de **Telegram** y **Correo**. Los umbrales aplican a la **estación principal (WS69)** (GW1100 en desarrollo) |
+| **Alertas** | Toggle global y por tipo. Umbrales: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja. Activar batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). Indica estado de **Telegram** y **Correo**. Los umbrales se configuran **por estación**: la principal (WS69) y cada secundaria con su propio selector |
 | **Calibración** | Toggle global. Offsets: temp (°C), humedad (%), presión (hPa). Multiplicadores: viento y lluvia (factor) |
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
@@ -337,8 +339,8 @@ Si `ADMIN_USER`/`ADMIN_PASSWORD` están vacíos, el panel queda **deshabilitado*
 Se evalúan en cada lectura y avisan **una vez al activarse** y otra **al
 normalizarse** (no spamean). Canales: **Telegram** y/o **correo (SMTP)**, con
 **selección por canal** de qué categorías recibe cada uno; si ninguno está
-configurado, van al log. Los umbrales aplican a la **estación principal (WS69)**;
-las alertas para la secundaria (GW1100) están en desarrollo.
+configurado, van al log. Los umbrales se configuran **por estación**: la
+principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in).
 
 | Alerta | Se dispara cuando… |
 |--------|--------------------|
@@ -457,12 +459,10 @@ disponibilidad (ver `uptime-worker/`).
 **Persistencia:** los ajustes del panel viven en el volumen `receiver-data`
 (`/data/settings.json`), así que sobreviven a reinicios y reconstrucciones.
 
-**Cuando llegue el WS2910 (~2026-07-17):**
-1. Apagar el simulador de datos.
-2. Limpiar los datos falsos de InfluxDB.
-3. En la consola: *Weather Services → Customized → Ecowitt*, host
-   `clima.xe1e.net`, ruta `/data/report/`.
-4. Verificar en `/api/current` y en la web que llegan lecturas reales.
+**Estación en operación:** el WS2910 está **instalado y enviando datos reales**
+desde ~2026-07-19; el simulador está apagado y los datos falsos, limpiados. La
+consola apunta a `clima.xe1e.net`, ruta `/data/report/` (*Weather Services →
+Customized → Ecowitt*), y las lecturas reales se ven en `/api/current` y en la web.
 
 ---
 
@@ -495,26 +495,11 @@ disponibilidad (ver `uptime-worker/`).
 
 ## 13. Estado y pendientes
 
-**Hecho:** despliegue con HTTPS; **Vista clásica** + `/pro` con todas sus
-secciones (Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Climatología,
-Radar y satélite, Astronomía, Calidad del aire, Aeronáutica y Widget);
-**tema claro/oscuro**, unidades y FX; **PWA instalable** y **widget insertable**
-(`/embed`). Alertas completas —incluida calidad del aire (AQI/IMECA)—, Telegram y
-MQTT/HA; control de calidad (rangos + picos), calibración, variables derivadas,
-pronóstico local y publicación a 5 redes. Histórico Día/Mes/Año, récords
-ampliados con **top-5**, **"en este día"**, reporte NOAA, **climograma**,
-**grados-día + ET**, **rosa de vientos** y almanaque; **IMECA** estimado;
-**satélite NASA GIBS**; **METAR/TAF** con perfil atmosférico; sismos; backups a
-R2 y monitor de uptime externo. **Multi-estación**: soporte de una **estación
-remota** secundaria (aislada por tag, con su propia página solo-lectura y tarjeta
-opcional en Mi tablero).
-
-**Pendiente:** versión en inglés (i18n); acciones del usuario (crear bot de
-Telegram, token WAQI, credenciales de las redes públicas); y poblar el histórico
-real cuando llegue el **WS2910**.
+**Pendiente:** versión en inglés (i18n) y acciones del usuario (crear bot de
+Telegram, credenciales de las redes públicas).
 
 > Notas de estudio y planeación (exploratorias) quedan archivadas en `docs/archivo/`.
 
 ---
 
-*Última actualización: 2026-07-17.*
+*Última actualización: 2026-07-22.*
