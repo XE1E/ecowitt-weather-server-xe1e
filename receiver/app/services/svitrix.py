@@ -70,6 +70,8 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
     gust = _num(d.get("wind_gust"))
     uv = _num(d.get("uv_index"))
     solar = _num(d.get("solar_radiation"))
+    rain_today = _num(d.get("rain_daily"))
+    rain_rate = _num(d.get("rain_rate"))
 
     us_aqi = _num((aq or {}).get("aqi"))
     poll: Dict[str, float] = {}
@@ -91,6 +93,11 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
         "gust_kph": round(gust, 1) if gust is not None else None,
         "uv": round(uv, 1) if uv is not None else None,
         "solar_radiation": round(solar) if solar is not None else None,  # W/m² (extra)
+        # Precipitación: precip_mm/in = acumulado de HOY (estándar WeatherAPI);
+        # rain_rate_mm = intensidad actual (mm/h, extra).
+        "precip_mm": round(rain_today, 1) if rain_today is not None else None,
+        "precip_in": round(rain_today / 25.4, 2) if rain_today is not None else None,
+        "rain_rate_mm": round(rain_rate, 1) if rain_rate is not None else None,
         "condition": _condition(d),
         "air_quality": {
             "us-epa-index": _epa_index(us_aqi),
