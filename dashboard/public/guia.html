@@ -310,19 +310,19 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p><strong>Barra superior:</strong> título y ubicación, reloj en vivo, botón de <strong>unidades</strong> (métrico ↔ imperial), botón de <strong>tema</strong> (☀️/🌙), botón <strong>FX</strong> (efectos de clima animados), enlace a la Vista clásica y el <strong>cintillo</strong> de secciones. Tema y unidades se recuerdan entre visitas.</p>
 
       <h3>Inicio</h3>
-      <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. de lluvia, humedad, «vs ayer»); <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes, con humedad/UV/presión en cajas); <strong>viento</strong> (tarjeta que <strong>gira</strong> a la rosa de vientos al pulsar); <strong>presión</strong> (mín/máx/tendencia y gráfica de 24 h con hora); <strong>pronóstico local</strong> (por tendencia del barómetro); pronóstico Open-Meteo; gráfica de temperatura; precipitación; UV/solar; sol y luna; <strong>calidad del aire (AQI) e IMECA</strong>; último sismo; alertas; próximos eventos; e <strong>interior</strong> y <strong>sensores adicionales WN31</strong>. Abajo, el radar.</p>
+      <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. de lluvia, humedad, «vs ayer»); <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes, con humedad/UV/presión en cajas); <strong>viento</strong> (brújula-instrumento con aguja de compás coloreada por intensidad; <strong>gira</strong> a la rosa de vientos al pulsar); <strong>presión</strong> (mín/máx/tendencia y gráfica de 24 h con hora); <strong>pronóstico local</strong> (por tendencia del barómetro); pronóstico Open-Meteo y <strong>comparativa de hoy (Open-Meteo vs SMN oficial)</strong>; gráfica de temperatura; precipitación (con aviso «sin lluvia prevista»); UV y radiación solar; sol y luna; <strong>METAR</strong> del aeropuerto (categoría de vuelo, temp, viento, visibilidad, presión, cielo); <strong>calidad del aire (AQI) e IMECA</strong>; último sismo; alertas; próximos eventos; e <strong>interior</strong> y <strong>sensores adicionales WN31</strong>. Abajo, el radar.</p>
 
       <h3>Mi tablero</h3>
       <p>Una vista <strong>personalizable</strong>: con el botón «Personalizar» eliges qué tarjetas mostrar u ocultar (las mismas del Inicio) y, con ese modo activo, puedes <strong>arrastrarlas para reordenarlas</strong> a tu gusto (con soporte táctil). Tanto la selección como el orden se guardan <strong>en tu dispositivo</strong>. La tarjeta de condiciones actuales queda fija arriba. Entre las disponibles está la de la <strong>Estación remota</strong> (resumen compacto de la segunda estación).</p>
 
       <h3>Pronóstico</h3>
-      <p>Pronóstico de Open-Meteo (modelo <code>best_match</code>) en pestañas <strong>por día</strong> y <strong>por hora</strong>, con tarjeta resumen del día y <strong>descripciones en lenguaje natural</strong> (NLG), más la explicación de qué son los modelos y por qué el pronóstico es probabilidad, no certeza.</p>
+      <p>Con <strong>selector de fuente</strong> (solo se ve una a la vez): <strong>Open-Meteo</strong> (modelo global <code>best_match</code>, pestañas por día/por hora con <strong>descripciones en lenguaje natural</strong> y explicación de los modelos) y <strong>SMN oficial</strong> (Servicio Meteorológico Nacional · CONAGUA): pronóstico oficial por municipio (4 días + 48 h) para Benito Juárez, con <strong>buscador de municipios</strong> para ver cualquier municipio de México (~2,460). En el Inicio hay además una <strong>mini-comparativa de hoy</strong> (Open-Meteo vs SMN).</p>
 
       <h3>Historia</h3>
-      <p>El archivo de la estación con <strong>granularidad Día / Mes / Año</strong> y cinco grupos de <strong>gráficas interactivas</strong> (temperatura; viento con dirección; humedad y punto de rocío; radiación UV/solar; y precipitación y presión), tabla de días/meses clicable, detalle diario y <strong>exportación a CSV</strong>.</p>
+      <p>El archivo de la estación con <strong>granularidad Día / Mes / Año</strong> y cinco grupos de <strong>gráficas interactivas</strong> (temperatura; viento con dirección; humedad y punto de rocío; radiación UV/solar; y <strong>precipitación y presión</strong>, que incluye la <strong>tasa máxima de lluvia</strong>). <strong>Tabla diaria/mensual</strong> (día/mes en insignia + nombre, máx/mín/prom/precipitación/viento), clicable al detalle diario, y <strong>exportación a CSV</strong>.</p>
 
       <h3>Estadísticas</h3>
-      <p>Con selector de año: <strong>resumen del año</strong>, <strong>promedios mensuales</strong>, <strong>contadores de días</strong> (cálidos, noches frescas, con/sin lluvia), <strong>grados-día y evapotranspiración</strong>, <strong>récords históricos</strong> en pestañas por categoría (cada uno con su <strong>top 5</strong> y fecha), estadísticas por periodo y una <strong>rosa de vientos</strong>.</p>
+      <p>Con selector de año: <strong>resumen del año</strong>, <strong>promedios mensuales</strong>, <strong>contadores de días</strong> (cálidos, noches frescas, con/sin lluvia), <strong>grados-día y evapotranspiración</strong>, <strong>récords históricos</strong> en pestañas por categoría (cada uno con su <strong>top 5</strong> y fecha), estadísticas por periodo y una <strong>rosa de vientos apilada por bandas de velocidad</strong> (16 sectores; cada pétalo divide la frecuencia por dirección en bandas de color por velocidad, con leyenda y detalle al pasar el cursor).</p>
 
       <h3>Climatología</h3>
       <p><strong>Climatología Local</strong> a partir del resumen diario: tarjetas de ayer / mes / año (temperatura, humedad, viento, lluvia, grados-día y ET), un <strong>climograma</strong> (lluvia + temperatura por mes), <strong>récords por mes</strong>, el <strong>reporte estilo NOAA</strong> (diario/mensual/anual, base 18.3 °C) y <strong>«en este día»</strong> (años previos).</p>
@@ -449,6 +449,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
         <tbody>
           <tr><td>Estación Ecowitt (push)</td><td>todo el dato local (real)</td><td>~16–60 s</td></tr>
           <tr><td>Open-Meteo</td><td>pronóstico y astronomía base</td><td>30 min</td></tr>
+          <tr><td>SMN / CONAGUA</td><td>pronóstico oficial por municipio (4 días + 48 h), cualquier municipio de México</td><td>30 min</td></tr>
           <tr><td>Ventusky</td><td>radar y mapas interactivos</td><td>en vivo</td></tr>
           <tr><td>NASA GIBS</td><td>imagen satelital de color real</td><td>diaria</td></tr>
           <tr><td>aviationweather.gov (NOAA)</td><td>METAR y TAF (aeropuertos)</td><td>10 min</td></tr>
@@ -473,6 +474,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td><code>GET /api/stats/records?start=-30d</code></td><td>mín/máx/prom del rango</td></tr>
           <tr><td><code>GET /api/compare</code></td><td>24 h vs 24 h previas</td></tr>
           <tr><td><code>GET /api/forecast/local</code></td><td>pronóstico por tendencia barométrica</td></tr>
+          <tr><td><code>GET /api/smn</code> · <code>/api/smn/municipios</code></td><td>pronóstico oficial SMN por municipio (4 días + 48 h) y lista de municipios</td></tr>
           <tr><td><code>GET /api/climate/daily</code></td><td>resúmenes diarios</td></tr>
           <tr><td><code>GET /api/climate/records</code></td><td>récords (siempre, por mes, este mes/año, ayer)</td></tr>
           <tr><td><code>GET /api/climate/onthisday</code></td><td>efeméride: mismo día en años previos</td></tr>
@@ -535,7 +537,7 @@ docker compose ps                 # verificar estado</code></pre>
       <p><span class="pill warn">Pendiente</span> versión en inglés (i18n) y acciones del usuario (bot de Telegram, credenciales de redes).</p>
     </section>
 
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-22 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-23 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
   </main>
 </div>
 

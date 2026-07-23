@@ -210,12 +210,17 @@ Panel principal con el estado actual:
 - **Condiciones actuales:** temperatura grande + ícono + descripción; sensación,
   punto de rocío, bulbo húmedo, **humidex** y **base de nubes**; y humedad, UV y
   presión (en cajas).
-- **Viento:** la tarjeta **gira** (flip) a la **rosa de vientos** al pulsar
-  "Rosa de vientos".
+- **Viento:** **brújula-instrumento** (aguja de compás que apunta al origen del
+  viento, coloreada por intensidad Beaufort, con anillo graduado y velocidad al
+  centro); **gira** (flip) a la **rosa de vientos** al pulsar "Rosa de vientos".
 - **Presión:** valor, mín/máx del día, **tendencia** y gráfica de 24 h con la hora.
 - **Pronóstico local:** texto propio según la **tendencia del barómetro**.
-- **Pronóstico (Open-Meteo)**, **gráfica de temperatura**, **precipitación**,
-  **UV/solar** y **Sol y Luna**.
+- **Pronóstico (Open-Meteo)** y **comparativa de hoy** (Open-Meteo vs **SMN
+  oficial**); **gráfica de temperatura**, **precipitación** (con aviso "sin lluvia
+  prevista" cuando no se espera), **UV y radiación solar** (coloreadas por nivel)
+  y **Sol y Luna**.
+- **METAR** del aeropuerto: **categoría de vuelo** (VFR/MVFR/IFR/LIFR) explicada,
+  temperatura, viento, visibilidad, presión (QNH) y cielo por capas.
 - **Calidad del aire (AQI)** e **IMECA**; **último sismo**; **alertas**;
   **próximos eventos** (fases lunares).
 - **Interior** (temp/humedad) y **sensores adicionales WN31** (por canal, con
@@ -230,23 +235,33 @@ fija arriba. Entre las tarjetas disponibles está la de la **Estación remota**
 (resumen compacto de la segunda estación; ver §5.11).
 
 ### 5.3 Pronóstico
-Pronóstico de **Open-Meteo** (modelo `best_match`) en pestañas **por día** y
-**por hora**, con tarjeta resumen del día y **descripciones en lenguaje natural**
-(NLG), más la explicación de qué son los modelos y por qué es probabilidad, no
-certeza.
+Con **selector de fuente** (solo se ve una a la vez, sin saturar):
+- **Open-Meteo** (modelo global `best_match`): pestañas **por día** y **por hora**,
+  tarjeta resumen y **descripciones en lenguaje natural** (NLG), con la explicación
+  de qué son los modelos y por qué es probabilidad, no certeza.
+- **SMN oficial** (Servicio Meteorológico Nacional · CONAGUA): el pronóstico
+  **oficial por municipio** (4 días + 48 h) para Benito Juárez, y un **buscador de
+  municipios** (autocompletar) para ver el de **cualquier municipio de México**
+  (~2,460). Se actualiza cada hora.
+
+En el Inicio hay además una **mini-comparativa de hoy** (Open-Meteo vs SMN).
 
 ### 5.4 Historia
 El **archivo de la estación** con granularidad **Día / Mes / Año** y cinco grupos
 de **gráficas interactivas** (temperatura; viento con dirección; humedad y punto
-de rocío; radiación UV/solar; precipitación y presión). Tabla de días/meses
-clicable, detalle diario y **exportación a CSV**.
+de rocío; radiación UV/solar; y **precipitación y presión**, que incluye la
+**tasa máxima de lluvia**). **Tabla diaria/mensual** con día/mes en insignia y su
+nombre, y columnas máx/mín/prom/precipitación/viento; clicable para abrir el
+**detalle diario**; **exportación a CSV**.
 
 ### 5.5 Estadísticas
 Con **selector de año**: **resumen del año**, **promedios mensuales**,
 **contadores de días** (cálidos, noches frescas, con/sin lluvia), **grados-día**
 y **evapotranspiración**, **récords históricos** en pestañas por categoría (cada
 uno con su **top 5** y fecha), estadísticas por periodo y una **rosa de vientos**
-(16 sectores).
+(16 sectores, **apilada por bandas de velocidad**: cada pétalo muestra la
+frecuencia por dirección dividida en bandas de color de menor a mayor velocidad,
+con leyenda y detalle al pasar el cursor).
 
 ### 5.6 Climatología
 **Climatología Local** sobre el resumen diario:
@@ -421,6 +436,7 @@ sugerido por cada red aunque la estación reporte cada minuto.
 |--------|-----------|--------------------|
 | **Estación Ecowitt** (push) | todo el dato local (real) | ~16–60 s |
 | **Open-Meteo** | pronóstico horario/diario y astronomía base | 30 min |
+| **SMN / CONAGUA** | pronóstico **oficial por municipio** (4 días + 48 h), cualquier municipio de México | 30 min (SMN publica c/hora) |
 | **Ventusky** | radar y mapas interactivos | en vivo (iframe) |
 | **NASA GIBS** | imagen satelital de color real | diaria |
 | **aviationweather.gov** (NOAA) | METAR y TAF (aeropuertos) | 10 min |
@@ -444,6 +460,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/stats/records?start=-30d` | mín/máx/prom del rango |
 | `GET /api/compare` | 24 h vs 24 h previas ("vs ayer") |
 | `GET /api/forecast/local` | pronóstico por tendencia barométrica |
+| `GET /api/smn` · `GET /api/smn/municipios` | pronóstico oficial SMN por municipio (4 días + 48 h) y lista de municipios |
 | `GET /api/climate/daily` | resúmenes diarios |
 | `GET /api/climate/records` | récords (siempre, por mes, este mes/año, ayer) |
 | `GET /api/climate/onthisday` | efeméride: mismo día en años previos |
@@ -532,4 +549,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-07-22.*
+*Última actualización: 2026-07-23.*

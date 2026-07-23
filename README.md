@@ -14,11 +14,11 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 
 | Página | Qué muestra |
 |--------|-------------|
-| **Inicio** | Condiciones actuales, viento (con brújula que gira a la rosa de vientos), presión con tendencia, pronóstico, precipitación, UV/solar, sol y luna, calidad del aire, IMECA, sismos, interior y sensores adicionales |
+| **Inicio** | Condiciones actuales, viento (brújula-instrumento que gira a la rosa de vientos), presión con tendencia, pronóstico y **comparativa Open-Meteo vs SMN**, precipitación, UV/radiación solar, sol y luna, **METAR** del aeropuerto, calidad del aire, IMECA, sismos, interior y sensores adicionales |
 | **Mi tablero** | Tablero personalizable: elige qué tarjetas ver y **arrástralas para reordenarlas** a tu gusto (se guarda por dispositivo) |
-| **Pronóstico** | Por día y por hora, con descripciones en lenguaje natural (Open-Meteo) |
-| **Historia** | Archivo de la estación con granularidad Día/Mes/Año y gráficas interactivas |
-| **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, rosa de vientos |
+| **Pronóstico** | Por día y por hora, con **selector de fuente**: **Open-Meteo** (descripciones en lenguaje natural) y **SMN oficial** (CONAGUA) con **buscador de cualquier municipio de México** |
+| **Historia** | Archivo de la estación con granularidad Día/Mes/Año, tabla diaria y gráficas interactivas (incl. tasa de lluvia) |
+| **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, **rosa de vientos apilada por bandas de velocidad** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día" |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
@@ -76,7 +76,7 @@ WS69 (exterior)   WN31 (interior)
 
 ## Fuentes de datos externas
 
-Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local).
+Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **SMN / CONAGUA** (pronóstico oficial por municipio, cualquier municipio de México), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local).
 
 ---
 
@@ -139,6 +139,7 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/history` · `/api/stats/daily` | Histórico y estadísticas del día |
 | GET | `/api/climate/*` | Resúmenes diarios, récords y reporte NOAA |
 | GET | `/api/forecast` · `/api/almanac` | Pronóstico y almanaque |
+| GET | `/api/smn` · `/api/smn/municipios` | Pronóstico oficial SMN por municipio (4 días + 48 h) |
 | GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
 | GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
 | GET | `/health` | Estado del servicio |
