@@ -146,6 +146,9 @@ class Settings(BaseSettings):
     # Panel de administración (si faltan credenciales, el panel queda deshabilitado)
     admin_user: Optional[str] = None
     admin_password: Optional[str] = None
+    # Alternativa recomendada a admin_password en claro: hash PBKDF2 generado con
+    # admin.hash_password(). Si está definido, tiene prioridad sobre admin_password.
+    admin_password_hash: Optional[str] = None
     settings_file: str = "/data/settings.json"
 
     # Server

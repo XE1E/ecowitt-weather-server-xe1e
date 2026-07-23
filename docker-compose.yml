@@ -56,8 +56,10 @@ services:
       - influxdb-config:/etc/influxdb2
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      # Solo se aplican en la PRIMERA inicialización (volumen vacío). Configúralos
+      # en .env; el fallback conserva el comportamiento previo si no se define.
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_INIT_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_INIT_PASSWORD:-adminpassword}
       - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-weather}
       - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-ecowitt}
       - DOCKER_INFLUXDB_INIT_RETENTION=${DATA_RETENTION_DAYS:-90}d
@@ -76,8 +78,8 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - influxdb

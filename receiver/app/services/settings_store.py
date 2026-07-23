@@ -11,6 +11,18 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
+def _write_json_secure(path: str, data: Dict[str, Any]) -> None:
+    """Escribe JSON y restringe permisos a 600 (el archivo guarda secretos:
+    tokens de Telegram/SMTP/WAQI, claves de redes, etc.)."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    try:
+        os.chmod(path, 0o600)
+    except OSError as e:  # p. ej. sistemas de archivos sin soporte de permisos
+        logger.warning("No se pudo aplicar chmod 600 a %s: %s", path, e)
+
 # Solo estas claves se pueden editar/persistir desde el panel
 EDITABLE_KEYS = {
     "alerts_enabled",
@@ -118,9 +130,7 @@ def save_overrides(path: str, overrides: Dict[str, Any]) -> None:
     clean = {k: v for k, v in overrides.items() if k in EDITABLE_KEYS}
     data = load_all_settings(path)
     data.update(clean)
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    _write_json_secure(path, data)
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +149,8 @@ def load_all_settings(path: str) -> Dict[str, Any]:
 
 
 def save_all_settings(path: str, data: Dict[str, Any]) -> None:
-    """Guarda todo el archivo de settings."""
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    """Guarda todo el archivo de settings (permisos 600)."""
+    _write_json_secure(path, data)
 
 
 def get_stations_config(path: str) -> Dict[str, Dict[str, Any]]:

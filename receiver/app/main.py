@@ -560,6 +560,13 @@ async def admin_login(body: LoginBody, request: Request):
     return {"token": token}
 
 
+@app.post("/api/admin/logout")
+async def admin_logout(authorization: Optional[str] = Header(default=None)):
+    """Revoca el token de sesión en el servidor (no solo en el cliente)."""
+    adminsvc.logout(adminsvc.bearer_token(authorization))
+    return {"status": "ok"}
+
+
 @app.get("/api/admin/settings")
 async def admin_get_settings(authorization: Optional[str] = Header(default=None)):
     _require_admin(authorization)
@@ -574,6 +581,22 @@ async def admin_save_settings(body: dict, authorization: Optional[str] = Header(
     for tk in settings_store.SECRET_KEYS:
         if tk in incoming and (incoming[tk] is None or incoming[tk] == ""):
             incoming.pop(tk)
+    # Validar/coaccionar tipos según el modelo Settings (evita corromper la
+    # config con tipos inválidos, p. ej. un puerto o un umbral no numérico).
+    for k in list(incoming.keys()):
+        v = incoming[k]
+        if v is None:
+            continue
+        cur = getattr(settings, k, None)
+        try:
+            if isinstance(cur, bool):
+                incoming[k] = v if isinstance(v, bool) else str(v).strip().lower() in ("1", "true", "yes", "on")
+            elif isinstance(cur, int) and not isinstance(cur, bool):
+                incoming[k] = int(float(v))
+            elif isinstance(cur, float):
+                incoming[k] = float(v)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=422, detail=f"Valor inválido para '{k}'")
     current = settings_store.load_overrides(settings.settings_file)
     current.update(incoming)
     settings_store.save_overrides(settings.settings_file, current)

@@ -207,18 +207,23 @@ fail2ban (jail de sshd); aplicar los parches de seguridad pendientes del SO.
 - [x] **Extra:** CORS restringido a `clima.xe1e.net` (sin `allow_credentials`);
       errores 500 genéricos (sin `str(e)`) en `/data/report` e history/stats.
 
-### Tanda 3 — endurecimiento
-- [ ] Actualizar dependencias Python (`python-multipart>=0.0.18`, `fastapi>=0.115`, resto).
-- [ ] `os.chmod(path, 0o600)` al escribir `settings.json`.
-- [ ] Hash del password admin (argon2id/bcrypt) → `ADMIN_PASSWORD_HASH`.
-- [ ] CORS restringido a `https://clima.xe1e.net`, sin `allow_credentials`.
-- [ ] Reducir precisión de coordenadas públicas a 2–3 decimales; coordenada exacta
-      solo en `.env` (no en `config.py`/`config.ts`/`.env.example`).
-- [ ] Mover InfluxDB `admin/adminpassword` y Grafana `admin/admin` a variables de `.env`.
-- [ ] Errores 500: mensaje genérico al cliente, `str(e)` solo al log.
-- [ ] `POST /api/admin/logout` que revoque el token server-side.
-- [ ] Validación Pydantic del body de `POST /settings`.
-- [ ] Deshabilitar rpcbind (`:111`) si no se usa.
+### Tanda 3 — endurecimiento — hecho 2026-07-22
+- [x] Actualizar dependencias Python: `fastapi 0.115.6`, `python-multipart 0.0.18`
+      (cierra CVE-2024-47874 / 24762 / 53981), + uvicorn/pydantic/httpx al día.
+      `paho-mqtt` se mantiene en 1.6.1 (la 2.x rompe la API de callbacks).
+- [x] `os.chmod(0o600)` al escribir `settings.json` (helper `_write_json_secure`).
+- [x] Hash del password admin (PBKDF2-SHA256, stdlib) → `ADMIN_PASSWORD_HASH`
+      (opt-in, con fallback a `ADMIN_PASSWORD`; generador en `admin.hash_password`).
+- [x] CORS restringido a `clima.xe1e.net` sin `allow_credentials` (ya en Tanda 2).
+- [~] Coordenadas públicas: *decisión 2026-07-22: **dejarlas exactas*** (ya visibles
+      en WU/CWOP; sin cambio).
+- [x] InfluxDB y Grafana: credenciales parametrizadas a variables de `.env`
+      (con fallback; nota: las de InfluxDB solo aplican al inicializar el volumen).
+- [~] Errores 500 genéricos: hecho en `/data/report`, `/api/history`, `/api/stats/*`;
+      resto de endpoints aún con `str(e)` (bajo riesgo, pendiente de barrido).
+- [x] `POST /api/admin/logout` que revoca el token server-side (+ el frontend lo llama).
+- [x] Validación/coerción de tipos del body de `POST /settings` (422 si es inválido).
+- [x] Deshabilitar rpcbind (`:111`).
 
 ---
 

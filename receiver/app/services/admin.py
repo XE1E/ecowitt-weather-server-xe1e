@@ -2,6 +2,7 @@
 Autenticación (usuario/contraseña -> token de sesión) y aplicación de ajustes
 para el panel de administración.
 """
+import hashlib
 import hmac
 import secrets
 import time
@@ -12,10 +13,50 @@ logger = logging.getLogger(__name__)
 
 _SESSIONS: Dict[str, float] = {}  # token -> expiry epoch
 SESSION_TTL = 12 * 3600  # 12 h
+_PBKDF2_ITERATIONS = 200_000
+
+
+def hash_password(plain: str, iterations: int = _PBKDF2_ITERATIONS) -> str:
+    """Genera un hash PBKDF2-SHA256 para guardar en ADMIN_PASSWORD_HASH.
+
+    Uso (en el VPS):
+        docker compose exec receiver \\
+          python -c "from app.services.admin import hash_password; print(hash_password('MI_PASSWORD'))"
+    Luego pon el resultado en .env como ADMIN_PASSWORD_HASH y quita ADMIN_PASSWORD.
+    """
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", plain.encode("utf-8"), salt, iterations)
+    return f"pbkdf2_sha256${iterations}${salt.hex()}${dk.hex()}"
+
+
+def _verify_pbkdf2(plain: str, stored: str) -> bool:
+    try:
+        algo, iters, salt_hex, hash_hex = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", plain.encode("utf-8"), bytes.fromhex(salt_hex), int(iters)
+        )
+        return hmac.compare_digest(dk.hex(), hash_hex)
+    except Exception:
+        return False
+
+
+def _verify_password(settings, plain: str) -> bool:
+    """Verifica la contraseña contra el hash (preferido) o el texto plano (compat)."""
+    h = getattr(settings, "admin_password_hash", None)
+    if h:
+        return _verify_pbkdf2(str(plain), str(h))
+    pw = getattr(settings, "admin_password", None)
+    if not pw:
+        return False
+    return hmac.compare_digest(str(plain), str(pw))
 
 
 def admin_enabled(settings) -> bool:
-    return bool(getattr(settings, "admin_user", None)) and bool(getattr(settings, "admin_password", None))
+    has_secret = bool(getattr(settings, "admin_password", None)) or \
+        bool(getattr(settings, "admin_password_hash", None))
+    return bool(getattr(settings, "admin_user", None)) and has_secret
 
 
 def login(settings, user: str, password: str) -> Optional[str]:
@@ -23,12 +64,18 @@ def login(settings, user: str, password: str) -> Optional[str]:
     if not admin_enabled(settings):
         return None
     ok_user = hmac.compare_digest(str(user), str(settings.admin_user))
-    ok_pass = hmac.compare_digest(str(password), str(settings.admin_password))
+    ok_pass = _verify_password(settings, password)
     if ok_user and ok_pass:
         token = secrets.token_urlsafe(32)
         _SESSIONS[token] = time.time() + SESSION_TTL
         return token
     return None
+
+
+def logout(token: Optional[str]) -> None:
+    """Revoca (invalida) un token de sesión en el servidor."""
+    if token:
+        _SESSIONS.pop(token, None)
 
 
 def valid_session(token: Optional[str]) -> bool:

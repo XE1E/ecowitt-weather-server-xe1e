@@ -41,6 +41,14 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    const tk = token
+    if (tk) {
+      // Revocar el token en el servidor (fire-and-forget); no bloquea el logout local.
+      fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` },
+      }).catch(() => {})
+    }
     sessionStorage.removeItem('admin_token')
     setToken(null)
   }
