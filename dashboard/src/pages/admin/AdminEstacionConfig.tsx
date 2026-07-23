@@ -23,6 +23,7 @@ interface StationConfig {
   alerts_enabled: boolean
   publish_enabled: boolean
   mqtt_enabled: boolean
+  treat_indoor_as_outdoor?: boolean
 }
 
 interface StationData {
@@ -50,6 +51,7 @@ export function AdminEstacionConfig() {
   const [alertsEnabled, setAlertsEnabled] = useState(false)
   const [publishEnabled, setPublishEnabled] = useState(false)
   const [mqttEnabled, setMqttEnabled] = useState(false)
+  const [treatOutdoor, setTreatOutdoor] = useState(false)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export function AdminEstacionConfig() {
         setAlertsEnabled(data.config?.alerts_enabled ?? false)
         setPublishEnabled(data.config?.publish_enabled ?? false)
         setMqttEnabled(data.config?.mqtt_enabled ?? false)
+        setTreatOutdoor(data.config?.treat_indoor_as_outdoor ?? false)
         setSensorLabels(data.sensor_labels || {})
       })
       .finally(() => setLoading(false))
@@ -85,6 +88,7 @@ export function AdminEstacionConfig() {
             alerts_enabled: alertsEnabled,
             publish_enabled: publishEnabled,
             mqtt_enabled: mqttEnabled,
+            treat_indoor_as_outdoor: treatOutdoor,
           },
           sensor_labels: sensorLabels,
         }),
@@ -216,6 +220,27 @@ export function AdminEstacionConfig() {
             : 'Por defecto las estaciones secundarias solo almacenan datos. Activa estos servicios para incluirla.'}
         </p>
       </div>
+
+      {/* Sensor integrado a la intemperie (solo secundarias) */}
+      {!isPrincipal && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <h2 className="font-medium mb-3">Sensor integrado</h2>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={treatOutdoor}
+              onChange={e => setTreatOutdoor(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
+            />
+            <span className="text-sm">🌡️ Está a la intemperie (tratar como exterior)</span>
+          </label>
+          <p className="text-xs text-slate-500 mt-2">
+            El sensor integrado (temp/humedad) reporta como «interior». Si el gateway está
+            afuera, actívalo para que su lectura se trate como <span className="text-slate-400">exterior</span> en
+            toda la app (página remota, calibración, estadísticas y publicación). La presión no cambia.
+          </p>
+        </div>
+      )}
 
       {/* Sensores WN31 */}
       {wn31Sensors.length > 0 && (

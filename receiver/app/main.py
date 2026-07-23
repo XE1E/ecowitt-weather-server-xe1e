@@ -360,16 +360,27 @@ async def receive_ecowitt_data(request: Request):
         if settings.output_unit_system == "metric":
             parsed_data = convert_to_metric(parsed_data, compute_derived=False)
 
+        # Config de la estación secundaria (se lee una vez y se reutiliza).
+        station_cfg = (settings_store.get_station_config(settings.settings_file, station)
+                       if station is not None else {})
+
+        # Secundaria "a la intemperie" (p. ej. un GW1100 con su sensor integrado
+        # puesto afuera): reporta como INTERIOR, pero físicamente es EXTERIOR. Se
+        # promueve interior→exterior para que TODO (calibración exterior, derivados,
+        # almacenamiento, publicación a redes y la web) lo trate como exterior.
+        if station is not None and station_cfg.get("treat_indoor_as_outdoor"):
+            for src, dst in (("temperature_indoor", "temperature_outdoor"),
+                             ("humidity_indoor", "humidity_outdoor")):
+                if parsed_data.get(src) is not None:
+                    parsed_data[dst] = parsed_data.pop(src)
+
         # Pipeline estilo WeeWX: calibrar -> QC rangos -> QC picos -> derivar.
         # El filtro de picos compara contra la lectura PREVIA de ESA estación
         # (no una global) para no generar falsos picos al mezclar estaciones.
         prev = latest_by_station.get(station)
         # Calibración: la principal usa la global; las secundarias usan la SUYA
         # (independiente, no hereda la de la principal).
-        station_cal = None
-        if station is not None:
-            station_cal = settings_store.get_station_config(
-                settings.settings_file, station).get("calibration") or {}
+        station_cal = (station_cfg.get("calibration") or {}) if station is not None else None
         parsed_data = apply_calibration(parsed_data, settings, station_cal)
         parsed_data, _ = quality_check(parsed_data, settings)
         parsed_data, _ = spike_check(parsed_data, prev, settings)

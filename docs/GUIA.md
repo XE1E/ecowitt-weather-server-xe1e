@@ -87,6 +87,33 @@ ruta `/data/report/`. Envía una lectura cada ~16–60 s.
 > ~2026-07-19. El simulador que se usó durante el desarrollo ya está apagado y
 > los datos falsos, limpiados.
 
+### Endpoint Ecowitt (configurar el datalogger)
+
+El datalogger (consola WS2910 o gateway GW1100) envía por **HTTP POST**
+(protocolo Ecowitt). En la app **WS View Plus** → *Weather Services → Customized*:
+
+| Campo | Valor |
+|-------|-------|
+| Protocol Type | **Ecowitt** |
+| Server IP / Hostname | `163.192.147.208` (o `clima.xe1e.net`) |
+| Port | `8080` |
+| Path | `/data/report/` |
+| Upload Interval | `60` s |
+
+URL completa: `http://163.192.147.208:8080/data/report/` (o
+`https://clima.xe1e.net/data/report/` por dominio). Las unidades de entrada son
+imperiales (°F, mph, inHg); el servidor las convierte a métrico.
+
+**Seguridad opcional** (Admin → Integraciones → 🔒 Seguridad del endpoint,
+desactivada por defecto): **token secreto** (`/data/report/?token=…`, responde
+403 si no coincide) y **allowlist de IP** (solo útil con IP pública fija).
+
+**Principal vs. secundarias:** cada dispositivo manda un `PASSKEY`; la principal
+es cualquier PASSKEY no mapeado, y las secundarias (p. ej. GW1100) se registran
+mapeando su PASSKEY a un nombre en Admin → Estaciones. Detalle completo, payload
+de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
+**[setup-gateway.md](setup-gateway.md)**.
+
 ---
 
 ## 3. Arquitectura y flujo de datos

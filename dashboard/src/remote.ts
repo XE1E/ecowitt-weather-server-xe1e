@@ -7,6 +7,10 @@ export interface RemoteHistRow {
   _time: string
   temperature_indoor?: number
   humidity_indoor?: number
+  // Si la secundaria está "a la intemperie" (treat_indoor_as_outdoor), su lectura
+  // llega como exterior. Se prefiere exterior y, si no hay, se cae a interior.
+  temperature_outdoor?: number
+  humidity_outdoor?: number
   pressure_relative?: number
 }
 

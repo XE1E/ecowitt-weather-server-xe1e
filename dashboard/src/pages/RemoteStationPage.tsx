@@ -105,23 +105,28 @@ export function RemoteStationPage() {
     ? { day: '2-digit', month: '2-digit', hour: '2-digit' }
     : { hour: '2-digit', minute: '2-digit' })
   const chart: ChartPoint[] = history
-    .map((r) => ({
-      t: new Date(r._time).getTime(),
-      temp: r.temperature_indoor != null ? Number(u.tempN(r.temperature_indoor).toFixed(1)) : null,
-      humidity: r.humidity_indoor ?? null,
-      pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
-    }))
+    .map((r) => {
+      const rt = r.temperature_outdoor ?? r.temperature_indoor
+      const rh = r.humidity_outdoor ?? r.humidity_indoor
+      return {
+        t: new Date(r._time).getTime(),
+        temp: rt != null ? Number(u.tempN(rt).toFixed(1)) : null,
+        humidity: rh ?? null,
+        pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
+      }
+    })
     .sort((a, b) => a.t - b.t)
 
   const offline = data?.received_at ? isStale(data.received_at) : false
   const s = stats ?? {}
 
-  const t = data?.temperature_indoor
-  const h = data?.humidity_indoor
+  const t = data?.temperature_outdoor ?? data?.temperature_indoor
+  const h = data?.humidity_outdoor ?? data?.humidity_indoor
   const dew = dewPointC(t, h)
 
   // Tendencias (últimas ~3 h) en unidades métricas -> se convierten para mostrar.
-  const tempTrendC = trendOver(history, 'temperature_indoor', 3)
+  // Prefiere exterior; cae a interior si la estación no está "a la intemperie".
+  const tempTrendC = trendOver(history, 'temperature_outdoor', 3) ?? trendOver(history, 'temperature_indoor', 3)
   const pressTrend = trendOver(history, 'pressure_relative', 3)
   const tempDelta = tempTrendC == null ? null : tempDeltaDisp(u.system, tempTrendC)
   const pressDelta = pressTrend == null ? null : pressDeltaDisp(u.system, pressTrend)
@@ -229,16 +234,16 @@ export function RemoteStationPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <StatTile
                 label="Temperatura"
-                min={s.temperature_indoor?.min ?? null}
-                avg={s.temperature_indoor?.avg ?? null}
-                max={s.temperature_indoor?.max ?? null}
+                min={(s.temperature_outdoor ?? s.temperature_indoor)?.min ?? null}
+                avg={(s.temperature_outdoor ?? s.temperature_indoor)?.avg ?? null}
+                max={(s.temperature_outdoor ?? s.temperature_indoor)?.max ?? null}
                 unit={u.tempU}
               />
               <StatTile
                 label="Humedad"
-                min={s.humidity_indoor?.min ?? null}
-                avg={s.humidity_indoor?.avg ?? null}
-                max={s.humidity_indoor?.max ?? null}
+                min={(s.humidity_outdoor ?? s.humidity_indoor)?.min ?? null}
+                avg={(s.humidity_outdoor ?? s.humidity_indoor)?.avg ?? null}
+                max={(s.humidity_outdoor ?? s.humidity_indoor)?.max ?? null}
                 unit="%"
               />
               <StatTile

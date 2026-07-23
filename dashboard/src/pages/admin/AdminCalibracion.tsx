@@ -72,6 +72,7 @@ export function AdminCalibracion() {
   const [chLabels, setChLabels] = useState<Record<number, string>>({})
   const [secondaries, setSecondaries] = useState<StationOpt[]>([])
   const [selected, setSelected] = useState<string | null>(null)  // null = principal (global)
+  const [treatOutdoor, setTreatOutdoor] = useState(false)  // secundaria a la intemperie
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
@@ -82,9 +83,12 @@ export function AdminCalibracion() {
       const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
       setSettings(s)
     } else {
-      const partial = await fetchWithAuth(`/api/admin/stations/${sel}/calibration`)
-        .then((r) => (r.ok ? r.json() : {}))
-        .catch(() => ({}))
+      const [partial, station] = await Promise.all([
+        fetchWithAuth(`/api/admin/stations/${sel}/calibration`)
+          .then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+        fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ])
+      setTreatOutdoor(station?.config?.treat_indoor_as_outdoor ?? false)
       setSettings({ ...emptyCal(), ...partial })
     }
   }
@@ -158,10 +162,13 @@ export function AdminCalibracion() {
 
   const on = settings.cal_enabled
   const isPrincipal = selected === null
-  const fixedRows = isPrincipal ? FIXED_ROWS : [
-    { label: 'Exterior', t: 'cal_temp_outdoor' as keyof CalSettings, h: 'cal_hum_outdoor' as keyof CalSettings },
-    { label: 'Interior', t: 'cal_temp_indoor' as keyof CalSettings, h: 'cal_hum_indoor' as keyof CalSettings },
-  ]
+  // Secundaria (GW1100): un solo sensor integrado. Si está a la intemperie se
+  // calibra como exterior (cal_*_outdoor); si no, como interior (cal_*_indoor).
+  const fixedRows = isPrincipal ? FIXED_ROWS : (
+    treatOutdoor
+      ? [{ label: 'Exterior (sensor integrado)', t: 'cal_temp_outdoor' as keyof CalSettings, h: 'cal_hum_outdoor' as keyof CalSettings }]
+      : [{ label: 'Interior (sensor integrado)', t: 'cal_temp_indoor' as keyof CalSettings, h: 'cal_hum_indoor' as keyof CalSettings }]
+  )
 
   return (
     <div className="space-y-4">
@@ -214,45 +221,53 @@ export function AdminCalibracion() {
               disabled={!on}
             />
           ))}
-          <div className="col-span-3 mt-2 pt-2 border-t border-white/10 text-xs font-medium text-slate-400">
-            Sensor WN31 — 8 canales
-          </div>
-          {CH_ROWS.map((row) => (
-            <RowFields
-              key={row.t}
-              label={chLabels[row.channel] ? `Canal ${row.channel} (${chLabels[row.channel]})` : `Canal ${row.channel}`}
-              tVal={settings[row.t] as number}
-              hVal={settings[row.h] as number}
-              onT={(v) => update(row.t, v)}
-              onH={(v) => update(row.h, v)}
-              disabled={!on}
-            />
-          ))}
+          {isPrincipal && (
+            <>
+              <div className="col-span-3 mt-2 pt-2 border-t border-white/10 text-xs font-medium text-slate-400">
+                Sensor WN31 — 8 canales
+              </div>
+              {CH_ROWS.map((row) => (
+                <RowFields
+                  key={row.t}
+                  label={chLabels[row.channel] ? `Canal ${row.channel} (${chLabels[row.channel]})` : `Canal ${row.channel}`}
+                  tVal={settings[row.t] as number}
+                  hVal={settings[row.h] as number}
+                  onT={(v) => update(row.t, v)}
+                  onH={(v) => update(row.h, v)}
+                  disabled={!on}
+                />
+              ))}
+            </>
+          )}
         </div>
       </div>
 
-      {/* Presion (WS2910) y viento/lluvia/solar (WS69) */}
+      {/* Presion (todas) y viento/lluvia/solar (solo principal · WS69) */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-        <h2 className="text-sm font-medium mb-3">Presion, viento, lluvia y solar</h2>
+        <h2 className="text-sm font-medium mb-3">{isPrincipal ? 'Presion, viento, lluvia y solar' : 'Presion'}</h2>
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-          <Item label="📊 Presion" src="WS2910" hint="hPa">
+          <Item label="📊 Presion" src={isPrincipal ? 'WS2910' : 'integrado'} hint="hPa">
             <NumField value={settings.cal_pressure_offset} onChange={(v) => update('cal_pressure_offset', v)} min={-50} max={50} step={0.1} disabled={!on} />
           </Item>
-          <Item label="💨 Viento (factor)" src="WS69" hint="×">
-            <NumField value={settings.cal_wind_mult} onChange={(v) => update('cal_wind_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
-          </Item>
-          <Item label="🧭 Direccion viento" src="WS69" hint="°">
-            <NumField value={settings.cal_wind_dir_offset} onChange={(v) => update('cal_wind_dir_offset', v)} min={-180} max={180} step={1} disabled={!on} />
-          </Item>
-          <Item label="🌧️ Lluvia (factor)" src="WS69" hint="×">
-            <NumField value={settings.cal_rain_mult} onChange={(v) => update('cal_rain_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
-          </Item>
-          <Item label="☀️ Solar (factor)" src="WS69" hint="×">
-            <NumField value={settings.cal_solar_mult} onChange={(v) => update('cal_solar_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
-          </Item>
-          <Item label="🔆 UV (offset)" src="WS69" hint="idx">
-            <NumField value={settings.cal_uv_offset} onChange={(v) => update('cal_uv_offset', v)} min={-5} max={5} step={1} disabled={!on} />
-          </Item>
+          {isPrincipal && (
+            <>
+              <Item label="💨 Viento (factor)" src="WS69" hint="×">
+                <NumField value={settings.cal_wind_mult} onChange={(v) => update('cal_wind_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
+              </Item>
+              <Item label="🧭 Direccion viento" src="WS69" hint="°">
+                <NumField value={settings.cal_wind_dir_offset} onChange={(v) => update('cal_wind_dir_offset', v)} min={-180} max={180} step={1} disabled={!on} />
+              </Item>
+              <Item label="🌧️ Lluvia (factor)" src="WS69" hint="×">
+                <NumField value={settings.cal_rain_mult} onChange={(v) => update('cal_rain_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
+              </Item>
+              <Item label="☀️ Solar (factor)" src="WS69" hint="×">
+                <NumField value={settings.cal_solar_mult} onChange={(v) => update('cal_solar_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
+              </Item>
+              <Item label="🔆 UV (offset)" src="WS69" hint="idx">
+                <NumField value={settings.cal_uv_offset} onChange={(v) => update('cal_uv_offset', v)} min={-5} max={5} step={1} disabled={!on} />
+              </Item>
+            </>
+          )}
         </div>
       </div>
 

@@ -62,6 +62,7 @@ export function AdminAlertas() {
   const [globalCache, setGlobalCache] = useState<AlertSettings | null>(null)
   const [secondaries, setSecondaries] = useState<StationOpt[]>([])
   const [selected, setSelected] = useState<string | null>(null)  // null = principal
+  const [offlineMin, setOfflineMin] = useState(15)  // watchdog de la secundaria
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
@@ -87,12 +88,16 @@ export function AdminAlertas() {
         const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
         setSettings(s); setGlobalCache(s)
       } else {
-        const ov = await fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
-          .then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+        const [ov, station] = await Promise.all([
+          fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
+            .then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+          fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ])
         // Sembrar con los umbrales globales y sobreponer los propios de la estación.
         const base: Record<string, number> = {}
         for (const k of THRESHOLD_KEYS) base[k] = (globalCache as unknown as Record<string, number>)?.[k] ?? 0
         setSettings({ ...base, ...ov } as AlertSettings)
+        setOfflineMin(station?.config?.watchdog_minutes ?? 15)
       }
     } finally { setLoading(false) }
   }
@@ -117,6 +122,15 @@ export function AdminAlertas() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(th),
         })
+        // Guardar también el "offline después de" (watchdog) de la estación.
+        // El backend fusiona, así que no pisa calibración ni umbrales.
+        if (res.ok) {
+          await fetchWithAuth(`/api/stations/${selected}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: { watchdog_minutes: offlineMin } }),
+          })
+        }
       }
       if (res.ok) {
         setMessage({ type: 'ok', text: 'Guardado' })
@@ -187,7 +201,7 @@ export function AdminAlertas() {
         </>
       ) : (
         <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido, offline y aire usan la configuración global.
+          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido y aire usan la configuración global.
         </div>
       )}
 
@@ -206,30 +220,33 @@ export function AdminAlertas() {
             </div>
           </div>
 
-          {/* Viento */}
-          <div>
-            <p className="text-sm font-medium mb-1">💨 Viento</p>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-400">Vel</span>
-              <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} />
-              <span className="text-slate-400">Raf</span>
-              <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} />
-              <span className="text-xs text-slate-500">km/h</span>
+          {/* Viento y Lluvia solo aplican a la principal (WS69). El GW1100 no los tiene. */}
+          {isPrincipal && (
+            <div>
+              <p className="text-sm font-medium mb-1">💨 Viento</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">Vel</span>
+                <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} />
+                <span className="text-slate-400">Raf</span>
+                <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} />
+                <span className="text-xs text-slate-500">km/h</span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Lluvia */}
-          <div>
-            <p className="text-sm font-medium mb-1">🌧️ Lluvia</p>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-400">Int</span>
-              <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} />
-              <span className="text-xs text-slate-500">mm/h</span>
-              <span className="text-slate-400">Dia</span>
-              <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} />
-              <span className="text-xs text-slate-500">mm</span>
+          {isPrincipal && (
+            <div>
+              <p className="text-sm font-medium mb-1">🌧️ Lluvia</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">Int</span>
+                <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} />
+                <span className="text-xs text-slate-500">mm/h</span>
+                <span className="text-slate-400">Dia</span>
+                <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} />
+                <span className="text-xs text-slate-500">mm</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Presion */}
           <div>
@@ -244,6 +261,16 @@ export function AdminAlertas() {
           </div>
         </div>
       </div>
+
+      {!isPrincipal && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-slate-400">📡 Offline despues de</span>
+            <NumField value={offlineMin} onChange={setOfflineMin} min={1} max={120} />
+            <span className="text-xs text-slate-500">min sin datos (watchdog de esta estación)</span>
+          </div>
+        </div>
+      )}
 
       {isPrincipal && (
         <>

@@ -60,11 +60,12 @@ export function RemoteStationCard() {
     )
   }
 
-  const t = data.temperature_indoor
-  const h = data.humidity_indoor
+  // Prefiere exterior (secundaria "a la intemperie"); cae a interior si no.
+  const t = data.temperature_outdoor ?? data.temperature_indoor
+  const h = data.humidity_outdoor ?? data.humidity_indoor
   const dew = dewPointC(t, h)
   const offline = data.received_at ? isStale(data.received_at) : false
-  const tTrend = trendOver(history, 'temperature_indoor', 3)
+  const tTrend = trendOver(history, 'temperature_outdoor', 3) ?? trendOver(history, 'temperature_indoor', 3)
   const pTrend = trendOver(history, 'pressure_relative', 3)
   const tDelta = tTrend == null ? null : tempDeltaDisp(u.system, tTrend)
   const pDelta = pTrend == null ? null : pressDeltaDisp(u.system, pTrend)

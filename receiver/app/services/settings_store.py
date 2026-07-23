@@ -103,6 +103,9 @@ DEFAULT_STATION_CONFIG = {
     "alerts_enabled": False,
     "publish_enabled": False,
     "mqtt_enabled": False,
+    # Secundaria con el sensor integrado a la intemperie: trata su lectura
+    # "interior" (tempinf/humidityin) como EXTERIOR en todo el sistema.
+    "treat_indoor_as_outdoor": False,
     # Calibración propia de la estación (secundarias). Dict de claves cal_*
     # (mismo formato que las globales). Vacío = sin calibración para esa estación.
     "calibration": {},
@@ -167,14 +170,19 @@ def get_station_config(path: str, name: str) -> Dict[str, Any]:
 
 
 def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
-    """Guarda la configuración de una estación."""
+    """Guarda la configuración de una estación FUSIONANDO con la existente.
+
+    Solo se actualizan las claves de DEFAULT_STATION_CONFIG que vengan en `config`;
+    el resto (p. ej. calibration, alert_thresholds, sensor_labels, o campos no
+    enviados en esta llamada) se CONSERVA. Antes se reemplazaba el objeto entero,
+    lo que borraba calibración/umbrales al guardar la config general.
+    """
     data = load_all_settings(path)
     if "stations" not in data:
         data["stations"] = {}
-    data["stations"][name] = {
-        k: v for k, v in config.items()
-        if k in DEFAULT_STATION_CONFIG
-    }
+    existing = data["stations"].get(name, {})
+    incoming = {k: v for k, v in config.items() if k in DEFAULT_STATION_CONFIG}
+    data["stations"][name] = {**existing, **incoming}
     save_all_settings(path, data)
 
 
