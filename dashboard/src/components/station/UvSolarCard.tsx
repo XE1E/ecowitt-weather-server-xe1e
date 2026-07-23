@@ -25,6 +25,16 @@ function uvIconName(uv: number): string {
   return `uv-index-${Math.max(1, Math.round(uv))}`
 }
 
+// Color del número de radiación solar por intensidad (W/m²). Umbrales indicativos
+// (noche→pico de sol). Da consistencia visual con el UV, sin escala oficial.
+function solarColor(w: number): string {
+  if (w >= 800) return 'text-red-400'
+  if (w >= 550) return 'text-orange-400'
+  if (w >= 250) return 'text-amber-300'
+  if (w >= 50) return 'text-yellow-300'
+  return 'text-slate-400'
+}
+
 export function UvSolarCard({ data }: { data: WeatherData }) {
   const uv = data.uv_index ?? 0
   return (
@@ -46,7 +56,7 @@ export function UvSolarCard({ data }: { data: WeatherData }) {
           <div className="flex items-center gap-3">
             <WeatherIcon name="clear-day" size={40} className="shrink-0" />
             <div>
-              <p className="text-2xl font-bold text-amber-300">{(data.solar_radiation ?? 0).toFixed(0)}</p>
+              <p className={`text-2xl font-bold ${solarColor(data.solar_radiation ?? 0)}`}>{(data.solar_radiation ?? 0).toFixed(0)}</p>
               <p className="text-xs text-slate-400">W/m²</p>
             </div>
           </div>
