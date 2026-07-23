@@ -21,16 +21,16 @@ const COVER: Record<string, string> = {
   FEW: 'Escasas', SCT: 'Dispersas', BKN: 'Fragmentadas', OVC: 'Cubierto',
   CLR: 'Despejado', SKC: 'Despejado', NSC: 'Sin nubes signif.', NCD: 'Sin nubes', VV: 'Cielo oscurecido',
 }
-const CAT: Record<string, { color: string; desc: string }> = {
-  VFR: { color: '#34d399', desc: 'Buen tiempo para volar' },
-  MVFR: { color: '#38bdf8', desc: 'Tiempo marginal' },
-  IFR: { color: '#fb923c', desc: 'Requiere instrumentos' },
-  LIFR: { color: '#f87171', desc: 'Muy malo (instrumentos)' },
+const CAT: Record<string, { color: string; short: string; long: string }> = {
+  VFR: { color: '#34d399', short: 'Buen tiempo para volar',
+    long: 'Cielo despejado y buena visibilidad; se vuela a la vista.' },
+  MVFR: { color: '#38bdf8', short: 'Tiempo marginal',
+    long: 'Techo de nubes o visibilidad algo reducidos.' },
+  IFR: { color: '#fb923c', short: 'Requiere instrumentos',
+    long: 'Techo bajo o poca visibilidad; se vuela por instrumentos.' },
+  LIFR: { color: '#f87171', short: 'Muy malo',
+    long: 'Techo y visibilidad muy bajos; solo por instrumentos.' },
 }
-// Explicación (tooltip) de la categoría de vuelo, en lenguaje llano.
-const CAT_HELP = 'Categoría de vuelo: qué tan bueno está el cielo según el techo de '
-  + 'nubes y la visibilidad. VFR = despejado, se vuela a la vista; MVFR/IFR/LIFR = '
-  + 'cada vez peor, hasta tener que volar solo por instrumentos.'
 
 function obsTime(observed?: string | null): string | null {
   if (!observed) return null
@@ -135,12 +135,13 @@ export function MetarCard() {
       {header}
 
       {cat && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold cursor-help"
-          title={CAT_HELP}
-          style={{ color: cat.color, backgroundColor: `${cat.color}1f`, borderColor: `${cat.color}55` }}>
-          <span>{m.flight_category}</span>
-          <span className="font-normal opacity-80">· {cat.desc}</span>
-          <span className="ml-auto text-xs font-normal opacity-60">ⓘ</span>
+        <div className="mt-3 rounded-lg border px-3 py-2"
+          style={{ backgroundColor: `${cat.color}1f`, borderColor: `${cat.color}55` }}>
+          <div className="flex items-baseline gap-2">
+            <span className="text-base font-bold" style={{ color: cat.color }}>{m.flight_category}</span>
+            <span className="text-sm font-semibold" style={{ color: cat.color }}>{cat.short}</span>
+          </div>
+          <p className="text-xs text-slate-300 mt-0.5 leading-snug">{cat.long}</p>
         </div>
       )}
 
