@@ -9,6 +9,13 @@
   --muted: #8496a6;
   --ink: #e8edf5;
   --surface: #0f1a2a;
+  /* Rosa de vientos: rampa secuencial azul por banda de velocidad (baja→alta).
+     Validada (dataviz) para superficie oscura. */
+  --wind-b1: #cde2fb;
+  --wind-b2: #9ec5f4;
+  --wind-b3: #5598e7;
+  --wind-b4: #2a78d6;
+  --wind-b5: #184f95;
 }
 
 body {
@@ -43,6 +50,12 @@ body {
   --muted: #55677a;
   --ink: #16232f;
   --surface: #ffffff;
+  /* Rosa de vientos: rampa validada para superficie clara (más oscura). */
+  --wind-b1: #86b6ef;
+  --wind-b2: #5598e7;
+  --wind-b3: #2a78d6;
+  --wind-b4: #1c5cab;
+  --wind-b5: #0d366b;
 }
 :root[data-theme="light"] body {
   color: #1e2a37;
