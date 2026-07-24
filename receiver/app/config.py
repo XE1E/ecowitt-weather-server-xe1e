@@ -110,6 +110,11 @@ class Settings(BaseSettings):
     cal_rain_mult: float = 1.0
     cal_solar_mult: float = 1.0        # ganancia radiación solar
     cal_uv_offset: float = 0.0         # offset índice UV
+    # Altitud de la estación PRINCIPAL (m). Si >0, el servidor CALCULA la presión
+    # relativa (nivel del mar) desde la absoluta con la fórmula barométrica ISA,
+    # ignorando la relativa que manda la consola (útil cuando la consola no tiene
+    # ajuste de altitud, p. ej. WS2910). 0 = usar la relativa de la consola.
+    station_altitude_m: float = 0.0
 
     # Publicación a redes públicas (uploaders tipo WeeWX)
     # *_interval: minutos mínimos entre envíos a esa red (0 = cada ingesta).

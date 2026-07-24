@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device, resolve_station
-from .services.converter import convert_to_metric, calculate_derived_values
+from .services.converter import convert_to_metric, calculate_derived_values, sea_level_pressure
 from .services.calibration import apply_calibration
 from .services.quality import quality_check, spike_check
 from .services.storage import InfluxDBStorage
@@ -384,6 +384,17 @@ async def receive_ecowitt_data(request: Request):
         # (independiente, no hereda la de la principal).
         station_cal = (station_cfg.get("calibration") or {}) if station is not None else None
         parsed_data = apply_calibration(parsed_data, settings, station_cal)
+
+        # Presión relativa (nivel del mar) calculada en el servidor desde la
+        # absoluta + altitud (fórmula ISA), independiente de la relativa que
+        # manda la consola. Útil cuando la consola no permite ajustar altitud
+        # (p. ej. WS2910). Altitud 0 = conservar la relativa de la estación.
+        altitude = (station_cfg.get("altitude_m") if station is not None
+                    else settings.station_altitude_m) or 0.0
+        if altitude and parsed_data.get("pressure_absolute") is not None:
+            parsed_data["pressure_relative"] = sea_level_pressure(
+                parsed_data["pressure_absolute"], altitude)
+
         parsed_data, _ = quality_check(parsed_data, settings)
         parsed_data, _ = spike_check(parsed_data, prev, settings)
         if settings.output_unit_system == "metric":

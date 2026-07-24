@@ -18,6 +18,22 @@ def inhg_to_hpa(inhg: float) -> float:
     return inhg * 33.8639
 
 
+def sea_level_pressure(abs_hpa: float, altitude_m: float) -> float:
+    """Reduce la presión absoluta a nivel del mar (relativa) con la fórmula
+    barométrica ISA/QNH, que NO depende de la temperatura ambiente (usa la
+    atmósfera estándar). Coincide con el altímetro (QNH) de aviación.
+
+    relativa = absoluta / (1 - altitud*0.0065/288.15)^5.255
+
+    Ej.: 779.8 hPa a 2250 m -> ~1025 hPa. Devuelve la absoluta sin cambios si la
+    altitud es 0/negativa.
+    """
+    if altitude_m and altitude_m > 0:
+        factor = (1.0 - (altitude_m * 0.0065) / 288.15) ** (-5.255)
+        return round(abs_hpa * factor, 1)
+    return round(abs_hpa, 1)
+
+
 def inches_to_mm(inches: float) -> float:
     """Convert inches to millimeters."""
     return inches * 25.4

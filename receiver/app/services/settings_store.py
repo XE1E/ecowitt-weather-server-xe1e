@@ -64,6 +64,7 @@ EDITABLE_KEYS = {
     "cal_wind_mult", "cal_wind_dir_offset",
     "cal_rain_mult",
     "cal_solar_mult", "cal_uv_offset",
+    "station_altitude_m",
     # Publicación a redes públicas (*_interval = minutos entre envíos)
     "wu_enabled", "wu_station_id", "wu_station_key", "wu_interval",
     "pws_enabled", "pws_station_id", "pws_password", "pws_interval",
@@ -106,6 +107,10 @@ DEFAULT_STATION_CONFIG = {
     # Secundaria con el sensor integrado a la intemperie: trata su lectura
     # "interior" (tempinf/humidityin) como EXTERIOR en todo el sistema.
     "treat_indoor_as_outdoor": False,
+    # Altitud (m) de esta estación. Si >0, el servidor calcula la presión
+    # relativa desde la absoluta (fórmula ISA), ignorando la de la consola.
+    # 0 = usar la relativa que envía la estación.
+    "altitude_m": 0.0,
     # Calibración propia de la estación (secundarias). Dict de claves cal_*
     # (mismo formato que las globales). Vacío = sin calibración para esa estación.
     "calibration": {},
