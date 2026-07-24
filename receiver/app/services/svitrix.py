@@ -4,8 +4,10 @@ Adaptador para el firmware SVITRIX (reloj Ulanzi TC001).
 Expone el dato REAL de la estación con la MISMA forma que WeatherAPI
 `current.json`, de modo que el firmware pueda apuntar aquí en lugar de a
 WeatherAPI.com cambiando solo la URL. Añade campos extra que WeatherAPI no
-tiene: `current.solar_radiation` (W/m²). El viento ya forma parte del esquema
-de WeatherAPI (`wind_kph`, `wind_degree`, `wind_dir`, `gust_kph`).
+tiene: `current.solar_radiation` (W/m²), `current.precip_event_mm` (lluvia del
+evento actual) y `current.rain_rate_mm` (intensidad mm/h). El viento ya forma
+parte del esquema de WeatherAPI (`wind_kph`, `wind_degree`, `wind_dir`,
+`gust_kph`).
 """
 from typing import Any, Dict, Optional
 
@@ -71,6 +73,7 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
     uv = _num(d.get("uv_index"))
     solar = _num(d.get("solar_radiation"))
     rain_today = _num(d.get("rain_daily"))
+    rain_event = _num(d.get("rain_event"))
     rain_rate = _num(d.get("rain_rate"))
 
     us_aqi = _num((aq or {}).get("aqi"))
@@ -94,9 +97,11 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
         "uv": round(uv, 1) if uv is not None else None,
         "solar_radiation": round(solar) if solar is not None else None,  # W/m² (extra)
         # Precipitación: precip_mm/in = acumulado de HOY (estándar WeatherAPI);
-        # rain_rate_mm = intensidad actual (mm/h, extra).
+        # precip_event_mm = lluvia del evento actual (extra); rain_rate_mm =
+        # intensidad actual (mm/h, extra).
         "precip_mm": round(rain_today, 1) if rain_today is not None else None,
         "precip_in": round(rain_today / 25.4, 2) if rain_today is not None else None,
+        "precip_event_mm": round(rain_event, 1) if rain_event is not None else None,
         "rain_rate_mm": round(rain_rate, 1) if rain_rate is not None else None,
         "condition": _condition(d),
         "air_quality": {
