@@ -142,6 +142,7 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/smn` · `/api/smn/municipios` | Pronóstico oficial SMN por municipio (4 días + 48 h) |
 | GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
 | GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
+| GET | `/api/svitrix` | Dato actual con forma WeatherAPI `current.json` (+ extras) para el reloj SVITRIX (Ulanzi TC001) |
 | GET | `/health` | Estado del servicio |
 
 > **Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan `?station=<nombre>` para consultar una **estación secundaria** (p. ej. `gw1100`); sin el parámetro devuelven la **principal**.

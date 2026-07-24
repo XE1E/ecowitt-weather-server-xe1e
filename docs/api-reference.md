@@ -229,6 +229,41 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/metar?station=MMMX` | METAR del aeropuerto (proxy a aviationweather.gov) |
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
+| `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
+
+### SVITRIX (reloj Ulanzi TC001)
+
+```
+GET /api/svitrix
+```
+
+Devuelve el dato **real de la estación** con la **misma forma que WeatherAPI
+`current.json`**, para que el firmware SVITRIX (fork AWTRIX3) pueda apuntar aquí
+en lugar de WeatherAPI.com cambiando solo la URL (campo *Servidor propio* en el
+reloj). Incluye campos **extra** que WeatherAPI no tiene.
+
+**Respuesta** (`current`):
+
+| Campo | Descripción |
+|-------|-------------|
+| `temp_c` / `temp_f` | Temperatura exterior |
+| `humidity` | Humedad exterior (%) |
+| `pressure_mb` | Presión relativa (hPa) |
+| `wind_kph` / `wind_degree` / `wind_dir` / `gust_kph` | Viento (km/h, grados, rumbo EN, ráfaga) |
+| `uv` | Índice UV |
+| `precip_mm` / `precip_in` | Lluvia acumulada de HOY (estándar WeatherAPI) |
+| `condition` | `{text, code}` derivado (códigos WeatherAPI) |
+| `air_quality` | `us-epa-index` (1–6) + `pm2_5`, `pm10`, `o3`, `no2`, `so2`, `co` |
+| `solar_radiation` | **Extra:** radiación solar (W/m²) |
+| `precip_event_mm` | **Extra:** lluvia del evento de lluvia actual (mm) |
+| `rain_rate_mm` | **Extra:** intensidad de lluvia actual (mm/h) |
+
+También devuelve `location` (nombre/lat/lon) y `source`. Los campos son `null`
+si aún no hay dato de la estación (p. ej. justo tras reiniciar el receiver).
+
+```bash
+curl -s https://clima.xe1e.net/api/svitrix | jq '.current | {temp_c, uv, solar_radiation, precip_event_mm}'
+```
 
 ### Administración (requiere sesión)
 
