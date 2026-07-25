@@ -4,12 +4,29 @@ Almacén de ajustes editables (overrides) en un archivo JSON.
 Permite editar en caliente ciertos ajustes desde el panel de administración
 sin tocar el .env ni reiniciar. Solo se persiste una lista blanca de claves.
 """
+import hashlib
 import json
 import logging
 import os
+import re
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def passkey_from_mac(mac: str) -> str:
+    """Deriva el PASSKEY de Ecowitt desde la MAC.
+
+    El PASSKEY es el MD5 (hex, MAYÚSCULAS) de la MAC formateada en mayúsculas y
+    separada por ':', p. ej. md5("8C:4F:00:4F:8B:63") -> "D74CF5...". Acepta la
+    MAC con o sin separadores (`:`/`-`/espacios). Lanza ValueError si no son 12
+    dígitos hex.
+    """
+    hexs = re.sub(r"[^0-9A-Fa-f]", "", mac or "").upper()
+    if len(hexs) != 12:
+        raise ValueError("MAC inválida (se esperan 12 dígitos hexadecimales)")
+    colon = ":".join(hexs[i:i + 2] for i in range(0, 12, 2))
+    return hashlib.md5(colon.encode()).hexdigest().upper()
 
 
 def _write_json_secure(path: str, data: Dict[str, Any]) -> None:
@@ -66,6 +83,7 @@ EDITABLE_KEYS = {
     "cal_solar_mult", "cal_uv_offset",
     "station_altitude_m",
     "primary_passkey",
+    "secondary_stations",
     # Publicación a redes públicas (*_interval = minutos entre envíos)
     "wu_enabled", "wu_station_id", "wu_station_key", "wu_interval",
     "pws_enabled", "pws_station_id", "pws_password", "pws_interval",

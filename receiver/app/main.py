@@ -992,6 +992,85 @@ async def admin_save_station_alerts(
     return {"status": "ok", "alert_thresholds": clean}
 
 
+# --- Registro de estaciones por MAC (whitelist de passkey) -----------------
+
+def _persist_registry(secondary_str=None, primary_pk=None):
+    """Persiste (settings.json) y aplica EN VIVO cambios al registro de passkeys."""
+    current = {}
+    if secondary_str is not None:
+        current["secondary_stations"] = secondary_str
+    if primary_pk is not None:
+        current["primary_passkey"] = primary_pk
+    settings_store.save_overrides(settings.settings_file, current)
+    adminsvc.apply_overrides(settings, alert_service, current)
+
+
+def _mask_pk(pk):
+    return (pk[:6] + "..." + pk[-4:]) if pk and len(pk) > 12 else (pk or "")
+
+
+def _valid_station_name(name):
+    return bool(name) and len(name) <= 32 and all(c.isalnum() or c in "_-" for c in name)
+
+
+@app.get("/api/admin/registry")
+async def admin_get_registry(authorization: Optional[str] = Header(default=None)):
+    """Registro de estaciones (whitelist de passkey): principal + secundarias."""
+    _require_admin(authorization)
+    primary_pk = getattr(settings, "primary_passkey", "") or ""
+    smap = settings.secondary_station_map  # {passkey: nombre}
+    return {
+        "whitelist_active": bool(primary_pk),
+        "primary": {"has_passkey": bool(primary_pk), "passkey_masked": _mask_pk(primary_pk)},
+        "secondaries": [{"name": n, "passkey_masked": _mask_pk(p)} for p, n in smap.items()],
+    }
+
+
+@app.put("/api/admin/registry/primary")
+async def admin_set_primary_passkey(body: dict, authorization: Optional[str] = Header(default=None)):
+    """Define/limpia el passkey de la PRINCIPAL desde su MAC (activa la whitelist)."""
+    _require_admin(authorization)
+    mac = (body.get("mac") or "").strip()
+    if not mac:
+        _persist_registry(primary_pk="")  # limpia -> whitelist desactivada
+        return {"has_passkey": False}
+    try:
+        pk = settings_store.passkey_from_mac(mac)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    _persist_registry(primary_pk=pk)
+    return {"has_passkey": True, "passkey_masked": _mask_pk(pk)}
+
+
+@app.post("/api/admin/registry/secondary")
+async def admin_add_secondary(body: dict, authorization: Optional[str] = Header(default=None)):
+    """Agrega una estación secundaria desde su MAC (deriva el passkey)."""
+    _require_admin(authorization)
+    name = (body.get("name") or "").strip()
+    mac = (body.get("mac") or "").strip()
+    if not _valid_station_name(name):
+        raise HTTPException(status_code=400, detail="Nombre inválido (letras, números, - o _)")
+    if name.lower() in ("principal", "primary"):
+        raise HTTPException(status_code=400, detail="Nombre reservado")
+    try:
+        pk = settings_store.passkey_from_mac(mac)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    smap = {p: n for p, n in settings.secondary_station_map.items() if n != name}
+    smap[pk] = name
+    _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
+    return {"name": name, "passkey_masked": _mask_pk(pk)}
+
+
+@app.delete("/api/admin/registry/secondary/{name}")
+async def admin_del_secondary(name: str, authorization: Optional[str] = Header(default=None)):
+    """Quita una estación secundaria del registro (deja de aceptar sus pushes)."""
+    _require_admin(authorization)
+    smap = {p: n for p, n in settings.secondary_station_map.items() if n != name}
+    _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------------------
 # Wizard de configuración inicial
 # ---------------------------------------------------------------------------
