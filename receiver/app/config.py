@@ -45,8 +45,22 @@ class Settings(BaseSettings):
     alert_gust_high: float = 70.0
     alert_rain_rate: float = 10.0
     alert_rain_daily: float = 40.0
-    alert_pressure_high: float = 1030.0
+    alert_pressure_high: float = 1035.0
     alert_pressure_low: float = 1000.0
+    # Humedad exterior (sobre humidity_outdoor). Baja = aire seco; alta = lluvia
+    # inminente / moho (GW1100 con trampa => su humedad llega como exterior).
+    alert_humidity_low: float = 25.0
+    alert_humidity_high: float = 85.0
+    # Tendencia de presión: cambio (hPa) dentro de la ventana. 2 niveles por
+    # dirección (aviso / fuerte). Caída = posible tormenta; subida = frente frío.
+    alert_pressure_drop_warn: float = 1.5
+    alert_pressure_drop_strong: float = 3.0
+    alert_pressure_rise_warn: float = 1.5
+    alert_pressure_rise_strong: float = 3.0
+    alert_pressure_trend_window_min: int = 60
+    # Histéresis anti-spam: la condición debe sostenerse estos minutos antes de
+    # avisar (y estar despejada otro tanto antes de normalizar). 0 = inmediato.
+    alert_persist_minutes: float = 3.0
     # Avisar si la estación deja de enviar datos por este tiempo (minutos)
     alert_station_offline_minutes: int = 15
     # Avisos de batería baja y de sensor sin contacto

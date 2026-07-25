@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "station", "battery", "sensor", "air"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "station", "battery", "sensor", "air"]
 
 
 def _category_for(rule_key: str) -> str:
@@ -37,6 +37,8 @@ def _category_for(rule_key: str) -> str:
         return "rain"
     if rule_key.startswith("pressure_"):
         return "pressure"
+    if rule_key.startswith("humidity_"):
+        return "humidity"
     if rule_key.startswith("station_offline"):
         return "station"
     if rule_key.startswith("battery_"):
@@ -46,6 +48,17 @@ def _category_for(rule_key: str) -> str:
     if rule_key in ("aqi_high", "imeca_high"):
         return "air"
     return "other"
+
+
+# Reglas que NO usan histéresis (avisan de inmediato):
+#  - gust_high: pico peligroso, no debe esperar.
+#  - sensor_* y battery_*: tienen su propia lógica de presencia/estado.
+def _persist_exempt(rule_key: str) -> bool:
+    return (
+        rule_key == "gust_high"
+        or rule_key.startswith("sensor_")
+        or rule_key.startswith("battery_")
+    )
 
 # Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
 _SENSOR_PRESENCE = {
@@ -81,6 +94,14 @@ class AlertService:
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         self.known_sensors: Dict[Optional[str], set] = {}
+        # Historial de presión POR ESTACIÓN para la tendencia: deque de
+        # (datetime, hPa). None = principal. Se aísla entre estaciones.
+        self._pressure_hist: Dict[Optional[str], deque] = {}
+        # Histéresis: momento en que una regla EMPEZÓ a cumplirse / a despejarse
+        # (por clave namespaceada). Se usa para exigir persistencia antes de
+        # avisar o normalizar. {nkey: datetime}
+        self._pending_on: Dict[str, datetime] = {}
+        self._pending_off: Dict[str, datetime] = {}
         # Alert history: deque of {key, message, timestamp, resolved_at?}
         self._history: deque = deque(maxlen=100)
 
@@ -112,15 +133,18 @@ class AlertService:
         return name
 
     def evaluate(self, data: Dict[str, Any], station: Optional[str] = None,
-                 thresholds: Optional[Dict[str, Any]] = None) -> Dict[str, Tuple[bool, str]]:
+                 thresholds: Optional[Dict[str, Any]] = None,
+                 now: Optional[datetime] = None) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply.
 
-        `station` aísla el estado de "sensor perdido" (known_sensors) por estación.
+        `station` aísla el estado (sensor perdido, buffer de presión) por estación.
         `thresholds` sobreescribe los umbrales globales (por estación); las claves
-        sin definir caen al valor global de settings.
+        sin definir caen al valor global de settings. `now` permite fijar el reloj
+        (pruebas de tendencia de presión).
         """
         rules: Dict[str, Tuple[bool, str]] = {}
         ov = thresholds or {}
+        now = now or datetime.utcnow()
 
         def T(key: str, default: float) -> float:
             v = ov.get(key)
@@ -161,10 +185,45 @@ class AlertService:
         # Presión alta / baja (a nivel del mar)
         press = data.get("pressure_relative")
         if press is not None:
-            p_hi = T("alert_pressure_high", 1030.0)
+            p_hi = T("alert_pressure_high", 1035.0)
             p_lo = T("alert_pressure_low", 1000.0)
             rules["pressure_high"] = (press >= p_hi, f"📈 Presión alta: {press} hPa (≥ {p_hi} hPa)")
             rules["pressure_low"] = (press <= p_lo, f"📉 Presión baja: {press} hPa (≤ {p_lo} hPa)")
+
+            # Tendencia de presión: cambio dentro de la ventana (buffer por estación).
+            window = int(T("alert_pressure_trend_window_min", 60))
+            hist = self._pressure_hist.setdefault(station, deque(maxlen=1440))
+            hist.append((now, press))
+            cutoff = now - timedelta(minutes=window * 2)
+            while hist and hist[0][0] < cutoff:
+                hist.popleft()
+            delta = self._pressure_delta(hist, now, window)
+            if delta is not None:
+                drop = -delta  # positivo si CAYÓ
+                d_warn = T("alert_pressure_drop_warn", 1.5)
+                d_strong = T("alert_pressure_drop_strong", 3.0)
+                r_warn = T("alert_pressure_rise_warn", 1.5)
+                r_strong = T("alert_pressure_rise_strong", 3.0)
+                if drop >= d_warn:
+                    lvl = "fuerte" if drop >= d_strong else "aviso"
+                    rules["pressure_drop"] = (True, f"⛈️ Presión cayendo {drop:.1f} hPa/{window}min ({lvl}) — posible tormenta")
+                else:
+                    rules["pressure_drop"] = (False, f"Presión sin caída relevante ({delta:+.1f} hPa/{window}min)")
+                if delta >= r_warn:
+                    lvl = "fuerte" if delta >= r_strong else "aviso"
+                    rules["pressure_rise"] = (True, f"🌬️ Presión subiendo {delta:.1f} hPa/{window}min ({lvl}) — posible frente frío")
+                else:
+                    rules["pressure_rise"] = (False, f"Presión sin subida relevante ({delta:+.1f} hPa/{window}min)")
+
+        # Humedad exterior (baja = aire seco; alta = lluvia/moho). Para el GW1100
+        # con trampa, su humedad llega en humidity_outdoor; su umbral se ajusta
+        # por estación (p. ej. alto=65 para moho, bajo=0 para desactivar).
+        hum = data.get("humidity_outdoor")
+        if hum is not None:
+            h_lo = T("alert_humidity_low", 25.0)
+            h_hi = T("alert_humidity_high", 85.0)
+            rules["humidity_low"] = (hum <= h_lo, f"🏜️ Humedad exterior baja: {hum}% (≤ {h_lo}%)")
+            rules["humidity_high"] = (hum >= h_hi, f"💧 Humedad exterior alta: {hum}% (≥ {h_hi}%)")
 
         # Batería baja: campos battery_* binarios (True=OK / False=baja).
         if getattr(self._settings, "alert_battery_enabled", True):
@@ -191,6 +250,21 @@ class AlertService:
                     )
 
         return rules
+
+    def _pressure_delta(self, hist: deque, now: datetime, window_min: int) -> Optional[float]:
+        """Cambio de presión (hPa) = actual − línea base de hace ~`window_min`.
+
+        Devuelve None si aún no hay historia suficiente (línea base con al menos
+        media ventana de antigüedad), de modo que tras un reinicio no dispara
+        hasta acumular ~1 h de lecturas. Positivo = subió; negativo = cayó.
+        """
+        if len(hist) < 2:
+            return None
+        target = now - timedelta(minutes=window_min)
+        baseline = min(hist, key=lambda e: abs((e[0] - target).total_seconds()))
+        if (now - baseline[0]) < timedelta(minutes=window_min * 0.5):
+            return None
+        return hist[-1][1] - baseline[1]
 
     def get_history(self, limit: int = 20, hours: int = 24) -> List[Dict[str, Any]]:
         """Return recent alert history within the last N hours."""
@@ -229,30 +303,57 @@ class AlertService:
 
     async def process(self, data: Dict[str, Any], station: Optional[str] = None,
                       label: Optional[str] = None,
-                      thresholds: Optional[Dict[str, Any]] = None) -> None:
+                      thresholds: Optional[Dict[str, Any]] = None,
+                      now: Optional[datetime] = None) -> None:
         """
         Evalúa reglas y notifica en las transiciones, POR ESTACIÓN.
         El estado (active/historial) se namespacea por estación y el mensaje se
         etiqueta con la estación cuando no es la principal. `thresholds` permite
         umbrales propios por estación (caen a los globales si no se definen).
+        `now` fija el reloj (pruebas de histéresis/tendencia).
         """
         if not self.enabled:
             return
 
         prefix = "" if station is None else f"{station}:"
         tag = "" if station is None else f"[{label or station}] "
-        for key, (triggered, message) in self.evaluate(data, station=station, thresholds=thresholds).items():
+        now = now or datetime.utcnow()
+        # Persistencia (minutos) que la condición debe sostenerse antes de avisar
+        # o normalizar. 0 = inmediato (ráfaga y reglas exentas).
+        persist = float(getattr(self._settings, "alert_persist_minutes", 3.0) or 0)
+
+        for key, (triggered, message) in self.evaluate(
+            data, station=station, thresholds=thresholds, now=now
+        ).items():
             nkey = f"{prefix}{key}"
             cat = _category_for(key)
-            if triggered and nkey not in self.active:
-                self.active[nkey] = tag + message
-                self._add_to_history(nkey, tag + message, resolved=False, station=station)
-                await self._safe_notify(f"⚠️ ALERTA — {tag}{message}", category=cat)
-            elif not triggered and nkey in self.active:
-                self._add_to_history(nkey, self.active[nkey], resolved=True, station=station)
-                self.active.pop(nkey, None)
-                self._active_since.pop(nkey, None)
-                await self._safe_notify(f"✅ Normalizado — {tag}{message}", category=cat)
+            need = timedelta(minutes=0 if _persist_exempt(key) else persist)
+            is_active = nkey in self.active
+
+            if triggered and not is_active:
+                # Candidato a ACTIVAR: exige persistencia sostenida.
+                self._pending_off.pop(nkey, None)
+                first = self._pending_on.setdefault(nkey, now)
+                if now - first >= need:
+                    self._pending_on.pop(nkey, None)
+                    self.active[nkey] = tag + message
+                    self._add_to_history(nkey, tag + message, resolved=False, station=station)
+                    await self._safe_notify(f"⚠️ ALERTA — {tag}{message}", category=cat)
+            elif not triggered and is_active:
+                # Candidato a NORMALIZAR: exige la condición despejada y sostenida.
+                self._pending_on.pop(nkey, None)
+                first = self._pending_off.setdefault(nkey, now)
+                if now - first >= need:
+                    self._pending_off.pop(nkey, None)
+                    self._add_to_history(nkey, self.active[nkey], resolved=True, station=station)
+                    self.active.pop(nkey, None)
+                    self._active_since.pop(nkey, None)
+                    await self._safe_notify(f"✅ Normalizado — {tag}{message}", category=cat)
+            else:
+                # Estado estable: cancela cualquier cuenta regresiva pendiente
+                # (esto mata el parpadeo alrededor del umbral).
+                self._pending_on.pop(nkey, None)
+                self._pending_off.pop(nkey, None)
 
     async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
         """

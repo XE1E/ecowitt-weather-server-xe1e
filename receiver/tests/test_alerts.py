@@ -17,6 +17,16 @@ def make_settings(**kw):
         alert_rain_daily=40.0,
         alert_pressure_high=1030.0,
         alert_pressure_low=1000.0,
+        alert_humidity_low=25.0,
+        alert_humidity_high=85.0,
+        alert_pressure_drop_warn=1.5,
+        alert_pressure_drop_strong=3.0,
+        alert_pressure_rise_warn=1.5,
+        alert_pressure_rise_strong=3.0,
+        alert_pressure_trend_window_min=60,
+        # 0 = inmediato: mantiene el comportamiento clásico salvo donde se prueba
+        # la persistencia explícitamente.
+        alert_persist_minutes=0.0,
         alert_battery_enabled=True,
         alert_sensor_lost_enabled=True,
         telegram_enabled=False,
@@ -178,10 +188,111 @@ def test_category_mapping():
     assert _category_for("wind_high") == "wind"
     assert _category_for("rain_daily") == "rain"
     assert _category_for("pressure_low") == "pressure"
+    assert _category_for("pressure_drop") == "pressure"
+    assert _category_for("humidity_high") == "humidity"
     assert _category_for("station_offline_principal") == "station"
     assert _category_for("battery_ch1") == "battery"
     assert _category_for("sensor_temperature_ch1") == "sensor"
     assert _category_for("aqi_high") == "air"
+
+
+# ── Humedad exterior ──
+def test_humidity_thresholds():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"humidity_outdoor": 20})
+    assert r["humidity_low"][0] is True     # 20 <= 25
+    assert r["humidity_high"][0] is False
+    r = svc.evaluate({"humidity_outdoor": 90})
+    assert r["humidity_high"][0] is True     # 90 >= 85
+    assert r["humidity_low"][0] is False
+
+
+def test_humidity_per_station_override_for_mold():
+    # El GW1100 (trampa=exterior) usa umbral propio: alto=65 (moho), bajo=0 (off).
+    svc = AlertService(make_settings(), notifier=Collector())
+    th = {"alert_humidity_high": 65.0, "alert_humidity_low": 0.0}
+    r = svc.evaluate({"humidity_outdoor": 70}, station="gw1100", thresholds=th)
+    assert r["humidity_high"][0] is True     # 70 >= 65 (moho)
+    assert r["humidity_low"][0] is False     # 70 <= 0 -> nunca (desactivada)
+
+
+# ── Tendencia de presión (2 niveles) ──
+def test_pressure_trend_needs_history():
+    from datetime import datetime
+    svc = AlertService(make_settings(), notifier=Collector())
+    t0 = datetime(2026, 7, 25, 12, 0, 0)
+    # Una sola lectura -> aún no hay tendencia
+    r = svc.evaluate({"pressure_relative": 1020}, now=t0)
+    assert "pressure_drop" not in r and "pressure_rise" not in r
+
+
+def test_pressure_drop_levels():
+    from datetime import datetime, timedelta
+    svc = AlertService(make_settings(), notifier=Collector())
+    t0 = datetime(2026, 7, 25, 12, 0, 0)
+    svc.evaluate({"pressure_relative": 1020}, now=t0)
+    # 1 h después: cae 2.5 hPa -> aviso (>=1.5, <3)
+    r = svc.evaluate({"pressure_relative": 1017.5}, now=t0 + timedelta(minutes=60))
+    assert r["pressure_drop"][0] is True and "aviso" in r["pressure_drop"][1]
+    # Otra estación/servicio: caída fuerte
+    svc2 = AlertService(make_settings(), notifier=Collector())
+    svc2.evaluate({"pressure_relative": 1020}, now=t0)
+    r2 = svc2.evaluate({"pressure_relative": 1016}, now=t0 + timedelta(minutes=60))
+    assert r2["pressure_drop"][0] is True and "fuerte" in r2["pressure_drop"][1]
+
+
+def test_pressure_rise_level():
+    from datetime import datetime, timedelta
+    svc = AlertService(make_settings(), notifier=Collector())
+    t0 = datetime(2026, 7, 25, 12, 0, 0)
+    svc.evaluate({"pressure_relative": 1018}, now=t0)
+    r = svc.evaluate({"pressure_relative": 1022}, now=t0 + timedelta(minutes=60))
+    assert r["pressure_rise"][0] is True and "fuerte" in r["pressure_rise"][1]  # +4 >= 3
+    assert r["pressure_drop"][0] is False
+
+
+def test_pressure_trend_isolated_per_station():
+    from datetime import datetime, timedelta
+    svc = AlertService(make_settings(), notifier=Collector())
+    t0 = datetime(2026, 7, 25, 12, 0, 0)
+    # La principal cae; la secundaria no debe verse afectada por ese historial
+    svc.evaluate({"pressure_relative": 1020}, now=t0)
+    svc.evaluate({"pressure_relative": 1030}, now=t0, station="gw1100")
+    r = svc.evaluate({"pressure_relative": 1030}, now=t0 + timedelta(minutes=60), station="gw1100")
+    assert r["pressure_drop"][0] is False and r["pressure_rise"][0] is False  # estable
+
+
+# ── Histéresis / persistencia ──
+def test_persistence_delays_trigger():
+    from datetime import datetime, timedelta
+    c = Collector()
+    svc = AlertService(make_settings(alert_persist_minutes=3.0), notifier=c)
+    t = datetime(2026, 7, 25, 12, 0, 0)
+    asyncio.run(svc.process({"temperature_outdoor": 40}, now=t))                      # inicia cuenta
+    assert c.msgs == [] and "temp_high" not in svc.active
+    asyncio.run(svc.process({"temperature_outdoor": 41}, now=t + timedelta(minutes=1)))
+    assert c.msgs == []                                                              # aún <3 min
+    asyncio.run(svc.process({"temperature_outdoor": 41}, now=t + timedelta(minutes=3)))
+    assert len(c.msgs) == 1 and "temp_high" in svc.active                            # sostenido 3 min
+
+
+def test_persistence_resets_on_flicker():
+    from datetime import datetime, timedelta
+    c = Collector()
+    svc = AlertService(make_settings(alert_persist_minutes=3.0), notifier=c)
+    t = datetime(2026, 7, 25, 12, 0, 0)
+    asyncio.run(svc.process({"temperature_outdoor": 40}, now=t))                      # cuenta
+    asyncio.run(svc.process({"temperature_outdoor": 20}, now=t + timedelta(minutes=1)))  # cae -> reset
+    asyncio.run(svc.process({"temperature_outdoor": 40}, now=t + timedelta(minutes=2)))  # recomienza
+    asyncio.run(svc.process({"temperature_outdoor": 40}, now=t + timedelta(minutes=4)))  # solo 2 min
+    assert c.msgs == []                                                              # nunca sostenido 3 min
+
+
+def test_gust_fires_immediately_despite_persistence():
+    c = Collector()
+    svc = AlertService(make_settings(alert_persist_minutes=5.0), notifier=c)
+    asyncio.run(svc.process({"wind_gust": 85}))   # ráfaga: exenta -> avisa al instante
+    assert len(c.msgs) == 1 and "gust_high" in svc.active
 
 
 def test_channel_allows_by_category():
