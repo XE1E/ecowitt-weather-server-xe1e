@@ -295,6 +295,37 @@ def test_gust_fires_immediately_despite_persistence():
     assert len(c.msgs) == 1 and "gust_high" in svc.active
 
 
+# ── Habilitar/deshabilitar por alarma ──
+def test_disabled_rule_does_not_fire_and_clears_silently():
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    asyncio.run(svc.process({"temperature_outdoor": 40}))          # dispara temp_high
+    assert "temp_high" in svc.active and len(c.msgs) == 1
+    # Apagar temp_high mientras está activa -> se limpia SIN "Normalizado"
+    asyncio.run(svc.process({"temperature_outdoor": 41}, disabled=["temp_high"]))
+    assert "temp_high" not in svc.active
+    assert not any("Normalizado" in m for m in c.msgs)
+    # Ya apagada: no vuelve a disparar aunque siga alta
+    c.msgs.clear()
+    asyncio.run(svc.process({"temperature_outdoor": 42}, disabled=["temp_high"]))
+    assert c.msgs == [] and "temp_high" not in svc.active
+
+
+def test_disable_one_does_not_affect_others():
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    # Apagar temp_low no afecta a temp_high (que sí debe disparar)
+    asyncio.run(svc.process({"temperature_outdoor": 40}, disabled=["temp_low"]))
+    assert "temp_high" in svc.active
+
+
+def test_principal_uses_global_disabled_list():
+    c = Collector()
+    svc = AlertService(make_settings(alert_rules_disabled=["temp_high"]), notifier=c)
+    asyncio.run(svc.process({"temperature_outdoor": 40}))   # disabled=None -> usa la global
+    assert "temp_high" not in svc.active and c.msgs == []
+
+
 def test_channel_allows_by_category():
     # None = todas las categorías; lista = solo esas; [] = ninguna.
     svc = AlertService(make_settings(

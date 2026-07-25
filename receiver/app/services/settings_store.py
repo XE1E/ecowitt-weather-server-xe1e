@@ -59,6 +59,7 @@ EDITABLE_KEYS = {
     "alert_pressure_rise_strong",
     "alert_pressure_trend_window_min",
     "alert_persist_minutes",
+    "alert_rules_disabled",
     "alert_station_offline_minutes",
     "alert_battery_enabled",
     "alert_sensor_lost_enabled",
@@ -144,6 +145,9 @@ DEFAULT_STATION_CONFIG = {
     # Umbrales de alerta propios (secundarias). Dict de claves alert_* (temp/viento/
     # lluvia/presión). Las no definidas caen a los umbrales globales.
     "alert_thresholds": {},
+    # Reglas deshabilitadas propias de esta estación (independiente de la global).
+    # Lista de claves (temp_high, humidity_low, pressure_drop…). Vacío = todas activas.
+    "disabled_rules": [],
 }
 
 

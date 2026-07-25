@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     # Histéresis anti-spam: la condición debe sostenerse estos minutos antes de
     # avisar (y estar despejada otro tanto antes de normalizar). 0 = inmediato.
     alert_persist_minutes: float = 3.0
+    # Reglas deshabilitadas (por clave: temp_high, humidity_low, pressure_drop…).
+    # Vacío = todas activas. Es la lista GLOBAL (principal); las secundarias tienen
+    # la suya en disabled_rules dentro de su config de estación.
+    alert_rules_disabled: List[str] = []
     # Avisar si la estación deja de enviar datos por este tiempo (minutos)
     alert_station_offline_minutes: int = 15
     # Avisos de batería baja y de sensor sin contacto

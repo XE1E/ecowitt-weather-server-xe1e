@@ -123,6 +123,7 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_pressure_rise_strong": settings.alert_pressure_rise_strong,
         "alert_pressure_trend_window_min": settings.alert_pressure_trend_window_min,
         "alert_persist_minutes": settings.alert_persist_minutes,
+        "alert_rules_disabled": list(settings.alert_rules_disabled or []),
         "alert_station_offline_minutes": settings.alert_station_offline_minutes,
         "alert_battery_enabled": settings.alert_battery_enabled,
         "alert_sensor_lost_enabled": settings.alert_sensor_lost_enabled,

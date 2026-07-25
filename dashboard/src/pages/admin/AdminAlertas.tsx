@@ -19,6 +19,7 @@ interface AlertSettings {
   alert_pressure_rise_strong: number
   alert_pressure_trend_window_min: number
   alert_persist_minutes: number
+  alert_rules_disabled: string[]
   alert_station_offline_minutes: number
   alert_battery_enabled: boolean
   alert_sensor_lost_enabled: boolean
@@ -56,8 +57,8 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
   )
 }
 
-function NumField({ value, onChange, min, max, step = 1, w = 'w-16' }: {
-  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; w?: string
+function NumField({ value, onChange, min, max, step = 1, w = 'w-16', off = false }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; w?: string; off?: boolean
 }) {
   return (
     <input
@@ -65,7 +66,21 @@ function NumField({ value, onChange, min, max, step = 1, w = 'w-16' }: {
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
       min={min} max={max} step={step}
-      className={`${w} rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50`}
+      disabled={off}
+      className={`${w} rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50 ${off ? 'opacity-40' : ''}`}
+    />
+  )
+}
+
+// Interruptor pequeño para habilitar/deshabilitar una alarma concreta.
+function RuleGate({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <input
+      type="checkbox"
+      checked={on}
+      onChange={onToggle}
+      title={on ? 'Alarma activa — clic para desactivar' : 'Alarma desactivada — clic para activar'}
+      className="w-3.5 h-3.5 accent-sky-500 cursor-pointer shrink-0"
     />
   )
 }
@@ -77,6 +92,7 @@ export function AdminAlertas() {
   const [secondaries, setSecondaries] = useState<StationOpt[]>([])
   const [selected, setSelected] = useState<string | null>(null)  // null = principal
   const [offlineMin, setOfflineMin] = useState(15)  // watchdog de la secundaria
+  const [disabled, setDisabled] = useState<string[]>([])  // reglas apagadas
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
@@ -87,6 +103,7 @@ export function AdminAlertas() {
       fetch('/api/stations').then((r) => r.json()).catch(() => null),
     ]).then(([s, st]) => {
       setSettings(s); setGlobalCache(s)
+      setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
       const list = st?.stations || []
       setSecondaries(
         list.filter((x: { name: string | null }) => x.name !== null)
@@ -101,6 +118,7 @@ export function AdminAlertas() {
       if (sel === null) {
         const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
         setSettings(s); setGlobalCache(s)
+        setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
       } else {
         const [ov, station] = await Promise.all([
           fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
@@ -112,6 +130,7 @@ export function AdminAlertas() {
         for (const k of THRESHOLD_KEYS) base[k] = (globalCache as unknown as Record<string, number>)?.[k] ?? 0
         setSettings({ ...base, ...ov } as AlertSettings)
         setOfflineMin(station?.config?.watchdog_minutes ?? 15)
+        setDisabled(Array.isArray(station?.config?.disabled_rules) ? station.config.disabled_rules : [])
       }
     } finally { setLoading(false) }
   }
@@ -126,11 +145,12 @@ export function AdminAlertas() {
         res = await fetchWithAuth('/api/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings),
+          body: JSON.stringify({ ...settings, alert_rules_disabled: disabled }),
         })
       } else {
-        const th: Record<string, number> = {}
+        const th: Record<string, unknown> = {}
         for (const k of THRESHOLD_KEYS) th[k] = (settings as unknown as Record<string, number>)[k]
+        th.disabled_rules = disabled
         res = await fetchWithAuth(`/api/admin/stations/${selected}/alerts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -162,6 +182,10 @@ export function AdminAlertas() {
   const update = <K extends keyof AlertSettings>(key: K, value: AlertSettings[K]) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev))
   }
+
+  const isOff = (rule: string) => disabled.includes(rule)
+  const toggleRule = (rule: string) =>
+    setDisabled((d) => (d.includes(rule) ? d.filter((r) => r !== rule) : [...d, rule]))
 
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
@@ -210,12 +234,12 @@ export function AdminAlertas() {
             <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
           </div>
           <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS2910)</span>. Elige otra estación arriba para editar sus umbrales propios.
+            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS2910)</span>. Elige otra estación arriba para editar sus umbrales propios. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla sin afectar las demás.</span>
           </div>
         </>
       ) : (
         <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido y aire usan la configuración global.
+          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido y aire usan la configuración global. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla (independiente de la principal).</span>
         </div>
       )}
 
@@ -226,10 +250,12 @@ export function AdminAlertas() {
           <div>
             <p className="text-sm font-medium mb-1">🌡️ Temperatura</p>
             <div className="flex items-center gap-2 text-sm">
+              <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
               <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} />
+              <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} off={isOff('temp_high')} />
+              <RuleGate on={!isOff('temp_low')} onToggle={() => toggleRule('temp_low')} />
               <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_temp_low} onChange={(v) => update('alert_temp_low', v)} min={-40} max={30} step={0.5} />
+              <NumField value={settings.alert_temp_low} onChange={(v) => update('alert_temp_low', v)} min={-40} max={30} step={0.5} off={isOff('temp_low')} />
               <span className="text-xs text-slate-500">°C</span>
             </div>
           </div>
@@ -239,10 +265,12 @@ export function AdminAlertas() {
             <div>
               <p className="text-sm font-medium mb-1">💨 Viento</p>
               <div className="flex items-center gap-2 text-sm">
+                <RuleGate on={!isOff('wind_high')} onToggle={() => toggleRule('wind_high')} />
                 <span className="text-slate-400">Vel</span>
-                <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} />
+                <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} off={isOff('wind_high')} />
+                <RuleGate on={!isOff('gust_high')} onToggle={() => toggleRule('gust_high')} />
                 <span className="text-slate-400">Raf</span>
-                <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} />
+                <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} off={isOff('gust_high')} />
                 <span className="text-xs text-slate-500">km/h</span>
               </div>
             </div>
@@ -252,11 +280,13 @@ export function AdminAlertas() {
             <div>
               <p className="text-sm font-medium mb-1">🌧️ Lluvia</p>
               <div className="flex items-center gap-2 text-sm">
+                <RuleGate on={!isOff('rain_rate')} onToggle={() => toggleRule('rain_rate')} />
                 <span className="text-slate-400">Int</span>
-                <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} />
+                <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} off={isOff('rain_rate')} />
                 <span className="text-xs text-slate-500">mm/h</span>
+                <RuleGate on={!isOff('rain_daily')} onToggle={() => toggleRule('rain_daily')} />
                 <span className="text-slate-400">Dia</span>
-                <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} />
+                <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} off={isOff('rain_daily')} />
                 <span className="text-xs text-slate-500">mm</span>
               </div>
             </div>
@@ -266,10 +296,12 @@ export function AdminAlertas() {
           <div>
             <p className="text-sm font-medium mb-1">📊 Presion</p>
             <div className="flex items-center gap-2 text-sm">
+              <RuleGate on={!isOff('pressure_high')} onToggle={() => toggleRule('pressure_high')} />
               <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_pressure_high} onChange={(v) => update('alert_pressure_high', v)} min={900} max={1100} />
+              <NumField value={settings.alert_pressure_high} onChange={(v) => update('alert_pressure_high', v)} min={900} max={1100} off={isOff('pressure_high')} />
+              <RuleGate on={!isOff('pressure_low')} onToggle={() => toggleRule('pressure_low')} />
               <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_pressure_low} onChange={(v) => update('alert_pressure_low', v)} min={900} max={1100} />
+              <NumField value={settings.alert_pressure_low} onChange={(v) => update('alert_pressure_low', v)} min={900} max={1100} off={isOff('pressure_low')} />
               <span className="text-xs text-slate-500">hPa</span>
             </div>
           </div>
@@ -278,10 +310,12 @@ export function AdminAlertas() {
           <div>
             <p className="text-sm font-medium mb-1">💧 Humedad</p>
             <div className="flex items-center gap-2 text-sm">
+              <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
               <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_humidity_high} onChange={(v) => update('alert_humidity_high', v)} min={0} max={100} step={5} />
+              <NumField value={settings.alert_humidity_high} onChange={(v) => update('alert_humidity_high', v)} min={0} max={100} step={5} off={isOff('humidity_high')} />
+              <RuleGate on={!isOff('humidity_low')} onToggle={() => toggleRule('humidity_low')} />
               <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} />
+              <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} off={isOff('humidity_low')} />
               <span className="text-xs text-slate-500">%</span>
             </div>
           </div>
@@ -295,18 +329,20 @@ export function AdminAlertas() {
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
+            <RuleGate on={!isOff('pressure_drop')} onToggle={() => toggleRule('pressure_drop')} />
             <span className="text-slate-400">Caída</span>
             <span className="text-xs text-slate-500">aviso</span>
-            <NumField value={settings.alert_pressure_drop_warn} onChange={(v) => update('alert_pressure_drop_warn', v)} min={0} max={20} step={0.5} />
+            <NumField value={settings.alert_pressure_drop_warn} onChange={(v) => update('alert_pressure_drop_warn', v)} min={0} max={20} step={0.5} off={isOff('pressure_drop')} />
             <span className="text-xs text-slate-500">fuerte</span>
-            <NumField value={settings.alert_pressure_drop_strong} onChange={(v) => update('alert_pressure_drop_strong', v)} min={0} max={20} step={0.5} />
+            <NumField value={settings.alert_pressure_drop_strong} onChange={(v) => update('alert_pressure_drop_strong', v)} min={0} max={20} step={0.5} off={isOff('pressure_drop')} />
           </div>
           <div className="flex items-center gap-2">
+            <RuleGate on={!isOff('pressure_rise')} onToggle={() => toggleRule('pressure_rise')} />
             <span className="text-slate-400">Subida</span>
             <span className="text-xs text-slate-500">aviso</span>
-            <NumField value={settings.alert_pressure_rise_warn} onChange={(v) => update('alert_pressure_rise_warn', v)} min={0} max={20} step={0.5} />
+            <NumField value={settings.alert_pressure_rise_warn} onChange={(v) => update('alert_pressure_rise_warn', v)} min={0} max={20} step={0.5} off={isOff('pressure_rise')} />
             <span className="text-xs text-slate-500">fuerte</span>
-            <NumField value={settings.alert_pressure_rise_strong} onChange={(v) => update('alert_pressure_rise_strong', v)} min={0} max={20} step={0.5} />
+            <NumField value={settings.alert_pressure_rise_strong} onChange={(v) => update('alert_pressure_rise_strong', v)} min={0} max={20} step={0.5} off={isOff('pressure_rise')} />
           </div>
           <span className="text-xs text-slate-500">hPa</span>
           {isPrincipal && (

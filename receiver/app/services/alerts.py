@@ -304,13 +304,16 @@ class AlertService:
     async def process(self, data: Dict[str, Any], station: Optional[str] = None,
                       label: Optional[str] = None,
                       thresholds: Optional[Dict[str, Any]] = None,
-                      now: Optional[datetime] = None) -> None:
+                      now: Optional[datetime] = None,
+                      disabled: Optional[List[str]] = None) -> None:
         """
         Evalúa reglas y notifica en las transiciones, POR ESTACIÓN.
         El estado (active/historial) se namespacea por estación y el mensaje se
         etiqueta con la estación cuando no es la principal. `thresholds` permite
         umbrales propios por estación (caen a los globales si no se definen).
-        `now` fija el reloj (pruebas de histéresis/tendencia).
+        `now` fija el reloj (pruebas de histéresis/tendencia). `disabled` es la
+        lista de reglas apagadas: para la principal (None) usa la global de
+        settings; una secundaria pasa la suya (independiente).
         """
         if not self.enabled:
             return
@@ -321,11 +324,26 @@ class AlertService:
         # Persistencia (minutos) que la condición debe sostenerse antes de avisar
         # o normalizar. 0 = inmediato (ráfaga y reglas exentas).
         persist = float(getattr(self._settings, "alert_persist_minutes", 3.0) or 0)
+        # Reglas apagadas: la secundaria pasa la suya; la principal (disabled=None)
+        # cae a la lista global de settings.
+        if disabled is None:
+            disabled = getattr(self._settings, "alert_rules_disabled", []) or []
+        disabled_set = set(disabled)
 
         for key, (triggered, message) in self.evaluate(
             data, station=station, thresholds=thresholds, now=now
         ).items():
             nkey = f"{prefix}{key}"
+
+            # Regla apagada: no dispara y, si estaba activa, se limpia EN SILENCIO
+            # (sin "Normalizado") junto con sus temporizadores.
+            if key in disabled_set:
+                self.active.pop(nkey, None)
+                self._active_since.pop(nkey, None)
+                self._pending_on.pop(nkey, None)
+                self._pending_off.pop(nkey, None)
+                continue
+
             cat = _category_for(key)
             need = timedelta(minutes=0 if _persist_exempt(key) else persist)
             is_active = nkey in self.active

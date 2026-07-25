@@ -467,7 +467,8 @@ async def receive_ecowitt_data(request: Request):
                 if scfg.get("alerts_enabled"):
                     await alert_service.process(
                         parsed_data, station=station, label=scfg.get("label") or station,
-                        thresholds=scfg.get("alert_thresholds") or None)
+                        thresholds=scfg.get("alert_thresholds") or None,
+                        disabled=scfg.get("disabled_rules") or [])
             except Exception as e:
                 logger.error(f"Alert processing (secundaria {station}) failed: {e}")
 
@@ -981,15 +982,17 @@ async def admin_get_station_alerts(name: str, authorization: Optional[str] = Hea
 async def admin_save_station_alerts(
     name: str, body: dict, authorization: Optional[str] = Header(default=None)
 ):
-    """Guarda los umbrales de alerta propios de una estación secundaria."""
+    """Guarda los umbrales y las reglas apagadas propios de una secundaria."""
     _require_admin(authorization)
     if name not in settings.secondary_station_map.values():
         raise HTTPException(status_code=404, detail="Estación no encontrada")
     clean = {k: v for k, v in body.items() if k.startswith("alert_")}
     cfg = settings_store.get_station_config(settings.settings_file, name)
     cfg["alert_thresholds"] = clean
+    if isinstance(body.get("disabled_rules"), list):
+        cfg["disabled_rules"] = [r for r in body["disabled_rules"] if isinstance(r, str)]
     settings_store.save_station_config(settings.settings_file, name, cfg)
-    return {"status": "ok", "alert_thresholds": clean}
+    return {"status": "ok", "alert_thresholds": clean, "disabled_rules": cfg.get("disabled_rules", [])}
 
 
 # --- Registro de estaciones por MAC (whitelist de passkey) -----------------
