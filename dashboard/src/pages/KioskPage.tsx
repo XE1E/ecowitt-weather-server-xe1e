@@ -224,7 +224,7 @@ export function KioskPage() {
         <div style={{
           display: 'grid', width: 1024, height: 600, gap: 2,
           gridTemplateColumns: '1fr 1fr 1fr',
-          gridTemplateRows: '1.4fr 1.18fr 1.22fr 0.96fr 0.74fr',
+          gridTemplateRows: '1.32fr 1.14fr 1.18fr 1.0fr 0.92fr',
         }}>
           {/* Fila 1 */}
           <div className="cell col">
@@ -372,26 +372,26 @@ export function KioskPage() {
 
           {/* Fila 5 */}
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', gap: 42, marginBottom: 3 }}>
-              <span style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>TIME</span>
-              <span style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>DATE</span>
+            <div style={{ display: 'flex', gap: 42, marginBottom: 2 }}>
+              <span style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>TIME</span>
+              <span style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>DATE</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, whiteSpace: 'nowrap' }}>
-              <span className="gg" style={{ fontSize: 50, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
-              <span className="gg" style={{ fontSize: 34, fontWeight: 800 }}>{dateStr}</span>
+              <span className="gg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+              <span className="gg" style={{ fontSize: 30, fontWeight: 800 }}>{dateStr}</span>
             </div>
           </div>
 
           <div className="cell col" style={{ justifyContent: 'center' }}>
             <div className="lbl">SUNLIGHT</div>
-            <div className="gw" style={{ fontSize: 56, fontWeight: 800, marginTop: 5 }}>
-              {data?.solar_radiation != null ? data.solar_radiation.toFixed(1) : '--'}<span className="u" style={{ fontSize: 22, color: 'var(--w)' }}> W/m²</span>
+            <div className="gw" style={{ fontSize: 50, fontWeight: 800, marginTop: 2 }}>
+              {data?.solar_radiation != null ? data.solar_radiation.toFixed(1) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}> W/m²</span>
             </div>
           </div>
 
           <div className="cell col" style={{ justifyContent: 'center' }}>
             <div className="lbl">HEAT INDEX</div>
-            <div className="gg" style={{ fontSize: 56, fontWeight: 800, marginTop: 4 }}>
+            <div className="gg" style={{ fontSize: 50, fontWeight: 800, marginTop: 2 }}>
               {u.temp(data?.heat_index ?? data?.feels_like)}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
             </div>
           </div>
