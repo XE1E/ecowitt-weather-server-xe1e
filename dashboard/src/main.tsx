@@ -23,6 +23,7 @@ import {
   AdminDashboard,
   AdminEstaciones,
   AdminEstacionConfig,
+  AdminRegistro,
   AdminAlertas,
   AdminCalibracion,
   AdminPublicacion,
@@ -73,6 +74,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route index element={<AdminDashboard />} />
               <Route path="estaciones" element={<AdminEstaciones />} />
               <Route path="estaciones/:name" element={<AdminEstacionConfig />} />
+              <Route path="registro" element={<AdminRegistro />} />
               <Route path="alertas" element={<AdminAlertas />} />
               <Route path="calibracion" element={<AdminCalibracion />} />
               <Route path="publicacion" element={<AdminPublicacion />} />

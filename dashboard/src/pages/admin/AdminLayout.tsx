@@ -5,6 +5,7 @@ import { useAdminAuth } from '../../admin-auth'
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
   { to: '/admin/estaciones', label: 'Estaciones', icon: '📡' },
+  { to: '/admin/registro', label: 'Registro', icon: '🔑' },
   { to: '/admin/alertas', label: 'Alertas', icon: '🔔' },
   { to: '/admin/calibracion', label: 'Calibración', icon: '🔧' },
   { to: '/admin/publicacion', label: 'Publicación', icon: '📤' },
