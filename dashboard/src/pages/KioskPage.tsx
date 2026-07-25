@@ -11,6 +11,35 @@ const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const pad = (n: number) => String(n).padStart(2, '0')
 
+// ── Helpers de la página "consola" (réplica de la consola física Ecowitt) ──
+const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+const cardinal = (deg?: number) => (deg == null ? '--' : DIR16[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16])
+
+// Fase lunar sencilla (mes sinódico) → fracción iluminada + creciente/menguante.
+function moonPhase(d: Date) {
+  const syn = 29.530588853
+  const ref = Date.UTC(2000, 0, 6, 18, 14) / 86400000 // luna nueva de referencia
+  const phase = (((d.getTime() / 86400000 - ref) / syn) % 1 + 1) % 1
+  return { phase, illum: (1 - Math.cos(2 * Math.PI * phase)) / 2, waxing: phase <= 0.5 }
+}
+
+// Dibuja la luna con la iluminación real (terminador elíptico correcto).
+function MoonGlyph({ size = 42 }: { size?: number }) {
+  const R = size / 2
+  const { phase, illum, waxing } = moonPhase(new Date())
+  const rx = Math.max(0.4, Math.abs(R * Math.cos(2 * Math.PI * phase)))
+  const gibbous = illum > 0.5
+  const s1 = waxing ? 1 : 0
+  const s2 = gibbous ? s1 : 1 - s1
+  const litPath = `M0,${-R} A ${R} ${R} 0 0 ${s1} 0 ${R} A ${rx} ${R} 0 0 ${s2} 0 ${-R} Z`
+  return (
+    <svg width={size} height={size} viewBox={`${-R} ${-R} ${size} ${size}`}>
+      <circle r={R} fill="#1b1b1b" />
+      <path d={litPath} fill="#ffcf19" />
+    </svg>
+  )
+}
+
 // Pestañas de la barra inferior. El ORDEN y el número deben coincidir con
 // NUM_PAGES del firmware (que mapea el toque en la franja inferior a la pagina
 // segun la X). Pagina N -> TABS[N-1].
@@ -93,9 +122,9 @@ export function KioskPage() {
     const i = setInterval(load, 30000)
     return () => clearInterval(i)
   }, [])
-  // Estación remota (GW1100): solo en la página de sensores.
+  // Estación remota (GW1100): página de sensores y consola.
   useEffect(() => {
-    if (page !== '3') return
+    if (page !== '3' && page !== 'consola') return
     const load = () => fetch('/api/current?station=gw1100').then((r) => (r.ok ? r.json() : null))
       .then(setRemote).catch(() => {})
     load()
@@ -155,6 +184,221 @@ export function KioskPage() {
       {tabBar}
     </div>
   )
+
+  // ── Página "consola": réplica de la consola física Ecowitt, pantalla
+  //    completa (sin header ni barra de pestañas), llena todo el ancho. ──
+  if (page === 'consola') {
+    const cond = data ? deriveCondition(data) : { icon: '', label: '' }
+    const dir = data?.wind_direction
+    const chTemp = data?.temperature_ch1
+    const chHum = data?.humidity_ch1
+    const hasCh1 = chTemp != null || chHum != null
+    const sTemp = hasCh1 ? chTemp : remote?.temperature_indoor
+    const sHum = hasCh1 ? chHum : remote?.humidity_indoor
+    const sTag = hasCh1 ? 'CH1' : remote ? 'REM' : 'CH1'
+    const dateStr = `${DIAS_CORTO[now.getDay()].toUpperCase()} ${pad(now.getDate())}.${pad(now.getMonth() + 1)}`
+
+    const css = `
+      .cns{--o:#ff7b1c;--b:#2ab7f4;--y:#ffcf19;--g:#37d64a;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
+        font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+      .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
+      .cns .lbl .ac{color:var(--o)} .cns .lbl .acg{color:var(--g)}
+      .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px}
+      .cns .go{color:var(--o);text-shadow:0 0 12px rgba(255,123,28,.55)}
+      .cns .gb{color:var(--b);text-shadow:0 0 12px rgba(42,183,244,.55)}
+      .cns .gy{color:var(--y);text-shadow:0 0 12px rgba(255,207,25,.5)}
+      .cns .gg{color:var(--g);text-shadow:0 0 12px rgba(55,214,74,.55)}
+      .cns .gw{color:var(--w);text-shadow:0 0 10px rgba(234,234,234,.35)}
+      .cns .u{font-weight:700;vertical-align:top} .cns .ured{color:var(--red)}
+      .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0}
+      .cns .col{display:flex;flex-direction:column}
+      .cns .ctr{margin-top:auto;margin-bottom:auto}
+      .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
+    `
+    const bars = [9, 14, 20, 26]
+
+    return (
+      <div data-kiosk-ready={ready ? 'true' : 'false'} className="cns"
+        style={{ width: 1024, height: 600, background: '#242424', overflow: 'hidden' }}>
+        <style>{css}</style>
+        <div style={{
+          display: 'grid', width: 1024, height: 600, gap: 2,
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateRows: '1.4fr 1.18fr 1.22fr 0.96fr 0.74fr',
+        }}>
+          {/* Fila 1 */}
+          <div className="cell col">
+            <div className="lbl">OUTDOOR</div>
+            <div style={{ color: 'var(--o)', fontSize: 18, fontWeight: 700, letterSpacing: 2, marginTop: 5 }}>TEMPERATURE</div>
+            <div className="big go ctr" style={{ fontSize: 104 }}>
+              {u.temp(data?.temperature_outdoor)}<span className="u ured" style={{ fontSize: 32 }}>{u.tempU}</span>
+            </div>
+          </div>
+
+          <div className="cell" style={{ padding: '7px 9px' }}>
+            <div className="bt">
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>WIND</span>
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>{u.windU}</span>
+            </div>
+            <span style={{ position: 'absolute', left: 10, top: 52, color: 'var(--w)', fontSize: 16, fontWeight: 700 }}>{cardinal(dir)}</span>
+            <div style={{ position: 'absolute', inset: '26px 8px 6px' }}>
+              <svg viewBox="0 0 100 96" width="100%" height="100%" style={{ display: 'block' }}>
+                <ellipse cx="50" cy="50" rx="47" ry="44" stroke="#3a3a3a" strokeWidth="1.4" fill="none" />
+                <ellipse cx="50" cy="50" rx="40" ry="37" stroke="#232323" strokeWidth="1" fill="none" />
+                <text x="50" y="10" fill="#eaeaea" fontSize="8" fontWeight="700" textAnchor="middle">N</text>
+                <text x="97" y="53" fill="#eaeaea" fontSize="8" fontWeight="700" textAnchor="middle">E</text>
+                <text x="50" y="95" fill="#eaeaea" fontSize="8" fontWeight="700" textAnchor="middle">S</text>
+                <text x="3" y="53" fill="#eaeaea" fontSize="8" fontWeight="700" textAnchor="middle">W</text>
+                {dir != null && (
+                  <g transform={`rotate(${dir} 50 50)`}>
+                    <polygon points="50,15 44,27 50,24 56,27" fill="#37d64a" />
+                    <rect x="48.6" y="24" width="2.8" height="22" fill="#37d64a" />
+                  </g>
+                )}
+              </svg>
+            </div>
+            <div className="gg" style={{ position: 'absolute', top: '54%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
+              <span style={{ fontSize: 64 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 32 }}>°</span>
+            </div>
+          </div>
+
+          <div className="cell col">
+            <div className="lbl">GUST</div>
+            <div style={{ position: 'absolute', top: 10, right: 12 }}>
+              <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
+                <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M2 15 H25 a4.5 4.5 0 1 1 -4.5 4.5" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="big go ctr" style={{ fontSize: 104 }}>
+              {u.wind(data?.wind_gust, 1)}<span className="u" style={{ fontSize: 26, color: 'var(--o)' }}> {u.windU}</span>
+            </div>
+          </div>
+
+          {/* Fila 2 */}
+          <div className="cell col">
+            <div className="lbl">HUMIDITY</div>
+            <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'flex-end', gap: 3, height: 26 }}>
+              {bars.map((h, i) => <span key={i} style={{ width: 5, height: h, background: 'var(--lbl)', borderRadius: 1 }} />)}
+            </div>
+            <div className="big gw ctr" style={{ fontSize: 80, lineHeight: 0.8 }}>
+              {(data?.humidity_outdoor ?? 0).toFixed(0)}<span className="u" style={{ fontSize: 34, color: 'var(--w)' }}>%</span>
+            </div>
+            <div style={{ position: 'absolute', left: 12, bottom: 8, color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>EXTERIOR</div>
+          </div>
+
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, paddingLeft: 16 }}>
+            <div>
+              <div style={{ color: 'var(--o)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>DEWPOINT</div>
+              <div className="go" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>
+                {u.temp(data?.dew_point)}<span className="u ured" style={{ fontSize: 16 }}>{u.tempU}</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--o)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>FEELS LIKE</div>
+              <div className="go" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>
+                {u.temp(data?.feels_like)}<span className="u ured" style={{ fontSize: 16 }}>{u.tempU}</span>
+              </div>
+            </div>
+            <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' }}>
+              <svg width="48" height="38" viewBox="0 0 52 40" fill="none">
+                <path d="M14 24 a9 9 0 0 1 0.6 -17.8 a11 11 0 0 1 21 3 a8 8 0 0 1 -2 15.8 Z" fill="#c9ccd1" />
+                <line x1="16" y1="30" x2="13" y2="37" stroke="#2ab7f4" strokeWidth="2.4" strokeLinecap="round" />
+                <line x1="26" y1="30" x2="23" y2="37" stroke="#2ab7f4" strokeWidth="2.4" strokeLinecap="round" />
+                <line x1="36" y1="30" x2="33" y2="37" stroke="#2ab7f4" strokeWidth="2.4" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="cell col">
+            <div className="lbl">AVERAGE</div>
+            <div className="big gw ctr" style={{ fontSize: 86 }}>{u.wind(data?.wind_speed, 1)}</div>
+          </div>
+
+          {/* Fila 3 */}
+          <div className="cell col">
+            <div className="bt"><span className="lbl">RAIN</span><span className="lbl">HOY</span></div>
+            <div className="big gb ctr" style={{ fontSize: 96 }}>
+              {u.rain(data?.rain_daily)}<span className="u" style={{ fontSize: 32, color: 'var(--b)' }}> {u.rainU}</span>
+            </div>
+          </div>
+
+          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <WeatherIcon name={cond.icon} size={150} />
+          </div>
+
+          <div className="cell col">
+            <div className="bt"><span className="lbl">PRESSURE</span><span className="lbl">REL</span></div>
+            <div className="big gb ctr" style={{ fontSize: 80 }}>
+              {u.press(data?.pressure_relative, 1)}<span className="u" style={{ fontSize: 26, color: 'var(--b)' }}> {u.pressU}</span>
+            </div>
+          </div>
+
+          {/* Fila 4 */}
+          <div className="cell">
+            <div className="lbl">IN <span className="ac">TEMP</span></div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 7 }}>
+              <span className="gy" style={{ fontSize: 56, fontWeight: 800 }}>
+                {u.temp(data?.temperature_indoor)}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
+              </span>
+              <span className="gy" style={{ fontSize: 56, fontWeight: 800 }}>
+                {data?.humidity_indoor != null ? data.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="cell" style={{ display: 'flex' }}>
+            <div style={{ flex: 1 }}>
+              <div className="lbl">UV INDEX</div>
+              <div className="gw" style={{ fontSize: 70, fontWeight: 800, marginTop: 6 }}>{data?.uv_index ?? '--'}</div>
+            </div>
+            <div style={{ width: '38%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <div style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>MOON</div>
+              <MoonGlyph size={44} />
+            </div>
+          </div>
+
+          <div className="cell">
+            <div className="lbl">SENSOR <span className="acg">{sTag}</span></div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 7 }}>
+              <span className="gg" style={{ fontSize: 56, fontWeight: 800 }}>
+                {sTemp != null ? u.temp(sTemp) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
+              </span>
+              <span className="gg" style={{ fontSize: 56, fontWeight: 800 }}>
+                {sHum != null ? sHum.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}>%</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Fila 5 */}
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 42, marginBottom: 3 }}>
+              <span style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>TIME</span>
+              <span style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>DATE</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, whiteSpace: 'nowrap' }}>
+              <span className="gg" style={{ fontSize: 50, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+              <span className="gg" style={{ fontSize: 34, fontWeight: 800 }}>{dateStr}</span>
+            </div>
+          </div>
+
+          <div className="cell col" style={{ justifyContent: 'center' }}>
+            <div className="lbl">SUNLIGHT</div>
+            <div className="gw" style={{ fontSize: 56, fontWeight: 800, marginTop: 5 }}>
+              {data?.solar_radiation != null ? data.solar_radiation.toFixed(1) : '--'}<span className="u" style={{ fontSize: 22, color: 'var(--w)' }}> W/m²</span>
+            </div>
+          </div>
+
+          <div className="cell col" style={{ justifyContent: 'center' }}>
+            <div className="lbl">HEAT INDEX</div>
+            <div className="gg" style={{ fontSize: 56, fontWeight: 800, marginTop: 4 }}>
+              {u.temp(data?.heat_index ?? data?.feels_like)}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── Página 2: sensor local del display (BME280) ──
   if (page === '2') {

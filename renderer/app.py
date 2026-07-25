@@ -26,7 +26,7 @@ CACHE_TTL = float(os.environ.get("CACHE_TTL", "45"))              # segundos
 READY_TIMEOUT_MS = float(os.environ.get("READY_TIMEOUT_MS", "15000"))
 JPEG_QUALITY = int(os.environ.get("JPEG_QUALITY", "80"))
 GOTO_RETRIES = int(os.environ.get("GOTO_RETRIES", "3"))           # reintentos de page.goto
-VALID_PAGES = {"1", "2", "3", "4", "5"}
+VALID_PAGES = {"1", "2", "3", "4", "5", "consola"}
 
 _state: dict = {"browser": None, "playwright": None}
 _lock = asyncio.Lock()
