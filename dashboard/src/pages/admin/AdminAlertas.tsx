@@ -11,6 +11,14 @@ interface AlertSettings {
   alert_rain_daily: number
   alert_pressure_high: number
   alert_pressure_low: number
+  alert_humidity_low: number
+  alert_humidity_high: number
+  alert_pressure_drop_warn: number
+  alert_pressure_drop_strong: number
+  alert_pressure_rise_warn: number
+  alert_pressure_rise_strong: number
+  alert_pressure_trend_window_min: number
+  alert_persist_minutes: number
   alert_station_offline_minutes: number
   alert_battery_enabled: boolean
   alert_sensor_lost_enabled: boolean
@@ -22,9 +30,15 @@ interface AlertSettings {
   email_enabled: boolean
 }
 
+// Umbrales que se pueden sobreescribir POR ESTACIÓN (se siembran de los globales
+// al elegir una secundaria y se guardan en su alert_thresholds). La ventana de
+// tendencia y la persistencia anti-spam son globales (no van aquí).
 const THRESHOLD_KEYS = [
   'alert_temp_high', 'alert_temp_low', 'alert_wind_high', 'alert_gust_high',
   'alert_rain_rate', 'alert_rain_daily', 'alert_pressure_high', 'alert_pressure_low',
+  'alert_humidity_high', 'alert_humidity_low',
+  'alert_pressure_drop_warn', 'alert_pressure_drop_strong',
+  'alert_pressure_rise_warn', 'alert_pressure_rise_strong',
 ] as const
 
 interface StationOpt { name: string; label: string }
@@ -152,7 +166,7 @@ export function AdminAlertas() {
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
   const isPrincipal = selected === null
-  const selLabel = isPrincipal ? 'Principal (WS69)' : (secondaries.find((s) => s.name === selected)?.label || selected)
+  const selLabel = isPrincipal ? 'Principal (WS2910)' : (secondaries.find((s) => s.name === selected)?.label || selected)
 
   return (
     <div className="space-y-4">
@@ -160,7 +174,7 @@ export function AdminAlertas() {
         <div>
           <h1 className="text-xl font-bold">Alertas</h1>
           <p className="text-slate-400 text-sm">
-            {isPrincipal ? 'Umbrales de la estación principal · WS69' : `Umbrales de ${selLabel}`}
+            {isPrincipal ? 'Umbrales de la estación principal · WS2910' : `Umbrales de ${selLabel}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -170,7 +184,7 @@ export function AdminAlertas() {
               onChange={(e) => onSelectStation(e.target.value || null)}
               className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
             >
-              <option value="">Principal (WS69)</option>
+              <option value="">Principal (WS2910)</option>
               {secondaries.map((s) => (<option key={s.name} value={s.name}>{s.label}</option>))}
             </select>
           )}
@@ -196,7 +210,7 @@ export function AdminAlertas() {
             <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
           </div>
           <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS69)</span>. Elige otra estación arriba para editar sus umbrales propios.
+            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS2910)</span>. Elige otra estación arriba para editar sus umbrales propios.
           </div>
         </>
       ) : (
@@ -220,7 +234,7 @@ export function AdminAlertas() {
             </div>
           </div>
 
-          {/* Viento y Lluvia solo aplican a la principal (WS69). El GW1100 no los tiene. */}
+          {/* Viento y Lluvia solo aplican a la principal (WS2910). El GW1100 no los tiene. */}
           {isPrincipal && (
             <div>
               <p className="text-sm font-medium mb-1">💨 Viento</p>
@@ -259,6 +273,49 @@ export function AdminAlertas() {
               <span className="text-xs text-slate-500">hPa</span>
             </div>
           </div>
+
+          {/* Humedad (aplica a ambas: exterior WS2910; GW1100 con trampa = exterior) */}
+          <div>
+            <p className="text-sm font-medium mb-1">💧 Humedad</p>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-400">Alta</span>
+              <NumField value={settings.alert_humidity_high} onChange={(v) => update('alert_humidity_high', v)} min={0} max={100} step={5} />
+              <span className="text-slate-400">Baja</span>
+              <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} />
+              <span className="text-xs text-slate-500">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tendencia de presión (2 niveles). Aplica a ambas estaciones. */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <p className="text-sm font-medium mb-2">
+          📉 Tendencia de presión <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (caída = tormenta · subida = frente frío)</span>
+        </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">Caída</span>
+            <span className="text-xs text-slate-500">aviso</span>
+            <NumField value={settings.alert_pressure_drop_warn} onChange={(v) => update('alert_pressure_drop_warn', v)} min={0} max={20} step={0.5} />
+            <span className="text-xs text-slate-500">fuerte</span>
+            <NumField value={settings.alert_pressure_drop_strong} onChange={(v) => update('alert_pressure_drop_strong', v)} min={0} max={20} step={0.5} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">Subida</span>
+            <span className="text-xs text-slate-500">aviso</span>
+            <NumField value={settings.alert_pressure_rise_warn} onChange={(v) => update('alert_pressure_rise_warn', v)} min={0} max={20} step={0.5} />
+            <span className="text-xs text-slate-500">fuerte</span>
+            <NumField value={settings.alert_pressure_rise_strong} onChange={(v) => update('alert_pressure_rise_strong', v)} min={0} max={20} step={0.5} />
+          </div>
+          <span className="text-xs text-slate-500">hPa</span>
+          {isPrincipal && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-slate-400">Ventana</span>
+              <NumField value={settings.alert_pressure_trend_window_min} onChange={(v) => update('alert_pressure_trend_window_min', v)} min={15} max={180} step={15} />
+              <span className="text-xs text-slate-500">min (global)</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -285,6 +342,12 @@ export function AdminAlertas() {
               <div className="h-4 w-px bg-white/10" />
               <Toggle enabled={settings.alert_battery_enabled} onChange={(v) => update('alert_battery_enabled', v)} label="🔋 Bateria baja" />
               <Toggle enabled={settings.alert_sensor_lost_enabled} onChange={(v) => update('alert_sensor_lost_enabled', v)} label="📡 Sensor perdido" />
+              <div className="h-4 w-px bg-white/10" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">⏱️ Sostener</span>
+                <NumField value={settings.alert_persist_minutes} onChange={(v) => update('alert_persist_minutes', v)} min={0} max={30} step={0.5} />
+                <span className="text-xs text-slate-500">min antes de avisar (anti-spam global; ráfaga es inmediata)</span>
+              </div>
             </div>
           </div>
 
