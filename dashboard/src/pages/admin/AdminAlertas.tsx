@@ -246,17 +246,22 @@ export function AdminAlertas() {
       {/* Umbrales en grid compacto */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Temperatura */}
+          {/* Temperatura — en 2 líneas (alta / baja) para mayor claridad */}
           <div>
             <p className="text-sm font-medium mb-1">🌡️ Temperatura</p>
-            <div className="flex items-center gap-2 text-sm">
-              <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
-              <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} off={isOff('temp_high')} />
-              <RuleGate on={!isOff('temp_low')} onToggle={() => toggleRule('temp_low')} />
-              <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_temp_low} onChange={(v) => update('alert_temp_low', v)} min={-40} max={30} step={0.5} off={isOff('temp_low')} />
-              <span className="text-xs text-slate-500">°C</span>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
+                <span className="text-slate-400 w-10">Alta</span>
+                <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} off={isOff('temp_high')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('temp_low')} onToggle={() => toggleRule('temp_low')} />
+                <span className="text-slate-400 w-10">Baja</span>
+                <NumField value={settings.alert_temp_low} onChange={(v) => update('alert_temp_low', v)} min={-40} max={30} step={0.5} off={isOff('temp_low')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
             </div>
           </div>
 

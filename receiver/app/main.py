@@ -1195,7 +1195,7 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
 
     # Sensor exterior (WS69)
     if data.get("temperature_outdoor") is not None:
-        sensors.append({
+        ext = {
             "id": "outdoor",
             "type": "WS69",
             "category": "exterior",
@@ -1205,7 +1205,14 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
             "signal": data.get("signal_wh65", data.get("signal_ws69")),
             "active": True,
-        })
+        }
+        # Si la estación mide presión pero NO tiene sensor interior separado
+        # (p. ej. GW1100 con trampa: su barómetro integrado va como exterior),
+        # se muestra la presión en la fila exterior; si hubiera interior, la
+        # presión va allí (WS2910).
+        if data.get("temperature_indoor") is None and data.get("pressure_relative") is not None:
+            ext["pressure"] = data.get("pressure_relative")
+        sensors.append(ext)
 
     # Sensor interior (consola o GW1100)
     if data.get("temperature_indoor") is not None:

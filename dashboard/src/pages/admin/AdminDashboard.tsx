@@ -60,6 +60,24 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(h / 24)}d`
 }
 
+// Nombres de los chips de categoría de alerta y a qué mapea cada clave de regla.
+const ALERT_CHIPS = ['Temperatura', 'Humedad', 'Viento', 'Lluvia', 'Presion', 'Tendencia', 'Offline', 'Bateria', 'Sensor', 'Aire']
+
+function alertChipLabel(key: string): string | null {
+  const k = key.includes(':') ? key.split(':')[1] : key   // quita el prefijo de estación
+  if (k.startsWith('temp_')) return 'Temperatura'
+  if (k.startsWith('humidity_')) return 'Humedad'
+  if (k === 'wind_high' || k === 'gust_high') return 'Viento'
+  if (k.startsWith('rain_')) return 'Lluvia'
+  if (k === 'pressure_high' || k === 'pressure_low') return 'Presion'
+  if (k === 'pressure_drop' || k === 'pressure_rise') return 'Tendencia'
+  if (k.startsWith('station_offline')) return 'Offline'
+  if (k.startsWith('battery_')) return 'Bateria'
+  if (k.startsWith('sensor_')) return 'Sensor'
+  if (k === 'aqi_high' || k === 'imeca_high') return 'Aire'
+  return null
+}
+
 function SensorRow({ sensor, online }: { sensor: SensorDetail; online: boolean }) {
   const icon = { exterior: '🌡️', interior: '🏠', canal: '📍', viento: '💨', lluvia: '🌧️', solar: '☀️' }[sensor.category] || '📡'
   const receiving = sensor.active && online
@@ -354,9 +372,22 @@ export function AdminDashboard() {
           <p className="text-emerald-400 text-sm">✓ Sin alertas activas</p>
         )}
         <div className="flex flex-wrap gap-2 mt-2">
-          {['Temperatura', 'Viento', 'Lluvia', 'Presion', 'Offline', 'Bateria', 'Sensor', 'Aire'].map(t => (
-            <span key={t} className={`text-xs px-2 py-0.5 rounded ${status?.alerts_enabled ? 'bg-slate-700/50 text-slate-300' : 'bg-slate-800/50 text-slate-500'}`}>{t}</span>
-          ))}
+          {(() => {
+            const activeCats = new Set(alerts.map((a) => alertChipLabel(a.key)).filter(Boolean))
+            return ALERT_CHIPS.map((t) => {
+              const active = activeCats.has(t)
+              const cls = active
+                ? 'bg-red-500/25 text-red-200 font-semibold ring-1 ring-red-500/60'
+                : status?.alerts_enabled
+                  ? 'bg-slate-700/50 text-slate-300'
+                  : 'bg-slate-800/50 text-slate-500'
+              return (
+                <span key={t} className={`text-xs px-2 py-0.5 rounded ${cls}`}>
+                  {active ? '● ' : ''}{t}
+                </span>
+              )
+            })
+          })()}
         </div>
         <AlertHistory history={history} />
       </div>
