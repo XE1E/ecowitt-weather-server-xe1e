@@ -353,6 +353,23 @@ async def receive_ecowitt_data(request: Request):
         # filtro de picos.
         station = resolve_station(parsed_data, settings.secondary_station_map)
 
+        # Whitelist de passkey: si station is None, no es una secundaria conocida
+        # — puede ser la principal registrada o un passkey DESCONOCIDO.
+        if station is None:
+            passkey = (parsed_data.get("passkey") or "").strip()
+            primary_pk = (getattr(settings, "primary_passkey", "") or "").strip()
+            if primary_pk:
+                if passkey != primary_pk:
+                    # Whitelist activa: passkey ajeno/mal configurado -> rechazar
+                    # (antes se trataba como principal y contaminaba el dato real).
+                    logger.warning("Push RECHAZADO: passkey no registrado (%s...) IP %s",
+                                   (passkey[:6] or "?"), client_ip or "?")
+                    raise HTTPException(status_code=403, detail="Estacion no registrada")
+            elif passkey:
+                # Whitelist NO configurada: se conserva el comportamiento previo
+                # (no listado = principal) y se registra el passkey para capturarlo.
+                logger.info("Passkey de la principal (whitelist no configurada): %s", passkey)
+
         # El passkey ya cumplió su función (resolver la estación). Se elimina para
         # que NUNCA quede en la copia en memoria ni se filtre por /api/current,
         # /api/stations, etc. (no se usa en el resto del pipeline).

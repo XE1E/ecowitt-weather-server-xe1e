@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # como la estación principal (sus datos NO llevan tag 'station').
     secondary_stations: str = ""
 
+    # Passkey de la estación PRINCIPAL (whitelist). Si se define, el servidor
+    # SOLO acepta pushes cuyo passkey sea el de la principal o el de una
+    # secundaria registrada; cualquier otro se RECHAZA (403), en vez de tratarse
+    # como principal. Protege contra estaciones ajenas/mal configuradas que
+    # contaminarían la principal. Vacío = comportamiento previo (no listado =
+    # principal) y se registra en log el passkey entrante para poder capturarlo.
+    primary_passkey: str = ""
+
     # Alerts (thresholds in metric units: °C, km/h, mm/h)
     alerts_enabled: bool = False
     alert_temp_high: float = 35.0

@@ -65,6 +65,7 @@ EDITABLE_KEYS = {
     "cal_rain_mult",
     "cal_solar_mult", "cal_uv_offset",
     "station_altitude_m",
+    "primary_passkey",
     # Publicación a redes públicas (*_interval = minutos entre envíos)
     "wu_enabled", "wu_station_id", "wu_station_key", "wu_interval",
     "pws_enabled", "pws_station_id", "pws_password", "pws_interval",
