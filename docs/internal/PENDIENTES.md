@@ -45,6 +45,14 @@ dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:
 El GW1100 ya está en línea y reporta `signal_*` (0‑4). Falta la UI: barras/íconos de
 señal por sensor (p. ej. en `AdminEstacionConfig` / tarjeta de sensores).
 
+## 6. Limpiar historial de presión falso (servidor) — de ayer para atrás
+Mientras se ajustaba la presión (cálculo por altitud) se registraron en InfluxDB
+**lecturas de presión bajas irreales** que ensucian las estadísticas (mín/máx/prom).
+Purgar los puntos de presión anómalos **de ayer (2026-07-24) para atrás** (o el rango
+afectado) para que las estadísticas queden reales. Borrado selectivo por rango de
+tiempo/medición (ver notas de SSH al VPS y de tags de InfluxDB en la memoria). Los
+datos actuales ya son correctos; esto es solo limpieza del histórico.
+
 ---
 ### Hecho reciente (referencia)
 - Alertas: humedad, tendencia de presión (2 niveles), histéresis anti‑spam,
