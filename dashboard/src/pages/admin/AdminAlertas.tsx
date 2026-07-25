@@ -252,13 +252,13 @@ export function AdminAlertas() {
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
-                <span className="text-slate-400 w-10">Alta</span>
+                <span className="text-slate-400 w-14">Alta</span>
                 <NumField value={settings.alert_temp_high} onChange={(v) => update('alert_temp_high', v)} min={0} max={60} step={0.5} off={isOff('temp_high')} />
                 <span className="text-xs text-slate-500">°C</span>
               </div>
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('temp_low')} onToggle={() => toggleRule('temp_low')} />
-                <span className="text-slate-400 w-10">Baja</span>
+                <span className="text-slate-400 w-14">Baja</span>
                 <NumField value={settings.alert_temp_low} onChange={(v) => update('alert_temp_low', v)} min={-40} max={30} step={0.5} off={isOff('temp_low')} />
                 <span className="text-xs text-slate-500">°C</span>
               </div>
@@ -269,14 +269,19 @@ export function AdminAlertas() {
           {isPrincipal && (
             <div>
               <p className="text-sm font-medium mb-1">💨 Viento</p>
-              <div className="flex items-center gap-2 text-sm">
-                <RuleGate on={!isOff('wind_high')} onToggle={() => toggleRule('wind_high')} />
-                <span className="text-slate-400">Vel</span>
-                <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} off={isOff('wind_high')} />
-                <RuleGate on={!isOff('gust_high')} onToggle={() => toggleRule('gust_high')} />
-                <span className="text-slate-400">Raf</span>
-                <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} off={isOff('gust_high')} />
-                <span className="text-xs text-slate-500">km/h</span>
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('wind_high')} onToggle={() => toggleRule('wind_high')} />
+                  <span className="text-slate-400 w-14">Sostenido</span>
+                  <NumField value={settings.alert_wind_high} onChange={(v) => update('alert_wind_high', v)} min={0} max={200} step={5} off={isOff('wind_high')} />
+                  <span className="text-xs text-slate-500">km/h</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('gust_high')} onToggle={() => toggleRule('gust_high')} />
+                  <span className="text-slate-400 w-14">Ráfaga</span>
+                  <NumField value={settings.alert_gust_high} onChange={(v) => update('alert_gust_high', v)} min={0} max={200} step={5} off={isOff('gust_high')} />
+                  <span className="text-xs text-slate-500">km/h</span>
+                </div>
               </div>
             </div>
           )}
@@ -284,15 +289,19 @@ export function AdminAlertas() {
           {isPrincipal && (
             <div>
               <p className="text-sm font-medium mb-1">🌧️ Lluvia</p>
-              <div className="flex items-center gap-2 text-sm">
-                <RuleGate on={!isOff('rain_rate')} onToggle={() => toggleRule('rain_rate')} />
-                <span className="text-slate-400">Int</span>
-                <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} off={isOff('rain_rate')} />
-                <span className="text-xs text-slate-500">mm/h</span>
-                <RuleGate on={!isOff('rain_daily')} onToggle={() => toggleRule('rain_daily')} />
-                <span className="text-slate-400">Dia</span>
-                <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} off={isOff('rain_daily')} />
-                <span className="text-xs text-slate-500">mm</span>
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('rain_rate')} onToggle={() => toggleRule('rain_rate')} />
+                  <span className="text-slate-400 w-14">Intensidad</span>
+                  <NumField value={settings.alert_rain_rate} onChange={(v) => update('alert_rain_rate', v)} min={0} max={100} off={isOff('rain_rate')} />
+                  <span className="text-xs text-slate-500">mm/h</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('rain_daily')} onToggle={() => toggleRule('rain_daily')} />
+                  <span className="text-slate-400 w-14">Día</span>
+                  <NumField value={settings.alert_rain_daily} onChange={(v) => update('alert_rain_daily', v)} min={0} max={500} step={5} off={isOff('rain_daily')} />
+                  <span className="text-xs text-slate-500">mm</span>
+                </div>
               </div>
             </div>
           )}
@@ -300,28 +309,38 @@ export function AdminAlertas() {
           {/* Presion */}
           <div>
             <p className="text-sm font-medium mb-1">📊 Presion</p>
-            <div className="flex items-center gap-2 text-sm">
-              <RuleGate on={!isOff('pressure_high')} onToggle={() => toggleRule('pressure_high')} />
-              <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_pressure_high} onChange={(v) => update('alert_pressure_high', v)} min={900} max={1100} off={isOff('pressure_high')} />
-              <RuleGate on={!isOff('pressure_low')} onToggle={() => toggleRule('pressure_low')} />
-              <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_pressure_low} onChange={(v) => update('alert_pressure_low', v)} min={900} max={1100} off={isOff('pressure_low')} />
-              <span className="text-xs text-slate-500">hPa</span>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('pressure_high')} onToggle={() => toggleRule('pressure_high')} />
+                <span className="text-slate-400 w-14">Alta</span>
+                <NumField value={settings.alert_pressure_high} onChange={(v) => update('alert_pressure_high', v)} min={900} max={1100} off={isOff('pressure_high')} />
+                <span className="text-xs text-slate-500">hPa</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('pressure_low')} onToggle={() => toggleRule('pressure_low')} />
+                <span className="text-slate-400 w-14">Baja</span>
+                <NumField value={settings.alert_pressure_low} onChange={(v) => update('alert_pressure_low', v)} min={900} max={1100} off={isOff('pressure_low')} />
+                <span className="text-xs text-slate-500">hPa</span>
+              </div>
             </div>
           </div>
 
           {/* Humedad (aplica a ambas: exterior WS2910; GW1100 con trampa = exterior) */}
           <div>
             <p className="text-sm font-medium mb-1">💧 Humedad</p>
-            <div className="flex items-center gap-2 text-sm">
-              <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
-              <span className="text-slate-400">Alta</span>
-              <NumField value={settings.alert_humidity_high} onChange={(v) => update('alert_humidity_high', v)} min={0} max={100} step={5} off={isOff('humidity_high')} />
-              <RuleGate on={!isOff('humidity_low')} onToggle={() => toggleRule('humidity_low')} />
-              <span className="text-slate-400">Baja</span>
-              <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} off={isOff('humidity_low')} />
-              <span className="text-xs text-slate-500">%</span>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
+                <span className="text-slate-400 w-14">Alta</span>
+                <NumField value={settings.alert_humidity_high} onChange={(v) => update('alert_humidity_high', v)} min={0} max={100} step={5} off={isOff('humidity_high')} />
+                <span className="text-xs text-slate-500">%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('humidity_low')} onToggle={() => toggleRule('humidity_low')} />
+                <span className="text-slate-400 w-14">Baja</span>
+                <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} off={isOff('humidity_low')} />
+                <span className="text-xs text-slate-500">%</span>
+              </div>
             </div>
           </div>
         </div>

@@ -78,6 +78,14 @@ function alertChipLabel(key: string): string | null {
   return null
 }
 
+// De qué estación es la alerta (por el prefijo de la clave namespaceada).
+function alertStation(key: string): { label: string; secondary: boolean } {
+  if (key.includes(':')) return { label: key.split(':')[0].toUpperCase(), secondary: true }
+  return { label: 'Principal', secondary: false }
+}
+// Quita el "[Remota] " del mensaje (ya lo indica la insignia).
+const cleanAlertMsg = (msg: string) => msg.replace(/^\[[^\]]+\]\s*/, '')
+
 function SensorRow({ sensor, online }: { sensor: SensorDetail; online: boolean }) {
   const icon = { exterior: '🌡️', interior: '🏠', canal: '📍', viento: '💨', lluvia: '🌧️', solar: '☀️' }[sensor.category] || '📡'
   const receiving = sensor.active && online
@@ -168,15 +176,17 @@ function AlertHistory({ history }: { history: AlertHistoryItem[] }) {
   if (history.length === 0) return null
   return (
     <div className="mt-3 pt-3 border-t border-white/5">
-      <p className="text-xs text-slate-500 mb-2">Últimas 24h</p>
+      <p className="text-xs text-slate-500 mb-2">Historial de alertas (últimas 24 h)</p>
       <div className="space-y-1 max-h-32 overflow-y-auto">
         {history.slice(0, 10).map((a, i) => {
           const time = new Date(a.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
           const resolved = a.resolved_at ? ` → ${new Date(a.resolved_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : ''
+          const st = alertStation(a.key)
           return (
-            <div key={i} className="text-xs text-slate-400 flex gap-2">
-              <span className="text-slate-500 tabular-nums">{time}{resolved}</span>
-              <span className={a.resolved_at ? 'line-through text-slate-600' : ''}>{a.message}</span>
+            <div key={i} className="text-xs text-slate-400 flex gap-2 items-start">
+              <span className="text-slate-500 tabular-nums shrink-0">{time}{resolved}</span>
+              <span className={`shrink-0 text-[10px] font-semibold px-1 rounded ${st.secondary ? 'bg-violet-500/20 text-violet-300' : 'bg-sky-500/20 text-sky-300'}`}>{st.label}</span>
+              <span className={a.resolved_at ? 'line-through text-slate-600' : ''}>{cleanAlertMsg(a.message)}</span>
             </div>
           )
         })}
@@ -365,8 +375,16 @@ export function AdminDashboard() {
           <a href="/admin/alertas" className="text-sky-400 hover:text-sky-300 text-xs">Configurar →</a>
         </div>
         {alerts.length > 0 ? (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-sm">
-            {alerts.map((a, i) => <div key={i} className="text-red-300">{a.message}</div>)}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-sm space-y-1">
+            {alerts.map((a, i) => {
+              const st = alertStation(a.key)
+              return (
+                <div key={i} className="flex items-start gap-2 text-red-300">
+                  <span className={`shrink-0 mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${st.secondary ? 'bg-violet-500/25 text-violet-200' : 'bg-sky-500/25 text-sky-200'}`}>{st.label}</span>
+                  <span>{cleanAlertMsg(a.message)}</span>
+                </div>
+              )
+            })}
           </div>
         ) : (
           <p className="text-emerald-400 text-sm">✓ Sin alertas activas</p>
