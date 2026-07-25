@@ -13,6 +13,7 @@ interface CalSettings {
   cal_wind_mult: number; cal_wind_dir_offset: number
   cal_rain_mult: number
   cal_solar_mult: number; cal_uv_offset: number
+  station_altitude_m: number
   [key: string]: number | boolean
 }
 
@@ -32,7 +33,7 @@ interface StationOpt { name: string; label: string }
 function emptyCal(): CalSettings {
   const c: Record<string, number | boolean> = {
     cal_enabled: false, cal_pressure_offset: 0, cal_wind_mult: 1, cal_wind_dir_offset: 0,
-    cal_rain_mult: 1, cal_solar_mult: 1, cal_uv_offset: 0,
+    cal_rain_mult: 1, cal_solar_mult: 1, cal_uv_offset: 0, station_altitude_m: 0,
     cal_temp_outdoor: 0, cal_temp_indoor: 0, cal_hum_outdoor: 0, cal_hum_indoor: 0,
   }
   for (let i = 1; i <= 8; i++) { c[`cal_temp_ch${i}`] = 0; c[`cal_hum_ch${i}`] = 0 }
@@ -251,6 +252,13 @@ export function AdminCalibracion() {
           </Item>
           {isPrincipal && (
             <>
+              <Item label="⛰️ Altitud" src="estación" hint="m">
+                <NumField value={settings.station_altitude_m} onChange={(v) => update('station_altitude_m', v)} min={0} max={6000} step={1} />
+              </Item>
+              <p className="sm:col-span-2 lg:col-span-3 text-xs text-slate-500 -mt-1">
+                Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
+                Útil si la consola no tiene ajuste de altitud (p. ej. WS2910).
+              </p>
               <Item label="💨 Viento (factor)" src="WS69" hint="×">
                 <NumField value={settings.cal_wind_mult} onChange={(v) => update('cal_wind_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
               </Item>

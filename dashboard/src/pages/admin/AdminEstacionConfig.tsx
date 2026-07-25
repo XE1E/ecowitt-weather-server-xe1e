@@ -24,6 +24,7 @@ interface StationConfig {
   publish_enabled: boolean
   mqtt_enabled: boolean
   treat_indoor_as_outdoor?: boolean
+  altitude_m?: number
 }
 
 interface StationData {
@@ -52,6 +53,7 @@ export function AdminEstacionConfig() {
   const [publishEnabled, setPublishEnabled] = useState(false)
   const [mqttEnabled, setMqttEnabled] = useState(false)
   const [treatOutdoor, setTreatOutdoor] = useState(false)
+  const [altitudeM, setAltitudeM] = useState(0)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export function AdminEstacionConfig() {
         setPublishEnabled(data.config?.publish_enabled ?? false)
         setMqttEnabled(data.config?.mqtt_enabled ?? false)
         setTreatOutdoor(data.config?.treat_indoor_as_outdoor ?? false)
+        setAltitudeM(data.config?.altitude_m ?? 0)
         setSensorLabels(data.sensor_labels || {})
       })
       .finally(() => setLoading(false))
@@ -89,6 +92,7 @@ export function AdminEstacionConfig() {
             publish_enabled: publishEnabled,
             mqtt_enabled: mqttEnabled,
             treat_indoor_as_outdoor: treatOutdoor,
+            altitude_m: altitudeM,
           },
           sensor_labels: sensorLabels,
         }),
@@ -239,6 +243,24 @@ export function AdminEstacionConfig() {
             afuera, actívalo para que su lectura se trate como <span className="text-slate-400">exterior</span> en
             toda la app (página remota, calibración, estadísticas y publicación). La presión no cambia.
           </p>
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">⛰️ Altitud (m)</span>
+              <input
+                type="number"
+                value={altitudeM}
+                onChange={e => setAltitudeM(Number(e.target.value))}
+                min={0}
+                max={6000}
+                step={1}
+                className="w-24 rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
+              Útil si la consola no tiene ajuste de altitud (p. ej. WS2910).
+            </p>
+          </div>
         </div>
       )}
 
