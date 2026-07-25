@@ -1,7 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
+
+interface Registry {
+  whitelist_active: boolean
+  primary: { has_passkey: boolean; passkey_masked: string }
+  secondaries: { name: string; passkey_masked: string }[]
+}
+
+const MAC_HINT = 'MAC del equipo (etiqueta), p. ej. 8C:4F:00:4F:8B:63 — con o sin «:». El servidor deriva el passkey.'
 
 interface SensorDetail {
   id: string
@@ -55,6 +63,70 @@ export function AdminEstacionConfig() {
   const [treatOutdoor, setTreatOutdoor] = useState(false)
   const [altitudeM, setAltitudeM] = useState(0)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
+
+  // Registro (passkey por MAC)
+  const [registry, setRegistry] = useState<Registry | null>(null)
+  const [regMac, setRegMac] = useState('')
+  const [savingReg, setSavingReg] = useState(false)
+  const [regMsg, setRegMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+
+  const loadRegistry = useCallback(async () => {
+    try {
+      const r = await fetchWithAuth('/api/admin/registry')
+      setRegistry(await r.json())
+    } catch {
+      /* silencioso: la tarjeta mostrará estado desconocido */
+    }
+  }, [fetchWithAuth])
+
+  useEffect(() => {
+    loadRegistry()
+  }, [loadRegistry])
+
+  const saveRegistro = async (mac: string) => {
+    const principal = station?.name === null
+    setSavingReg(true)
+    setRegMsg(null)
+    try {
+      const res = principal
+        ? await fetchWithAuth('/api/admin/registry/primary', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mac }),
+          })
+        : await fetchWithAuth('/api/admin/registry/secondary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, mac }),
+          })
+      if (res.ok) {
+        setRegMac('')
+        setRegMsg({ type: 'ok', text: mac ? 'Passkey actualizada' : 'Whitelist desactivada' })
+        await loadRegistry()
+        setTimeout(() => setRegMsg(null), 2500)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setRegMsg({ type: 'error', text: data.detail || 'Error al guardar' })
+      }
+    } catch {
+      setRegMsg({ type: 'error', text: 'Error de conexión' })
+    } finally {
+      setSavingReg(false)
+    }
+  }
+
+  const handleSaveRegistro = () => {
+    if (!regMac.trim()) {
+      setRegMsg({ type: 'error', text: 'Ingresa una MAC del equipo' })
+      return
+    }
+    saveRegistro(regMac.trim())
+  }
+
+  const handleDisableWhitelist = () => {
+    if (!window.confirm('¿Desactivar la whitelist? El servidor aceptará pushes de cualquier passkey y la primera desconocida se tratará como estación principal.')) return
+    saveRegistro('')
+  }
 
   useEffect(() => {
     if (!name) return
@@ -122,6 +194,12 @@ export function AdminEstacionConfig() {
   const wn31Sensors = station.sensors_detail.filter(s => s.type === 'WN31')
   const otherSensors = station.sensors_detail.filter(s => s.type !== 'WN31')
 
+  // Registro: passkey de ESTA estación
+  const regSecondary = isPrincipal ? undefined : registry?.secondaries.find(s => s.name === name)
+  const regHasPasskey = isPrincipal ? !!registry?.primary.has_passkey : !!regSecondary
+  const regPasskeyMasked = isPrincipal ? registry?.primary.passkey_masked : regSecondary?.passkey_masked
+  const whitelistActive = registry?.whitelist_active ?? false
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -181,6 +259,74 @@ export function AdminEstacionConfig() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Registro (passkey por MAC) */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-medium">Registro</h2>
+          <span className="text-sm text-slate-400">
+            {regHasPasskey
+              ? <>Passkey: <span className="font-mono text-slate-300">{regPasskeyMasked}</span></>
+              : <span className="text-amber-400">No registrado</span>}
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">
+          Solo se aceptan pushes de estaciones registradas. El registro se gestiona por MAC
+          (etiqueta del equipo); el servidor deriva el passkey.
+        </p>
+        {isPrincipal && !whitelistActive && (
+          <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 flex items-center gap-2">
+            <span>⚠️</span>
+            <p className="text-xs text-amber-400">
+              Whitelist inactiva: no hay passkey principal configurada. Cualquier estación
+              desconocida sería tratada como principal.
+            </p>
+          </div>
+        )}
+        {isPrincipal && whitelistActive && (
+          <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 flex items-center gap-2">
+            <span>🟢</span>
+            <p className="text-xs text-emerald-400">
+              Whitelist activa: solo se aceptan las passkeys registradas.
+            </p>
+          </div>
+        )}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-sm text-slate-400 mb-1">MAC del equipo</label>
+            <input
+              type="text"
+              value={regMac}
+              onChange={e => setRegMac(e.target.value)}
+              placeholder="8C:4F:00:4F:8B:63"
+              className="w-full rounded bg-slate-900/50 border border-white/10 px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-sky-500/50"
+            />
+          </div>
+          <button
+            onClick={handleSaveRegistro}
+            disabled={savingReg}
+            className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium"
+          >
+            {savingReg ? 'Guardando...' : 'Guardar'}
+          </button>
+          {regMsg && (
+            <span className={`text-sm ${regMsg.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{regMsg.text}</span>
+          )}
+        </div>
+        <p className="text-xs text-slate-500 mt-2">{MAC_HINT}</p>
+        {isPrincipal && (
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-3">
+            <button
+              onClick={handleDisableWhitelist}
+              disabled={savingReg || !regHasPasskey}
+              className="text-sm text-red-400 hover:text-red-300 disabled:text-slate-600 disabled:cursor-not-allowed"
+            >
+              Desactivar whitelist
+            </button>
+            <span className="text-xs text-slate-500">Borra el passkey principal y deja de filtrar por registro.</span>
+          </div>
+        )}
       </div>
 
       {/* Servicios por estación */}
