@@ -45,13 +45,16 @@ dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:
 El GW1100 ya está en línea y reporta `signal_*` (0‑4). Falta la UI: barras/íconos de
 señal por sensor (p. ej. en `AdminEstacionConfig` / tarjeta de sensores).
 
-## 6. Limpiar historial de presión falso (servidor) — de ayer para atrás
-Mientras se ajustaba la presión (cálculo por altitud) se registraron en InfluxDB
-**lecturas de presión bajas irreales** que ensucian las estadísticas (mín/máx/prom).
-Purgar los puntos de presión anómalos **de ayer (2026-07-24) para atrás** (o el rango
-afectado) para que las estadísticas queden reales. Borrado selectivo por rango de
-tiempo/medición (ver notas de SSH al VPS y de tags de InfluxDB en la memoria). Los
-datos actuales ya son correctos; esto es solo limpieza del histórico.
+## 6. Limpiar historial de presión falso (servidor) — ✅ HECHO (2026-07-25)
+La presión relativa de la principal (WS2910) del 2026-07-19 al 2026-07-24 estaba
+sistemáticamente ~14 hPa baja (~1013) porque no se aplicaba la altitud. **Corregido
+sin perder datos:** se recalculó la relativa desde la **absoluta @2250 m** (misma
+fórmula ISA del servidor, `round(...,1)`) con un `to()` de Flux que sobrescribió solo
+ese campo (backup previo en `/data/pressure_backup_pre_altitude.csv`, 7580 filas), y
+se reconstruyeron los resúmenes `weather_daily` de esos días con
+`aggregator.compute_and_store_day`. También se borraron 3 lecturas anómalas de
+absoluta (~790 hPa) del 07-24 22:42-22:44Z. Resultado: presión histórica real
+(~1024-1032 hPa). El GW1100 se dejó igual (usa la altitud de su propia consola).
 
 ---
 ### Hecho reciente (referencia)
