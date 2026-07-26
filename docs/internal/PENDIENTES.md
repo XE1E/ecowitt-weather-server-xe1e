@@ -45,6 +45,15 @@ dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:
 - [ ] Token en el push (además de la whitelist por passkey).
 - [ ] Barrer los `str(e)` de errores 500 en el resto de endpoints.
 
+## 5b. Idea futura — video en vivo del cielo/horizonte en el dashboard
+El usuario evaluará comprar una **cámara IP exterior RTSP/ONVIF** (gama media, ~$50‑80;
+Reolink RLC‑520A/810A, PoE, IP66; NO Ring/Nest/Blink/Wyze‑sin‑RTSP). Pendiente hasta
+validar cámara + costo. Arquitectura acordada (resuelve el CGNAT/IP dinámica):
+`cámara RTSP (LAN) → go2rtc en la RPi4 (WebRTC/HLS) → Cloudflare Tunnel (cam.xe1e.net)
+→ página "Cielo" embebida en el dashboard`. La **pantalla ESP32 NO** puede mostrar
+video fluido (solo JPEG), sería solo web. La HP10 de Ecowitt NO sirve para esto (es
+time‑lapse/snapshots, no stream; su `/capture` local solo da fotos).
+
 ## 5. Bonus (ya se puede) — señal RF por sensor
 El GW1100 ya está en línea y reporta `signal_*` (0‑4). Falta la UI: barras/íconos de
 señal por sensor (p. ej. en `AdminEstacionConfig` / tarjeta de sensores).
