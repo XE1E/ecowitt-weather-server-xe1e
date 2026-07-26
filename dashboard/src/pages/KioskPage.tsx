@@ -205,9 +205,11 @@ export function KioskPage() {
         font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
       .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
       .cns .lbl .ac{color:var(--o)} .cns .lbl .acg{color:var(--g)}
-      /* Números en fuente 7-segmentos (DSEG); etiquetas y unidades en sans. */
-      .cns .seg{font-family:'DSEG7','Roboto Condensed',monospace}
-      .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px;font-family:'DSEG7','Roboto Condensed',monospace}
+      .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px}
+      /* Números en fuente 7-segmentos (DSEG). Las clases de glow .go/.gy/.gw/.gb
+         solo se usan en números; .gg es mixta (números + fecha) → a mano con .seg.
+         Las unidades (.u) y etiquetas (.lbl) se quedan en sans. */
+      .cns .seg,.cns .big,.cns .go,.cns .gy,.cns .gw,.cns .gb{font-family:'DSEG7','Roboto Condensed',monospace}
       .cns .go{color:var(--o);text-shadow:0 0 12px rgba(255,123,28,.55)}
       .cns .gb{color:var(--b);text-shadow:0 0 12px rgba(42,183,244,.55)}
       .cns .gy{color:var(--y);text-shadow:0 0 12px rgba(255,207,25,.5)}
@@ -262,7 +264,7 @@ export function KioskPage() {
               </svg>
             </div>
             <div className="gg" style={{ position: 'absolute', top: '54%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
-              <span style={{ fontSize: 64 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 32 }}>°</span>
+              <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 32 }}>°</span>
             </div>
           </div>
 
@@ -333,8 +335,8 @@ export function KioskPage() {
 
           <div className="cell col">
             <div className="bt"><span className="lbl">PRESSURE</span><span className="lbl">REL</span></div>
-            <div className="big gb ctr" style={{ fontSize: 80 }}>
-              {u.press(data?.pressure_relative, 1)}<span className="u" style={{ fontSize: 26, color: 'var(--b)' }}> {u.pressU}</span>
+            <div className="big gb ctr" style={{ fontSize: 56 }}>
+              {u.press(data?.pressure_relative, 1)}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
 
@@ -342,10 +344,10 @@ export function KioskPage() {
           <div className="cell">
             <div className="lbl">IN <span className="ac">TEMP</span></div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 7 }}>
-              <span className="gy" style={{ fontSize: 56, fontWeight: 800 }}>
+              <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {u.temp(data?.temperature_indoor)}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
-              <span className="gy" style={{ fontSize: 56, fontWeight: 800 }}>
+              <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {data?.humidity_indoor != null ? data.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
               </span>
             </div>
@@ -365,10 +367,10 @@ export function KioskPage() {
           <div className="cell">
             <div className="lbl">SENSOR <span className="acg">{sTag}</span></div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 7 }}>
-              <span className="gg" style={{ fontSize: 56, fontWeight: 800 }}>
+              <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? u.temp(sTemp) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
-              <span className="gg" style={{ fontSize: 56, fontWeight: 800 }}>
+              <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sHum != null ? sHum.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}>%</span>
               </span>
             </div>
@@ -381,21 +383,21 @@ export function KioskPage() {
               <span style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>DATE</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, whiteSpace: 'nowrap' }}>
-              <span className="gg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+              <span className="gg seg" style={{ fontSize: 40, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
               <span className="gg" style={{ fontSize: 30, fontWeight: 800 }}>{dateStr}</span>
             </div>
           </div>
 
           <div className="cell col" style={{ justifyContent: 'center' }}>
             <div className="lbl">SUNLIGHT</div>
-            <div className="gw" style={{ fontSize: 50, fontWeight: 800, marginTop: 2 }}>
+            <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 2 }}>
               {data?.solar_radiation != null ? data.solar_radiation.toFixed(1) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}> W/m²</span>
             </div>
           </div>
 
           <div className="cell col" style={{ justifyContent: 'center' }}>
             <div className="lbl">HEAT INDEX</div>
-            <div className="gg" style={{ fontSize: 50, fontWeight: 800, marginTop: 2 }}>
+            <div className="gg seg" style={{ fontSize: 50, fontWeight: 800, marginTop: 2 }}>
               {u.temp(data?.heat_index ?? data?.feels_like)}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
             </div>
           </div>
