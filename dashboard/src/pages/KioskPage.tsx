@@ -49,6 +49,7 @@ const TABS = [
   { icon: '🏠', label: 'Sensores' },
   { icon: '📅', label: '7 días' },
   { icon: '📈', label: '24 h' },
+  { icon: '🖥️', label: 'Consola' },
 ]
 
 interface Imeca { available: boolean; imeca?: number; category?: string; color?: string }
@@ -199,17 +200,20 @@ export function KioskPage() {
     const dateStr = `${DIAS_CORTO[now.getDay()].toUpperCase()} ${pad(now.getDate())}.${pad(now.getMonth() + 1)}`
 
     const css = `
+      @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
       .cns{--o:#ff7b1c;--b:#2ab7f4;--y:#ffcf19;--g:#37d64a;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
         font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
       .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
       .cns .lbl .ac{color:var(--o)} .cns .lbl .acg{color:var(--g)}
-      .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px}
+      /* Números en fuente 7-segmentos (DSEG); etiquetas y unidades en sans. */
+      .cns .seg{font-family:'DSEG7','Roboto Condensed',monospace}
+      .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px;font-family:'DSEG7','Roboto Condensed',monospace}
       .cns .go{color:var(--o);text-shadow:0 0 12px rgba(255,123,28,.55)}
       .cns .gb{color:var(--b);text-shadow:0 0 12px rgba(42,183,244,.55)}
       .cns .gy{color:var(--y);text-shadow:0 0 12px rgba(255,207,25,.5)}
       .cns .gg{color:var(--g);text-shadow:0 0 12px rgba(55,214,74,.55)}
       .cns .gw{color:var(--w);text-shadow:0 0 10px rgba(234,234,234,.35)}
-      .cns .u{font-weight:700;vertical-align:top} .cns .ured{color:var(--red)}
+      .cns .u{font-weight:700;vertical-align:top;font-family:'Roboto Condensed','Arial Narrow',system-ui,sans-serif} .cns .ured{color:var(--red)}
       .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0}
       .cns .col{display:flex;flex-direction:column}
       .cns .ctr{margin-top:auto;margin-bottom:auto}
