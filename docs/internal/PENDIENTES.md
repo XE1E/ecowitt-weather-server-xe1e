@@ -19,13 +19,15 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
 
 ## 2. Display de consola — fase 2 (firmware) — diferido
 Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola física,
-1024×600). Falta el firmware en el repo **`ecowitt-display-kiosk-xe1e`**:
+1024×600). **Plan detallado + decisiones:** `ecowitt-display-kiosk-xe1e/docs/PLAN-CONSOLA-XE1E.md`.
+Fase inmediata en curso (cambios mínimos):
 
-- [ ] Apuntar el display a `?page=consola` como pantalla inicial.
-- [ ] Decidir navegación por touch a las páginas de historial/estadísticas (ya existen).
-- [ ] Pequeños ajustes visuales de la consola.
-- [ ] Opcional: embeber fuente **7‑segmentos (DSEG)** en el dashboard para clavar los
-      dígitos (el Chromium del servidor cae a una fuente de respaldo).
+- [ ] **Servidor:** 6ª pestaña "Consola" (🖥️) en la barra de KioskPage + fuente
+      **7‑segmentos (DSEG) solo en la consola** (en los números).
+- [ ] **Firmware** (`ecowitt-display-kiosk-xe1e`): barra de 6 pestañas (la 6ª → consola
+      full‑screen `?page=consola`); tocar la consola en cualquier parte → **regresa a la
+      página 1**. Reflasheo.
+- Futuro: consola como home + zonas de toque por bloque (pendiente de definir).
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
