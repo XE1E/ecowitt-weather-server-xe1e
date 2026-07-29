@@ -543,13 +543,17 @@ async def get_history(
 
 
 @app.get("/api/stats/daily")
-async def get_daily_stats(station: Optional[str] = None, start: str = "-24h"):
+async def get_daily_stats(station: Optional[str] = None, start: Optional[str] = None):
     """
-    Get statistics (min, max, avg) over a range.
+    Get statistics (min, max, avg) for today (local calendar day).
 
     station: None/omitido = principal; nombre = estación secundaria.
-    start: ventana Flux (p. ej. "-24h", "-7d", "-30d").
+    start: si se omite, usa inicio del día local (medianoche); si se pasa,
+           puede ser ventana Flux ("-24h") o timestamp ISO.
     """
+    if start is None:
+        start_iso, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        start = start_iso
     try:
         secsvc.validate_flux_time(start, "start")
         secsvc.validate_station(station)
@@ -1671,10 +1675,10 @@ async def get_display_data():
     else:
         result["current"] = {}
 
-    # === STATS (min/max del día con timestamps) ===
+    # === STATS (min/max del día calendario local) ===
     try:
-        stats_response = await storage.get_daily_stats(start="-24h", station=None)
-        # Extraer solo el objeto stats interno para que ESP32 acceda directamente
+        today_start, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        stats_response = await storage.get_daily_stats(start=today_start, station=None)
         result["stats"] = stats_response.get("stats", {})
     except Exception as e:
         logger.warning(f"Error getting stats for display: {e}")
@@ -1867,9 +1871,10 @@ async def get_display_data():
 
     result["current"] = current
 
-    # 2. Daily stats (min/max/avg)
+    # 2. Daily stats (min/max/avg) - día calendario local
     try:
-        stats = await storage.get_daily_stats(start="-24h")
+        today_start, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        stats = await storage.get_daily_stats(start=today_start)
         result["stats"] = stats.get("stats", {})
     except Exception as e:
         logger.error(f"Display endpoint - stats error: {e}")
