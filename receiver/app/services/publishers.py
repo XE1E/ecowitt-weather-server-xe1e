@@ -11,12 +11,14 @@ Redes soportadas:
 - PWSWeather (unidades imperiales, mismo protocolo que WU)
 - Windy.com (unidades métricas / SI)
 - OpenWeatherMap (Stations API, JSON)
+- AWEKAS (unidades métricas, formato semicolon-delimited)
 
 Los datos entran en MÉTRICO (°C, km/h, hPa, mm) y aquí se convierten según
 lo que cada protocolo espera.
 """
 from typing import Any, Dict, Optional
 import asyncio
+import hashlib
 import logging
 from datetime import datetime
 
@@ -27,6 +29,7 @@ logger = logging.getLogger(__name__)
 _TIMEOUT = 15.0
 _CWOP_HOST = "cwop.aprs.net"
 _CWOP_PORT = 14580
+_AWEKAS_URL = "http://data.awekas.at/eingabe_pruefung.php"
 
 # Último instante en que se intentó publicar en cada red, para respetar el
 # intervalo por sistema (la estación ingresa datos ~cada minuto, pero cada red
@@ -171,6 +174,63 @@ async def _owm(client, data, api_key, station_id) -> bool:
         return False
 
 
+# ---------- AWEKAS ----------
+async def _awekas(client, data, username, password, lat, lon) -> bool:
+    """
+    Publica a AWEKAS usando su formato de 25 campos semicolon-delimited.
+    Unidades: °C, km/h, hPa, lluvia en décimas de mm.
+    """
+    now = datetime.utcnow()
+    password_hash = hashlib.md5(password.encode()).hexdigest()
+
+    def _fmt(v):
+        if v is None:
+            return ""
+        return str(round(v, 1) if isinstance(v, float) else v)
+
+    values = [
+        username,                                    # 1: usuario
+        password_hash,                               # 2: MD5 password
+        now.strftime("%d.%m.%Y"),                    # 3: fecha DD.MM.YYYY
+        now.strftime("%H:%M"),                       # 4: hora HH:MM
+        _fmt(data.get("temperature_outdoor")),       # 5: temp °C
+        _fmt(data.get("humidity_outdoor")),          # 6: humedad %
+        _fmt(data.get("pressure_relative")),         # 7: presión hPa
+        _fmt((data.get("rain_daily") or 0) * 10),    # 8: lluvia diaria (0.1mm)
+        _fmt(data.get("wind_speed")),                # 9: viento km/h
+        _fmt(data.get("wind_direction")),            # 10: dirección
+        "",                                          # 11: condición clima
+        "",                                          # 12: texto aviso
+        "",                                          # 13: altura nieve
+        "en",                                        # 14: idioma
+        "",                                          # 15: tendencia
+        _fmt(data.get("wind_gust")),                 # 16: ráfaga km/h
+        _fmt(data.get("solar_radiation")),           # 17: radiación solar
+        _fmt(data.get("uv")),                        # 18: UV index
+        "",                                          # 19: brillo
+        "",                                          # 20: horas sol
+        "",                                          # 21: temp suelo
+        _fmt((data.get("rain_rate") or 0) * 10),     # 22: tasa lluvia (0.1mm/h)
+        "ecowitt-xe1e_1.0",                          # 23: software
+        str(lon) if lon else "",                     # 24: longitud
+        str(lat) if lat else "",                     # 25: latitud
+    ]
+
+    valstr = ";".join(values)
+    url = f"{_AWEKAS_URL}?val={valstr}"
+
+    try:
+        r = await client.get(url, timeout=_TIMEOUT)
+        if r.status_code == 200 and "OK" in r.text.upper():
+            logger.info("Publicado en AWEKAS")
+            return True
+        logger.warning("AWEKAS respondió %s: %s", r.status_code, r.text[:120])
+        return False
+    except Exception as e:
+        logger.error("Error publicando en AWEKAS: %s", e)
+        return False
+
+
 # ---------- CWOP / APRS-IS ----------
 def _aprs_lat(lat: float) -> str:
     ns = "N" if lat >= 0 else "S"
@@ -278,6 +338,11 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
         if (getattr(settings, "owm_enabled", False) and settings.owm_api_key
                 and _due("openweathermap", getattr(settings, "owm_interval", 5), now)):
             results["openweathermap"] = await _owm(client, data, settings.owm_api_key, settings.owm_station_id)
+        if (getattr(settings, "awekas_enabled", False) and settings.awekas_username and settings.awekas_password
+                and _due("awekas", getattr(settings, "awekas_interval", 5), now)):
+            results["awekas"] = await _awekas(
+                client, data, settings.awekas_username, settings.awekas_password,
+                getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None))
     if (getattr(settings, "cwop_enabled", False) and settings.cwop_callsign
             and _due("cwop", getattr(settings, "cwop_interval", 10), now)):
         results["cwop"] = await _cwop(

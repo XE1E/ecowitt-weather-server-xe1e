@@ -1,6 +1,6 @@
 import { WeatherData } from './types'
 
-export type FxType = 'rain' | 'snow' | 'lightning' | 'fog' | 'none'
+export type FxType = 'rain' | 'snow' | 'storm' | 'fog' | 'clear' | 'cloudy' | 'partly-cloudy' | 'none'
 
 export interface Condition {
   icon: string        // meteocons icon name
@@ -36,7 +36,7 @@ export function deriveCondition(d: WeatherData): Condition {
     }
     // Heavy rain with lightning sensor activity -> thunderstorm
     if (heavy && lightning) {
-      return { icon: 'thunderstorms-rain', label: 'Tormenta', fx: 'lightning', intensity: 1 }
+      return { icon: 'thunderstorms-rain', label: 'Tormenta', fx: 'storm', intensity: 1 }
     }
     if (heavy) return { icon: `overcast-${suffix}-rain`, label: 'Lluvia fuerte', fx: 'rain', intensity: 1 }
     if (moderate) return { icon: `overcast-${suffix}-rain`, label: 'Lluvia', fx: 'rain', intensity: 0.7 }
@@ -53,12 +53,13 @@ export function deriveCondition(d: WeatherData): Condition {
 
   // Clear / cloudy inferred from solar radiation during the day
   if (isDay) {
-    if (solar > 450) return { icon: 'clear-day', label: 'Despejado', fx: 'none', intensity: 0 }
-    if (solar > 120) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'none', intensity: 0 }
-    return { icon: 'overcast-day', label: 'Nublado', fx: 'none', intensity: 0 }
+    if (solar > 450) return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
+    if (solar > 120) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+    return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
   }
-  // Night: cannot detect clouds without more data
-  return { icon: 'clear-night', label: 'Noche despejada', fx: 'none', intensity: 0 }
+  // Night: stars effect for clear night
+  if (humidity < 70) return { icon: 'clear-night', label: 'Noche despejada', fx: 'clear', intensity: 0.5 }
+  return { icon: 'partly-cloudy-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.4 }
 }
 
 /** Wet-bulb temperature (°C) from temp (°C) and RH (%), Stull's approximation. */

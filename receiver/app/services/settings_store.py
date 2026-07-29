@@ -100,6 +100,8 @@ EDITABLE_KEYS = {
     "owm_enabled", "owm_api_key", "owm_station_id", "owm_interval",
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
     "cwop_latitude", "cwop_longitude", "cwop_interval",
+    "awekas_enabled", "awekas_username", "awekas_password", "awekas_interval",
+    "awekas_latitude", "awekas_longitude",
     # Seguridad del endpoint de push
     "ecowitt_secure_enabled", "ecowitt_secure_token", "ecowitt_ip_allowlist",
     # MQTT / Home Assistant
@@ -122,6 +124,7 @@ SECRET_KEYS = {
     "mqtt_password",
     "owm_api_key",
     "cwop_passcode",
+    "awekas_password",
 }
 
 # Configuración por defecto para una estación

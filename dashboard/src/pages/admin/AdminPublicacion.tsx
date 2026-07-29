@@ -28,6 +28,13 @@ interface PubSettings {
   cwop_latitude: number
   cwop_longitude: number
   cwop_interval: number
+  awekas_enabled: boolean
+  awekas_username: string | null
+  awekas_password: string | null
+  awekas_password_masked: string | null
+  awekas_latitude: number
+  awekas_longitude: number
+  awekas_interval: number
 }
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
@@ -248,6 +255,35 @@ export function AdminPublicacion() {
                 <TextField value={settings.owm_station_id} onChange={(v) => update('owm_station_id', v)} placeholder="Station ID" />
               </div>
               <IntervalField value={settings.owm_interval} onChange={(v) => update('owm_interval', v)} />
+            </div>
+          )}
+        </div>
+
+        {/* AWEKAS */}
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Toggle enabled={settings.awekas_enabled} onChange={(v) => update('awekas_enabled', v)} />
+            <span className="text-sm font-medium">AWEKAS</span>
+            {settings.awekas_enabled && <CfgBadge ok={!!settings.awekas_username && (!!settings.awekas_password || !!settings.awekas_password_masked)} />}
+            <a href="https://www.awekas.at/" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
+          </div>
+          {settings.awekas_enabled && (
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Usuario</span>
+                <TextField value={settings.awekas_username} onChange={(v) => update('awekas_username', v)} placeholder="Usuario AWEKAS" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Password</span>
+                <TextField value={settings.awekas_password} onChange={(v) => update('awekas_password', v)} placeholder="Password" type="password" masked={settings.awekas_password_masked} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Lat</span>
+                <NumField value={settings.awekas_latitude} onChange={(v) => update('awekas_latitude', v)} />
+                <span className="text-xs text-slate-400 w-8 ml-2">Lon</span>
+                <NumField value={settings.awekas_longitude} onChange={(v) => update('awekas_longitude', v)} />
+              </div>
+              <IntervalField value={settings.awekas_interval} onChange={(v) => update('awekas_interval', v)} />
             </div>
           )}
         </div>
