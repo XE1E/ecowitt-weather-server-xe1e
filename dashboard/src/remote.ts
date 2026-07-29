@@ -5,12 +5,13 @@ export const REMOTE_LABEL = 'Estación remota'
 
 export interface RemoteHistRow {
   _time: string
+  // Interior: sensor integrado del GW1100
   temperature_indoor?: number
   humidity_indoor?: number
-  // Si la secundaria está "a la intemperie" (treat_indoor_as_outdoor), su lectura
-  // llega como exterior. Se prefiere exterior y, si no hay, se cae a interior.
+  // Exterior: sensor WN32 conectado al GW1100
   temperature_outdoor?: number
   humidity_outdoor?: number
+  // Presión: barómetro del GW1100
   pressure_relative?: number
 }
 

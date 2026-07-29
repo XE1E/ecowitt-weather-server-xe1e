@@ -20,7 +20,7 @@ import {
   tempDeltaDisp, pressDeltaDisp,
 } from '../remote'
 
-const REFRESH = 60000 // 1 min, como el resto del dashboard
+const REFRESH = 60000
 
 type Period = '24h' | '7d' | '30d'
 const PERIODS: { key: Period; label: string; start: string }[] = [
@@ -29,23 +29,21 @@ const PERIODS: { key: Period; label: string; start: string }[] = [
   { key: '30d', label: '30 d', start: '-30d' },
 ]
 
-type ChartMetric = 'th' | 'pressure'
+type ChartMetric = 'outdoor' | 'indoor' | 'pressure'
 
 interface ChartPoint {
   t: number
-  temp: number | null
-  humidity: number | null
+  tempOut: number | null
+  humOut: number | null
+  tempIn: number | null
+  humIn: number | null
   pressure: number | null
 }
 
 function StatTile({ label, min, avg, max, unit }: {
-  label: string
-  min: number | null
-  avg: number | null
-  max: number | null
-  unit: string
+  label: string; min: number | null; avg: number | null; max: number | null; unit: string
 }) {
-  const fmt = (v: number | null) => (v == null ? '--' : v)
+  const fmt = (v: number | null) => (v != null ? v.toFixed(1) : '--')
   return (
     <div className="rounded-lg bg-white/5 px-3 py-2">
       <p className="text-xs text-slate-400 mb-1">{label}</p>
@@ -64,7 +62,7 @@ export function RemoteStationPage() {
   const [stats, setStats] = useState<DailyStats['stats'] | null>(null)
   const [history, setHistory] = useState<RemoteHistRow[]>([])
   const [period, setPeriod] = useState<Period>('24h')
-  const [metric, setMetric] = useState<ChartMetric>('th')
+  const [metric, setMetric] = useState<ChartMetric>('outdoor')
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -104,32 +102,36 @@ export function RemoteStationPage() {
   const fmtTick = (t: number) => new Date(t).toLocaleString('es-MX', longRange
     ? { day: '2-digit', month: '2-digit', hour: '2-digit' }
     : { hour: '2-digit', minute: '2-digit' })
+
   const chart: ChartPoint[] = history
-    .map((r) => {
-      const rt = r.temperature_outdoor ?? r.temperature_indoor
-      const rh = r.humidity_outdoor ?? r.humidity_indoor
-      return {
-        t: new Date(r._time).getTime(),
-        temp: rt != null ? Number(u.tempN(rt).toFixed(1)) : null,
-        humidity: rh ?? null,
-        pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
-      }
-    })
+    .map((r) => ({
+      t: new Date(r._time).getTime(),
+      tempOut: r.temperature_outdoor != null ? Number(u.tempN(r.temperature_outdoor).toFixed(1)) : null,
+      humOut: r.humidity_outdoor ?? null,
+      tempIn: r.temperature_indoor != null ? Number(u.tempN(r.temperature_indoor).toFixed(1)) : null,
+      humIn: r.humidity_indoor ?? null,
+      pressure: r.pressure_relative != null ? Number(u.pressN(r.pressure_relative).toFixed(u.system === 'imperial' ? 2 : 1)) : null,
+    }))
     .sort((a, b) => a.t - b.t)
 
   const offline = data?.received_at ? isStale(data.received_at) : false
   const s = stats ?? {}
 
-  const t = data?.temperature_outdoor ?? data?.temperature_indoor
-  const h = data?.humidity_outdoor ?? data?.humidity_indoor
-  const dew = dewPointC(t, h)
+  // Exterior (WN32) - puede no existir aún
+  const tOut = data?.temperature_outdoor
+  const hOut = data?.humidity_outdoor
+  const dewOut = dewPointC(tOut, hOut)
+  const hasOutdoor = tOut != null || hOut != null
 
-  // Tendencias (últimas ~3 h) en unidades métricas -> se convierten para mostrar.
-  // Prefiere exterior; cae a interior si la estación no está "a la intemperie".
-  const tempTrendC = trendOver(history, 'temperature_outdoor', 3) ?? trendOver(history, 'temperature_indoor', 3)
+  // Interior (sensor integrado GW1100)
+  const tIn = data?.temperature_indoor
+  const hIn = data?.humidity_indoor
+  const dewIn = dewPointC(tIn, hIn)
+
+  // Tendencias
+  const tempOutTrend = trendOver(history, 'temperature_outdoor', 3)
+  const tempInTrend = trendOver(history, 'temperature_indoor', 3)
   const pressTrend = trendOver(history, 'pressure_relative', 3)
-  const tempDelta = tempTrendC == null ? null : tempDeltaDisp(u.system, tempTrendC)
-  const pressDelta = pressTrend == null ? null : pressDeltaDisp(u.system, pressTrend)
 
   const periodLabel = PERIODS.find((p) => p.key === period)!.label
 
@@ -151,11 +153,11 @@ export function RemoteStationPage() {
 
   return (
     <div>
-      {/* Encabezado de la página */}
+      {/* Encabezado */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <div>
           <h2 className="text-xl font-bold">{REMOTE_LABEL}</h2>
-          <p className="text-sm text-slate-400">Solo lectura · sin alertas.</p>
+          <p className="text-sm text-slate-400">GW1100 + WN32 (exterior)</p>
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-400">
           {data && (
@@ -188,28 +190,67 @@ export function RemoteStationPage() {
       ) : (
         <>
           {/* Condiciones actuales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            {/* Exterior (WN32) */}
             <div className="card">
-              <p className="card-title">Condiciones actuales</p>
+              <p className="card-title flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                Exterior (WN32)
+              </p>
+              {hasOutdoor ? (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+                    <WeatherIcon name="thermometer" size={28} />
+                    <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
+                    <p className="text-xs text-slate-400">Temp</p>
+                    {tempOutTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempOutTrend)} unit={u.tempU} threshold={0.2} />}
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+                    <WeatherIcon name="humidity" size={28} />
+                    <p className="text-xl font-bold text-cyan-300 mt-1">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
+                    <p className="text-xs text-slate-400">Humedad</p>
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+                    <WeatherIcon name="thermometer" size={28} />
+                    <p className="text-xl font-bold text-emerald-300 mt-1">{dewOut != null ? `${u.temp(dewOut)}${u.tempU}` : '--'}</p>
+                    <p className="text-xs text-slate-400">Rocío</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-slate-500">
+                  <p className="text-sm">Sensor WN32 no detectado</p>
+                  <p className="text-xs mt-1">Se mostrará cuando esté conectado</p>
+                </div>
+              )}
+            </div>
+
+            {/* Interior (GW1100) */}
+            <div className="card">
+              <p className="card-title flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                Interior (GW1100)
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="thermometer" size={34} />
-                  <p className="text-2xl font-bold text-amber-300 mt-1">{t != null ? `${u.temp(t)}${u.tempU}` : '--'}</p>
-                  <p className="text-xs text-slate-400">Temperatura</p>
-                  <TrendBadge delta={tempDelta} unit={u.tempU} threshold={0.2} />
+                  <WeatherIcon name="thermometer" size={28} />
+                  <p className="text-xl font-bold text-amber-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
+                  <p className="text-xs text-slate-400">Temp</p>
+                  {tempInTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempInTrend)} unit={u.tempU} threshold={0.2} />}
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="humidity" size={34} />
-                  <p className="text-2xl font-bold text-cyan-300 mt-1">{h != null ? `${Math.round(h)}%` : '--'}</p>
+                  <WeatherIcon name="humidity" size={28} />
+                  <p className="text-xl font-bold text-cyan-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
                   <p className="text-xs text-slate-400">Humedad</p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="thermometer" size={34} />
-                  <p className="text-2xl font-bold text-emerald-300 mt-1">{dew != null ? `${u.temp(dew)}${u.tempU}` : '--'}</p>
-                  <p className="text-xs text-slate-400">Punto de rocío</p>
+                  <WeatherIcon name="thermometer" size={28} />
+                  <p className="text-xl font-bold text-emerald-300 mt-1">{dewIn != null ? `${u.temp(dewIn)}${u.tempU}` : '--'}</p>
+                  <p className="text-xs text-slate-400">Rocío</p>
                 </div>
               </div>
             </div>
+
+            {/* Presión */}
             <div className="card">
               <p className="card-title">Presión</p>
               <div className="rounded-lg bg-white/5 px-3 py-3 flex items-center justify-between">
@@ -218,60 +259,107 @@ export function RemoteStationPage() {
                     {data?.pressure_relative != null ? `${u.press(data.pressure_relative)}` : '--'}
                     <span className="text-base font-normal text-slate-400"> {u.pressU}</span>
                   </p>
-                  <p className="text-xs text-slate-400">Relativa</p>
+                  <p className="text-xs text-slate-400">Relativa (nivel del mar)</p>
                 </div>
-                <TrendBadge delta={pressDelta} unit={u.pressU} threshold={u.system === 'imperial' ? 0.02 : 0.3} />
+                {pressTrend != null && <TrendBadge delta={pressDeltaDisp(u.system, pressTrend)} unit={u.pressU} threshold={u.system === 'imperial' ? 0.02 : 0.3} />}
               </div>
             </div>
           </div>
 
-          {/* Estadística del periodo */}
+          {/* Estadísticas */}
           <div className="card mb-6">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <p className="card-title mb-0">Estadística ({periodLabel})</p>
+              <p className="card-title mb-0">Estadísticas ({periodLabel})</p>
               {periodBtns}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <StatTile
-                label="Temperatura"
-                min={(s.temperature_outdoor ?? s.temperature_indoor)?.min ?? null}
-                avg={(s.temperature_outdoor ?? s.temperature_indoor)?.avg ?? null}
-                max={(s.temperature_outdoor ?? s.temperature_indoor)?.max ?? null}
-                unit={u.tempU}
-              />
-              <StatTile
-                label="Humedad"
-                min={(s.humidity_outdoor ?? s.humidity_indoor)?.min ?? null}
-                avg={(s.humidity_outdoor ?? s.humidity_indoor)?.avg ?? null}
-                max={(s.humidity_outdoor ?? s.humidity_indoor)?.max ?? null}
-                unit="%"
-              />
-              <StatTile
-                label="Presión"
-                min={s.pressure_relative?.min ?? null}
-                avg={s.pressure_relative?.avg ?? null}
-                max={s.pressure_relative?.max ?? null}
-                unit={` ${u.pressU}`}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Stats Exterior */}
+              {hasOutdoor && (
+                <div>
+                  <p className="text-xs text-amber-400 font-medium mb-2 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    Exterior (WN32)
+                  </p>
+                  <div className="grid gap-2">
+                    <StatTile
+                      label="Temperatura"
+                      min={s.temperature_outdoor?.min ?? null}
+                      avg={s.temperature_outdoor?.avg ?? null}
+                      max={s.temperature_outdoor?.max ?? null}
+                      unit={u.tempU}
+                    />
+                    <StatTile
+                      label="Humedad"
+                      min={s.humidity_outdoor?.min ?? null}
+                      avg={s.humidity_outdoor?.avg ?? null}
+                      max={s.humidity_outdoor?.max ?? null}
+                      unit="%"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Stats Interior */}
+              <div>
+                <p className="text-xs text-sky-400 font-medium mb-2 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                  Interior (GW1100)
+                </p>
+                <div className="grid gap-2">
+                  <StatTile
+                    label="Temperatura"
+                    min={s.temperature_indoor?.min ?? null}
+                    avg={s.temperature_indoor?.avg ?? null}
+                    max={s.temperature_indoor?.max ?? null}
+                    unit={u.tempU}
+                  />
+                  <StatTile
+                    label="Humedad"
+                    min={s.humidity_indoor?.min ?? null}
+                    avg={s.humidity_indoor?.avg ?? null}
+                    max={s.humidity_indoor?.max ?? null}
+                    unit="%"
+                  />
+                </div>
+              </div>
+              {/* Stats Presión */}
+              <div className="md:col-span-2">
+                <StatTile
+                  label="Presión"
+                  min={s.pressure_relative?.min ?? null}
+                  avg={s.pressure_relative?.avg ?? null}
+                  max={s.pressure_relative?.max ?? null}
+                  unit={` ${u.pressU}`}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Histórico */}
+          {/* Gráfica histórica */}
           <div className="card">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex gap-1">
+                {hasOutdoor && (
+                  <button
+                    onClick={() => setMetric('outdoor')}
+                    className={`px-3 py-1 rounded-lg text-sm transition ${
+                      metric === 'outdoor' ? 'bg-amber-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                    }`}
+                  >
+                    Exterior
+                  </button>
+                )}
                 <button
-                  onClick={() => setMetric('th')}
+                  onClick={() => setMetric('indoor')}
                   className={`px-3 py-1 rounded-lg text-sm transition ${
-                    metric === 'th' ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                    metric === 'indoor' ? 'bg-sky-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
-                  Temp y humedad
+                  Interior
                 </button>
                 <button
                   onClick={() => setMetric('pressure')}
                   className={`px-3 py-1 rounded-lg text-sm transition ${
-                    metric === 'pressure' ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                    metric === 'pressure' ? 'bg-violet-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
                   Presión
@@ -289,21 +377,32 @@ export function RemoteStationPage() {
                   <LineChart data={chart} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} minTickGap={40} />
-                    {metric === 'th' ? (
+                    {metric === 'outdoor' && (
                       <>
                         <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
-                        <YAxis yAxisId="humidity" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} labelFormatter={(l) => fmtTick(Number(l))} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                         <Legend />
-                        <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f59e0b" strokeWidth={2} dot={false} name={`Temperatura (${u.tempU})`} />
-                        <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2} dot={false} name="Humedad (%)" />
+                        <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
+                        <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
                       </>
-                    ) : (
+                    )}
+                    {metric === 'indoor' && (
+                      <>
+                        <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                        <Legend />
+                        <Line yAxisId="left" type="monotone" dataKey="tempIn" name={`Temp ${u.tempU}`} stroke="#38bdf8" dot={false} strokeWidth={2} connectNulls />
+                        <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
+                      </>
+                    )}
+                    {metric === 'pressure' && (
                       <>
                         <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#e2e8f0' }} labelFormatter={(l) => fmtTick(Number(l))} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                         <Legend />
-                        <Line type="monotone" dataKey="pressure" stroke="#a78bfa" strokeWidth={2} dot={false} name={`Presión (${u.pressU})`} />
+                        <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#a78bfa" dot={false} strokeWidth={2} connectNulls />
                       </>
                     )}
                   </LineChart>

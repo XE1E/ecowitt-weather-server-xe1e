@@ -5,6 +5,8 @@ interface Props {
   data: WeatherData
   stats: DailyStats['stats'] | null
   label?: string
+  /** Si es true, muestra interior como sensor principal (para estaciones sin exterior) */
+  indoorPrimary?: boolean
 }
 
 type TrendDir = 'up' | 'down' | 'stable'
@@ -69,31 +71,41 @@ interface RowData {
   extra?: React.ReactNode
 }
 
-export function StationSummaryTable({ data, stats, label }: Props) {
+export function StationSummaryTable({ data, stats, label, indoorPrimary = false }: Props) {
   const s = stats
+
+  // Selecciona indoor o outdoor según el modo
+  const tempLabel = indoorPrimary ? 'Temperatura (int)' : 'Temperatura'
+  const humLabel = indoorPrimary ? 'Humedad (int)' : 'Humedad'
+
+  // Valores de T/H según modo
+  const temp = indoorPrimary ? data.temperature_indoor : data.temperature_outdoor
+  const hum = indoorPrimary ? data.humidity_indoor : data.humidity_outdoor
+  const tempStats = indoorPrimary ? s?.temperature_indoor : s?.temperature_outdoor
+  const humStats = indoorPrimary ? s?.humidity_indoor : s?.humidity_outdoor
 
   const rows: RowData[] = useMemo(() => [
     {
-      label: 'Temperatura',
+      label: tempLabel,
       unit: '°C',
-      current: data.temperature_outdoor,
-      min: s?.temperature_outdoor?.min,
-      minTime: s?.temperature_outdoor?.min_time,
-      max: s?.temperature_outdoor?.max,
-      maxTime: s?.temperature_outdoor?.max_time,
-      avg: s?.temperature_outdoor?.avg,
-      trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+      current: temp,
+      min: tempStats?.min,
+      minTime: tempStats?.min_time,
+      max: tempStats?.max,
+      maxTime: tempStats?.max_time,
+      avg: tempStats?.avg,
+      trend: getTrend(temp, tempStats?.avg),
     },
     {
-      label: 'Humedad',
+      label: humLabel,
       unit: '%',
-      current: data.humidity_outdoor,
-      min: s?.humidity_outdoor?.min,
-      minTime: s?.humidity_outdoor?.min_time,
-      max: s?.humidity_outdoor?.max,
-      maxTime: s?.humidity_outdoor?.max_time,
-      avg: s?.humidity_outdoor?.avg,
-      trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+      current: hum,
+      min: humStats?.min,
+      minTime: humStats?.min_time,
+      max: humStats?.max,
+      maxTime: humStats?.max_time,
+      avg: humStats?.avg,
+      trend: getTrend(hum, humStats?.avg),
     },
     {
       label: 'Punto de rocío',
@@ -191,7 +203,7 @@ export function StationSummaryTable({ data, stats, label }: Props) {
       maxTime: s?.uv_index?.max_time,
       avg: s?.uv_index?.avg,
     },
-  ], [data, s])
+  ], [data, s, temp, hum, tempStats, humStats, tempLabel, humLabel, indoorPrimary])
 
   const fmt = (v: number | string | undefined | null, decimals = 1): string => {
     if (v == null) return '—'

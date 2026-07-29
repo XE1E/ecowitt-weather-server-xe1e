@@ -76,6 +76,7 @@ export function TablesPage() {
           data={currentData}
           stats={currentStats}
           label={selected === 'principal' ? 'Estacion Principal — WS2910' : 'Estacion Remota — GW1100'}
+          indoorPrimary={selected === 'remota' && currentData.temperature_outdoor == null}
         />
       ) : (
         <div className="bg-slate-800/50 rounded-xl border border-white/10 p-8 text-center text-slate-400">

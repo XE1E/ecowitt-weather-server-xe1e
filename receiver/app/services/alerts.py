@@ -94,6 +94,7 @@ class AlertService:
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         self.known_sensors: Dict[Optional[str], set] = {}
+        self.known_batteries: Dict[Optional[str], set] = {}
         # Historial de presión POR ESTACIÓN para la tendencia: deque de
         # (datetime, hPa). None = principal. Se aísla entre estaciones.
         self._pressure_hist: Dict[Optional[str], deque] = {}
@@ -226,11 +227,15 @@ class AlertService:
             rules["humidity_high"] = (hum >= h_hi, f"💧 Humedad exterior alta: {hum}% (≥ {h_hi}%)")
 
         # Batería baja: campos battery_* binarios (True=OK / False=baja).
+        # Solo alerta de baterías que se han visto en ESTA estación (evita que
+        # un WN31 del WS2910 aparezca en alertas del GW1100).
         if getattr(self._settings, "alert_battery_enabled", True):
+            known_batt = self.known_batteries.setdefault(station, set())
             for key, val in data.items():
                 if not key.startswith("battery_") or not isinstance(val, bool):
                     continue
                 name = key[len("battery_"):]
+                known_batt.add(name)
                 rules[f"battery_{name}"] = (
                     val is False,
                     f"🔋 Batería baja: {self._sensor_label(name)}",
