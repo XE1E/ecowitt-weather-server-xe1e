@@ -200,6 +200,12 @@ def public_settings(settings) -> Dict[str, Any]:
         "cwop_latitude": settings.cwop_latitude,
         "cwop_longitude": settings.cwop_longitude,
         "cwop_interval": settings.cwop_interval,
+        "awekas_enabled": settings.awekas_enabled,
+        "awekas_username": settings.awekas_username,
+        "awekas_password_masked": mask(settings.awekas_password),
+        "awekas_latitude": settings.awekas_latitude,
+        "awekas_longitude": settings.awekas_longitude,
+        "awekas_interval": settings.awekas_interval,
         # Seguridad del endpoint de push
         "ecowitt_secure_enabled": settings.ecowitt_secure_enabled,
         "ecowitt_secure_token_masked": mask(settings.ecowitt_secure_token),
