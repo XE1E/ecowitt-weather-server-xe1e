@@ -15,6 +15,7 @@ import { AeronauticaPage } from './pages/AeronauticaPage'
 import { ClimatePage } from './pages/ClimatePage'
 import { EarthquakesPage } from './pages/EarthquakesPage'
 import { RemoteStationPage } from './pages/RemoteStationPage'
+import { TablesPage } from './pages/TablesPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { EmbedWidget } from './pages/EmbedWidget'
 import { KioskPage } from './pages/KioskPage'
@@ -104,6 +105,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="aeronautica" element={<AeronauticaPage />} />
                 <Route path="sismos" element={<EarthquakesPage />} />
                 <Route path="remota" element={<RemoteStationPage />} />
+                <Route path="tablas" element={<TablesPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
                 {/* Redirigir /pro/admin al nuevo panel */}
                 <Route path="admin" element={<Navigate to="/admin" replace />} />

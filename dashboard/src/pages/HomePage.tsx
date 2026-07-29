@@ -1,6 +1,5 @@
 import { RefreshCw } from 'lucide-react'
 import { useStationData } from '../station-data'
-import { StationSummaryTable } from '../components/station/StationSummaryTable'
 import { MiniStats } from '../components/station/MiniStats'
 import { CurrentConditions } from '../components/station/CurrentConditions'
 import { WindFlipCard } from '../components/station/WindFlipCard'
@@ -39,10 +38,6 @@ export function HomePage() {
     <>
       <div className="mb-4">
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
-      </div>
-
-      <div className="mb-4">
-        <StationSummaryTable data={data} stats={stats} label="Estación Principal — WS2910" />
       </div>
 
       {/* Mitades destacadas arriba (ambas altas, poco hueco entre ellas) */}

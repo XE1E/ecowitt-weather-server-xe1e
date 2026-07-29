@@ -19,9 +19,9 @@ function getTrend(current: number | undefined | null, avg: number | undefined | 
 }
 
 function TrendIcon({ dir }: { dir: TrendDir }) {
-  if (dir === 'up') return <span className="text-red-400 text-lg">↑</span>
-  if (dir === 'down') return <span className="text-sky-400 text-lg">↓</span>
-  return <span className="text-slate-500 text-lg">→</span>
+  if (dir === 'up') return <span className="text-red-400 text-2xl font-bold">↑</span>
+  if (dir === 'down') return <span className="text-sky-400 text-2xl font-bold">↓</span>
+  return <span className="text-slate-500 text-2xl font-bold">→</span>
 }
 
 function WindArrow({ deg }: { deg: number }) {
@@ -132,7 +132,7 @@ export function StationSummaryTable({ data, stats, label }: Props) {
       maxTime: s?.wind_speed?.max_time,
       avg: s?.wind_speed?.avg,
       extra: data.wind_direction !== undefined ? (
-        <div className="flex items-center gap-2 text-sm text-slate-300">
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-300">
           <WindArrow deg={data.wind_direction} />
           <span>{cardinal(data.wind_direction)}</span>
           <span className="text-slate-500">{data.wind_direction}°</span>
