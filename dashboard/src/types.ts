@@ -52,6 +52,7 @@ export interface WeatherData {
 
   // Rain
   rain_rate: number
+  rain_hourly?: number
   rain_daily: number
   rain_weekly: number
   rain_monthly: number
@@ -78,14 +79,18 @@ export interface HistoryData {
   pressure_relative?: number
 }
 
+export interface StatEntry {
+  min: number | null
+  min_time?: string
+  max: number | null
+  max_time?: string
+  avg: number | null
+}
+
 export interface DailyStats {
   period: string
   stats: {
-    [key: string]: {
-      min: number | null
-      max: number | null
-      avg: number | null
-    }
+    [key: string]: StatEntry
   }
   generated_at: string
 }
