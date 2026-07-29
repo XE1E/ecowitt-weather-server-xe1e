@@ -165,6 +165,12 @@ class Settings(BaseSettings):
     cwop_latitude: float = 19.380359
     cwop_longitude: float = -99.174564
     cwop_interval: int = 10            # CWOP recomienda 10-15 min
+    awekas_enabled: bool = False       # AWEKAS (red austriaca)
+    awekas_username: Optional[str] = None
+    awekas_password: Optional[str] = None
+    awekas_latitude: float = 19.380359
+    awekas_longitude: float = -99.174564
+    awekas_interval: int = 5
 
     # Seguridad del endpoint de push /data/report/
     ecowitt_secure_enabled: bool = False        # exige ?token= en la petición
