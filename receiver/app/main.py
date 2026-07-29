@@ -1193,17 +1193,23 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
     """
     sensors = []
 
-    # Sensor exterior (WS69)
+    # Sensor exterior (WS69 para WS2910, WN32 para GW1100)
     if data.get("temperature_outdoor") is not None:
+        # Detectar tipo de sensor exterior por batería/modelo
+        # WS69/WH65: battery_wh65 o battery_ws69
+        # WN32: battery_wh32
+        has_ws69 = data.get("battery_wh65") is not None or data.get("battery_ws69") is not None
+        has_wn32 = data.get("battery_wh32") is not None
+        sensor_type = "WS69" if has_ws69 else ("WN32" if has_wn32 else "Exterior")
         ext = {
             "id": "outdoor",
-            "type": "WS69",
+            "type": sensor_type,
             "category": "exterior",
             "label": sensor_labels.get("outdoor", "Exterior"),
             "temperature": data.get("temperature_outdoor"),
             "humidity": data.get("humidity_outdoor"),
-            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", True)),
-            "signal": data.get("signal_wh65", data.get("signal_ws69")),
+            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", data.get("battery_wh32", True))),
+            "signal": data.get("signal_wh65", data.get("signal_ws69", data.get("signal_wh32"))),
             "active": True,
         }
         # Si la estación mide presión pero NO tiene sensor interior separado

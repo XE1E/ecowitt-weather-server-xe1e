@@ -74,136 +74,252 @@ interface RowData {
 export function StationSummaryTable({ data, stats, label, indoorPrimary = false }: Props) {
   const s = stats
 
-  // Selecciona indoor o outdoor según el modo
-  const tempLabel = indoorPrimary ? 'Temperatura (int)' : 'Temperatura'
-  const humLabel = indoorPrimary ? 'Humedad (int)' : 'Humedad'
+  // Para remota (indoorPrimary): T/H exterior es del WN32, interior del GW1100
+  // Para principal: T/H exterior es del WS69, interior de la consola
 
-  // Valores de T/H según modo
-  const temp = indoorPrimary ? data.temperature_indoor : data.temperature_outdoor
-  const hum = indoorPrimary ? data.humidity_indoor : data.humidity_outdoor
-  const tempStats = indoorPrimary ? s?.temperature_indoor : s?.temperature_outdoor
-  const humStats = indoorPrimary ? s?.humidity_indoor : s?.humidity_outdoor
+  const rows: RowData[] = useMemo(() => {
+    const list: RowData[] = []
 
-  const rows: RowData[] = useMemo(() => [
-    {
-      label: tempLabel,
-      unit: '°C',
-      current: temp,
-      min: tempStats?.min,
-      minTime: tempStats?.min_time,
-      max: tempStats?.max,
-      maxTime: tempStats?.max_time,
-      avg: tempStats?.avg,
-      trend: getTrend(temp, tempStats?.avg),
-    },
-    {
-      label: humLabel,
-      unit: '%',
-      current: hum,
-      min: humStats?.min,
-      minTime: humStats?.min_time,
-      max: humStats?.max,
-      maxTime: humStats?.max_time,
-      avg: humStats?.avg,
-      trend: getTrend(hum, humStats?.avg),
-    },
-    {
-      label: 'Punto de rocío',
-      unit: '°C',
-      current: data.dew_point,
-      min: s?.dew_point?.min,
-      minTime: s?.dew_point?.min_time,
-      max: s?.dew_point?.max,
-      maxTime: s?.dew_point?.max_time,
-      avg: s?.dew_point?.avg,
-      trend: getTrend(data.dew_point, s?.dew_point?.avg),
-    },
-    {
-      label: 'Sensación térmica',
-      unit: '°C',
-      current: data.feels_like,
-    },
-    {
-      label: 'Presión atmosférica',
-      unit: 'hPa',
-      current: data.pressure_relative,
-      min: s?.pressure_relative?.min,
-      minTime: s?.pressure_relative?.min_time,
-      max: s?.pressure_relative?.max,
-      maxTime: s?.pressure_relative?.max_time,
-      avg: s?.pressure_relative?.avg,
-      trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
-    },
-    {
-      label: 'Velocidad del viento',
-      unit: 'km/h',
-      current: data.wind_speed,
-      min: s?.wind_speed?.min,
-      minTime: s?.wind_speed?.min_time,
-      max: s?.wind_speed?.max,
-      maxTime: s?.wind_speed?.max_time,
-      avg: s?.wind_speed?.avg,
-      extra: data.wind_direction !== undefined ? (
-        <div className="flex items-center justify-center gap-2 text-sm text-slate-300">
-          <WindArrow deg={data.wind_direction} />
-          <span>{cardinal(data.wind_direction)}</span>
-          <span className="text-slate-500">{data.wind_direction}°</span>
-        </div>
-      ) : null,
-    },
-    {
-      label: 'Ráfagas de viento',
-      unit: 'km/h',
-      current: data.wind_gust,
-      min: s?.wind_gust?.min,
-      minTime: s?.wind_gust?.min_time,
-      max: s?.wind_gust?.max,
-      maxTime: s?.wind_gust?.max_time,
-      avg: s?.wind_gust?.avg,
-    },
-    {
-      label: 'Tasa de lluvia',
-      unit: 'mm/h',
-      current: data.rain_rate,
-      min: s?.rain_rate?.min,
-      minTime: s?.rain_rate?.min_time,
-      max: s?.rain_rate?.max,
-      maxTime: s?.rain_rate?.max_time,
-      avg: s?.rain_rate?.avg,
-    },
-    {
-      label: 'Precipitación',
-      unit: 'mm',
-      current: data.rain_daily,
-      extra: (
-        <div className="text-xs text-slate-400 space-y-0.5">
-          <div>{data.rain_hourly?.toFixed(1) ?? '—'} mm / 1h</div>
-          <div>{data.rain_daily?.toFixed(1) ?? '—'} mm / hoy</div>
-          <div>{data.rain_monthly?.toFixed(1) ?? '—'} mm / mes</div>
-        </div>
-      ),
-    },
-    {
-      label: 'Radiación solar',
-      unit: 'W/m²',
-      current: data.solar_radiation,
-      min: s?.solar_radiation?.min,
-      minTime: s?.solar_radiation?.min_time,
-      max: s?.solar_radiation?.max,
-      maxTime: s?.solar_radiation?.max_time,
-      avg: s?.solar_radiation?.avg,
-    },
-    {
-      label: 'Índice UV',
-      unit: '',
-      current: data.uv_index,
-      min: s?.uv_index?.min,
-      minTime: s?.uv_index?.min_time,
-      max: s?.uv_index?.max,
-      maxTime: s?.uv_index?.max_time,
-      avg: s?.uv_index?.avg,
-    },
-  ], [data, s, temp, hum, tempStats, humStats, tempLabel, humLabel, indoorPrimary])
+    if (indoorPrimary) {
+      // REMOTA: WN32 exterior (cuando esté), GW1100 interior, presión
+      list.push(
+        {
+          label: 'Temperatura',
+          unit: '°C',
+          current: data.temperature_outdoor,
+          min: s?.temperature_outdoor?.min,
+          minTime: s?.temperature_outdoor?.min_time,
+          max: s?.temperature_outdoor?.max,
+          maxTime: s?.temperature_outdoor?.max_time,
+          avg: s?.temperature_outdoor?.avg,
+          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+        },
+        {
+          label: 'Humedad',
+          unit: '%',
+          current: data.humidity_outdoor,
+          min: s?.humidity_outdoor?.min,
+          minTime: s?.humidity_outdoor?.min_time,
+          max: s?.humidity_outdoor?.max,
+          maxTime: s?.humidity_outdoor?.max_time,
+          avg: s?.humidity_outdoor?.avg,
+          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+        },
+        {
+          label: 'Punto de rocío',
+          unit: '°C',
+          current: data.dew_point,
+          min: s?.dew_point?.min,
+          minTime: s?.dew_point?.min_time,
+          max: s?.dew_point?.max,
+          maxTime: s?.dew_point?.max_time,
+          avg: s?.dew_point?.avg,
+          trend: getTrend(data.dew_point, s?.dew_point?.avg),
+        },
+        {
+          label: 'Presión atmosférica',
+          unit: 'hPa',
+          current: data.pressure_relative,
+          min: s?.pressure_relative?.min,
+          minTime: s?.pressure_relative?.min_time,
+          max: s?.pressure_relative?.max,
+          maxTime: s?.pressure_relative?.max_time,
+          avg: s?.pressure_relative?.avg,
+          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+        },
+        {
+          label: 'Temperatura Interior',
+          unit: '°C',
+          current: data.temperature_indoor,
+          min: s?.temperature_indoor?.min,
+          minTime: s?.temperature_indoor?.min_time,
+          max: s?.temperature_indoor?.max,
+          maxTime: s?.temperature_indoor?.max_time,
+          avg: s?.temperature_indoor?.avg,
+          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+        },
+        {
+          label: 'Humedad Interior',
+          unit: '%',
+          current: data.humidity_indoor,
+          min: s?.humidity_indoor?.min,
+          minTime: s?.humidity_indoor?.min_time,
+          max: s?.humidity_indoor?.max,
+          maxTime: s?.humidity_indoor?.max_time,
+          avg: s?.humidity_indoor?.avg,
+          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+        }
+      )
+    } else {
+      // PRINCIPAL: Exterior, interior, WN31 Jardín, viento, lluvia, sol, UV
+      list.push(
+        {
+          label: 'Temperatura',
+          unit: '°C',
+          current: data.temperature_outdoor,
+          min: s?.temperature_outdoor?.min,
+          minTime: s?.temperature_outdoor?.min_time,
+          max: s?.temperature_outdoor?.max,
+          maxTime: s?.temperature_outdoor?.max_time,
+          avg: s?.temperature_outdoor?.avg,
+          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+        },
+        {
+          label: 'Humedad',
+          unit: '%',
+          current: data.humidity_outdoor,
+          min: s?.humidity_outdoor?.min,
+          minTime: s?.humidity_outdoor?.min_time,
+          max: s?.humidity_outdoor?.max,
+          maxTime: s?.humidity_outdoor?.max_time,
+          avg: s?.humidity_outdoor?.avg,
+          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+        },
+        {
+          label: 'Punto de rocío',
+          unit: '°C',
+          current: data.dew_point,
+          min: s?.dew_point?.min,
+          minTime: s?.dew_point?.min_time,
+          max: s?.dew_point?.max,
+          maxTime: s?.dew_point?.max_time,
+          avg: s?.dew_point?.avg,
+          trend: getTrend(data.dew_point, s?.dew_point?.avg),
+        },
+        {
+          label: 'Sensación térmica',
+          unit: '°C',
+          current: data.feels_like,
+        },
+        {
+          label: 'Presión atmosférica',
+          unit: 'hPa',
+          current: data.pressure_relative,
+          min: s?.pressure_relative?.min,
+          minTime: s?.pressure_relative?.min_time,
+          max: s?.pressure_relative?.max,
+          maxTime: s?.pressure_relative?.max_time,
+          avg: s?.pressure_relative?.avg,
+          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+        },
+        {
+          label: 'Velocidad del viento',
+          unit: 'km/h',
+          current: data.wind_speed,
+          min: s?.wind_speed?.min,
+          minTime: s?.wind_speed?.min_time,
+          max: s?.wind_speed?.max,
+          maxTime: s?.wind_speed?.max_time,
+          avg: s?.wind_speed?.avg,
+          extra: data.wind_direction !== undefined ? (
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-300">
+              <WindArrow deg={data.wind_direction} />
+              <span>{cardinal(data.wind_direction)}</span>
+              <span className="text-slate-500">{data.wind_direction}°</span>
+            </div>
+          ) : null,
+        },
+        {
+          label: 'Ráfagas de viento',
+          unit: 'km/h',
+          current: data.wind_gust,
+          min: s?.wind_gust?.min,
+          minTime: s?.wind_gust?.min_time,
+          max: s?.wind_gust?.max,
+          maxTime: s?.wind_gust?.max_time,
+          avg: s?.wind_gust?.avg,
+        },
+        {
+          label: 'Tasa de lluvia',
+          unit: 'mm/h',
+          current: data.rain_rate,
+          min: s?.rain_rate?.min,
+          minTime: s?.rain_rate?.min_time,
+          max: s?.rain_rate?.max,
+          maxTime: s?.rain_rate?.max_time,
+          avg: s?.rain_rate?.avg,
+        },
+        {
+          label: 'Precipitación',
+          unit: 'mm',
+          current: data.rain_daily,
+          extra: (
+            <div className="text-xs text-slate-400 space-y-0.5">
+              <div>{data.rain_hourly?.toFixed(1) ?? '—'} mm / 1h</div>
+              <div>{data.rain_daily?.toFixed(1) ?? '—'} mm / hoy</div>
+              <div>{data.rain_monthly?.toFixed(1) ?? '—'} mm / mes</div>
+            </div>
+          ),
+        },
+        {
+          label: 'Radiación solar',
+          unit: 'W/m²',
+          current: data.solar_radiation,
+          min: s?.solar_radiation?.min,
+          minTime: s?.solar_radiation?.min_time,
+          max: s?.solar_radiation?.max,
+          maxTime: s?.solar_radiation?.max_time,
+          avg: s?.solar_radiation?.avg,
+        },
+        {
+          label: 'Índice UV',
+          unit: '',
+          current: data.uv_index,
+          min: s?.uv_index?.min,
+          minTime: s?.uv_index?.min_time,
+          max: s?.uv_index?.max,
+          maxTime: s?.uv_index?.max_time,
+          avg: s?.uv_index?.avg,
+        },
+        {
+          label: 'Temperatura Interior',
+          unit: '°C',
+          current: data.temperature_indoor,
+          min: s?.temperature_indoor?.min,
+          minTime: s?.temperature_indoor?.min_time,
+          max: s?.temperature_indoor?.max,
+          maxTime: s?.temperature_indoor?.max_time,
+          avg: s?.temperature_indoor?.avg,
+          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+        },
+        {
+          label: 'Humedad Interior',
+          unit: '%',
+          current: data.humidity_indoor,
+          min: s?.humidity_indoor?.min,
+          minTime: s?.humidity_indoor?.min_time,
+          max: s?.humidity_indoor?.max,
+          maxTime: s?.humidity_indoor?.max_time,
+          avg: s?.humidity_indoor?.avg,
+          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+        },
+        {
+          label: 'Temperatura WN31 Jardín',
+          unit: '°C',
+          current: data.temperature_ch1,
+          min: s?.temperature_ch1?.min,
+          minTime: s?.temperature_ch1?.min_time,
+          max: s?.temperature_ch1?.max,
+          maxTime: s?.temperature_ch1?.max_time,
+          avg: s?.temperature_ch1?.avg,
+          trend: getTrend(data.temperature_ch1, s?.temperature_ch1?.avg),
+        },
+        {
+          label: 'Humedad WN31 Jardín',
+          unit: '%',
+          current: data.humidity_ch1,
+          min: s?.humidity_ch1?.min,
+          minTime: s?.humidity_ch1?.min_time,
+          max: s?.humidity_ch1?.max,
+          maxTime: s?.humidity_ch1?.max_time,
+          avg: s?.humidity_ch1?.avg,
+          trend: getTrend(data.humidity_ch1, s?.humidity_ch1?.avg),
+        }
+      )
+    }
+
+    return list
+  }, [data, s, indoorPrimary])
 
   const fmt = (v: number | string | undefined | null, decimals = 1): string => {
     if (v == null) return '—'

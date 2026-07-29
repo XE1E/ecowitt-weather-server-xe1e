@@ -338,23 +338,21 @@ export function RemoteStationPage() {
           <div className="card">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex gap-1">
-                {hasOutdoor && (
-                  <button
-                    onClick={() => setMetric('outdoor')}
-                    className={`px-3 py-1 rounded-lg text-sm transition ${
-                      metric === 'outdoor' ? 'bg-amber-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
-                    }`}
-                  >
-                    Exterior
-                  </button>
-                )}
+                <button
+                  onClick={() => setMetric('outdoor')}
+                  className={`px-3 py-1 rounded-lg text-sm transition ${
+                    metric === 'outdoor' ? 'bg-amber-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  Exterior (WN32)
+                </button>
                 <button
                   onClick={() => setMetric('indoor')}
                   className={`px-3 py-1 rounded-lg text-sm transition ${
                     metric === 'indoor' ? 'bg-sky-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
-                  Interior
+                  Interior (GW1100)
                 </button>
                 <button
                   onClick={() => setMetric('pressure')}
