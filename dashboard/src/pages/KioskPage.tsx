@@ -272,7 +272,7 @@ export function KioskPage() {
                 <text x="2" y="39" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">W</text>
                 {dir != null && (
                   <g transform={`rotate(${dir} 50 36)`}>
-                    <polygon points="50,12 46,22 50,19 54,22" fill="#37d64a" />
+                    <polygon points="50,4 46,12 50,9 54,12" fill="#37d64a" />
                   </g>
                 )}
               </svg>
@@ -311,29 +311,26 @@ export function KioskPage() {
           </div>
 
           {/* Fila 2 */}
-          <div className="cell col">
-            <div className="lbl">HUMIDITY</div>
-            <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'flex-end', gap: 3, height: 26 }}>
-              {bars.map((h, i) => <span key={i} style={{ width: 5, height: h, background: 'var(--lbl)', borderRadius: 1 }} />)}
-            </div>
-            <div className="big gw ctr rt" style={{ fontSize: 80, lineHeight: 0.8 }}>
+          <div className="cell col" style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <div className="lbl" style={{ alignSelf: 'flex-start' }}>HUMIDITY</div>
+            <div className="big gw" style={{ fontSize: 80, lineHeight: 0.8, marginTop: 8 }}>
               {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--w)' }}>%</span>
             </div>
-            <div style={{ position: 'absolute', left: 12, bottom: 8, color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>EXTERIOR</div>
+            <div style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1, marginTop: 8 }}>EXTERIOR</div>
           </div>
 
           {/* DEW/FEELS ahora viven dentro de la celda WIND (el compás abarca las 2 filas del centro). */}
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
+              <div style={{ textAlign: 'center' }}>
                 <div className="lbl">AVG</div>
                 <div className="gw seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_speed, 1))}
                 </div>
               </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div className="lbl" style={{ textAlign: 'right' }}>GUST</div>
+              <div style={{ textAlign: 'center' }}>
+                <div className="lbl">GUST</div>
                 <div className="go seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_gust, 1))}
                 </div>
@@ -373,14 +370,10 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex' }}>
-            <div style={{ flex: 1 }}>
-              <div className="lbl">UV INDEX</div>
-              <div className="gw" style={{ fontSize: 46, fontWeight: 800, marginTop: 6 }}>{data?.uv_index ?? '--'}</div>
-            </div>
-            <div style={{ width: '38%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <div style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>MOON</div>
-              <MoonGlyph size={44} />
+              <MoonGlyph size={50} />
             </div>
           </div>
 
@@ -409,16 +402,16 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
+              <div style={{ textAlign: 'center' }}>
                 <div className="lbl">SUNLIGHT</div>
                 <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
                   {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div className="lbl" style={{ textAlign: 'right' }}>UV INDEX</div>
+              <div style={{ textAlign: 'center' }}>
+                <div className="lbl">UV</div>
                 <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
                   {data?.uv_index ?? '--'}
                 </div>
