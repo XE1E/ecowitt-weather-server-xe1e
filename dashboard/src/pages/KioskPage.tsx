@@ -408,8 +408,8 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <WeatherIcon name={cond.icon} size={160} className="weather-main-icon" style={{ flexShrink: 0 }} />
-            <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, marginTop: -8, textTransform: 'uppercase', letterSpacing: 1, position: 'relative', zIndex: 10 }}>{cond.label || 'CLIMA'}</div>
+            <div style={{ flexShrink: 0 }}><WeatherIcon name={cond.icon} size={160} className="weather-main-icon" /></div>
+            <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, marginTop: -6, textTransform: 'uppercase', letterSpacing: 1, position: 'relative', zIndex: 10 }}>{cond.label || 'CLIMA'}</div>
           </div>
 
           <div className="cell">
