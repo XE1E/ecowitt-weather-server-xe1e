@@ -275,7 +275,7 @@ export function KioskPage() {
               </svg>
             </div>
             <div className="big go ctr rt" style={{ fontSize: 104, paddingRight: 32 }}>
-              {decNum(u.temp(data?.temperature_outdoor))}<span className="u ured" style={{ fontSize: 26 }}>{u.tempU}</span>
+              {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--o)' }}>{u.tempU}</span>
             </div>
           </div>
 
@@ -408,8 +408,8 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-            <WeatherIcon name={cond.icon} size={160} className="weather-main-icon" />
-            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 }}>{cond.label}</div>
+            <WeatherIcon name={cond.icon} size={130} className="weather-main-icon" />
+            <div style={{ color: 'var(--w)', fontSize: 20, fontWeight: 800, marginTop: 6, textTransform: 'uppercase', letterSpacing: 2 }}>{cond.label || 'CLIMA'}</div>
           </div>
 
           <div className="cell">
@@ -438,7 +438,7 @@ export function KioskPage() {
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INT</div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
-                {decNum(u.temp(data?.temperature_indoor))}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
+                {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
               </span>
               <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {data?.humidity_indoor != null ? data.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
