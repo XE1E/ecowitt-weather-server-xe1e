@@ -360,9 +360,9 @@ export function KioskPage() {
           </div>
 
           {/* Fila 4 */}
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INT</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {decNum(u.temp(data?.temperature_indoor))}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
@@ -373,15 +373,29 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
-              <MoonGlyph size={50} />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
+                <MoonGlyph size={42} />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
+                <div className="gw seg" style={{ fontSize: 36, fontWeight: 800, marginTop: 2 }}>
+                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 14, color: 'var(--w)' }}> W/m²</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>UV</div>
+                <div className="gw seg" style={{ fontSize: 36, fontWeight: 800, marginTop: 2 }}>
+                  {data?.uv_index ?? '--'}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--g)' }}>GW1100</span></div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
@@ -392,32 +406,15 @@ export function KioskPage() {
           </div>
 
           {/* Fila 5 */}
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sHum != null ? sHum.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}>%</span>
               </span>
-            </div>
-          </div>
-
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-                <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>
-                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}> W/m²</span>
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-                <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>
-                  {data?.uv_index ?? '--'}
-                </div>
-              </div>
             </div>
           </div>
 
@@ -434,6 +431,13 @@ export function KioskPage() {
                   <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="cell col">
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--g)' }}>GW1100</span></div>
+            <div className="big gg ctr rt" style={{ fontSize: 46 }}>
+              {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}> {u.pressU}</span>
             </div>
           </div>
         </div>
