@@ -1,5 +1,6 @@
 import { MoonStar } from 'lucide-react'
 import { SunMoonDetailCard } from '../components/station/SunMoonDetailCard'
+import { DaylightChart } from '../components/station/DaylightChart'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { AlmanacCard } from '../components/station/AlmanacCard'
 import { PageInfo } from '../components/station/PageInfo'
@@ -13,6 +14,7 @@ export function AstronomyPage() {
 
       <div className="space-y-4">
         <SunMoonDetailCard />
+        <DaylightChart />
         <AlmanacCard />
         <SkyEventsCard count={8} />
       </div>
