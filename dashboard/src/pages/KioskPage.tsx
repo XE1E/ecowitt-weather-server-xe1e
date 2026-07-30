@@ -316,15 +316,15 @@ export function KioskPage() {
             {/* ROCÍO + SENS en una línea, al pie de la celda del viento */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-evenly', gap: 6, paddingBottom: 2 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--o)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-                <div className="go" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.dew_point))}<span className="u ured" style={{ fontSize: 16 }}>{u.tempU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
+                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--o)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
-                <div className="go" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.feels_like))}<span className="u ured" style={{ fontSize: 16 }}>{u.tempU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
+                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
                 </div>
               </div>
             </div>
@@ -368,24 +368,26 @@ export function KioskPage() {
 
           {/* ROCÍO/SENS viven dentro de la celda VIENTO */}
 
-          <div className="cell">
-            <div className="bt">
-              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM</span>
-              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 12, padding: '0 8px' }}>
-              <span className="gw seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}>{u.windU}</span>
-              </span>
-              <span className="gw seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}>{u.windU}</span>
-              </span>
+          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Fila 3 */}
           <div className="cell col">
-            <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <circle cx="14" cy="14" r="12" stroke="#2ab7f4" strokeWidth="2" fill="none" />
@@ -406,8 +408,8 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-            <WeatherIcon name={cond.icon} size={140} className="weather-main-icon" />
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{cond.label}</div>
+            <WeatherIcon name={cond.icon} size={160} className="weather-main-icon" />
+            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 }}>{cond.label}</div>
           </div>
 
           <div className="cell">
