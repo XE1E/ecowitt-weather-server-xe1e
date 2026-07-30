@@ -309,9 +309,9 @@ export function KioskPage() {
           </div>
 
           {/* Fila 2 */}
-          <div className="cell col" style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1, alignSelf: 'flex-start' }}>HUMEDAD</div>
-            <div className="big gw" style={{ fontSize: 80, lineHeight: 0.8, marginTop: 8 }}>
+          <div className="cell col">
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
+            <div className="big gw ctr rt" style={{ fontSize: 80, lineHeight: 0.8 }}>
               {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--w)' }}>%</span>
             </div>
           </div>
@@ -338,8 +338,8 @@ export function KioskPage() {
           {/* Fila 3 */}
           <div className="cell col">
             <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
-            <div className="big gb ctr rt" style={{ fontSize: 56 }}>
-              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
+            <div className="big gb ctr rt" style={{ fontSize: 80 }}>
+              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 34, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
 
@@ -360,9 +360,9 @@ export function KioskPage() {
           </div>
 
           {/* Fila 4 */}
-          <div className="cell">
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INT</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
               <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {decNum(u.temp(data?.temperature_indoor))}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
@@ -379,9 +379,9 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell">
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--g)' }}>GW1100</span></div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
@@ -392,9 +392,9 @@ export function KioskPage() {
           </div>
 
           {/* Fila 5 */}
-          <div className="cell">
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 4 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
