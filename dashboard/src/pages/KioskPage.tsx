@@ -254,22 +254,19 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-            <div className="bt">
-              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
-              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>{u.windU}</span>
-            </div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</div>
             <span style={{ position: 'absolute', left: 10, top: 32, color: 'var(--w)', fontSize: 16, fontWeight: 700, zIndex: 2 }}>{cardinal(dir)}</span>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
-            <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-              <svg viewBox="0 0 100 72" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
-                <ellipse cx="50" cy="36" rx="49" ry="34" stroke="#3a3a3a" strokeWidth="1" fill="none" />
-                <ellipse cx="50" cy="36" rx="42" ry="27" stroke="#232323" strokeWidth="0.8" fill="none" />
+            <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
+              <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
+                <ellipse cx="50" cy="40" rx="49" ry="38" stroke="#3a3a3a" strokeWidth="1" fill="none" />
+                <ellipse cx="50" cy="40" rx="42" ry="31" stroke="#232323" strokeWidth="0.8" fill="none" />
                 <text x="50" y="9" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">N</text>
-                <text x="98" y="39" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">E</text>
-                <text x="50" y="70" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">S</text>
-                <text x="2" y="39" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">W</text>
+                <text x="98" y="43" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">E</text>
+                <text x="50" y="76" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">S</text>
+                <text x="2" y="43" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">W</text>
                 {dir != null && (
-                  <g transform={`rotate(${dir} 50 36)`}>
+                  <g transform={`rotate(${dir} 50 40)`}>
                     <polygon points="50,-1 47,6 50,4 53,6" fill="#37d64a" />
                   </g>
                 )}
@@ -321,13 +318,13 @@ export function KioskPage() {
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM <span style={{ color: 'var(--w)', fontWeight: 400 }}>{u.windU}</span></div>
                 <div className="gw seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_speed, 1))}
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA <span style={{ color: 'var(--w)', fontWeight: 400 }}>{u.windU}</span></div>
                 <div className="go seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_gust, 1))}
                 </div>
@@ -338,8 +335,8 @@ export function KioskPage() {
           {/* Fila 3 */}
           <div className="cell col">
             <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
-            <div className="big gb ctr rt" style={{ fontSize: 80 }}>
-              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 34, color: 'var(--b)' }}> {u.pressU}</span>
+            <div className="big gb ctr rt" style={{ fontSize: 56 }}>
+              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
 
@@ -373,20 +370,20 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
                 <MoonGlyph size={42} />
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-                <div className="gw seg" style={{ fontSize: 36, fontWeight: 800, marginTop: 2 }}>
-                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 14, color: 'var(--w)' }}> W/m²</span>
+                <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
+                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 12, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-                <div className="gw seg" style={{ fontSize: 36, fontWeight: 800, marginTop: 2 }}>
+                <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
                   {data?.uv_index ?? '--'}
                 </div>
               </div>
