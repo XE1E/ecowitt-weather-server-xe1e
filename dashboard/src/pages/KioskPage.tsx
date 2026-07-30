@@ -469,20 +469,20 @@ export function KioskPage() {
 
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--y)' }}>GW1100</span></div>
-            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
-              <span style={{ position: 'relative' }}>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40 }}>
+              <span style={{ position: 'relative', paddingRight: 16 }}>
                 <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
                   {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
                 </span>
-                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -18 }}>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
                   <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
                 </svg>
               </span>
-              <span style={{ position: 'relative' }}>
+              <span style={{ position: 'relative', paddingRight: 16 }}>
                 <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
                   {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
                 </span>
-                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -18 }}>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
                   <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
                 </svg>
               </span>
