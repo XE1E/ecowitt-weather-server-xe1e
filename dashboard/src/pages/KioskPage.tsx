@@ -248,8 +248,8 @@ export function KioskPage() {
           {/* Fila 1 */}
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
-            <div className="big go rt" style={{ fontSize: 120, marginTop: 6 }}>
-              {decNum(u.temp(data?.temperature_outdoor))}<span className="u ured" style={{ fontSize: 30 }}>{u.tempU}</span>
+            <div className="big go ctr rt" style={{ fontSize: 104 }}>
+              {decNum(u.temp(data?.temperature_outdoor))}<span className="u ured" style={{ fontSize: 26 }}>{u.tempU}</span>
             </div>
           </div>
 
@@ -407,30 +407,32 @@ export function KioskPage() {
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-                <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
-                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}> W/m²</span>
+                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
+                <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>
+                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-                <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
+                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>UV</div>
+                <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>
                   {data?.uv_index ?? '--'}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div className="bt">
-              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>HORA</span>
-              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>FECHA</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-              <span className="gg seg" style={{ fontSize: 56, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
-              <div style={{ textAlign: 'right', lineHeight: 1.02 }}>
-                <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
-                <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HORA</div>
+                <div className="gg seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>FECHA</div>
+                <div style={{ marginTop: 4, lineHeight: 1.02 }}>
+                  <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
+                  <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
+                </div>
               </div>
             </div>
           </div>
