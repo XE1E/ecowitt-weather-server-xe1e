@@ -119,6 +119,7 @@ export function KioskPage() {
   const [local, setLocal] = useState<Local | null>(null)
   const [localFetched, setLocalFetched] = useState(false)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
+  const [remoteHistory, setRemoteHistory] = useState<any[]>([])
 
   const page = new URLSearchParams(window.location.search).get('page') || '1'
 
@@ -144,6 +145,15 @@ export function KioskPage() {
       .then(setRemote).catch(() => {})
     load()
     const i = setInterval(load, 30000)
+    return () => clearInterval(i)
+  }, [page])
+  // Histórico de la estación remota (para tendencias en consola)
+  useEffect(() => {
+    if (page !== 'consola') return
+    const load = () => fetch('/api/history?start=-4h&station=gw1100').then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((j) => setRemoteHistory(j.data || [])).catch(() => {})
+    load()
+    const i = setInterval(load, 60000)
     return () => clearInterval(i)
   }, [page])
 
@@ -242,6 +252,28 @@ export function KioskPage() {
     const tempTrend = getTrend(data?.temperature_outdoor, tempPrev, 0.5)  // ±0.5°C
     const humTrend = getTrend(data?.humidity_outdoor, humPrev, 3)         // ±3%
     const pressTrend = getTrend(data?.pressure_relative, pressPrev, 1)    // ±1 hPa
+
+    // Tendencias estación remota (GW1100)
+    const getRemoteHistoricValue = (field: string, hoursAgo: number): number | null => {
+      if (!remoteHistory || remoteHistory.length === 0) return null
+      const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
+      let closest: any = null
+      let closestDiff = Infinity
+      for (const h of remoteHistory) {
+        const t = new Date(parseServerDate(h._time)).getTime()
+        const diff = Math.abs(t - targetTime)
+        if (diff < closestDiff) { closestDiff = diff; closest = h }
+      }
+      if (!closest || closestDiff > 30 * 60 * 1000) return null
+      return (closest as any)[field] ?? null
+    }
+    const remoteTempPrev = getRemoteHistoricValue('temperature_indoor', 1)
+    const remoteHumPrev = getRemoteHistoricValue('humidity_indoor', 1)
+    const remotePressPrev = getRemoteHistoricValue('pressure_relative', 3)
+    const remoteTempTrend = getTrend(remote?.temperature_indoor, remoteTempPrev, 0.5)
+    const remoteHumTrend = getTrend(remote?.humidity_indoor, remoteHumPrev, 3)
+    const remotePressTrend = getTrend(remote?.pressure_relative, remotePressPrev, 1)
+
     const chTemp = data?.temperature_ch1
     const chHum = data?.humidity_ch1
     const hasCh1 = chTemp != null || chHum != null
@@ -500,7 +532,9 @@ export function KioskPage() {
                   {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
                 </span>
                 <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
-                  <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+                  {remoteTempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                  {remoteTempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                  {remoteTempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
                 </svg>
               </span>
               <span style={{ position: 'relative', paddingRight: 16 }}>
@@ -508,7 +542,9 @@ export function KioskPage() {
                   {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
                 </span>
                 <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
-                  <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+                  {remoteHumTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                  {remoteHumTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                  {remoteHumTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
                 </svg>
               </span>
             </div>
@@ -547,7 +583,9 @@ export function KioskPage() {
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--g)' }}>GW1100</span></div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+                {remotePressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                {remotePressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                {remotePressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
               </svg>
             </div>
             <div className="big gg ctr rt" style={{ fontSize: 46, paddingRight: 32 }}>
