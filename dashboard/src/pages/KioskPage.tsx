@@ -407,9 +407,9 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{cond.label || 'CLIMA'}</div>
-            <WeatherIcon name={cond.icon} size={105} className="weather-main-icon" />
+          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
+            <div style={{ marginTop: -12 }}><WeatherIcon name={cond.icon} size={120} className="weather-main-icon" /></div>
           </div>
 
           <div className="cell">
