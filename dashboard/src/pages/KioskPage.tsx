@@ -248,7 +248,7 @@ export function KioskPage() {
           {/* Fila 1 */}
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
-            <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="24" height="48" viewBox="0 0 24 48" fill="none">
                 <rect x="8" y="8" width="8" height="32" rx="4" stroke="#ff7b1c" strokeWidth="2" fill="none" />
                 <circle cx="12" cy="36" r="6" fill="#ff7b1c" />
@@ -262,7 +262,6 @@ export function KioskPage() {
 
           <div className="cell" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</div>
-            <span style={{ position: 'absolute', left: 10, top: 32, color: 'var(--w)', fontSize: 16, fontWeight: 700, zIndex: 2 }}>{cardinal(dir)}</span>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
               <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
@@ -300,8 +299,11 @@ export function KioskPage() {
           </div>
 
           <div className="cell col">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</div>
-            <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <div className="bt">
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</span>
+              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700 }}>{cardinal(dir)}</span>
+            </div>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
                 <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
                 <path d="M2 15 H25 a4.5 4.5 0 1 1 -4.5 4.5" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
@@ -315,7 +317,7 @@ export function KioskPage() {
           {/* Fila 2 */}
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
-            <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
                 <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#eaeaea" strokeWidth="2" fill="none" />
               </svg>
@@ -347,7 +349,7 @@ export function KioskPage() {
           {/* Fila 3 */}
           <div className="cell col">
             <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
-            <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <circle cx="14" cy="14" r="12" stroke="#2ab7f4" strokeWidth="2" fill="none" />
                 <line x1="14" y1="14" x2="20" y2="8" stroke="#2ab7f4" strokeWidth="2.5" strokeLinecap="round" />
@@ -365,7 +367,7 @@ export function KioskPage() {
 
           <div className="cell">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
-            <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <path d="M8 8 L8 18" stroke="#2ab7f4" strokeWidth="2" strokeLinecap="round" />
                 <path d="M14 4 L14 14" stroke="#2ab7f4" strokeWidth="2" strokeLinecap="round" />
