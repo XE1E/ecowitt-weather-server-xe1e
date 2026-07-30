@@ -313,18 +313,18 @@ export function KioskPage() {
                 <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28, verticalAlign: 'super' }}>°</span>
               </div>
             </div>
-            {/* ROCÍO + SENS en una línea, al pie de la celda del viento */}
+            {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-evenly', gap: 6, paddingBottom: 2 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
-                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
                 </div>
               </div>
             </div>
@@ -366,20 +366,20 @@ export function KioskPage() {
             </div>
           </div>
 
-          {/* ROCÍO/SENS viven dentro de la celda VIENTO */}
+          {/* ROCÍO/SENS en fila 2 columna 3 */}
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
-                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
+                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
-                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.windU}</span>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
+                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
                 </div>
               </div>
             </div>
@@ -469,17 +469,22 @@ export function KioskPage() {
 
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--y)' }}>GW1100</span></div>
-            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
-              </svg>
-            </div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
-              <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
+              <span style={{ position: 'relative' }}>
+                <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                  {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
+                </span>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -18 }}>
+                  <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+                </svg>
               </span>
-              <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
+              <span style={{ position: 'relative' }}>
+                <span className="gy seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                  {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
+                </span>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -18 }}>
+                  <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+                </svg>
               </span>
             </div>
           </div>
