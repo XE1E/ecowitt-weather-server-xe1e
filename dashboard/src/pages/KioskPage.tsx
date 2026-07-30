@@ -235,8 +235,6 @@ export function KioskPage() {
       .cns .ctr{margin-top:auto;margin-bottom:auto}
       .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
     `
-    const bars = [9, 14, 20, 26]
-
     return (
       <div data-kiosk-ready={ready ? 'true' : 'false'} className="cns"
         style={{ width: 1024, height: 600, background: '#242424', overflow: 'hidden' }}>
