@@ -206,17 +206,42 @@ export function KioskPage() {
     const cond = data ? deriveCondition(data) : { icon: '', label: '' }
     const dir = data?.wind_direction
 
-    // Tendencias: comparar actual vs promedio del día
-    const getTrend = (current: number | undefined | null, avg: number | undefined | null): 'up' | 'down' | 'stable' => {
-      if (current == null || avg == null) return 'stable'
-      const diff = current - avg
-      if (diff > 0.5) return 'up'
-      if (diff < -0.5) return 'down'
+    // Tendencias: comparar actual vs valor de hace N horas en el histórico
+    const getHistoricValue = (field: string, hoursAgo: number): number | null => {
+      if (!history || history.length === 0) return null
+      const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
+      // Buscar el punto más cercano a hoursAgo horas atrás
+      let closest: any = null
+      let closestDiff = Infinity
+      for (const h of history) {
+        const t = new Date(parseServerDate(h._time)).getTime()
+        const diff = Math.abs(t - targetTime)
+        if (diff < closestDiff) {
+          closestDiff = diff
+          closest = h
+        }
+      }
+      // Solo usar si está dentro de 30 min del objetivo
+      if (!closest || closestDiff > 30 * 60 * 1000) return null
+      return (closest as any)[field] ?? null
+    }
+
+    const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): 'up' | 'down' | 'stable' => {
+      if (current == null || previous == null) return 'stable'
+      const diff = current - previous
+      if (diff > threshold) return 'up'
+      if (diff < -threshold) return 'down'
       return 'stable'
     }
-    const tempTrend = getTrend(data?.temperature_outdoor, stats?.temperature_outdoor?.avg)
-    const humTrend = getTrend(data?.humidity_outdoor, stats?.humidity_outdoor?.avg)
-    const pressTrend = getTrend(data?.pressure_relative, stats?.pressure_relative?.avg)
+
+    // Temp/humedad: comparar con hace 1 hora, presión: con hace 3 horas
+    const tempPrev = getHistoricValue('temperature_outdoor', 1)
+    const humPrev = getHistoricValue('humidity_outdoor', 1)
+    const pressPrev = getHistoricValue('pressure_relative', 3)
+
+    const tempTrend = getTrend(data?.temperature_outdoor, tempPrev, 0.5)  // ±0.5°C
+    const humTrend = getTrend(data?.humidity_outdoor, humPrev, 3)         // ±3%
+    const pressTrend = getTrend(data?.pressure_relative, pressPrev, 1)    // ±1 hPa
     const chTemp = data?.temperature_ch1
     const chHum = data?.humidity_ch1
     const hasCh1 = chTemp != null || chHum != null
