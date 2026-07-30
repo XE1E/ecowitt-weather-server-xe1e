@@ -5,7 +5,7 @@
 > web y cómo administrarla y mantenerla.
 >
 > **Sitio público:** https://clima.xe1e.net
-> **Ubicación:** Benito Juárez, Ciudad de México, México · 19.380359, −99.174564 · ~2240 m
+> **Ubicación:** Benito Juárez, Ciudad de México, México · 19.380359, −99.174564 · ~2250 m
 > **Repositorio:** github.com/XE1E/ecowitt-weather-server-xe1e
 
 ---
@@ -16,14 +16,16 @@
 3. [Arquitectura y flujo de datos](#3-arquitectura-y-flujo-de-datos)
 4. [Procesamiento del dato local](#4-procesamiento-del-dato-local)
 5. [La página web](#5-la-página-web-pro) (sección por sección)
-6. [Panel de administración](#6-panel-de-administración-proadmin)
-7. [Alertas y notificaciones](#7-alertas-y-notificaciones)
-8. [Publicación a redes públicas](#8-publicación-a-redes-públicas)
-9. [Fuentes de datos externas](#9-fuentes-de-datos-externas)
-10. [API (endpoints)](#10-api-endpoints)
-11. [Operación y mantenimiento](#11-operación-y-mantenimiento)
-12. [Glosario de términos e índices](#12-glosario-de-términos-e-índices)
-13. [Estado y pendientes](#13-estado-y-pendientes)
+6. [Widget para tu sitio](#6-widget-para-tu-sitio)
+7. [Pantallas físicas](#7-pantallas-físicas)
+8. [Panel de administración](#8-panel-de-administración-admin)
+9. [Alertas y notificaciones](#9-alertas-y-notificaciones)
+10. [Publicación a redes públicas](#10-publicación-a-redes-públicas)
+11. [Fuentes de datos externas](#11-fuentes-de-datos-externas)
+12. [API (endpoints)](#12-api-endpoints)
+13. [Operación y mantenimiento](#13-operación-y-mantenimiento)
+14. [Glosario de términos e índices](#14-glosario-de-términos-e-índices)
+15. [Estado y pendientes](#15-estado-y-pendientes)
 
 ---
 
@@ -57,6 +59,8 @@ presenta, y hacer crecer la plataforma a voluntad.
   - `/` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/pro`).
   - `/pro` — **Vista completa**: varias secciones con cintillo de navegación,
     unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA).
+- **Pantalla física:** también hay una **pantalla ESP32-S3 Waveshare** que muestra
+  las condiciones en tiempo real.
 
 ---
 
@@ -85,10 +89,6 @@ sí los reportan.
 protocolo **Ecowitt**, apuntando a `clima.xe1e.net` (o la IP/host del servidor),
 ruta `/data/report/`. Envía una lectura cada ~16–60 s.
 
-> **Nota:** la estación está **instalada y enviando datos reales** desde
-> ~2026-07-19. El simulador que se usó durante el desarrollo ya está apagado y
-> los datos falsos, limpiados.
-
 ### Endpoint Ecowitt (configurar el datalogger)
 
 El datalogger (consola WS2910 o gateway GW1100) envía por **HTTP POST**
@@ -104,7 +104,9 @@ El datalogger (consola WS2910 o gateway GW1100) envía por **HTTP POST**
 
 URL completa: `http://163.192.147.208:8080/data/report/` (o
 `https://clima.xe1e.net/data/report/` por dominio). Las unidades de entrada son
-imperiales (°F, mph, inHg); el servidor las convierte a métrico.
+imperiales (°F, mph, inHg); el servidor las convierte a métrico. El **PASSKEY**
+que envía cada dispositivo se deriva de su **dirección MAC**; el servidor lo usa
+para identificar la estación de origen.
 
 **Seguridad opcional** (Admin → Integraciones → 🔒 Seguridad del endpoint,
 desactivada por defecto): **token secreto** (`/data/report/?token=…`, responde
@@ -150,7 +152,7 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
 |-----|------|
 | Datos actuales, stats del día, comparación, pronóstico local | **60 s** |
 | Historia (página) | 5 min |
-| Pronóstico y astronomía (Open-Meteo) | 30 min |
+| Pronóstico (Open-Meteo y SMN) y astronomía | 30 min |
 | METAR, calidad del aire, almanaque (caché en el servidor) | 10 min |
 | Resumen diario (Dayfile) | al arrancar (90 días) + hoy/ayer cada hora |
 
@@ -303,13 +305,18 @@ la **categoría de vuelo** (VFR/MVFR/IFR/LIFR) y un **perfil atmosférico visual
 dibuja lluvia/rayos según el reporte). Buscador de cualquier código **ICAO** y
 accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).
 
-### 5.11 Estación remota
-Página **solo lectura** para una **segunda estación** (p. ej. un Ecowitt
-**GW1100**) que envía al mismo servidor. Sus datos se guardan **separados** de la
-principal (etiqueta interna por estación), así que **no la afectan**. Por
-defecto solo almacena datos, pero puede **disparar alertas propias** (con
-umbrales por estación) y publicar a redes si se activa desde el panel (ver §6).
-Muestra:
+### 5.11 Tablas
+Resumen tabular de todas las variables meteorológicas en formato de **tabla
+compacta**. Con **selector de estación** (Principal WS2910 / Remota GW1100) para
+ver los datos de cada una: valores actuales junto con mínimo, promedio y máximo
+del día. Útil para una vista rápida de todos los parámetros en un solo lugar.
+
+### 5.12 Estación remota
+Página para una **segunda estación** (p. ej. un Ecowitt **GW1100**) que envía al
+mismo servidor. Sus datos se guardan **separados** de la principal, así que **no
+la afectan**. Tiene **alertas propias** (temperatura, humedad, presión, punto de
+rocío y offline, con umbrales independientes) y puede publicar a redes si se
+activa desde el panel (ver §8). Muestra:
 - **Condiciones actuales:** temperatura (con **tendencia** a 3 h), humedad y **punto de rocío**.
 - **Presión** con su tendencia.
 - **Estadística** (mín/prom/máx) de temperatura, humedad y presión, con selector **24 h / 7 d / 30 d**.
@@ -318,27 +325,105 @@ Muestra:
 Un **resumen compacto** de esta estación está disponible también como tarjeta
 opcional en **Mi tablero** (§5.2).
 
-### 5.12 Vista clásica (`/`)
+### 5.13 Vista clásica (`/`)
 Tablero sencillo para consulta rápida, **unificado con el estilo de `/pro`**
 (reutiliza sus tarjetas: condiciones actuales, viento, interior, sensores,
 pronóstico, sol y luna…). Incluye enlace **"App completa →"** a `/pro`.
 
-### 5.13 Pie de página
+### 5.14 Pie de página
 Tres columnas (Estación / Datos / Proyecto) con hardware, ubicación, fuentes de
 datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**.
 
-### 5.14 Widget e instalar (PWA)
+### 5.15 Widget e instalar (PWA)
 - **Widget** (`/pro/compartir`): elige **unidades, tema y tamaño**, ve la
   **vista previa** y copia el **código `<iframe>`** para incrustarlo. El widget
   (`/embed`) es una tarjeta compacta que se actualiza cada minuto y acepta
   `?units=` y `?theme=`.
-- **Instalable (PWA):** desde el móvil, «Añadir a pantalla de inicio» lo deja
-  como app; abre directo la versión completa (`/pro`) y el "app shell" funciona
-  sin conexión.
+- **PWA (Progressive Web App):** el sitio se puede **instalar como aplicación**
+  en cualquier dispositivo. Una vez instalada, abre en pantalla completa (sin
+  barra del navegador), tiene su propio ícono y funciona como una app nativa.
+  - **En móvil (iOS/Android):** abre `clima.xe1e.net/pro` en el navegador → menú
+    «Compartir» (iOS) o «⋮» (Android) → **«Añadir a pantalla de inicio»**.
+  - **En escritorio (Chrome/Edge):** abre el sitio → clic en el ícono de
+    instalación en la barra de direcciones (o menú → «Instalar aplicación»).
+  - **Ventajas:** acceso directo desde el home/escritorio, abre la vista completa
+    (`/pro`) directamente, notificaciones (si se habilitan), y funciona offline
+    con los últimos datos cacheados.
 
 ---
 
-## 6. Panel de administración (`/admin`)
+## 6. Widget para tu sitio
+
+Cualquiera puede poner el clima en vivo de la estación en su web o blog con un
+**widget `<iframe>`**. La página [Widget para tu sitio](https://clima.xe1e.net/pro/compartir)
+es un generador: eliges **unidades** (°C/°F), **tema** (claro/oscuro) y **tamaño**,
+ves una vista previa y copias el código listo para pegar.
+
+### Cómo insertarlo
+1. Ajusta unidades, tema y tamaño hasta que la vista previa te guste.
+2. Pulsa **«Copiar código»**.
+3. Pega el código en el HTML de tu página: en **WordPress** un bloque «HTML
+   personalizado»; en **Blogger/Wix** un elemento «Insertar código»; en **HTML
+   puro**, dentro del `<body>`.
+
+Ejemplo del código:
+```html
+<iframe src="https://clima.xe1e.net/embed?units=metric&theme=dark"
+  width="360" height="210"
+  style="border:0;border-radius:16px;max-width:100%"
+  title="Clima CDMX" loading="lazy"></iframe>
+```
+
+- **Ruta base:** `/embed`, con parámetros opcionales `?units=metric|imperial` y
+  `&theme=light|dark`.
+- **Muestra:** temperatura, sensación y condición, más presión, humedad y viento;
+  se actualiza solo cada minuto.
+- **Responsivo** (`max-width:100%`), sin cuentas ni permisos; al hacer clic abre
+  el sitio completo.
+
+---
+
+## 7. Pantallas físicas
+
+Además del sitio web, el servidor alimenta **pantallas físicas dedicadas** que
+muestran el clima en tiempo real sin necesidad de abrir un navegador.
+
+### Waveshare ESP32-S3 (pantalla táctil 7")
+
+Una **pantalla táctil de 1024×600** basada en **ESP32-S3** que actúa como
+«display tonto»: el servidor genera cada pantalla como JPEG y el ESP32 solo la
+muestra. Un toque cambia de página.
+
+| Página | Contenido |
+|--------|-----------|
+| 1 | Estación: temperatura, tiles de resumen, pronóstico 6 h |
+| 2 | Sensor local BME280 (temperatura, humedad y presión del propio display) |
+
+El display tiene un **BME280 integrado** que envía sus lecturas al servidor
+(`POST /api/kiosk/local`), mostrándolas en la página 2. Configuración WiFi por
+portal cautivo (*WiFiManager*). Firmware y documentación:
+[ecowitt-display-kiosk-xe1e](https://github.com/XE1E/ecowitt-display-kiosk-xe1e).
+
+### SVITRIX-XE1E (Ulanzi TC001)
+
+Firmware personalizado para el **reloj píxel Ulanzi TC001** (matriz LED 32×8).
+Muestra el clima de la estación en apps rotativas con iconos animados:
+
+- **Apps de clima:** temperatura exterior, humedad, presión, calidad del aire,
+  UV, viento, radiación solar y precipitación.
+- **Apps nativas:** hora (varios modos), fecha, fase lunar, temperatura/humedad
+  interna, batería.
+- **Efectos:** overlays de lluvia, nieve, tormenta; 20+ efectos de fondo.
+- **Integración:** API HTTP/MQTT, auto-discovery en Home Assistant, notificaciones push.
+
+El servidor expone `/api/svitrix` con los datos en el formato que espera el reloj;
+el Ulanzi lo consulta cada 1–5 minutos. Flasher en línea, interfaz web de
+configuración y OTA. Firmware y documentación:
+[svitrix-firmware-XE1E](https://github.com/XE1E/svitrix-firmware-XE1E).
+
+---
+
+## 8. Panel de administración (`/admin`)
 
 Acceso **usuario/contraseña** (sesión de 12 h). Diseño compacto en columnas.
 Permite **editar en caliente** (sin reiniciar) todo lo configurable.
@@ -348,8 +433,8 @@ Permite **editar en caliente** (sin reiniciar) todo lo configurable.
 La primera vez que se accede al panel, un **asistente de 5 pasos** guía la
 configuración:
 1. **Bienvenida** — introducción al panel
-2. **Estación** — verifica que la consola esté enviando datos
-3. **Alertas y Telegram** — configura umbrales y notificaciones (con botón
+2. **Estación** — verifica sensores, ubicación y zona horaria
+3. **Alertas** — configura **Telegram** y **correo SMTP** (ambos con botón
    «Probar» para validar las credenciales antes de guardar)
 4. **Publicación** — activa las redes públicas (WU, Windy, etc.)
 5. **Resumen** — muestra lo configurado y finaliza
@@ -363,7 +448,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
 | **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara»). En secundarias, opción **«a la intemperie»**: trata el sensor integrado (que reporta como *interior*) como **exterior** en todo el sistema (alertas, calibración, página remota, publicación) |
-| **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, más batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** solo aplican **temperatura**, **presión** y **«offline después de»** (watchdog propio); viento y lluvia no aplican (son del WS69), y batería/sensor/aire usan la config global. Indica estado de **Telegram** y **Correo** |
+| **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, más batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** aplican **temperatura**, **humedad**, **presión**, **punto de rocío** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
 | **Calibración** | Toggle global y **por estación** con selector. Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, etiquetado *Exterior* o *Interior* según el «a la intemperie») + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
@@ -378,36 +463,50 @@ Si `ADMIN_USER`/`ADMIN_PASSWORD` están vacíos, el panel queda **deshabilitado*
 
 ---
 
-## 7. Alertas y notificaciones
+## 9. Alertas y notificaciones
 
 Se evalúan en cada lectura y avisan **una vez al activarse** y otra **al
 normalizarse** (no spamean). Canales: **Telegram** y/o **correo (SMTP)**, con
 **selección por canal** de qué categorías recibe cada uno; si ninguno está
 configurado, van al log. Los umbrales se configuran **por estación**: la
 principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in).
-En las **secundarias** solo aplican **temperatura**, **presión** y el aviso de
-**estación caída** (offline, con su propio watchdog); viento y lluvia no aplican
-(no tienen WS69), y batería/sensor/aire usan la configuración global.
+
+### Estación principal (WS69)
 
 | Alerta | Se dispara cuando… |
 |--------|--------------------|
 | Temp alta / baja | temp ≥/≤ umbral |
+| Humedad alta / baja | humedad ≥/≤ umbral |
 | Viento fuerte | viento sostenido ≥ umbral |
 | Ráfaga fuerte | ráfaga ≥ umbral |
 | Lluvia intensa | tasa de lluvia ≥ umbral |
 | Lluvia diaria alta | acumulado del día ≥ umbral |
 | Presión alta / baja | presión ≥/≤ umbral |
+| UV alto | índice UV ≥ umbral |
+| Radiación solar alta | radiación ≥ umbral W/m² |
+| Punto de rocío alto / bajo | punto de rocío ≥/≤ umbral |
+| Sensación térmica alta / baja | sensación ≥/≤ umbral |
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
+
+### Estación remota (GW1100)
+
+| Alerta | Se dispara cuando… |
+|--------|--------------------|
+| Temp alta / baja | temp ≥/≤ umbral |
+| Humedad alta / baja | humedad ≥/≤ umbral |
+| Presión alta / baja | presión ≥/≤ umbral |
+| Punto de rocío alto / bajo | punto de rocío ≥/≤ umbral |
+| **Estación caída** | no llegan datos en N minutos (watchdog propio) |
 
 **Telegram:** se crea un bot con @BotFather, se obtiene el `chat_id` y se pega
 token + chat id en el panel (o en `.env`).
 
 ---
 
-## 8. Publicación a redes públicas
+## 10. Publicación a redes públicas
 
 El servidor reenvía cada lectura (de forma tolerante a fallos) a las redes que
 se activen, con sus credenciales, desde el panel:
@@ -419,6 +518,7 @@ se activen, con sus credenciales, desde el panel:
 | **PWSWeather** | respaldo, ecosistema Aeris |
 | **OpenWeatherMap** | acceso a su API a cambio |
 | **CWOP / APRS** | entra a MADIS → modelos de NOAA (mayor aporte científico) |
+| **AWEKAS** | red europea con mapa interactivo y estadísticas |
 
 Filosofía: aportar a todas las útiles. Cada red usa sus unidades; el servidor
 convierte según el protocolo de cada una.
@@ -432,7 +532,7 @@ sugerido por cada red aunque la estación reporte cada minuto.
 
 ---
 
-## 9. Fuentes de datos externas
+## 11. Fuentes de datos externas
 
 | Fuente | Qué aporta | Frecuencia / caché |
 |--------|-----------|--------------------|
@@ -450,7 +550,7 @@ sugerido por cada red aunque la estación reporte cada minuto.
 
 ---
 
-## 10. API (endpoints)
+## 12. API (endpoints)
 
 Todos bajo el receiver, servidos vía `/api/*`:
 
@@ -474,6 +574,9 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/airquality` · `GET /api/airquality/imeca` | AQI e IMECA estimado (+ pronóstico) |
 | `GET /api/satellite` | imagen satelital NASA GIBS (proxy) |
 | `GET /api/earthquakes` | sismos recientes (USGS / SSN) |
+| `GET /api/svitrix` | datos para SVITRIX-XE1E (Ulanzi TC001) |
+| `GET /api/display.jpg?page=N` | imagen JPEG para pantalla Waveshare |
+| `POST /api/kiosk/local` | recibe lecturas del BME280 de la pantalla Waveshare |
 | `POST /api/admin/login` · `GET/POST /api/admin/settings` · `GET /api/admin/status` | administración |
 | `POST /data/report/` | **entrada** del push de la estación (Ecowitt) |
 
@@ -484,7 +587,7 @@ sin el parámetro devuelven la **principal**. Las secundarias se configuran en
 
 ---
 
-## 11. Operación y mantenimiento
+## 13. Operación y mantenimiento
 
 **Servidor:** VPS Oracle ARM, cuenta **PAYG** (para evitar recuperación por
 inactividad de la capa gratuita). Dominio `clima.xe1e.net` tras Cloudflare.
@@ -509,13 +612,13 @@ disponibilidad (ver `uptime-worker/`).
 (`/data/settings.json`), así que sobreviven a reinicios y reconstrucciones.
 
 **Estación en operación:** el WS2910 está **instalado y enviando datos reales**
-desde ~2026-07-19; el simulador está apagado y los datos falsos, limpiados. La
-consola apunta a `clima.xe1e.net`, ruta `/data/report/` (*Weather Services →
-Customized → Ecowitt*), y las lecturas reales se ven en `/api/current` y en la web.
+desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`
+(*Weather Services → Customized → Ecowitt*), y las lecturas reales se ven en
+`/api/current` y en la web.
 
 ---
 
-## 12. Glosario de términos e índices
+## 14. Glosario de términos e índices
 
 - **Punto de rocío:** temperatura a la que el aire se satura; alto = bochorno.
 - **Sensación térmica (feels like):** cómo se percibe la temperatura combinando
@@ -542,7 +645,7 @@ Customized → Ecowitt*), y las lecturas reales se ven en `/api/current` y en la
 
 ---
 
-## 13. Estado y pendientes
+## 15. Estado y pendientes
 
 **Pendiente:** versión en inglés (i18n) y acciones del usuario (crear bot de
 Telegram, credenciales de las redes públicas).
@@ -551,4 +654,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-07-23.*
+*Última actualización: 2026-07-30.*
