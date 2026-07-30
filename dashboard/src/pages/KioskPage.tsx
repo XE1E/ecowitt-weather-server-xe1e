@@ -13,7 +13,7 @@ const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SE
 const pad = (n: number) => String(n).padStart(2, '0')
 
 // ── Helpers de la página "consola" (réplica de la consola física Ecowitt) ──
-const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const cardinal = (deg?: number) => (deg == null ? '--' : DIR16[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16])
 
 // Fase lunar sencilla (mes sinódico) → fracción iluminada + creciente/menguante.
@@ -205,6 +205,18 @@ export function KioskPage() {
   if (page === 'consola') {
     const cond = data ? deriveCondition(data) : { icon: '', label: '' }
     const dir = data?.wind_direction
+
+    // Tendencias: comparar actual vs promedio del día
+    const getTrend = (current: number | undefined | null, avg: number | undefined | null): 'up' | 'down' | 'stable' => {
+      if (current == null || avg == null) return 'stable'
+      const diff = current - avg
+      if (diff > 0.5) return 'up'
+      if (diff < -0.5) return 'down'
+      return 'stable'
+    }
+    const tempTrend = getTrend(data?.temperature_outdoor, stats?.temperature_outdoor?.avg)
+    const humTrend = getTrend(data?.humidity_outdoor, stats?.humidity_outdoor?.avg)
+    const pressTrend = getTrend(data?.pressure_relative, stats?.pressure_relative?.avg)
     const chTemp = data?.temperature_ch1
     const chHum = data?.humidity_ch1
     const hasCh1 = chTemp != null || chHum != null
@@ -255,7 +267,14 @@ export function KioskPage() {
                 <line x1="12" y1="14" x2="12" y2="28" stroke="#ff7b1c" strokeWidth="3" strokeLinecap="round" />
               </svg>
             </div>
-            <div className="big go ctr rt" style={{ fontSize: 104 }}>
+            <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                {tempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                {tempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                {tempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+              </svg>
+            </div>
+            <div className="big go ctr rt" style={{ fontSize: 104, paddingRight: 32 }}>
               {decNum(u.temp(data?.temperature_outdoor))}<span className="u ured" style={{ fontSize: 26 }}>{u.tempU}</span>
             </div>
           </div>
@@ -335,7 +354,14 @@ export function KioskPage() {
                 <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#eaeaea" strokeWidth="2" fill="none" />
               </svg>
             </div>
-            <div className="big gw ctr rt" style={{ fontSize: 80, lineHeight: 0.8 }}>
+            <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                {humTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                {humTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                {humTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+              </svg>
+            </div>
+            <div className="big gw ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32 }}>
               {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--w)' }}>%</span>
             </div>
           </div>
@@ -345,15 +371,15 @@ export function KioskPage() {
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM <span style={{ color: 'var(--w)', fontWeight: 400 }}>{u.windU}</span></div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
                 <div className="gw seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
-                  {decNum(u.wind(data?.wind_speed, 1))}
+                  {decNum(u.wind(data?.wind_speed, 1))}<span style={{ fontSize: 18, color: 'var(--w)' }}> {u.windU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA <span style={{ color: 'var(--w)', fontWeight: 400 }}>{u.windU}</span></div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
                 <div className="go seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
-                  {decNum(u.wind(data?.wind_gust, 1))}
+                  {decNum(u.wind(data?.wind_gust, 1))}<span style={{ fontSize: 18, color: 'var(--o)' }}> {u.windU}</span>
                 </div>
               </div>
             </div>
@@ -369,7 +395,14 @@ export function KioskPage() {
                 <circle cx="14" cy="14" r="2" fill="#2ab7f4" />
               </svg>
             </div>
-            <div className="big gb ctr rt" style={{ fontSize: 56 }}>
+            <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                {pressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
+                {pressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
+                {pressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+              </svg>
+            </div>
+            <div className="big gb ctr rt" style={{ fontSize: 56, paddingRight: 32 }}>
               {u.press(data?.pressure_relative, 0)}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
@@ -435,7 +468,12 @@ export function KioskPage() {
 
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--g)' }}>GW1100</span></div>
-            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+            <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+              </svg>
+            </div>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, paddingRight: 32 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
               </span>
@@ -476,7 +514,12 @@ export function KioskPage() {
 
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--g)' }}>GW1100</span></div>
-            <div className="big gg ctr rt" style={{ fontSize: 46 }}>
+            <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+              <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+                <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />
+              </svg>
+            </div>
+            <div className="big gg ctr rt" style={{ fontSize: 46, paddingRight: 32 }}>
               {remote?.pressure_relative != null ? u.press(remote.pressure_relative, 0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}> {u.pressU}</span>
             </div>
           </div>
