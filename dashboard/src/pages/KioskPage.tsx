@@ -371,10 +371,6 @@ export function KioskPage() {
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
-                <MoonGlyph size={42} />
-              </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
                 <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
@@ -386,6 +382,10 @@ export function KioskPage() {
                 <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
                   {data?.uv_index ?? '--'}
                 </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
+                <MoonGlyph size={42} />
               </div>
             </div>
           </div>
