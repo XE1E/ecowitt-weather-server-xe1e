@@ -9,6 +9,7 @@ import { WeatherIcon } from '../components/WeatherIcon'
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
 const pad = (n: number) => String(n).padStart(2, '0')
 
 // ── Helpers de la página "consola" (réplica de la consola física Ecowitt) ──
@@ -209,8 +210,7 @@ export function KioskPage() {
     const hasCh1 = chTemp != null || chHum != null
     const sTemp = hasCh1 ? chTemp : remote?.temperature_indoor
     const sHum = hasCh1 ? chHum : remote?.humidity_indoor
-    const sTag = hasCh1 ? 'CH1' : remote ? 'REM' : 'CH1'
-
+    
     const css = `
       @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
       .cns{--o:#ff7b1c;--b:#2ab7f4;--y:#ffcf19;--g:#37d64a;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
@@ -247,7 +247,7 @@ export function KioskPage() {
         }}>
           {/* Fila 1 */}
           <div className="cell col">
-            <div className="lbl" style={{ color: 'var(--w)' }}>TEMP <span className="ac">EXT</span></div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
             <div className="big go rt" style={{ fontSize: 120, marginTop: 6 }}>
               {decNum(u.temp(data?.temperature_outdoor))}<span className="u ured" style={{ fontSize: 30 }}>{u.tempU}</span>
             </div>
@@ -275,7 +275,7 @@ export function KioskPage() {
                 )}
               </svg>
               <div className="gg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
-                <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28 }}>°</span>
+                <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28, verticalAlign: 'super' }}>°</span>
               </div>
             </div>
             {/* ROCÍO + SENS en una línea, al pie de la celda del viento */}
@@ -296,7 +296,7 @@ export function KioskPage() {
           </div>
 
           <div className="cell col">
-            <div className="lbl">VELOCIDAD</div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</div>
             <div style={{ position: 'absolute', top: 10, right: 12 }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
                 <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
@@ -310,11 +310,10 @@ export function KioskPage() {
 
           {/* Fila 2 */}
           <div className="cell col" style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <div className="lbl" style={{ alignSelf: 'flex-start' }}>HUMEDAD</div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1, alignSelf: 'flex-start' }}>HUMEDAD</div>
             <div className="big gw" style={{ fontSize: 80, lineHeight: 0.8, marginTop: 8 }}>
               {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--w)' }}>%</span>
             </div>
-            <div style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1, marginTop: 8 }}>EXTERIOR</div>
           </div>
 
           {/* ROCÍO/SENS viven dentro de la celda VIENTO */}
@@ -322,13 +321,13 @@ export function KioskPage() {
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div className="lbl">PROM</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>PROM</div>
                 <div className="gw seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_speed, 1))}
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div className="lbl">RÁFAGA</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
                 <div className="go seg" style={{ fontSize: 44, fontWeight: 800, marginTop: 4 }}>
                   {decNum(u.wind(data?.wind_gust, 1))}
                 </div>
@@ -338,18 +337,18 @@ export function KioskPage() {
 
           {/* Fila 3 */}
           <div className="cell col">
-            <div className="bt"><span className="lbl">PRESIÓN</span><span className="lbl">REL</span></div>
+            <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
             <div className="big gb ctr rt" style={{ fontSize: 56 }}>
               {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <WeatherIcon name={cond.icon} size={140} />
+          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+            <WeatherIcon name={cond.icon} size={160} className="weather-main-icon" />
           </div>
 
           <div className="cell">
-            <div className="lbl">LLUVIA</div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
               <span className="gb seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--b)' }}>{u.rainU}</span>
@@ -362,7 +361,7 @@ export function KioskPage() {
 
           {/* Fila 4 */}
           <div className="cell">
-            <div className="lbl">TEMP <span className="ac">INT</span></div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INT</div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
               <span className="gy" style={{ fontSize: 46, fontWeight: 800 }}>
                 {decNum(u.temp(data?.temperature_indoor))}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
@@ -375,13 +374,13 @@ export function KioskPage() {
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 14, letterSpacing: 1 }}>LUNA</div>
+              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
               <MoonGlyph size={50} />
             </div>
           </div>
 
           <div className="cell">
-            <div className="lbl">REMOTA <span className="acg">GW1100</span></div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--g)' }}>GW1100</span></div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
@@ -394,7 +393,7 @@ export function KioskPage() {
 
           {/* Fila 5 */}
           <div className="cell">
-            <div className="lbl">SENSOR <span className="acg">{sTag}</span></div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
               <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u ured" style={{ fontSize: 20 }}>{u.tempU}</span>
@@ -408,13 +407,13 @@ export function KioskPage() {
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div className="lbl">SOLAR</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
                 <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
                   {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div className="lbl">UV</div>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>UV</div>
                 <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, marginTop: 4 }}>
                   {data?.uv_index ?? '--'}
                 </div>
@@ -424,14 +423,14 @@ export function KioskPage() {
 
           <div className="cell" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div className="bt">
-              <span style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>HORA</span>
-              <span style={{ color: 'var(--lbl)', fontSize: 13, letterSpacing: 1 }}>FECHA</span>
+              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>HORA</span>
+              <span style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>FECHA</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-              <span className="gg seg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+              <span className="gg seg" style={{ fontSize: 56, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</span>
               <div style={{ textAlign: 'right', lineHeight: 1.02 }}>
                 <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
-                <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{pad(now.getDate())}.{pad(now.getMonth() + 1)}</div>
+                <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
               </div>
             </div>
           </div>
