@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts'
 import { LOCATION } from '../../config'
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -106,14 +106,20 @@ export function DaylightChart() {
 
   const monthTicks = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
 
+  const tip = {
+    contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
+    labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
+  }
+  const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
+
   return (
     <div className="card">
       <p className="card-title">Duración día</p>
-      <div className="mt-2">
-        <ResponsiveContainer width="100%" height={220}>
+      <div className="h-60">
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
-            margin={{ top: 10, right: 45, left: 5, bottom: 25 }}
+            margin={{ top: 5, right: 6, left: -8, bottom: 0 }}
             onMouseMove={(e) => {
               if (e && e.activeTooltipIndex !== undefined) {
                 setHoverIndex(e.activeTooltipIndex)
@@ -121,30 +127,21 @@ export function DaylightChart() {
             }}
             onMouseLeave={() => setHoverIndex(null)}
           >
-            <CartesianGrid
-              strokeDasharray="4 4"
-              stroke="rgba(148, 163, 184, 0.15)"
-              horizontal={true}
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
             <XAxis
               dataKey="day"
-              axisLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
-              tickLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
+              tick={{ fill: '#94a3b8', fontSize: 11 }}
               ticks={monthTicks}
               tickFormatter={(d) => data[d]?.month || ''}
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              interval={0}
+              minTickGap={12}
             />
             <YAxis
               yAxisId="left"
               domain={[0, 24]}
               ticks={[0, 4, 8, 12, 16, 20, 24]}
               tickFormatter={(v) => `${v.toString().padStart(2, '0')}:00`}
-              axisLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
-              tickLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
               tick={{ fill: '#94a3b8', fontSize: 11 }}
-              width={42}
+              width={44}
             />
             <YAxis
               yAxisId="right"
@@ -152,10 +149,30 @@ export function DaylightChart() {
               domain={[0, 15]}
               ticks={[0, 5, 10, 15]}
               tickFormatter={(v) => `${v}h`}
-              axisLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
-              tickLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
               tick={{ fill: '#94a3b8', fontSize: 11 }}
-              width={32}
+              width={30}
+            />
+            <Tooltip
+              cursor={cursor}
+              {...tip}
+              labelFormatter={(idx: number) => formatShortDate(idx)}
+              formatter={(v: number, name: string) => {
+                if (name === 'Ocaso') return [formatTime(v), name]
+                return [null, null]
+              }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null
+                const d = payload[0]?.payload
+                if (!d) return null
+                return (
+                  <div style={{ backgroundColor: '#0f1a2a', border: '1px solid #334155', borderRadius: 8, padding: '8px 12px' }}>
+                    <p style={{ color: '#e2e8f0', fontWeight: 600, marginBottom: 4 }}>{formatShortDate(d.day)}</p>
+                    <p style={{ color: '#94a3b8', fontSize: 12 }}>Amanecer: <span style={{ color: '#38bdf8' }}>{formatTime(d.sunrise)}</span></p>
+                    <p style={{ color: '#94a3b8', fontSize: 12 }}>Ocaso: <span style={{ color: '#f97316' }}>{formatTime(d.sunset)}</span></p>
+                    <p style={{ color: '#94a3b8', fontSize: 12 }}>Duración: <span style={{ color: '#fbbf24' }}>{formatDuration(d.dayLength)}</span></p>
+                  </div>
+                )
+              }}
             />
             <Area
               yAxisId="left"
@@ -188,6 +205,7 @@ export function DaylightChart() {
               yAxisId="left"
               type="monotone"
               dataKey="sunset"
+              name="Ocaso"
               fill="none"
               stroke="#f97316"
               strokeWidth={2}
@@ -199,6 +217,13 @@ export function DaylightChart() {
               x={todayIndex}
               stroke="#3b82f6"
               strokeWidth={1.5}
+              label={{
+                value: formatShortDate(todayIndex),
+                position: 'insideBottomLeft',
+                fill: '#3b82f6',
+                fontSize: 10,
+                offset: 5
+              }}
             />
             {hoverIndex !== null && hoverIndex !== todayIndex && (
               <ReferenceLine
@@ -208,10 +233,10 @@ export function DaylightChart() {
                 strokeWidth={1}
                 label={{
                   value: formatShortDate(hoverIndex),
-                  position: 'insideBottom',
-                  fill: '#94a3b8',
+                  position: 'insideBottomLeft',
+                  fill: '#9ca3af',
                   fontSize: 10,
-                  offset: 10
+                  offset: 5
                 }}
               />
             )}
@@ -219,7 +244,7 @@ export function DaylightChart() {
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-2 border-t border-white/10 pt-3">
+      <div className="mt-3 border-t border-white/10 pt-3">
         <div className="grid grid-cols-4 gap-2 text-xs text-slate-400 border-b border-white/10 pb-2 mb-2">
           <span></span>
           <span className="text-center">Amanecer</span>
