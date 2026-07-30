@@ -265,12 +265,25 @@ export function KioskPage() {
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
               <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
-                <ellipse cx="50" cy="40" rx="49" ry="38" stroke="#3a3a3a" strokeWidth="1" fill="none" />
-                <ellipse cx="50" cy="40" rx="42" ry="31" stroke="#232323" strokeWidth="0.8" fill="none" />
-                <text x="50" y="9" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">N</text>
-                <text x="98" y="43" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">E</text>
-                <text x="50" y="76" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">S</text>
-                <text x="2" y="43" fill="#eaeaea" fontSize="6.5" fontWeight="700" textAnchor="middle">W</text>
+                {/* Óvalo exterior más visible */}
+                <ellipse cx="50" cy="40" rx="49" ry="38" stroke="#555" strokeWidth="1.5" fill="none" />
+                {/* Marcas de grados cada 30° */}
+                {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
+                  const rad = (deg - 90) * Math.PI / 180
+                  const x1 = 50 + 44 * Math.cos(rad)
+                  const y1 = 40 + 34 * Math.sin(rad)
+                  const x2 = 50 + 49 * Math.cos(rad)
+                  const y2 = 40 + 38 * Math.sin(rad)
+                  const isMajor = deg % 90 === 0
+                  return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke={isMajor ? '#888' : '#555'} strokeWidth={isMajor ? 2 : 1} />
+                })}
+                {/* Óvalo interior */}
+                <ellipse cx="50" cy="40" rx="42" ry="31" stroke="#444" strokeWidth="1" fill="none" />
+                {/* Letras cardinales más grandes */}
+                <text x="50" y="8" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">N</text>
+                <text x="98" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">E</text>
+                <text x="50" y="77" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">S</text>
+                <text x="2" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">O</text>
                 {dir != null && (
                   <g transform={`rotate(${dir} 50 40)`}>
                     <polygon points="50,-1 47,6 50,4 53,6" fill="#37d64a" />
