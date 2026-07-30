@@ -293,7 +293,7 @@ export function KioskPage() {
           </div>
 
           <div className="cell col">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</div>
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</div>
             <div style={{ position: 'absolute', top: 10, right: 12 }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
                 <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#ff7b1c" strokeWidth="2.4" strokeLinecap="round" />
@@ -336,7 +336,7 @@ export function KioskPage() {
           <div className="cell col">
             <div className="bt"><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</span><span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700 }}>REL</span></div>
             <div className="big gb ctr rt" style={{ fontSize: 56 }}>
-              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
+              {u.press(data?.pressure_relative, 0)}<span className="u" style={{ fontSize: 24, color: 'var(--b)' }}> {u.pressU}</span>
             </div>
           </div>
 
@@ -434,7 +434,7 @@ export function KioskPage() {
           <div className="cell col">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--g)' }}>GW1100</span></div>
             <div className="big gg ctr rt" style={{ fontSize: 46 }}>
-              {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}> {u.pressU}</span>
+              {remote?.pressure_relative != null ? u.press(remote.pressure_relative, 0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--g)' }}> {u.pressU}</span>
             </div>
           </div>
         </div>
