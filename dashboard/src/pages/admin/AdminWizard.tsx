@@ -19,6 +19,14 @@ interface WizardData {
   telegram_enabled: boolean
   telegram_bot_token: string
   telegram_chat_id: string
+  email_enabled: boolean
+  email_smtp_host: string
+  email_smtp_port: number
+  email_smtp_user: string
+  email_smtp_password: string
+  email_from: string
+  email_to: string
+  email_starttls: boolean
   wu_enabled: boolean
   wu_station_id: string
   wu_station_key: string
@@ -200,17 +208,23 @@ function AlertsStep({
   onChange,
   onNext,
   onBack,
-  onTest,
-  testing,
-  testResult,
+  onTestTelegram,
+  testingTelegram,
+  testTelegramResult,
+  onTestEmail,
+  testingEmail,
+  testEmailResult,
 }: {
   data: WizardData
   onChange: (d: Partial<WizardData>) => void
   onNext: () => void
   onBack: () => void
-  onTest: () => void
-  testing: boolean
-  testResult: { ok: boolean; message: string } | null
+  onTestTelegram: () => void
+  testingTelegram: boolean
+  testTelegramResult: { ok: boolean; message: string } | null
+  onTestEmail: () => void
+  testingEmail: boolean
+  testEmailResult: { ok: boolean; message: string } | null
 }) {
   return (
     <div>
@@ -281,15 +295,124 @@ function AlertsStep({
               {data.telegram_bot_token && data.telegram_chat_id && (
                 <div>
                   <button
-                    onClick={onTest}
-                    disabled={testing}
+                    onClick={onTestTelegram}
+                    disabled={testingTelegram}
                     className="text-sky-400 hover:text-sky-300 text-sm disabled:text-slate-500"
                   >
-                    {testing ? 'Enviando...' : '🧪 Enviar mensaje de prueba'}
+                    {testingTelegram ? 'Enviando...' : '🧪 Enviar mensaje de prueba'}
                   </button>
-                  {testResult && (
-                    <p className={`text-sm mt-1 ${testResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {testResult.message}
+                  {testTelegramResult && (
+                    <p className={`text-sm mt-1 ${testTelegramResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {testTelegramResult.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Email section */}
+        <div className="border-t border-white/10 pt-4">
+          <label className="flex items-center gap-3 cursor-pointer mb-4">
+            <input
+              type="checkbox"
+              checked={data.email_enabled}
+              onChange={e => onChange({ email_enabled: e.target.checked })}
+              className="w-5 h-5 rounded bg-slate-700 border-slate-600 text-sky-500 focus:ring-sky-500/50"
+            />
+            <div>
+              <p className="font-medium">Notificaciones por correo</p>
+              <p className="text-sm text-slate-400">Recibe alertas en tu email</p>
+            </div>
+          </label>
+
+          {data.email_enabled && (
+            <div className="space-y-4 pl-8 animate-in slide-in-from-top-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-sm text-slate-300 mb-1">Servidor SMTP</label>
+                  <input
+                    type="text"
+                    value={data.email_smtp_host}
+                    onChange={e => onChange({ email_smtp_host: e.target.value })}
+                    placeholder="smtp.gmail.com"
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Puerto</label>
+                  <input
+                    type="number"
+                    value={data.email_smtp_port}
+                    onChange={e => onChange({ email_smtp_port: parseInt(e.target.value) || 587 })}
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={data.email_starttls}
+                      onChange={e => onChange({ email_starttls: e.target.checked })}
+                      className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                    />
+                    <span className="text-sm text-slate-300">STARTTLS</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Usuario</label>
+                  <input
+                    type="text"
+                    value={data.email_smtp_user}
+                    onChange={e => onChange({ email_smtp_user: e.target.value })}
+                    placeholder="usuario@gmail.com"
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Contraseña</label>
+                  <input
+                    type="password"
+                    value={data.email_smtp_password}
+                    onChange={e => onChange({ email_smtp_password: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Remitente</label>
+                  <input
+                    type="email"
+                    value={data.email_from}
+                    onChange={e => onChange({ email_from: e.target.value })}
+                    placeholder="alertas@tudominio.com"
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Destinatario(s)</label>
+                  <input
+                    type="text"
+                    value={data.email_to}
+                    onChange={e => onChange({ email_to: e.target.value })}
+                    placeholder="tu@email.com"
+                    className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  />
+                </div>
+              </div>
+              {data.email_smtp_host && data.email_to && (
+                <div>
+                  <button
+                    onClick={onTestEmail}
+                    disabled={testingEmail}
+                    className="text-sky-400 hover:text-sky-300 text-sm disabled:text-slate-500"
+                  >
+                    {testingEmail ? 'Enviando...' : '🧪 Enviar correo de prueba'}
+                  </button>
+                  {testEmailResult && (
+                    <p className={`text-sm mt-1 ${testEmailResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {testEmailResult.message}
                     </p>
                   )}
                 </div>
@@ -436,6 +559,7 @@ function DoneStep({
     `Zona horaria: ${tzLabel}`,
     data.alerts_enabled && 'Alertas habilitadas',
     data.telegram_enabled && 'Notificaciones Telegram',
+    data.email_enabled && 'Notificaciones por correo',
     data.wu_enabled && 'Weather Underground',
     data.windy_enabled && 'Windy',
   ].filter(Boolean)
@@ -566,6 +690,14 @@ export function AdminWizard() {
     telegram_enabled: false,
     telegram_bot_token: '',
     telegram_chat_id: '',
+    email_enabled: false,
+    email_smtp_host: '',
+    email_smtp_port: 587,
+    email_smtp_user: '',
+    email_smtp_password: '',
+    email_from: '',
+    email_to: '',
+    email_starttls: true,
     wu_enabled: false,
     wu_station_id: '',
     wu_station_key: '',
@@ -575,6 +707,8 @@ export function AdminWizard() {
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/stations').then(r => r.json()).then(j => setStations(j.stations || []))
@@ -605,6 +739,31 @@ export function AdminWizard() {
     setTesting(false)
   }
 
+  const testEmail = async () => {
+    setTestingEmail(true)
+    setTestEmailResult(null)
+    try {
+      const r = await fetchWithAuth('/api/admin/wizard/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          smtp_host: data.email_smtp_host,
+          smtp_port: data.email_smtp_port,
+          smtp_user: data.email_smtp_user,
+          smtp_password: data.email_smtp_password,
+          from_address: data.email_from,
+          to_addresses: data.email_to,
+          starttls: data.email_starttls,
+        }),
+      })
+      const j = await r.json()
+      setTestEmailResult({ ok: r.ok, message: j.message || (r.ok ? 'Correo enviado' : 'Error') })
+    } catch {
+      setTestEmailResult({ ok: false, message: 'Error de conexión' })
+    }
+    setTestingEmail(false)
+  }
+
   const finish = async () => {
     setSaving(true)
     try {
@@ -627,6 +786,16 @@ export function AdminWizard() {
       if (data.windy_enabled) {
         settings.windy_enabled = true
         if (data.windy_api_key) settings.windy_api_key = data.windy_api_key
+      }
+      if (data.email_enabled) {
+        settings.email_enabled = true
+        settings.email_smtp_host = data.email_smtp_host
+        settings.email_smtp_port = data.email_smtp_port
+        settings.email_smtp_user = data.email_smtp_user
+        if (data.email_smtp_password) settings.email_smtp_password = data.email_smtp_password
+        settings.email_from = data.email_from
+        settings.email_to = data.email_to
+        settings.email_starttls = data.email_starttls
       }
 
       await fetchWithAuth('/api/admin/settings', {
@@ -679,9 +848,12 @@ export function AdminWizard() {
                   onChange={updateData}
                   onNext={() => setStep(3)}
                   onBack={() => setStep(1)}
-                  onTest={testTelegram}
-                  testing={testing}
-                  testResult={testResult}
+                  onTestTelegram={testTelegram}
+                  testingTelegram={testing}
+                  testTelegramResult={testResult}
+                  onTestEmail={testEmail}
+                  testingEmail={testingEmail}
+                  testEmailResult={testEmailResult}
                 />
               )}
               {step === 3 && (

@@ -1163,6 +1163,49 @@ async def admin_wizard_test_telegram(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/admin/wizard/test-email")
+async def admin_wizard_test_email(
+    body: dict,
+    authorization: Optional[str] = Header(default=None)
+):
+    """Prueba credenciales de correo durante el wizard (sin guardarlas aún)."""
+    _require_admin(authorization)
+    smtp_host = body.get("smtp_host")
+    smtp_port = body.get("smtp_port", 587)
+    smtp_user = body.get("smtp_user")
+    smtp_password = body.get("smtp_password")
+    from_address = body.get("from_address")
+    to_addresses = body.get("to_addresses")
+    starttls = body.get("starttls", True)
+
+    if not smtp_host or not to_addresses:
+        raise HTTPException(status_code=400, detail="Faltan smtp_host o to_addresses")
+
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+
+        msg = MIMEText("🧪 Mensaje de prueba desde el wizard de Estación Clima XE1E")
+        msg["Subject"] = "Prueba de alertas - Estación Clima XE1E"
+        msg["From"] = from_address or smtp_user or "alertas@estacion.local"
+        msg["To"] = to_addresses
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            if starttls:
+                server.starttls()
+            if smtp_user and smtp_password:
+                server.login(smtp_user, smtp_password)
+            server.sendmail(msg["From"], to_addresses.split(","), msg.as_string())
+
+        return {"status": "ok", "message": "Correo enviado correctamente"}
+    except smtplib.SMTPAuthenticationError:
+        return {"status": "error", "message": "Error de autenticación SMTP"}
+    except smtplib.SMTPConnectError:
+        return {"status": "error", "message": "No se pudo conectar al servidor SMTP"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---------------------------------------------------------------------------
 # API de Estaciones (Etapa 2)
 # ---------------------------------------------------------------------------
