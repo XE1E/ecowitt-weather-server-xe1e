@@ -345,17 +345,18 @@ export function KioskPage() {
           </div>
 
           <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <WeatherIcon name={cond.icon} size={110} />
+            <WeatherIcon name={cond.icon} size={140} />
           </div>
 
-          <div className="cell col">
-            <div className="bt"><span className="lbl">LLUVIA</span><span className="lbl">HOY</span></div>
-            <div className="big gb ctr" style={{ fontSize: 48, marginTop: 4 }}>
-              {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--b)' }}> {u.rainU}</span>
-            </div>
-            <div className="gb" style={{ fontSize: 24, fontWeight: 700, marginTop: 4, textAlign: 'center' }}>
-              <span style={{ color: 'var(--lbl)', fontSize: 13 }}>TASA </span>
-              {decNum(u.rain(data?.rain_rate))}<span style={{ fontSize: 14, color: 'var(--b)' }}> {u.rainU}/h</span>
+          <div className="cell">
+            <div className="lbl">LLUVIA</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
+              <span className="gb seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--b)' }}>{u.rainU}</span>
+              </span>
+              <span className="gb seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 20, color: 'var(--b)' }}>/h</span>
+              </span>
             </div>
           </div>
 
