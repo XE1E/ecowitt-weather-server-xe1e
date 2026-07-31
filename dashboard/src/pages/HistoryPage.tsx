@@ -165,7 +165,7 @@ export function HistoryPage() {
             {stat('Días lluviosos', String(s!.rain_days ?? 0), 'text-blue-300')}
           </div>
 
-          <HistoryCharts data={points} labelFormatter={labelFmt} onCsv={downloadCsv} />
+          <HistoryCharts data={points} labelFormatter={labelFmt} onCsv={downloadCsv} period={sel.gran} />
 
           {/* Gráfica multivariable */}
           <div className="card">

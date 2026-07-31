@@ -18,10 +18,11 @@ const CARD16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'S
 const dir16 = (d: number) => CARD16[Math.round(d / 22.5) % 16]
 const nf = (v: number) => Number(v).toLocaleString('es-MX', { maximumFractionDigits: 1 })
 
-export function HistoryCharts({ data, labelFormatter, onCsv }: {
+export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }: {
   data: HistPoint[]
   labelFormatter?: (l: string) => string
   onCsv?: () => void
+  period?: 'day' | 'month' | 'year'
 }) {
   const u = useUnits()
   const tip = {
@@ -33,8 +34,8 @@ export function HistoryCharts({ data, labelFormatter, onCsv }: {
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
   const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
-  // Ancho mínimo para scroll horizontal cuando hay muchos puntos (móvil)
-  const minW = data.length > 15 ? `${Math.max(400, data.length * 24)}px` : undefined
+  // Ancho mínimo para scroll horizontal según período (móvil)
+  const minW = period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

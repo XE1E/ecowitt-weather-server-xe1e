@@ -371,7 +371,7 @@ export function RemoteStationPage() {
               </div>
             ) : (
               <div className="h-80 md:h-64 overflow-x-auto">
-                <div style={{ minWidth: '500px', height: '100%' }}>
+                <div style={{ minWidth: period === '24h' ? '500px' : period === '7d' ? '750px' : '1000px', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chart} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
