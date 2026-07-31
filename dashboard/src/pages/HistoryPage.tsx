@@ -4,6 +4,7 @@ import { useUnits } from '../units'
 import { LOCATION } from '../config'
 import { HistoryDayDetail } from '../components/station/HistoryDayDetail'
 import { HistoryCharts, HistPoint } from '../components/station/HistoryCharts'
+import { MultiVariableChart } from '../components/station/MultiVariableChart'
 import { PageInfo } from '../components/station/PageInfo'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -50,6 +51,7 @@ export function HistoryPage() {
   const [month, setMonth] = useState<MonthData | null>(null)
   const [year, setYear] = useState<YearData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [multiMode, setMultiMode] = useState<'day' | 'week'>('day')
 
   useEffect(() => {
     let cancel = false
@@ -164,6 +166,28 @@ export function HistoryPage() {
           </div>
 
           <HistoryCharts data={points} labelFormatter={labelFmt} onCsv={downloadCsv} />
+
+          {/* Gráfica multivariable */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-2">
+              <p className="card-title mb-0">Resumen multivariable</p>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setMultiMode('day')}
+                  className={`px-3 py-1 rounded-lg text-xs ${multiMode === 'day' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/15'}`}
+                >
+                  Día
+                </button>
+                <button
+                  onClick={() => setMultiMode('week')}
+                  className={`px-3 py-1 rounded-lg text-xs ${multiMode === 'week' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/15'}`}
+                >
+                  Semana
+                </button>
+              </div>
+            </div>
+            <MultiVariableChart mode={multiMode} />
+          </div>
 
           {/* Tabla: días del mes (clic → detalle) o meses del año (clic → mes) */}
           <div className="card overflow-x-auto">
