@@ -2,12 +2,27 @@ import { useState, useEffect } from 'react'
 import { WeatherData } from '../../types'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
-import { relativeTime, isStale } from '../../weather'
-import { TrendBadge } from './TrendBadge'
-import {
-  REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC, trendOver,
-  tempDeltaDisp, pressDeltaDisp,
-} from '../../remote'
+import { relativeTime, isStale, parseServerDate } from '../../weather'
+import { TrendArrow, getTrend } from '../TrendArrow'
+import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
+
+function getHistoricValue(history: RemoteHistRow[], field: string, hoursAgo: number): number | null {
+  if (!history || history.length === 0) return null
+  const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
+  let closest: RemoteHistRow | null = null
+  let closestDiff = Infinity
+  for (const h of history) {
+    const t = new Date(parseServerDate(h._time)).getTime()
+    const diff = Math.abs(t - targetTime)
+    if (diff < closestDiff) {
+      closestDiff = diff
+      closest = h
+    }
+  }
+  if (!closest || closestDiff > 30 * 60 * 1000) return null
+  const val = (closest as any)[field]
+  return typeof val === 'number' ? val : null
+}
 
 const REFRESH = 60000 // 1 min
 
@@ -66,14 +81,24 @@ export function RemoteStationCard() {
   const tOut = data.temperature_outdoor
   const hOut = data.humidity_outdoor
   const dewOut = dewPointC(tOut, hOut)
-  const tOutTrend = trendOver(history, 'temperature_outdoor', 3)
-  const tOutDelta = tOutTrend == null ? null : tempDeltaDisp(u.system, tOutTrend)
+
+  // Tendencias con flechas (comparar con hace 1h para temp/hum, 3h para presión)
+  const tOutPrev = getHistoricValue(history, 'temperature_outdoor', 1)
+  const hOutPrev = getHistoricValue(history, 'humidity_outdoor', 1)
+  const tOutArrow = getTrend(tOut, tOutPrev, 0.5)
+  const hOutArrow = getTrend(hOut, hOutPrev, 3)
 
   // Interior (GW1100)
   const tIn = data.temperature_indoor
   const hIn = data.humidity_indoor
-  const pTrend = trendOver(history, 'pressure_relative', 3)
-  const pDelta = pTrend == null ? null : pressDeltaDisp(u.system, pTrend)
+
+  // Tendencias interior
+  const tInPrev = getHistoricValue(history, 'temperature_indoor', 1)
+  const hInPrev = getHistoricValue(history, 'humidity_indoor', 1)
+  const pPrev = getHistoricValue(history, 'pressure_relative', 3)
+  const tInArrow = getTrend(tIn, tInPrev, 0.5)
+  const hInArrow = getTrend(hIn, hInPrev, 3)
+  const pArrow = getTrend(data.pressure_relative, pPrev, 1)
 
   return (
     <div className="card">
@@ -89,13 +114,18 @@ export function RemoteStationCard() {
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="thermometer" size={24} />
-          <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-xl font-bold text-amber-300">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
+            <TrendArrow trend={tOutArrow} size={18} />
+          </div>
           <p className="text-xs text-slate-400">Temp</p>
-          <TrendBadge delta={tOutDelta} unit={u.tempU} threshold={0.2} />
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="humidity" size={24} />
-          <p className="text-xl font-bold text-cyan-300 mt-1">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-xl font-bold text-cyan-300">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
+            <TrendArrow trend={hOutArrow} size={18} />
+          </div>
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
@@ -110,21 +140,29 @@ export function RemoteStationCard() {
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="thermometer" size={24} />
-          <p className="text-xl font-bold text-orange-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-xl font-bold text-orange-300">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
+            <TrendArrow trend={tInArrow} size={18} />
+          </div>
           <p className="text-xs text-slate-400">Temp</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="humidity" size={24} />
-          <p className="text-xl font-bold text-sky-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-xl font-bold text-sky-300">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
+            <TrendArrow trend={hInArrow} size={18} />
+          </div>
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="barometer" size={24} />
-          <p className="text-xl font-bold text-violet-300 mt-1">
-            {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}
-          </p>
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-xl font-bold text-violet-300">
+              {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}
+            </p>
+            <TrendArrow trend={pArrow} size={18} />
+          </div>
           <p className="text-xs text-slate-400">{u.pressU}</p>
-          <TrendBadge delta={pDelta} unit={u.pressU} threshold={u.system === 'imperial' ? 0.02 : 0.3} />
         </div>
       </div>
 

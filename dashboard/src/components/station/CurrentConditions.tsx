@@ -1,9 +1,35 @@
 import { WeatherData } from '../../types'
-import { deriveCondition, wetBulb } from '../../weather'
+import { deriveCondition, wetBulb, parseServerDate } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
+import { TrendArrow, getTrend } from '../TrendArrow'
 
-export function CurrentConditions({ data }: { data: WeatherData }) {
+interface HistoryPoint {
+  _time: string
+  temperature_outdoor?: number
+  humidity_outdoor?: number
+  pressure_relative?: number
+}
+
+function getHistoricValue(history: HistoryPoint[], field: keyof HistoryPoint, hoursAgo: number): number | null {
+  if (!history || history.length === 0) return null
+  const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
+  let closest: HistoryPoint | null = null
+  let closestDiff = Infinity
+  for (const h of history) {
+    const t = new Date(parseServerDate(h._time)).getTime()
+    const diff = Math.abs(t - targetTime)
+    if (diff < closestDiff) {
+      closestDiff = diff
+      closest = h
+    }
+  }
+  if (!closest || closestDiff > 30 * 60 * 1000) return null
+  const val = closest[field]
+  return typeof val === 'number' ? val : null
+}
+
+export function CurrentConditions({ data, history }: { data: WeatherData; history?: HistoryPoint[] }) {
   const u = useUnits()
   const cond = deriveCondition(data)
   const temp = data.temperature_outdoor
@@ -12,13 +38,23 @@ export function CurrentConditions({ data }: { data: WeatherData }) {
       ? wetBulb(temp, data.humidity_outdoor)
       : undefined
 
+  const historyData = history || []
+  const tempPrev = getHistoricValue(historyData, 'temperature_outdoor', 1)
+  const humPrev = getHistoricValue(historyData, 'humidity_outdoor', 1)
+  const pressPrev = getHistoricValue(historyData, 'pressure_relative', 3)
+
+  const tempTrend = getTrend(data.temperature_outdoor, tempPrev, 0.5)
+  const humTrend = getTrend(data.humidity_outdoor, humPrev, 3)
+  const pressTrend = getTrend(data.pressure_relative, pressPrev, 1)
+
   return (
     <div className="card">
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-end gap-1">
+          <div className="flex items-center gap-2">
             <span className="text-6xl font-bold tracking-tight">{u.temp(temp)}</span>
-            <span className="text-2xl text-slate-400 mb-2">{u.tempU}</span>
+            <span className="text-2xl text-slate-400">{u.tempU}</span>
+            <TrendArrow trend={tempTrend} size={32} />
           </div>
           <p className="text-slate-300 mt-1">{cond.label}</p>
         </div>
@@ -40,7 +76,10 @@ export function CurrentConditions({ data }: { data: WeatherData }) {
       <div className="grid grid-cols-3 gap-2 mt-4">
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Humedad</p>
-          <p className="text-xl font-bold text-cyan-300">{(data.humidity_outdoor ?? 0).toFixed(0)}%</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xl font-bold text-cyan-300">{(data.humidity_outdoor ?? 0).toFixed(0)}%</p>
+            <TrendArrow trend={humTrend} size={20} />
+          </div>
         </div>
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Índice UV</p>
@@ -48,7 +87,10 @@ export function CurrentConditions({ data }: { data: WeatherData }) {
         </div>
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Presión</p>
-          <p className="text-xl font-bold text-violet-300">{u.press(data.pressure_relative)}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xl font-bold text-violet-300">{u.press(data.pressure_relative)}</p>
+            <TrendArrow trend={pressTrend} size={20} />
+          </div>
         </div>
       </div>
     </div>

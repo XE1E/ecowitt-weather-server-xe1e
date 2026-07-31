@@ -42,7 +42,7 @@ export function HomePage() {
 
       {/* Mitades destacadas arriba (ambas altas, poco hueco entre ellas) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 items-start">
-        <CurrentConditions data={data} />
+        <CurrentConditions data={data} history={history} />
         <StationTempChart history={history} forecast={forecast} />
       </div>
 
@@ -63,7 +63,7 @@ export function HomePage() {
           <PrecipitationCard data={data} forecast={forecast} />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
-          <ExtraSensorsCard data={data} />
+          <ExtraSensorsCard data={data} history={history} />
           <RemoteStationCard />
         </div>
         <div className="space-y-4">
