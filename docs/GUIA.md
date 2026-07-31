@@ -286,6 +286,10 @@ centrados en la estación.
 - **Sol** y **Luna** con **arco de trayectoria** y estadísticas (elevación,
   azimut, iluminación, edad, distancia…).
 - Fila de **fases lunares**.
+- **Gráfica de duración del día**: muestra la variación de amanecer, ocaso y
+  duración del día a lo largo del año. Áreas apiladas (noche/día/noche), línea
+  naranja de ocaso, línea azul del día actual. Al pasar el mouse se muestra el
+  día seleccionado con sus datos en la tabla inferior.
 - **Almanaque** (pyephem, local): los tres **crepúsculos** (civil −6°, náutico
   −12°, astronómico −18°) y los **planetas** visibles (Mercurio…Saturno) con
   orto/ocaso, altitud y magnitud.
