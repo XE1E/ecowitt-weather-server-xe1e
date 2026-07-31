@@ -19,6 +19,15 @@ interface Props {
 
 const nf = (v: number) => Number(v).toLocaleString('es-MX', { maximumFractionDigits: 1 })
 
+// Colores
+const COL = {
+  temp: '#f97316',    // naranja
+  press: '#a78bfa',   // morado
+  rain: '#38bdf8',    // azul claro
+  wind: '#22c55e',    // verde
+  hum: '#3b82f6',     // azul oscuro
+}
+
 export function MultiVariableChart({ mode }: Props) {
   const u = useUnits()
   const [data, setData] = useState<DataPoint[]>([])
@@ -116,21 +125,9 @@ export function MultiVariableChart({ mode }: Props) {
   const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
   return (
-    <div className="h-80 relative">
-      {/* Etiquetas de unidades arriba de los ejes */}
-      <div className="absolute top-0 left-0 right-0 flex justify-between text-[10px] font-medium px-2 z-10">
-        <span className="flex gap-2">
-          <span style={{ color: '#ef4444' }}>°C</span>
-          <span style={{ color: '#f97316' }}>hPa</span>
-          <span style={{ color: '#3b82f6' }}>mm</span>
-        </span>
-        <span className="flex gap-2">
-          <span style={{ color: '#22c55e' }}>km/h</span>
-          <span style={{ color: '#38bdf8' }}>%</span>
-        </span>
-      </div>
+    <div className="h-80">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 18, right: 70, left: 70, bottom: 5 }}>
+        <ComposedChart data={data} margin={{ top: 5, right: 70, left: 70, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
 
           <XAxis
@@ -140,39 +137,42 @@ export function MultiVariableChart({ mode }: Props) {
             tickLine={{ stroke: 'rgba(148,163,184,0.3)' }}
           />
 
-          {/* Eje izquierdo 1: Temperatura °C (rojo) - más a la izquierda */}
+          {/* Eje izquierdo 1: Temperatura °C (naranja) */}
           <YAxis
             yAxisId="temp"
             orientation="left"
             domain={domains.temp}
             ticks={genTicks(domains.temp, 6)}
-            tick={{ fill: '#ef4444', fontSize: 9 }}
-            axisLine={{ stroke: '#ef4444' }}
-            tickLine={{ stroke: '#ef4444' }}
+            tick={{ fill: COL.temp, fontSize: 9 }}
+            axisLine={{ stroke: COL.temp }}
+            tickLine={{ stroke: COL.temp }}
+            label={{ value: '°C', position: 'top', offset: 0, fill: COL.temp, fontSize: 10 }}
             width={25}
           />
 
-          {/* Eje izquierdo 2: Presión hPa (naranja) - centro izq */}
+          {/* Eje izquierdo 2: Presión hPa (morado) */}
           <YAxis
             yAxisId="press"
             orientation="left"
             domain={domains.press}
             ticks={genTicks(domains.press, 5)}
-            tick={{ fill: '#f97316', fontSize: 9 }}
-            axisLine={{ stroke: '#f97316' }}
-            tickLine={{ stroke: '#f97316' }}
+            tick={{ fill: COL.press, fontSize: 9 }}
+            axisLine={{ stroke: COL.press }}
+            tickLine={{ stroke: COL.press }}
+            label={{ value: 'hPa', position: 'top', offset: 0, fill: COL.press, fontSize: 10 }}
             width={32}
           />
 
-          {/* Eje izquierdo 3: Precipitación mm (azul) - más cerca del gráfico */}
+          {/* Eje izquierdo 3: Precipitación mm (azul claro) */}
           <YAxis
             yAxisId="rain"
             orientation="left"
             domain={domains.rain}
             ticks={genTicks(domains.rain, 6)}
-            tick={{ fill: '#3b82f6', fontSize: 9 }}
-            axisLine={{ stroke: '#3b82f6' }}
-            tickLine={{ stroke: '#3b82f6' }}
+            tick={{ fill: COL.rain, fontSize: 9 }}
+            axisLine={{ stroke: COL.rain }}
+            tickLine={{ stroke: COL.rain }}
+            label={{ value: 'mm', position: 'top', offset: 0, fill: COL.rain, fontSize: 10 }}
             width={20}
           />
 
@@ -182,21 +182,23 @@ export function MultiVariableChart({ mode }: Props) {
             orientation="right"
             domain={domains.wind}
             ticks={genTicks(domains.wind, 6)}
-            tick={{ fill: '#22c55e', fontSize: 9 }}
-            axisLine={{ stroke: '#22c55e' }}
-            tickLine={{ stroke: '#22c55e' }}
+            tick={{ fill: COL.wind, fontSize: 9 }}
+            axisLine={{ stroke: COL.wind }}
+            tickLine={{ stroke: COL.wind }}
+            label={{ value: 'km/h', position: 'top', offset: 0, fill: COL.wind, fontSize: 10 }}
             width={28}
           />
 
-          {/* Eje derecho 2: Humedad % (azul claro) */}
+          {/* Eje derecho 2: Humedad % (azul oscuro) */}
           <YAxis
             yAxisId="hum"
             orientation="right"
             domain={domains.hum}
             ticks={genTicks(domains.hum, 6)}
-            tick={{ fill: '#38bdf8', fontSize: 9 }}
-            axisLine={{ stroke: '#38bdf8' }}
-            tickLine={{ stroke: '#38bdf8' }}
+            tick={{ fill: COL.hum, fontSize: 9 }}
+            axisLine={{ stroke: COL.hum }}
+            tickLine={{ stroke: COL.hum }}
+            label={{ value: '%', position: 'top', offset: 0, fill: COL.hum, fontSize: 10 }}
             width={28}
           />
 
@@ -210,43 +212,43 @@ export function MultiVariableChart({ mode }: Props) {
           />
 
           <Legend
-            verticalAlign="top"
+            verticalAlign="bottom"
             height={28}
-            wrapperStyle={{ fontSize: 11, paddingBottom: 5 }}
+            wrapperStyle={{ fontSize: 11, paddingTop: 5 }}
             iconType="circle"
             iconSize={8}
           />
 
-          {/* Barras de precipitación (azul) */}
+          {/* Barras de precipitación (azul claro) */}
           <Bar
             yAxisId="rain"
             dataKey="rain"
             name="Precipitación"
-            fill="#3b82f6"
+            fill={COL.rain}
             opacity={0.85}
             radius={[2, 2, 0, 0]}
             barSize={mode === 'day' ? 12 : 8}
           />
 
-          {/* Línea de temperatura (rojo) */}
+          {/* Línea de temperatura (naranja) */}
           <Line
             yAxisId="temp"
             type="monotone"
             dataKey="temp"
             name="Temperatura"
-            stroke="#ef4444"
+            stroke={COL.temp}
             strokeWidth={2.5}
             dot={false}
             connectNulls
           />
 
-          {/* Línea de presión (naranja) */}
+          {/* Línea de presión (morado) */}
           <Line
             yAxisId="press"
             type="monotone"
             dataKey="pressure"
             name="Presión atmosférica"
-            stroke="#f97316"
+            stroke={COL.press}
             strokeWidth={2}
             dot={false}
             connectNulls
@@ -258,19 +260,19 @@ export function MultiVariableChart({ mode }: Props) {
             type="monotone"
             dataKey="wind"
             name="Velocidad del viento"
-            stroke="#22c55e"
+            stroke={COL.wind}
             strokeWidth={2}
             dot={false}
             connectNulls
           />
 
-          {/* Línea de humedad (azul claro) */}
+          {/* Línea de humedad (azul oscuro) */}
           <Line
             yAxisId="hum"
             type="monotone"
             dataKey="humidity"
             name="Humedad"
-            stroke="#38bdf8"
+            stroke={COL.hum}
             strokeWidth={2}
             dot={false}
             connectNulls
