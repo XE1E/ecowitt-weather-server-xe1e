@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
@@ -31,11 +31,16 @@ export function MultiVariableChart({ mode }: Props) {
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((json) => {
         const raw = json.data || []
+        const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
         const points: DataPoint[] = raw.map((p: any) => {
           const d = new Date(p._time)
-          const label = mode === 'day'
-            ? `${d.getHours().toString().padStart(2, '0')}:00`
-            : `${d.getDate()} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]}`
+          let label: string
+          if (mode === 'day') {
+            label = `${d.getHours().toString().padStart(2, '0')}:00`
+          } else {
+            label = `${d.getDate()} ${MES[d.getMonth()]}`
+          }
           return {
             x: label,
             temp: p.temperature_outdoor ?? null,
@@ -45,6 +50,7 @@ export function MultiVariableChart({ mode }: Props) {
             humidity: p.humidity_outdoor ?? null,
           }
         })
+
         const grouped = mode === 'day' ? groupByHour(points) : groupByDay(points)
         setData(grouped)
         setLoading(false)
@@ -52,8 +58,55 @@ export function MultiVariableChart({ mode }: Props) {
       .catch(() => setLoading(false))
   }, [mode])
 
+  // Calcular dominios dinámicos basados en los datos
+  const domains = useMemo(() => {
+    if (data.length === 0) {
+      return {
+        temp: [0, 30],
+        press: [1000, 1030],
+        rain: [0, 5],
+        wind: [0, 15],
+        hum: [0, 100],
+      }
+    }
+
+    const calcDomain = (values: (number | null | undefined)[], padding = 0.1, minRange = 5) => {
+      const valid = values.filter((v): v is number => v != null)
+      if (valid.length === 0) return [0, 10]
+      const min = Math.min(...valid)
+      const max = Math.max(...valid)
+      const range = Math.max(max - min, minRange)
+      const pad = range * padding
+      return [Math.floor(min - pad), Math.ceil(max + pad)]
+    }
+
+    const calcDomainPress = (values: (number | null | undefined)[]) => {
+      const valid = values.filter((v): v is number => v != null)
+      if (valid.length === 0) return [1000, 1030]
+      const min = Math.min(...valid)
+      const max = Math.max(...valid)
+      const range = Math.max(max - min, 5)
+      return [Math.floor(min - range * 0.2), Math.ceil(max + range * 0.2)]
+    }
+
+    return {
+      temp: calcDomain(data.map((d) => d.temp), 0.15, 5),
+      press: calcDomainPress(data.map((d) => d.pressure)),
+      rain: [0, Math.max(2, Math.ceil(Math.max(...data.map((d) => d.rain ?? 0)) * 1.3))],
+      wind: [0, Math.max(3, Math.ceil(Math.max(...data.map((d) => d.wind ?? 0)) * 1.3))],
+      hum: calcDomain(data.map((d) => d.humidity), 0.1, 20),
+    }
+  }, [data])
+
+  // Generar ticks dinámicos
+  const genTicks = (domain: number[], count: number) => {
+    const [min, max] = domain
+    const step = (max - min) / (count - 1)
+    return Array.from({ length: count }, (_, i) => Math.round(min + step * i))
+  }
+
   if (loading) {
-    return <div className="h-72 flex items-center justify-center text-slate-400">Cargando...</div>
+    return <div className="h-80 flex items-center justify-center text-slate-400">Cargando...</div>
   }
 
   const tip = {
@@ -63,75 +116,88 @@ export function MultiVariableChart({ mode }: Props) {
   const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
   return (
-    <div className="h-72">
+    <div className="h-80 relative">
+      {/* Etiquetas de unidades arriba de los ejes */}
+      <div className="absolute top-0 left-0 right-0 flex justify-between text-[10px] font-medium px-2 z-10">
+        <span className="flex gap-2">
+          <span style={{ color: '#ef4444' }}>°C</span>
+          <span style={{ color: '#f97316' }}>hPa</span>
+          <span style={{ color: '#3b82f6' }}>mm</span>
+        </span>
+        <span className="flex gap-2">
+          <span style={{ color: '#22c55e' }}>km/h</span>
+          <span style={{ color: '#38bdf8' }}>%</span>
+        </span>
+      </div>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 5, right: 80, left: 60, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-          <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
+        <ComposedChart data={data} margin={{ top: 18, right: 70, left: 70, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
 
-          {/* Eje izquierdo 1: Temperatura °C (rojo) */}
+          <XAxis
+            dataKey="x"
+            tick={{ fill: '#94a3b8', fontSize: 10 }}
+            axisLine={{ stroke: 'rgba(148,163,184,0.3)' }}
+            tickLine={{ stroke: 'rgba(148,163,184,0.3)' }}
+          />
+
+          {/* Eje izquierdo 1: Temperatura °C (rojo) - más a la izquierda */}
           <YAxis
             yAxisId="temp"
             orientation="left"
-            domain={[0, 35]}
-            ticks={[0, 5, 10, 15, 20, 25, 30]}
-            tick={{ fill: '#ef4444', fontSize: 10 }}
+            domain={domains.temp}
+            ticks={genTicks(domains.temp, 6)}
+            tick={{ fill: '#ef4444', fontSize: 9 }}
             axisLine={{ stroke: '#ef4444' }}
             tickLine={{ stroke: '#ef4444' }}
-            label={{ value: '°C', angle: 0, position: 'insideTopLeft', fill: '#ef4444', fontSize: 10, dy: -10 }}
-            width={30}
+            width={25}
           />
 
-          {/* Eje izquierdo 2: Presión hPa (gris) */}
+          {/* Eje izquierdo 2: Presión hPa (naranja) - centro izq */}
           <YAxis
             yAxisId="press"
             orientation="left"
-            domain={[1000, 1030]}
-            ticks={[1000, 1005, 1010, 1015, 1020, 1025, 1030]}
-            tick={{ fill: '#9ca3af', fontSize: 10 }}
-            axisLine={{ stroke: '#9ca3af' }}
-            tickLine={{ stroke: '#9ca3af' }}
-            label={{ value: 'hPa', angle: 0, position: 'insideTopLeft', fill: '#9ca3af', fontSize: 10, dy: -10 }}
-            width={35}
+            domain={domains.press}
+            ticks={genTicks(domains.press, 5)}
+            tick={{ fill: '#f97316', fontSize: 9 }}
+            axisLine={{ stroke: '#f97316' }}
+            tickLine={{ stroke: '#f97316' }}
+            width={32}
           />
 
-          {/* Eje izquierdo 3: Precipitación mm (azul) */}
+          {/* Eje izquierdo 3: Precipitación mm (azul) - más cerca del gráfico */}
           <YAxis
             yAxisId="rain"
             orientation="left"
-            domain={[0, 5]}
-            ticks={[0, 1, 2, 3, 4, 5]}
-            tick={{ fill: '#3b82f6', fontSize: 10 }}
+            domain={domains.rain}
+            ticks={genTicks(domains.rain, 6)}
+            tick={{ fill: '#3b82f6', fontSize: 9 }}
             axisLine={{ stroke: '#3b82f6' }}
             tickLine={{ stroke: '#3b82f6' }}
-            label={{ value: 'mm', angle: 0, position: 'insideTopLeft', fill: '#3b82f6', fontSize: 10, dy: -10 }}
-            width={25}
+            width={20}
           />
 
           {/* Eje derecho 1: Viento km/h (verde) */}
           <YAxis
             yAxisId="wind"
             orientation="right"
-            domain={[0, 20]}
-            ticks={[0, 5, 10, 15, 20]}
-            tick={{ fill: '#22c55e', fontSize: 10 }}
+            domain={domains.wind}
+            ticks={genTicks(domains.wind, 6)}
+            tick={{ fill: '#22c55e', fontSize: 9 }}
             axisLine={{ stroke: '#22c55e' }}
             tickLine={{ stroke: '#22c55e' }}
-            label={{ value: 'km/h', angle: 0, position: 'insideTopRight', fill: '#22c55e', fontSize: 10, dy: -10 }}
-            width={35}
+            width={28}
           />
 
           {/* Eje derecho 2: Humedad % (azul claro) */}
           <YAxis
             yAxisId="hum"
             orientation="right"
-            domain={[0, 100]}
-            ticks={[0, 20, 40, 60, 80, 100]}
-            tick={{ fill: '#38bdf8', fontSize: 10 }}
+            domain={domains.hum}
+            ticks={genTicks(domains.hum, 6)}
+            tick={{ fill: '#38bdf8', fontSize: 9 }}
             axisLine={{ stroke: '#38bdf8' }}
             tickLine={{ stroke: '#38bdf8' }}
-            label={{ value: '%', angle: 0, position: 'insideTopRight', fill: '#38bdf8', fontSize: 10, dy: -10 }}
-            width={30}
+            width={28}
           />
 
           <Tooltip
@@ -143,7 +209,13 @@ export function MultiVariableChart({ mode }: Props) {
             }}
           />
 
-          <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
+          <Legend
+            verticalAlign="top"
+            height={28}
+            wrapperStyle={{ fontSize: 11, paddingBottom: 5 }}
+            iconType="circle"
+            iconSize={8}
+          />
 
           {/* Barras de precipitación (azul) */}
           <Bar
@@ -151,8 +223,9 @@ export function MultiVariableChart({ mode }: Props) {
             dataKey="rain"
             name="Precipitación"
             fill="#3b82f6"
-            opacity={0.8}
+            opacity={0.85}
             radius={[2, 2, 0, 0]}
+            barSize={mode === 'day' ? 12 : 8}
           />
 
           {/* Línea de temperatura (rojo) */}
@@ -162,18 +235,18 @@ export function MultiVariableChart({ mode }: Props) {
             dataKey="temp"
             name="Temperatura"
             stroke="#ef4444"
-            strokeWidth={2}
+            strokeWidth={2.5}
             dot={false}
             connectNulls
           />
 
-          {/* Línea de presión (gris) */}
+          {/* Línea de presión (naranja) */}
           <Line
             yAxisId="press"
             type="monotone"
             dataKey="pressure"
             name="Presión atmosférica"
-            stroke="#9ca3af"
+            stroke="#f97316"
             strokeWidth={2}
             dot={false}
             connectNulls
