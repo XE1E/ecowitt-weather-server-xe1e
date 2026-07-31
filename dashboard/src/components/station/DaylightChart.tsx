@@ -119,7 +119,7 @@ export function DaylightChart() {
     <div className="card">
       <p className="card-title flex items-center gap-2"><Sun className="w-4 h-4 text-amber-400" /> Duración día</p>
       <div className="h-80 md:h-64 overflow-x-auto">
-        <div style={{ minWidth: isMobile ? '480px' : undefined, height: '100%' }}>
+        <div style={{ minWidth: isMobile ? '480px' : '100%', height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
             data={data}

@@ -127,7 +127,7 @@ export function MultiVariableChart({ mode }: Props) {
 
   // Ancho mínimo para scroll horizontal (solo móvil)
   const isMobile = useIsMobile()
-  const minW = isMobile ? (data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px') : undefined
+  const minW = isMobile ? (data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px') : '100%'
 
   return (
     <div className="h-96 md:h-80 overflow-x-auto">

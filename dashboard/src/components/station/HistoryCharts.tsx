@@ -37,7 +37,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
   const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
   // Ancho mínimo para scroll horizontal según período (solo móvil)
-  const minW = isMobile ? (period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px') : undefined
+  const minW = isMobile ? (period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px') : '100%'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

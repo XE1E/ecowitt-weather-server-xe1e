@@ -125,7 +125,7 @@ export function ImecaCard() {
         <div className="card">
           <p className="card-title">Pronóstico del IMECA (próximas horas)</p>
           <div className="h-72 md:h-52 overflow-x-auto">
-            <div style={{ minWidth: isMobile ? (fc.length > 12 ? `${Math.max(400, fc.length * 28)}px` : '400px') : undefined, height: '100%' }}>
+            <div style={{ minWidth: isMobile ? (fc.length > 12 ? `${Math.max(400, fc.length * 28)}px` : '400px') : '100%', height: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={fc} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
                 <defs>

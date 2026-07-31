@@ -52,7 +52,7 @@ export function CurrentConditions({ data, history }: { data: WeatherData; histor
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-6xl font-bold tracking-tight">{u.temp(temp)}</span>
+            <span className="text-6xl font-bold tracking-tight text-orange-500">{u.temp(temp)}</span>
             <span className="text-2xl text-slate-400">{u.tempU}</span>
             <TrendArrow trend={tempTrend} size={32} />
           </div>

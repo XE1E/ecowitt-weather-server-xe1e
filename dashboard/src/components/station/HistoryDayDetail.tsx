@@ -106,7 +106,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
       <p className={`text-2xl font-bold ${cls}`}>{value}</p>
     </div>
   )
-  const minW = isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px') : undefined
+  const minW = isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px') : '100%'
 
   const LineCard = ({ title, unit, series }: { title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[] }) => (
     <div className="card">

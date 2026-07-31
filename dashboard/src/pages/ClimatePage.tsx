@@ -186,7 +186,7 @@ export function ClimatePage() {
               </div>
               <div className="card">
                 <div className="h-80 md:h-72 overflow-x-auto">
-                  <div style={{ minWidth: isMobile ? '400px' : undefined, height: '100%' }}>
+                  <div style={{ minWidth: isMobile ? '400px' : '100%', height: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />

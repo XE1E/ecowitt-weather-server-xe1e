@@ -42,7 +42,7 @@ export function StationTempChart({ history, forecast }: Props) {
   const nowMs = Date.now()
 
   const isMobile = useIsMobile()
-  const minW = isMobile ? (points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px') : undefined
+  const minW = isMobile ? (points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px') : '100%'
 
   return (
     <div className="card">

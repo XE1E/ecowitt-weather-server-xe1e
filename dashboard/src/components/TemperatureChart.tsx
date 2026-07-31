@@ -113,7 +113,7 @@ export function TemperatureChart() {
         </div>
       ) : (
         <div className="h-80 md:h-64 overflow-x-auto">
-          <div style={{ minWidth: isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px') : undefined, height: '100%' }}>
+          <div style={{ minWidth: isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px') : '100%', height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

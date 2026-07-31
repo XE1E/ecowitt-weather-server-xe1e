@@ -349,7 +349,7 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
     <>
       {/* Vista normal con scroll horizontal en móvil */}
       <div className="overflow-x-auto md:overflow-visible">
-        <div style={{ minWidth: isMobile ? '500px' : undefined }}>
+        <div style={{ minWidth: isMobile ? '500px' : '100%' }}>
           {profileContent(false)}
         </div>
       </div>
