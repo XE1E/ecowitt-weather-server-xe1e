@@ -3,7 +3,6 @@ import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface DataPoint {
   x: string
@@ -125,12 +124,11 @@ export function MultiVariableChart({ mode }: Props) {
   }
   const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
-  // Ancho mínimo para scroll horizontal (solo móvil)
-  const isMobile = useIsMobile()
-  const minW = isMobile ? (data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px') : '100%'
+  // Ancho mínimo para scroll horizontal (CSS anula en desktop)
+  const minW = data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px'
 
   return (
-    <div className="h-96 md:h-80 overflow-x-auto">
+    <div className="h-96 md:h-80 overflow-x-auto chart-scroll">
       <div style={{ minWidth: minW, height: '100%' }}>
         <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 20, right: 70, left: 70, bottom: 5 }}>

@@ -4,7 +4,6 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { LOCATION } from '../../config'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Sub { pollutant: string; conc: number; index: number }
 interface Fc { t: string; imeca: number; category: string }
@@ -38,7 +37,6 @@ function hourLabel(iso: string) {
 
 export function ImecaCard() {
   const [d, setD] = useState<Imeca | null>(null)
-  const isMobile = useIsMobile()
   useEffect(() => {
     fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
       .then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => {})
@@ -124,8 +122,8 @@ export function ImecaCard() {
       {fc.length > 1 && (
         <div className="card">
           <p className="card-title">Pronóstico del IMECA (próximas horas)</p>
-          <div className="h-72 md:h-52 overflow-x-auto">
-            <div style={{ minWidth: isMobile ? (fc.length > 12 ? `${Math.max(400, fc.length * 28)}px` : '400px') : '100%', height: '100%' }}>
+          <div className="h-72 md:h-52 overflow-x-auto chart-scroll">
+            <div style={{ minWidth: fc.length > 12 ? `${Math.max(400, fc.length * 28)}px` : '400px', height: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={fc} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
                 <defs>

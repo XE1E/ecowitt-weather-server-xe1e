@@ -4,7 +4,6 @@ import {
 } from 'recharts'
 import { CalendarDays } from 'lucide-react'
 import { useUnits } from '../units'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { LOCATION } from '../config'
 import { PageInfo } from '../components/station/PageInfo'
 
@@ -72,7 +71,6 @@ interface OnThisDay {
 
 export function ClimatePage() {
   const u = useUnits()
-  const isMobile = useIsMobile()
   const [rec, setRec] = useState<RecordsBundle | null>(null)
   const [otd, setOtd] = useState<OnThisDay | null>(null)
   const [year, setYear] = useState(YEAR_NOW)
@@ -185,8 +183,8 @@ export function ClimatePage() {
                 </select>
               </div>
               <div className="card">
-                <div className="h-80 md:h-72 overflow-x-auto">
-                  <div style={{ minWidth: isMobile ? '400px' : '100%', height: '100%' }}>
+                <div className="h-80 md:h-72 overflow-x-auto chart-scroll">
+                  <div style={{ minWidth: '400px', height: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />

@@ -98,6 +98,16 @@ body {
 /* Enlaces un poco más oscuros para contraste sobre claro */
 :root[data-theme="light"] .text-blue-400 { color: #2563a8; }
 
+/* Scroll horizontal en gráficas: minWidth solo en móvil */
+.chart-scroll > div {
+  height: 100%;
+}
+@media (min-width: 768px) {
+  .chart-scroll > div {
+    min-width: 100% !important;
+  }
+}
+
 @layer components {
   /* Glassmorphism card */
   .card {

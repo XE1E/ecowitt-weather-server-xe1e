@@ -4,7 +4,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Row {
   _time: string
@@ -45,7 +44,6 @@ function shortDay(date: string): string {
 
 export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () => void }) {
   const u = useUnits()
-  const isMobile = useIsMobile()
   const [cur, setCur] = useState(date)
   const [rows, setRows] = useState<Row[] | null>(null)
 
@@ -106,12 +104,12 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
       <p className={`text-2xl font-bold ${cls}`}>{value}</p>
     </div>
   )
-  const minW = isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px') : '100%'
+  const minW = data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px'
 
   const LineCard = ({ title, unit, series }: { title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[] }) => (
     <div className="card">
       <p className="card-title">{title}</p>
-      <div className="h-72 md:h-56 overflow-x-auto">
+      <div className="h-72 md:h-56 overflow-x-auto chart-scroll">
         <div style={{ minWidth: minW, height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 5, right: 12, left: -8, bottom: 0 }}>
@@ -175,7 +173,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {/* Viento: medio/máx (líneas) + dirección (puntos, eje derecho) */}
             <div className="card">
               <p className="card-title">Viento</p>
-              <div className="h-72 md:h-56 overflow-x-auto">
+              <div className="h-72 md:h-56 overflow-x-auto chart-scroll">
                 <div style={{ minWidth: minW, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -198,7 +196,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {/* Humedad y punto de rocío (doble eje) */}
             <div className="card">
               <p className="card-title">Humedad y punto de rocío</p>
-              <div className="h-72 md:h-56 overflow-x-auto">
+              <div className="h-72 md:h-56 overflow-x-auto chart-scroll">
                 <div style={{ minWidth: minW, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -219,7 +217,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {/* Radiación UV y solar (doble eje) */}
             <div className="card">
               <p className="card-title">Radiación UV y solar</p>
-              <div className="h-72 md:h-56 overflow-x-auto">
+              <div className="h-72 md:h-56 overflow-x-auto chart-scroll">
                 <div style={{ minWidth: minW, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -240,7 +238,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {/* Precipitación y presión (doble eje) */}
             <div className="card lg:col-span-2">
               <p className="card-title">Precipitación y presión</p>
-              <div className="h-72 md:h-52 overflow-x-auto">
+              <div className="h-72 md:h-52 overflow-x-auto chart-scroll">
                 <div style={{ minWidth: minW, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -272,7 +270,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             return (
               <div className="card">
                 <p className="card-title">Mediciones por hora</p>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto chart-scroll">
                   <table className="w-full text-sm min-w-[820px] tabular-nums">
                     <thead>
                       <tr className="text-slate-400 text-xs border-b border-white/10">

@@ -3,7 +3,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 export interface HistPoint {
   x: string
@@ -26,7 +25,6 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
   period?: 'day' | 'month' | 'year'
 }) {
   const u = useUnits()
-  const isMobile = useIsMobile()
   const tip = {
     contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
     labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
@@ -36,15 +34,15 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
   const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
-  // Ancho mínimo para scroll horizontal según período (solo móvil)
-  const minW = isMobile ? (period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px') : '100%'
+  // Ancho mínimo para scroll horizontal (CSS anula en desktop)
+  const minW = period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Temperatura */}
       <div className="card">
         <p className="card-title">Temperatura</p>
-        <div className="h-72 md:h-60 overflow-x-auto">
+        <div className="h-72 md:h-60 overflow-x-auto chart-scroll">
           <div style={{ minWidth: minW, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -64,7 +62,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
       {/* Viento + dirección */}
       <div className="card">
         <p className="card-title">Viento</p>
-        <div className="h-72 md:h-60 overflow-x-auto">
+        <div className="h-72 md:h-60 overflow-x-auto chart-scroll">
           <div style={{ minWidth: minW, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -86,7 +84,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
       {/* Humedad y punto de rocío */}
       <div className="card">
         <p className="card-title">Humedad y punto de rocío</p>
-        <div className="h-72 md:h-60 overflow-x-auto">
+        <div className="h-72 md:h-60 overflow-x-auto chart-scroll">
           <div style={{ minWidth: minW, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -106,7 +104,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
       {/* Radiación UV y solar */}
       <div className="card">
         <p className="card-title">Radiación UV y solar</p>
-        <div className="h-72 md:h-60 overflow-x-auto">
+        <div className="h-72 md:h-60 overflow-x-auto chart-scroll">
           <div style={{ minWidth: minW, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
@@ -129,7 +127,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
           <p className="card-title mb-0">Precipitación y presión</p>
           {onCsv && <button onClick={onCsv} className="px-3 py-1 rounded-lg text-xs bg-white/5 text-slate-300 hover:bg-white/10">⬇ CSV</button>}
         </div>
-        <div className="h-80 md:h-64 mt-2 overflow-x-auto">
+        <div className="h-80 md:h-64 mt-2 overflow-x-auto chart-scroll">
           <div style={{ minWidth: minW, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>

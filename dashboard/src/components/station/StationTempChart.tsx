@@ -4,7 +4,6 @@ import {
 import { HistoryData } from '../../types'
 import { ForecastResult } from '../../forecast'
 import { useUnits } from '../../units'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Props {
   history: HistoryData[]
@@ -41,13 +40,13 @@ export function StationTempChart({ history, forecast }: Props) {
     new Date(t).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
   const nowMs = Date.now()
 
-  const isMobile = useIsMobile()
-  const minW = isMobile ? (points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px') : '100%'
+  // Ancho mínimo para scroll horizontal (CSS anula en desktop), máximo 1500px
+  const minW = points.length > 30 ? `${Math.min(1500, Math.max(500, points.length * 8))}px` : '500px'
 
   return (
     <div className="card">
       <p className="card-title">Temperatura — observado + pronóstico</p>
-      <div className="h-72 md:h-56 overflow-x-auto">
+      <div className="h-72 md:h-56 overflow-x-auto chart-scroll">
         <div style={{ minWidth: minW, height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
