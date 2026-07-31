@@ -122,9 +122,10 @@ export function ImecaCard() {
       {fc.length > 1 && (
         <div className="card">
           <p className="card-title">Pronóstico del IMECA (próximas horas)</p>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={fc} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
+          <div className="h-72 md:h-52 overflow-x-auto">
+            <div style={{ minWidth: fc.length > 12 ? `${Math.max(400, fc.length * 28)}px` : '400px', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={fc} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
                 <defs>
                   <linearGradient id="imecaFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.5} />
@@ -140,9 +141,10 @@ export function ImecaCard() {
                   formatter={(v: number, _n, p) => [`${v} · ${(p?.payload as Fc)?.category ?? ''}`, 'IMECA']}
                 />
                 <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 4" label={{ value: 'Mala', fill: '#f97316', fontSize: 10, position: 'insideTopRight' }} />
-                <Area type="monotone" dataKey="imeca" stroke="#38bdf8" strokeWidth={2} fill="url(#imecaFill)" />
-              </AreaChart>
-            </ResponsiveContainer>
+                  <Area type="monotone" dataKey="imeca" stroke="#38bdf8" strokeWidth={2} fill="url(#imecaFill)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}

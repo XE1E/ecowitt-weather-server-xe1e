@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react'
-import { RefreshCw, LayoutGrid, SlidersHorizontal, Check } from 'lucide-react'
+import { RefreshCw, LayoutGrid, SlidersHorizontal, Check, GripVertical } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor,
   useSensor, useSensors, DragEndEvent,
@@ -35,8 +35,8 @@ import { PageInfo } from '../components/station/PageInfo'
 
 const STORAGE_KEY = 'mi_tablero_cards'
 
-// Envoltura arrastrable de cada tarjeta. Solo arrastra en modo edición
-// (toda la tarjeta es el "agarre"); fuera de edición se comporta normal.
+// Envoltura arrastrable de cada tarjeta. En modo edición muestra un asa de
+// arrastre (grip) que es lo único que activa el drag, permitiendo scroll normal.
 function SortableCard({ id, spanClass, editing, children }: {
   id: string
   spanClass: string
@@ -51,9 +51,17 @@ function SortableCard({ id, spanClass, editing, children }: {
     <div
       ref={setNodeRef}
       style={style}
-      className={`${spanClass} ${editing ? 'cursor-move rounded-2xl ring-2 ring-blue-500/40 touch-none' : ''} ${isDragging ? 'relative z-20 opacity-80 shadow-2xl scale-[1.02]' : ''} ${editing && isActive && !isDragging ? 'opacity-50' : ''}`}
-      {...(editing ? { ...attributes, ...listeners } : {})}
+      className={`${spanClass} relative ${editing ? 'rounded-2xl ring-2 ring-blue-500/40' : ''} ${isDragging ? 'z-20 opacity-80 shadow-2xl scale-[1.02]' : ''} ${editing && isActive && !isDragging ? 'opacity-50' : ''}`}
     >
+      {editing && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 bg-blue-600 rounded-lg p-1.5 cursor-grab active:cursor-grabbing touch-none shadow-lg"
+        >
+          <GripVertical className="w-5 h-5 text-white" />
+        </div>
+      )}
       {children}
     </div>
   )
@@ -156,7 +164,7 @@ export function MiTableroPage() {
       {editing && (
         <div className="card mb-4">
           <p className="card-title">Elige tus tarjetas</p>
-          <p className="text-xs text-slate-400 -mt-1 mb-2">Toca para mostrar/ocultar. Con este modo activo, <span className="text-slate-200">{isMobile ? 'mantén presionada una tarjeta' : 'arrastra las tarjetas'}</span> del tablero para reordenarlas.</p>
+          <p className="text-xs text-slate-400 -mt-1 mb-2">Toca para mostrar/ocultar. Con este modo activo, <span className="text-slate-200">usa el asa azul <GripVertical className="w-3 h-3 inline" /></span> para arrastrar y reordenar las tarjetas.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {CARDS.map((c) => {
               const on = visible.includes(c.key)

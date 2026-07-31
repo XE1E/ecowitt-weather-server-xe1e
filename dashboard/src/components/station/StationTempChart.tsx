@@ -40,12 +40,15 @@ export function StationTempChart({ history, forecast }: Props) {
     new Date(t).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
   const nowMs = Date.now()
 
+  const minW = points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px'
+
   return (
     <div className="card">
       <p className="card-title">Temperatura — observado + pronóstico</p>
-      <div className="h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={points} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <div className="h-72 md:h-56 overflow-x-auto">
+        <div style={{ minWidth: minW, height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={points} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis
               dataKey="t"
@@ -69,8 +72,9 @@ export function StationTempChart({ history, forecast }: Props) {
             <Legend formatter={(v) => (v === 'obs' ? 'Observado' : 'Pronóstico')} />
             <Line type="monotone" dataKey="obs" stroke="#34d399" strokeWidth={2} dot={false} connectNulls name="obs" />
             <Line type="monotone" dataKey="fc" stroke="#f97316" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls name="fc" />
-          </LineChart>
-        </ResponsiveContainer>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

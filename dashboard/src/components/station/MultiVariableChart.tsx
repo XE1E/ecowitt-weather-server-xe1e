@@ -115,7 +115,7 @@ export function MultiVariableChart({ mode }: Props) {
   }
 
   if (loading) {
-    return <div className="h-80 flex items-center justify-center text-slate-400">Cargando...</div>
+    return <div className="h-96 md:h-80 flex items-center justify-center text-slate-400">Cargando...</div>
   }
 
   const tip = {
@@ -124,9 +124,13 @@ export function MultiVariableChart({ mode }: Props) {
   }
   const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
+  // Ancho mínimo para scroll horizontal en móvil
+  const minW = data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px'
+
   return (
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-96 md:h-80 overflow-x-auto">
+      <div style={{ minWidth: minW, height: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 20, right: 70, left: 70, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
 
@@ -278,7 +282,8 @@ export function MultiVariableChart({ mode }: Props) {
             connectNulls
           />
         </ComposedChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
 }

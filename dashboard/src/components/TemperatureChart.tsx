@@ -104,15 +104,16 @@ export function TemperatureChart() {
       </div>
 
       {loading ? (
-        <div className="h-64 flex items-center justify-center text-slate-400">Cargando histórico...</div>
+        <div className="h-80 md:h-64 flex items-center justify-center text-slate-400">Cargando histórico...</div>
       ) : data.length === 0 ? (
-        <div className="h-64 flex items-center justify-center text-slate-400">
+        <div className="h-80 md:h-64 flex items-center justify-center text-slate-400">
           No hay datos históricos disponibles
         </div>
       ) : (
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+        <div className="h-80 md:h-64 overflow-x-auto">
+          <div style={{ minWidth: data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px', height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="time" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} interval="preserveStartEnd" />
               <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={m.unit} />
@@ -122,10 +123,11 @@ export function TemperatureChart() {
                 labelStyle={{ color: '#e2e8f0' }}
               />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${m.unit})`} />
-              <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2} dot={false} name="Humedad (%)" />
-            </LineChart>
-          </ResponsiveContainer>
+                <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${m.unit})`} />
+                <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2} dot={false} name="Humedad (%)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
     </div>

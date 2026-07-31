@@ -104,22 +104,26 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
       <p className={`text-2xl font-bold ${cls}`}>{value}</p>
     </div>
   )
+  const minW = data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px'
+
   const LineCard = ({ title, unit, series }: { title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[] }) => (
     <div className="card">
       <p className="card-title">{title}</p>
-      <div className="h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 12, left: -8, bottom: 0 }}>
+      <div className="h-72 md:h-56 overflow-x-auto">
+        <div style={{ minWidth: minW, height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 5, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
             <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
             <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
             <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [`${nf(v)} ${unit}`, n]} />
             <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-            {series.map((se) => (
-              <Line key={se.key} type="monotone" dataKey={se.key} name={se.name} stroke={se.color} strokeWidth={2} strokeDasharray={se.dash} dot={false} connectNulls />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              {series.map((se) => (
+                <Line key={se.key} type="monotone" dataKey={se.key} name={se.name} stroke={se.color} strokeWidth={2} strokeDasharray={se.dash} dot={false} connectNulls />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )
@@ -169,9 +173,10 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {/* Viento: medio/máx (líneas) + dirección (puntos, eje derecho) */}
             <div className="card">
               <p className="card-title">Viento</p>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+              <div className="h-72 md:h-56 overflow-x-auto">
+                <div style={{ minWidth: minW, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
@@ -179,68 +184,75 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                       tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#84cc16', fontSize: 10 }} width={28} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                    <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-                    <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#84cc16" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
+                      <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#84cc16" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Humedad y punto de rocío (doble eje) */}
             <div className="card">
               <p className="card-title">Humedad y punto de rocío</p>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+              <div className="h-72 md:h-56 overflow-x-auto">
+                <div style={{ minWidth: minW, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                     <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                    <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Radiación UV y solar (doble eje) */}
             <div className="card">
               <p className="card-title">Radiación UV y solar</p>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+              <div className="h-72 md:h-56 overflow-x-auto">
+                <div style={{ minWidth: minW, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
-                    <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Precipitación y presión (doble eje) */}
             <div className="card lg:col-span-2">
               <p className="card-title">Precipitación y presión</p>
-              <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+              <div className="h-72 md:h-52 overflow-x-auto">
+                <div style={{ minWidth: minW, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
                     <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rateU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                    <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
-                    <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                      <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
