@@ -39,8 +39,8 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
           const s = stats[m.key]
           return (
             <div key={m.key} className="card">
-              <p className="card-title">
-                <WeatherIcon name={m.icon} size={20} /> {m.label}
+              <p className="card-title flex items-center gap-2">
+                <WeatherIcon name={m.icon} size={28} /> {m.label}
               </p>
               <div className="flex items-end justify-between">
                 <div>
