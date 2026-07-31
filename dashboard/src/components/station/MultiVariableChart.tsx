@@ -127,7 +127,7 @@ export function MultiVariableChart({ mode }: Props) {
   return (
     <div className="h-80">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 5, right: 70, left: 70, bottom: 5 }}>
+        <ComposedChart data={data} margin={{ top: 20, right: 70, left: 70, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
 
           <XAxis
