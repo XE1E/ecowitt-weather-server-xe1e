@@ -91,13 +91,7 @@ export function RemoteStationCard() {
   // Interior (GW1100)
   const tIn = data.temperature_indoor
   const hIn = data.humidity_indoor
-
-  // Tendencias interior
-  const tInPrev = getHistoricValue(history, 'temperature_indoor', 1)
-  const hInPrev = getHistoricValue(history, 'humidity_indoor', 1)
   const pPrev = getHistoricValue(history, 'pressure_relative', 3)
-  const tInArrow = getTrend(tIn, tInPrev, 0.5)
-  const hInArrow = getTrend(hIn, hInPrev, 3)
   const pArrow = getTrend(data.pressure_relative, pPrev, 1)
 
   return (
@@ -140,18 +134,12 @@ export function RemoteStationCard() {
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="thermometer" size={24} />
-          <div className="flex items-center gap-1 mt-1">
-            <p className="text-xl font-bold text-orange-300">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
-            <TrendArrow trend={tInArrow} size={18} />
-          </div>
+          <p className="text-xl font-bold text-orange-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
           <p className="text-xs text-slate-400">Temp</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="humidity" size={24} />
-          <div className="flex items-center gap-1 mt-1">
-            <p className="text-xl font-bold text-sky-300">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
-            <TrendArrow trend={hInArrow} size={18} />
-          </div>
+          <p className="text-xl font-bold text-sky-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
