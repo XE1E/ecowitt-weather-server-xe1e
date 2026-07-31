@@ -146,7 +146,7 @@ export function MultiVariableChart({ mode }: Props) {
             tick={{ fill: COL.temp, fontSize: 9 }}
             axisLine={{ stroke: COL.temp }}
             tickLine={{ stroke: COL.temp }}
-            label={{ value: '°C', position: 'top', offset: -24, fill: COL.temp, fontSize: 10 }}
+            label={{ value: '°C', position: 'top', offset: 12, fill: COL.temp, fontSize: 10 }}
             width={25}
           />
 
@@ -159,7 +159,7 @@ export function MultiVariableChart({ mode }: Props) {
             tick={{ fill: COL.press, fontSize: 9 }}
             axisLine={{ stroke: COL.press }}
             tickLine={{ stroke: COL.press }}
-            label={{ value: 'hPa', position: 'top', offset: -24, fill: COL.press, fontSize: 10 }}
+            label={{ value: 'hPa', position: 'top', offset: 12, fill: COL.press, fontSize: 10 }}
             width={32}
           />
 
@@ -172,7 +172,7 @@ export function MultiVariableChart({ mode }: Props) {
             tick={{ fill: COL.rain, fontSize: 9 }}
             axisLine={{ stroke: COL.rain }}
             tickLine={{ stroke: COL.rain }}
-            label={{ value: 'mm', position: 'top', offset: -24, fill: COL.rain, fontSize: 10 }}
+            label={{ value: 'mm', position: 'top', offset: 12, fill: COL.rain, fontSize: 10 }}
             width={20}
           />
 
@@ -185,7 +185,7 @@ export function MultiVariableChart({ mode }: Props) {
             tick={{ fill: COL.wind, fontSize: 9 }}
             axisLine={{ stroke: COL.wind }}
             tickLine={{ stroke: COL.wind }}
-            label={{ value: 'km/h', position: 'top', offset: -24, fill: COL.wind, fontSize: 10 }}
+            label={{ value: 'km/h', position: 'top', offset: 12, fill: COL.wind, fontSize: 10 }}
             width={28}
           />
 
@@ -198,7 +198,7 @@ export function MultiVariableChart({ mode }: Props) {
             tick={{ fill: COL.hum, fontSize: 9 }}
             axisLine={{ stroke: COL.hum }}
             tickLine={{ stroke: COL.hum }}
-            label={{ value: '%', position: 'top', offset: -24, fill: COL.hum, fontSize: 10 }}
+            label={{ value: '%', position: 'top', offset: 12, fill: COL.hum, fontSize: 10 }}
             width={28}
           />
 
