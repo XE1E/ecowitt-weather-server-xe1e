@@ -54,7 +54,7 @@ export function PrecipitationCard({ data, forecast }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-3 text-center">
+      <div className="grid grid-cols-3 gap-3 text-center">
         <div>
           <p className="text-2xl font-bold text-sky-400 tabular-nums">{u.rate(data.rain_rate)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">{u.rateU}</p>
@@ -66,10 +66,6 @@ export function PrecipitationCard({ data, forecast }: Props) {
         <div>
           <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_monthly)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">Mes</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_yearly)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Año</p>
         </div>
       </div>
 

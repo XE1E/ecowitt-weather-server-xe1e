@@ -40,11 +40,14 @@ export function HomePage() {
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
-      {/* Fila principal: Temperatura | Presión | Viento */}
+      {/* Fila principal: Temperatura | Presión | Viento + Alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 items-start">
         <CurrentConditions data={data} history={history} />
         <PressureCard data={data} stats={stats} history={history} />
-        <WindFlipCard data={data} />
+        <div className="space-y-4">
+          <WindFlipCard data={data} />
+          <AlertsPanel />
+        </div>
       </div>
 
       {/*
@@ -60,6 +63,7 @@ export function HomePage() {
           <LocalForecastCard lf={localForecast} />
         </div>
         <div className="space-y-4">
+          <SkyEventsCard />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />
@@ -71,8 +75,6 @@ export function HomePage() {
           <ImecaMiniCard />
           <MetarCard />
           <EarthquakesCard />
-          <AlertsPanel />
-          <SkyEventsCard />
         </div>
       </div>
 
