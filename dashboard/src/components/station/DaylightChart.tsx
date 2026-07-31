@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts'
+import { Sun } from 'lucide-react'
 import { LOCATION } from '../../config'
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -114,8 +115,8 @@ export function DaylightChart() {
 
   return (
     <div className="card">
-      <p className="card-title">Duración día</p>
-      <div className="h-60">
+      <p className="card-title flex items-center gap-2"><Sun className="w-4 h-4 text-amber-400" /> Duración día</p>
+      <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
@@ -127,10 +128,10 @@ export function DaylightChart() {
             }}
             onMouseLeave={() => setHoverIndex(null)}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.35)" />
             <XAxis
               dataKey="day"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
               ticks={monthTicks}
               tickFormatter={(d) => data[d]?.month || ''}
               minTickGap={12}
@@ -140,8 +141,8 @@ export function DaylightChart() {
               domain={[0, 24]}
               ticks={[0, 4, 8, 12, 16, 20, 24]}
               tickFormatter={(v) => `${v.toString().padStart(2, '0')}:00`}
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              width={44}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              width={48}
             />
             <YAxis
               yAxisId="right"
@@ -149,8 +150,8 @@ export function DaylightChart() {
               domain={[0, 15]}
               ticks={[0, 5, 10, 15]}
               tickFormatter={(v) => `${v}h`}
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              width={30}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              width={32}
             />
             <Tooltip
               cursor={cursor}
@@ -245,26 +246,26 @@ export function DaylightChart() {
       </div>
 
       <div className="mt-3 border-t border-white/10 pt-3">
-        <div className="grid grid-cols-4 gap-2 text-xs text-slate-400 border-b border-white/10 pb-2 mb-2">
+        <div className="grid grid-cols-4 gap-2 text-sm text-slate-400 border-b border-white/10 pb-2 mb-2">
           <span></span>
           <span className="text-center">Amanecer</span>
           <span className="text-center">Ocaso</span>
           <span className="text-center flex items-center justify-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
             Duración día
           </span>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-xs">
-          <span className="text-slate-300 font-medium">{formatDate(todayIndex)}</span>
-          <span className="text-center text-slate-100 tabular-nums font-semibold">{formatTime(todayData.sunrise)}</span>
-          <span className="text-center text-slate-100 tabular-nums font-semibold">{formatTime(todayData.sunset)}</span>
-          <span className="text-center text-orange-400 tabular-nums font-semibold">{formatDuration(todayData.dayLength)}</span>
+        <div className="grid grid-cols-4 gap-2 text-sm">
+          <span className="text-slate-200 font-medium">{formatDate(todayIndex)}</span>
+          <span className="text-center text-sky-400 tabular-nums font-semibold">{formatTime(todayData.sunrise)}</span>
+          <span className="text-center text-orange-400 tabular-nums font-semibold">{formatTime(todayData.sunset)}</span>
+          <span className="text-center text-amber-400 tabular-nums font-semibold">{formatDuration(todayData.dayLength)}</span>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-xs mt-2">
+        <div className="grid grid-cols-4 gap-2 text-sm mt-2">
           <span className="text-slate-500">{hoverData ? formatDate(hoverIndex!) : '--'}</span>
-          <span className="text-center text-slate-400 tabular-nums">{hoverData ? formatTime(hoverData.sunrise) : '--'}</span>
-          <span className="text-center text-slate-400 tabular-nums">{hoverData ? formatTime(hoverData.sunset) : '--'}</span>
-          <span className="text-center text-slate-500 tabular-nums">{hoverData ? formatDuration(hoverData.dayLength) : '--'}</span>
+          <span className="text-center text-sky-400/70 tabular-nums">{hoverData ? formatTime(hoverData.sunrise) : '--'}</span>
+          <span className="text-center text-orange-400/70 tabular-nums">{hoverData ? formatTime(hoverData.sunset) : '--'}</span>
+          <span className="text-center text-amber-400/70 tabular-nums">{hoverData ? formatDuration(hoverData.dayLength) : '--'}</span>
         </div>
       </div>
     </div>
