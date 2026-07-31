@@ -221,44 +221,50 @@ function getUnit(name: string, u: any): string {
 
 function groupByHour(points: DataPoint[]): DataPoint[] {
   const map = new Map<string, DataPoint[]>()
+  const order: string[] = []
   for (const p of points) {
     const key = p.x
-    if (!map.has(key)) map.set(key, [])
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
     map.get(key)!.push(p)
   }
-  const result: DataPoint[] = []
-  for (const [x, pts] of map) {
-    result.push({
+  return order.map((x) => {
+    const pts = map.get(x)!
+    return {
       x,
       temp: avg(pts.map((p) => p.temp)),
       pressure: avg(pts.map((p) => p.pressure)),
       rain: Math.max(...pts.map((p) => p.rain ?? 0)),
       wind: avg(pts.map((p) => p.wind)),
       humidity: avg(pts.map((p) => p.humidity)),
-    })
-  }
-  return result
+    }
+  })
 }
 
 function groupByDay(points: DataPoint[]): DataPoint[] {
   const map = new Map<string, DataPoint[]>()
+  const order: string[] = []
   for (const p of points) {
     const key = p.x
-    if (!map.has(key)) map.set(key, [])
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
     map.get(key)!.push(p)
   }
-  const result: DataPoint[] = []
-  for (const [x, pts] of map) {
-    result.push({
+  return order.map((x) => {
+    const pts = map.get(x)!
+    return {
       x,
       temp: avg(pts.map((p) => p.temp)),
       pressure: avg(pts.map((p) => p.pressure)),
       rain: sum(pts.map((p) => p.rain ?? 0)),
       wind: avg(pts.map((p) => p.wind)),
       humidity: avg(pts.map((p) => p.humidity)),
-    })
-  }
-  return result
+    }
+  })
 }
 
 function avg(arr: (number | null | undefined)[]): number | null {
