@@ -17,12 +17,15 @@ interface Props {
   mode: 'day' | 'week'
 }
 
+const nf = (v: number) => Number(v).toLocaleString('es-MX', { maximumFractionDigits: 1 })
+
 export function MultiVariableChart({ mode }: Props) {
   const u = useUnits()
   const [data, setData] = useState<DataPoint[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     const start = mode === 'day' ? '-24h' : '-7d'
     fetch(`/api/history?start=${start}`)
       .then((r) => (r.ok ? r.json() : { data: [] }))
@@ -42,7 +45,6 @@ export function MultiVariableChart({ mode }: Props) {
             humidity: p.humidity_outdoor ?? null,
           }
         })
-        // Reducir puntos si hay muchos (agrupar por hora/día)
         const grouped = mode === 'day' ? groupByHour(points) : groupByDay(points)
         setData(grouped)
         setLoading(false)
@@ -51,163 +53,125 @@ export function MultiVariableChart({ mode }: Props) {
   }, [mode])
 
   if (loading) {
-    return <div className="h-80 flex items-center justify-center text-slate-400">Cargando...</div>
+    return <div className="h-60 flex items-center justify-center text-slate-400">Cargando...</div>
   }
 
+  const tip = {
+    contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
+    labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
+  }
+  const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload?.length) return null
-    return (
-      <div style={{ backgroundColor: '#0f1a2a', border: '1px solid #334155', borderRadius: 8, padding: '8px 12px' }}>
-        <p style={{ color: '#e2e8f0', fontWeight: 600, marginBottom: 4 }}>{label}</p>
-        {payload.map((p: any) => (
-          <p key={p.dataKey} style={{ color: p.color, fontSize: 12 }}>
-            {p.name}: {p.value != null ? `${p.value.toFixed(1)} ${getUnit(p.dataKey, u)}` : '--'}
-          </p>
-        ))}
-      </div>
-    )
-  }
+  const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
   return (
-    <div>
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 20, right: 60, left: 0, bottom: 0 }}>
-            {grid}
-            <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={20} />
+    <div className="h-60">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 5, right: 50, left: -8, bottom: 0 }}>
+          {grid}
+          {xax}
 
-            {/* Eje izquierdo: Temperatura */}
-            <YAxis
-              yAxisId="temp"
-              orientation="left"
-              domain={['auto', 'auto']}
-              tick={{ fill: '#ef4444', fontSize: 10 }}
-              tickFormatter={(v) => `${v}°`}
-              width={35}
-            />
+          {/* Eje izquierdo: Temperatura */}
+          <YAxis
+            yAxisId="temp"
+            orientation="left"
+            domain={['auto', 'auto']}
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tickFormatter={(v) => `${v}°`}
+            width={44}
+          />
 
-            {/* Eje izquierdo 2: Presión */}
-            <YAxis
-              yAxisId="press"
-              orientation="left"
-              domain={['auto', 'auto']}
-              tick={{ fill: '#f97316', fontSize: 10 }}
-              tickFormatter={(v) => `${v}`}
-              width={40}
-              axisLine={false}
-              tickLine={false}
-            />
+          {/* Eje derecho: Humedad % */}
+          <YAxis
+            yAxisId="hum"
+            orientation="right"
+            domain={[0, 100]}
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tickFormatter={(v) => `${v}%`}
+            width={40}
+          />
 
-            {/* Eje derecho: Viento */}
-            <YAxis
-              yAxisId="wind"
-              orientation="right"
-              domain={[0, 'auto']}
-              tick={{ fill: '#22c55e', fontSize: 10 }}
-              tickFormatter={(v) => `${v}`}
-              width={30}
-            />
+          <Tooltip
+            cursor={cursor}
+            {...tip}
+            formatter={(v: number, name: string) => {
+              const unit = getUnit(name, u)
+              return [`${nf(v)} ${unit}`, name]
+            }}
+          />
 
-            {/* Eje derecho 2: Humedad % */}
-            <YAxis
-              yAxisId="hum"
-              orientation="right"
-              domain={[0, 100]}
-              tick={{ fill: '#38bdf8', fontSize: 10 }}
-              tickFormatter={(v) => `${v}%`}
-              width={35}
-              axisLine={false}
-              tickLine={false}
-            />
+          <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
 
-            <Tooltip content={<CustomTooltip />} />
+          {/* Barras de precipitación */}
+          <Bar
+            yAxisId="temp"
+            dataKey="rain"
+            name="Precipitación"
+            fill="#60a5fa"
+            opacity={0.7}
+            radius={[2, 2, 0, 0]}
+          />
 
-            <Legend
-              wrapperStyle={{ fontSize: 11 }}
-              iconType="circle"
-              formatter={(value: string, entry: any) => {
-                const color = entry.color
-                return <span style={{ color }}>{value}</span>
-              }}
-            />
+          {/* Línea de temperatura */}
+          <Line
+            yAxisId="temp"
+            type="monotone"
+            dataKey="temp"
+            name="Temperatura"
+            stroke="#ef4444"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
 
-            {/* Barras de precipitación */}
-            <Bar
-              yAxisId="wind"
-              dataKey="rain"
-              name="Precipitación"
-              fill="#60a5fa"
-              opacity={0.7}
-              radius={[2, 2, 0, 0]}
-            />
+          {/* Línea de presión */}
+          <Line
+            yAxisId="temp"
+            type="monotone"
+            dataKey="pressure"
+            name="Presión"
+            stroke="#f97316"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
 
-            {/* Línea de temperatura */}
-            <Line
-              yAxisId="temp"
-              type="monotone"
-              dataKey="temp"
-              name="Temperatura"
-              stroke="#ef4444"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
+          {/* Línea de viento */}
+          <Line
+            yAxisId="temp"
+            type="monotone"
+            dataKey="wind"
+            name="Viento"
+            stroke="#22c55e"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
 
-            {/* Línea de presión */}
-            <Line
-              yAxisId="press"
-              type="monotone"
-              dataKey="pressure"
-              name="Presión atmosférica"
-              stroke="#f97316"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-
-            {/* Línea de viento */}
-            <Line
-              yAxisId="wind"
-              type="monotone"
-              dataKey="wind"
-              name="Velocidad del viento"
-              stroke="#22c55e"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-
-            {/* Línea de humedad */}
-            <Line
-              yAxisId="hum"
-              type="monotone"
-              dataKey="humidity"
-              name="Humedad"
-              stroke="#38bdf8"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex justify-between text-[10px] text-slate-500 mt-2">
-        <span>°C / hPa / mm</span>
-        <span>km/h / %</span>
-      </div>
+          {/* Línea de humedad */}
+          <Line
+            yAxisId="hum"
+            type="monotone"
+            dataKey="humidity"
+            name="Humedad"
+            stroke="#38bdf8"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   )
 }
 
-function getUnit(key: string, u: any): string {
-  switch (key) {
-    case 'temp': return u.tempU
-    case 'pressure': return u.pressU
-    case 'rain': return 'mm/h'
-    case 'wind': return u.windU
-    case 'humidity': return '%'
+function getUnit(name: string, u: any): string {
+  switch (name) {
+    case 'Temperatura': return u.tempU
+    case 'Presión': return u.pressU
+    case 'Precipitación': return 'mm/h'
+    case 'Viento': return u.windU
+    case 'Humedad': return '%'
     default: return ''
   }
 }
