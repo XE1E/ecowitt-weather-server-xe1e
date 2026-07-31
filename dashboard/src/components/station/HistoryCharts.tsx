@@ -33,79 +33,90 @@ export function HistoryCharts({ data, labelFormatter, onCsv }: {
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
   const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
+  // Ancho mínimo para scroll horizontal cuando hay muchos puntos (móvil)
+  const minW = data.length > 15 ? `${Math.max(400, data.length * 24)}px` : undefined
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Temperatura */}
       <div className="card">
         <p className="card-title">Temperatura</p>
-        <div className="h-60">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-              {grid}{xax}
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-              <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [`${nf(v)} ${u.tempU}`, n]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Line type="monotone" dataKey="max" name="Máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-              <Line type="monotone" dataKey="prom" name="Promedio" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
-              <Line type="monotone" dataKey="min" name="Mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="h-72 md:h-60 overflow-x-auto">
+          <div style={{ minWidth: minW, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+                {grid}{xax}
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [`${nf(v)} ${u.tempU}`, n]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Line type="monotone" dataKey="max" name="Máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
+                <Line type="monotone" dataKey="prom" name="Promedio" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
+                <Line type="monotone" dataKey="min" name="Mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Viento + dirección */}
       <div className="card">
         <p className="card-title">Viento</p>
-        <div className="h-60">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-              {grid}{xax}
-              <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-              <YAxis yAxisId="dir" orientation="right" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]}
-                tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#84cc16', fontSize: 10 }} width={28} />
-              <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-              <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-              <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#84cc16" />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <div className="h-72 md:h-60 overflow-x-auto">
+          <div style={{ minWidth: minW, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+                {grid}{xax}
+                <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
+                <YAxis yAxisId="dir" orientation="right" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]}
+                  tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#84cc16', fontSize: 10 }} width={28} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
+                <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#84cc16" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Humedad y punto de rocío */}
       <div className="card">
         <p className="card-title">Humedad y punto de rocío</p>
-        <div className="h-60">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-              {grid}{xax}
-              <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-              <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-              <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-              <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <div className="h-72 md:h-60 overflow-x-auto">
+          <div style={{ minWidth: minW, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+                {grid}{xax}
+                <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
+                <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Radiación UV y solar */}
       <div className="card">
         <p className="card-title">Radiación UV y solar</p>
-        <div className="h-60">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-              {grid}{xax}
-              <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-              <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
-              <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
-              <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <div className="h-72 md:h-60 overflow-x-auto">
+          <div style={{ minWidth: minW, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+                {grid}{xax}
+                <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
+                <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -115,20 +126,22 @@ export function HistoryCharts({ data, labelFormatter, onCsv }: {
           <p className="card-title mb-0">Precipitación y presión</p>
           {onCsv && <button onClick={onCsv} className="px-3 py-1 rounded-lg text-xs bg-white/5 text-slate-300 hover:bg-white/10">⬇ CSV</button>}
         </div>
-        <div className="h-64 mt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
-              {grid}{xax}
-              <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
-              <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
-              <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [
-                n === 'Presión' ? `${nf(v)} ${u.pressU}` : n === 'Tasa máx' ? `${nf(v)} ${u.rateU}` : `${nf(v)} ${u.rainU}`, n]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-              <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#60a5fa" radius={[3, 3, 0, 0]} />
-              <Line yAxisId="r" type="monotone" dataKey="rrate" name="Tasa máx" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
-              <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
-            </ComposedChart>
-          </ResponsiveContainer>
+        <div className="h-80 md:h-64 mt-2 overflow-x-auto">
+          <div style={{ minWidth: minW, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 5, right: 6, left: -8, bottom: 0 }}>
+                {grid}{xax}
+                <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
+                <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
+                <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [
+                  n === 'Presión' ? `${nf(v)} ${u.pressU}` : n === 'Tasa máx' ? `${nf(v)} ${u.rateU}` : `${nf(v)} ${u.rainU}`, n]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                <Line yAxisId="r" type="monotone" dataKey="rrate" name="Tasa máx" stroke="#22d3ee" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>

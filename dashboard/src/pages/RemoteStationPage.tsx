@@ -370,41 +370,43 @@ export function RemoteStationPage() {
                 No hay datos históricos disponibles
               </div>
             ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chart} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} minTickGap={40} />
-                    {metric === 'outdoor' && (
-                      <>
-                        <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
-                        <Legend />
-                        <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
-                        <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
-                      </>
-                    )}
-                    {metric === 'indoor' && (
-                      <>
-                        <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
-                        <Legend />
-                        <Line yAxisId="left" type="monotone" dataKey="tempIn" name={`Temp ${u.tempU}`} stroke="#38bdf8" dot={false} strokeWidth={2} connectNulls />
-                        <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
-                      </>
-                    )}
-                    {metric === 'pressure' && (
-                      <>
-                        <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
-                        <Legend />
-                        <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#a78bfa" dot={false} strokeWidth={2} connectNulls />
-                      </>
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="h-80 md:h-64 overflow-x-auto">
+                <div style={{ minWidth: chart.length > 50 ? `${Math.max(500, chart.length * 4)}px` : '500px', height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chart} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} minTickGap={40} />
+                      {metric === 'outdoor' && (
+                        <>
+                          <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Legend />
+                          <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
+                        </>
+                      )}
+                      {metric === 'indoor' && (
+                        <>
+                          <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Legend />
+                          <Line yAxisId="left" type="monotone" dataKey="tempIn" name={`Temp ${u.tempU}`} stroke="#38bdf8" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
+                        </>
+                      )}
+                      {metric === 'pressure' && (
+                        <>
+                          <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Legend />
+                          <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#a78bfa" dot={false} strokeWidth={2} connectNulls />
+                        </>
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
           </div>

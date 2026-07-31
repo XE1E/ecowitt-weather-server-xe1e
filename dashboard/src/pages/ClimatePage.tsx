@@ -183,23 +183,25 @@ export function ClimatePage() {
                 </select>
               </div>
               <div className="card">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-                      <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                      <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44}
-                        label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#60a5fa', fontSize: 11 }} />
-                      <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-                      <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip}
-                        formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                      <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
-                      <Line yAxisId="t" type="monotone" dataKey="tmax" name="T. máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-                      <Line yAxisId="t" type="monotone" dataKey="tmed" name="T. media" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
-                      <Line yAxisId="t" type="monotone" dataKey="tmin" name="T. mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                <div className="h-80 md:h-72 overflow-x-auto">
+                  <div style={{ minWidth: '400px', height: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
+                        <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                        <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44}
+                          label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#60a5fa', fontSize: 11 }} />
+                        <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
+                        <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip}
+                          formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                        <Line yAxisId="t" type="monotone" dataKey="tmax" name="T. máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
+                        <Line yAxisId="t" type="monotone" dataKey="tmed" name="T. media" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
+                        <Line yAxisId="t" type="monotone" dataKey="tmin" name="T. mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
                   Barras: precipitación mensual. Líneas: temperatura media, máxima y mínima del mes.

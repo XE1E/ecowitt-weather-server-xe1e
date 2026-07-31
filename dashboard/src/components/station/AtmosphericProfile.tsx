@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Maximize2, X } from 'lucide-react'
 
 interface Cloud { cover: string; base: number | null }
 interface Metar {
@@ -57,10 +58,20 @@ function windows(x: number, top: number, w: number, h: number, fill: string, nig
 
 export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const [now, setNow] = useState(() => new Date())
+  const [expanded, setExpanded] = useState(false)
+
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(i)
   }, [])
+
+  // Bloquear scroll del body cuando está expandido
+  useEffect(() => {
+    if (expanded) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [expanded])
 
   if (!m) return null
   const hour = now.getHours()
@@ -94,8 +105,11 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const win = night ? '#ffd27a' : '#b9c9de'
   const cloudFill = night ? '#cbd6e8' : '#ffffff'
 
-  return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 relative" style={{ aspectRatio: `${W} / ${H}` }}>
+  const profileContent = (isExpanded: boolean) => (
+    <div className={`rounded-2xl overflow-hidden border border-white/10 relative ${isExpanded ? '' : 'cursor-pointer'}`}
+      style={{ aspectRatio: `${W} / ${H}` }}
+      onClick={isExpanded ? undefined : () => setExpanded(true)}
+    >
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -309,6 +323,43 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           {['FEW', 'SCT', 'BKN', 'OVC'].map((c) => <span key={c}>{c}</span>)}
         </div>
       </div>
+
+      {/* Botón expandir (solo en vista normal) */}
+      {!isExpanded && (
+        <div className="absolute top-3 left-3 bg-black/45 rounded-lg p-1.5 backdrop-blur-sm md:hidden">
+          <Maximize2 className="w-5 h-5 text-white/70" />
+        </div>
+      )}
+
+      {/* Botón cerrar (solo en vista expandida) */}
+      {isExpanded && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="absolute top-4 right-4 bg-black/60 rounded-full p-2 backdrop-blur-sm z-10"
+        >
+          <X className="w-6 h-6 text-white" />
+        </button>
+      )}
     </div>
+  )
+
+  return (
+    <>
+      {/* Vista normal con scroll horizontal en móvil */}
+      <div className="overflow-x-auto md:overflow-visible">
+        <div style={{ minWidth: '500px' }}>
+          {profileContent(false)}
+        </div>
+      </div>
+
+      {/* Modal expandido (pantalla completa horizontal) */}
+      {expanded && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setExpanded(false)}>
+          <div className="w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            {profileContent(true)}
+          </div>
+        </div>
+      )}
+    </>
   )
 }

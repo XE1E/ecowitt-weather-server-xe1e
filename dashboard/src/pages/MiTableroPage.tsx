@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext, arrayMove, useSortable, rectSortingStrategy,
-  sortableKeyboardCoordinates,
+  verticalListSortingStrategy, sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useStationData } from '../station-data'
@@ -43,14 +43,15 @@ function SortableCard({ id, spanClass, editing, children }: {
   editing: boolean
   children: ReactNode
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, activeIndex } =
     useSortable({ id, disabled: !editing })
+  const isActive = activeIndex !== -1
   const style = { transform: CSS.Transform.toString(transform), transition }
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`${spanClass} ${editing ? 'cursor-move rounded-2xl ring-2 ring-blue-500/40' : ''} ${isDragging ? 'relative z-20 opacity-80 shadow-2xl' : ''}`}
+      className={`${spanClass} ${editing ? 'cursor-move rounded-2xl ring-2 ring-blue-500/40 touch-none' : ''} ${isDragging ? 'relative z-20 opacity-80 shadow-2xl scale-[1.02]' : ''} ${editing && isActive && !isDragging ? 'opacity-50' : ''}`}
       {...(editing ? { ...attributes, ...listeners } : {})}
     >
       {children}
@@ -61,6 +62,13 @@ function SortableCard({ id, spanClass, editing, children }: {
 export function MiTableroPage() {
   const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
   const [editing, setEditing] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // Catálogo de tarjetas elegibles (la de condiciones actuales va fija aparte)
   const CARDS: { key: string; label: string; span: 1 | 2 | 3; render: () => JSX.Element }[] = [
@@ -103,11 +111,11 @@ export function MiTableroPage() {
   const toggle = (k: string) =>
     setVisible((v) => (v.includes(k) ? v.filter((x) => x !== k) : [...v, k]))
 
-  // Drag & drop para reordenar (táctil incluido). distance/delay evitan que un
-  // toque simple dispare un arrastre.
+  // Drag & drop para reordenar. En móvil usamos delay más largo y tolerancia
+  // mayor para evitar conflictos con scroll y permitir activación más fácil.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 15 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
   const onDragEnd = (e: DragEndEvent) => {
@@ -148,7 +156,7 @@ export function MiTableroPage() {
       {editing && (
         <div className="card mb-4">
           <p className="card-title">Elige tus tarjetas</p>
-          <p className="text-xs text-slate-400 -mt-1 mb-2">Toca para mostrar/ocultar. Con este modo activo, <span className="text-slate-200">arrastra las tarjetas</span> del tablero para reordenarlas.</p>
+          <p className="text-xs text-slate-400 -mt-1 mb-2">Toca para mostrar/ocultar. Con este modo activo, <span className="text-slate-200">{isMobile ? 'mantén presionada una tarjeta' : 'arrastra las tarjetas'}</span> del tablero para reordenarlas.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {CARDS.map((c) => {
               const on = visible.includes(c.key)
@@ -184,7 +192,7 @@ export function MiTableroPage() {
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={shown.map((c) => c.key)} strategy={rectSortingStrategy}>
+          <SortableContext items={shown.map((c) => c.key)} strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {shown.map((c) => (
                 <SortableCard key={c.key} id={c.key} spanClass={spanCls(c.span)} editing={editing}>

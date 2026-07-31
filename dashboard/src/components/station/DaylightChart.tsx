@@ -116,9 +116,10 @@ export function DaylightChart() {
   return (
     <div className="card">
       <p className="card-title flex items-center gap-2"><Sun className="w-4 h-4 text-amber-400" /> Duración día</p>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
+      <div className="h-80 md:h-64 overflow-x-auto">
+        <div style={{ minWidth: '480px', height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
             data={data}
             margin={{ top: 5, right: 6, left: -8, bottom: 0 }}
             onMouseMove={(e) => {
@@ -241,8 +242,9 @@ export function DaylightChart() {
                 }}
               />
             )}
-          </AreaChart>
-        </ResponsiveContainer>
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <div className="mt-3 border-t border-white/10 pt-3">
