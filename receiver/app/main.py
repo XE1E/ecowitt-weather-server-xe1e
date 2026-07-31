@@ -1666,6 +1666,21 @@ async def get_wind_rose(start: str = "-7d"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/rain/last")
+async def get_last_rain():
+    """Fecha/hora de la última lluvia registrada (rain_rate > 0)."""
+    try:
+        records = await storage.query(start="-90d", fields=["rain_rate"])
+        rain_records = [r for r in records if (r.get("rain_rate") or 0) > 0]
+        if rain_records:
+            last = max(rain_records, key=lambda r: r.get("_time", ""))
+            return {"date": last.get("_time")}
+        return {"date": None}
+    except Exception as e:
+        logger.error(f"Error getting last rain: {e}")
+        return {"date": None}
+
+
 @app.get("/api/almanac")
 async def get_almanac_data():
     """Almanaque astronómico ampliado (sol, crepúsculos, luna y planetas)."""

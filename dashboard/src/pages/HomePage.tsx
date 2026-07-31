@@ -40,10 +40,11 @@ export function HomePage() {
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
-      {/* Mitades destacadas arriba (ambas altas, poco hueco entre ellas) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 items-start">
+      {/* Fila principal: Temperatura | Presión | Viento */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 items-start">
         <CurrentConditions data={data} history={history} />
-        <StationTempChart history={history} forecast={forecast} />
+        <PressureCard data={data} stats={stats} history={history} />
+        <WindFlipCard data={data} />
       </div>
 
       {/*
@@ -55,12 +56,10 @@ export function HomePage() {
         <div className="space-y-4">
           <ForecastCard forecast={forecast} />
           <ForecastCompareCard forecast={forecast} />
-          <WindFlipCard data={data} />
-          <PressureCard data={data} stats={stats} history={history} />
+          <PrecipitationCard data={data} forecast={forecast} />
           <LocalForecastCard lf={localForecast} />
         </div>
         <div className="space-y-4">
-          <PrecipitationCard data={data} forecast={forecast} />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />
@@ -77,7 +76,9 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="mt-4">
+      {/* Gráficas al final */}
+      <div className="mt-4 space-y-4">
+        <StationTempChart history={history} forecast={forecast} />
         <RadarCard />
       </div>
     </>
