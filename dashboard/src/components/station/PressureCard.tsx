@@ -30,8 +30,8 @@ export function PressureCard({ data, stats, history }: Props) {
   let trendColor = 'text-slate-300'
   if (raw.length > 6) {
     const d = raw[raw.length - 1] - raw[Math.max(0, raw.length - 7)]
-    if (d > 0.6) { trend = 'Subiendo'; trendColor = 'text-emerald-300' }
-    else if (d < -0.6) { trend = 'Bajando'; trendColor = 'text-red-300' }
+    if (d > 1) { trend = 'Subiendo'; trendColor = 'text-green-500' }
+    else if (d < -1) { trend = 'Bajando'; trendColor = 'text-red-500' }
   }
 
   const box = (label: string, value: string, color = 'text-slate-100') => (
@@ -81,8 +81,8 @@ export function PressureCard({ data, stats, history }: Props) {
                   tickLine={false} axisLine={false}
                 />
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--surface, #1e293b)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
-                  cursor={{ stroke: '#a78bfa', strokeOpacity: 0.4, strokeDasharray: '3 3' }}
+                  contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
+                  cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }}
                   labelFormatter={(l) => stampFmt(Number(l))}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />

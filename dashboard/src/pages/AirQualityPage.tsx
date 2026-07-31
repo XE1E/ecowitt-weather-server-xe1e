@@ -47,7 +47,7 @@ export function AirQualityPage() {
   }, [])
 
   if (loading) {
-    return <div className="h-40 flex items-center justify-center"><RefreshCw className="w-7 h-7 animate-spin text-blue-400" /></div>
+    return <div className="h-40 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
   }
 
   if (aq?.error === 'no_token') {

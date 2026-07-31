@@ -10,11 +10,11 @@ export function TrendBadge({ delta, unit, threshold }: {
   const up = delta > threshold
   const down = delta < -threshold
   const Icon = up ? ArrowUp : down ? ArrowDown : Minus
-  const color = up ? 'text-amber-300' : down ? 'text-sky-300' : 'text-slate-400'
+  const color = up ? 'text-green-500' : down ? 'text-red-500' : 'text-slate-400'
   const sign = delta > 0 ? '+' : ''
   return (
     <span className={`inline-flex items-center gap-1 text-xs ${color}`} title="Cambio en las últimas 3 h">
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-4 h-4" />
       {sign}{delta.toFixed(1)}{unit} / 3 h
     </span>
   )

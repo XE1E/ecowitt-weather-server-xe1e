@@ -99,8 +99,8 @@ export function SunMoonDetailCard() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-3">
-            <TimeBox label="Salida del sol" time={val(s.rise)} icon={<Sun className="w-3 h-3 text-amber-400" />} />
-            <TimeBox label="Puesta del sol" time={val(s.set)} icon={<Sun className="w-3 h-3 text-orange-400" />} />
+            <TimeBox label="Salida del sol" time={val(s.rise)} icon={<Sun className="w-4 h-4 text-amber-400" />} />
+            <TimeBox label="Puesta del sol" time={val(s.set)} icon={<Sun className="w-4 h-4 text-orange-400" />} />
           </div>
           <div className="relative mt-3">
             {s.noon && <p className="text-[11px] text-slate-500 text-center absolute inset-x-0 -top-1">☀ {s.noon}</p>}
@@ -127,8 +127,8 @@ export function SunMoonDetailCard() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-3">
-            <TimeBox label="Salida de la luna" time={val(m.rise)} icon={<Moon className="w-3 h-3 text-sky-300" />} />
-            <TimeBox label="Puesta de la luna" time={val(m.set)} icon={<Moon className="w-3 h-3 text-slate-400" />} />
+            <TimeBox label="Salida de la luna" time={val(m.rise)} icon={<Moon className="w-4 h-4 text-sky-300" />} />
+            <TimeBox label="Puesta de la luna" time={val(m.set)} icon={<Moon className="w-4 h-4 text-slate-400" />} />
           </div>
           <div className="relative mt-3">
             <SkyArc rise={m.rise} set={m.set} up={(m.altitude ?? -1) > 0} color="#e2e8f0" />

@@ -190,12 +190,12 @@ export function ClimatePage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                         <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                         <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44}
-                          label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#60a5fa', fontSize: 11 }} />
+                          label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#38bdf8', fontSize: 11 }} />
                         <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                         <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip}
                           formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]} />
                         <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#38bdf8" radius={[3, 3, 0, 0]} />
                         <Line yAxisId="t" type="monotone" dataKey="tmax" name="T. máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
                         <Line yAxisId="t" type="monotone" dataKey="tmed" name="T. media" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
                         <Line yAxisId="t" type="monotone" dataKey="tmin" name="T. mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />

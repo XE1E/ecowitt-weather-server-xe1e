@@ -176,7 +176,7 @@ export function RemoteStationPage() {
 
       {loading && !data && !notFound ? (
         <div className="h-64 flex items-center justify-center text-slate-400">
-          <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
+          <RefreshCw className="w-8 h-8 animate-spin text-blue-400" />
         </div>
       ) : notFound ? (
         <div className="card">
@@ -203,7 +203,7 @@ export function RemoteStationPage() {
                     <WeatherIcon name="thermometer" size={28} />
                     <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Temp</p>
-                    {tempOutTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempOutTrend)} unit={u.tempU} threshold={0.2} />}
+                    {tempOutTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempOutTrend)} unit={u.tempU} threshold={0.5} />}
                   </div>
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                     <WeatherIcon name="humidity" size={28} />
@@ -235,7 +235,7 @@ export function RemoteStationPage() {
                   <WeatherIcon name="thermometer" size={28} />
                   <p className="text-xl font-bold text-amber-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
                   <p className="text-xs text-slate-400">Temp</p>
-                  {tempInTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempInTrend)} unit={u.tempU} threshold={0.2} />}
+                  {tempInTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempInTrend)} unit={u.tempU} threshold={0.5} />}
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                   <WeatherIcon name="humidity" size={28} />
@@ -380,26 +380,26 @@ export function RemoteStationPage() {
                         <>
                           <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
                           <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
-                          <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f59e0b" dot={false} strokeWidth={2} connectNulls />
-                          <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f97316" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#3b82f6" dot={false} strokeWidth={2} connectNulls />
                         </>
                       )}
                       {metric === 'indoor' && (
                         <>
                           <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={u.tempU} />
                           <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
                           <Line yAxisId="left" type="monotone" dataKey="tempIn" name={`Temp ${u.tempU}`} stroke="#38bdf8" dot={false} strokeWidth={2} connectNulls />
-                          <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#22d3ee" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#3b82f6" dot={false} strokeWidth={2} connectNulls />
                         </>
                       )}
                       {metric === 'pressure' && (
                         <>
                           <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
-                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
                           <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#a78bfa" dot={false} strokeWidth={2} connectNulls />
                         </>

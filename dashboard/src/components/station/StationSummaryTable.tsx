@@ -21,9 +21,9 @@ function getTrend(current: number | undefined | null, avg: number | undefined | 
 }
 
 function TrendIcon({ dir }: { dir: TrendDir }) {
-  if (dir === 'up') return <span className="text-red-400 text-2xl font-bold">↑</span>
-  if (dir === 'down') return <span className="text-sky-400 text-2xl font-bold">↓</span>
-  return <span className="text-slate-500 text-2xl font-bold">→</span>
+  if (dir === 'up') return <span className="text-green-500 text-2xl font-bold">↑</span>
+  if (dir === 'down') return <span className="text-red-500 text-2xl font-bold">↓</span>
+  return <span className="text-slate-400 text-2xl font-bold">→</span>
 }
 
 function WindArrow({ deg }: { deg: number }) {

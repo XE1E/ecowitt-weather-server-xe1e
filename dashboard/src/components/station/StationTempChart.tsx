@@ -70,7 +70,7 @@ export function StationTempChart({ history, forecast }: Props) {
             <ReferenceLine x={nowMs} stroke="#64748b" strokeDasharray="2 2"
               label={{ value: 'ahora', position: 'insideTopRight', fill: '#94a3b8', fontSize: 10 }} />
             <Legend formatter={(v) => (v === 'obs' ? 'Observado' : 'Pronóstico')} />
-            <Line type="monotone" dataKey="obs" stroke="#34d399" strokeWidth={2} dot={false} connectNulls name="obs" />
+            <Line type="monotone" dataKey="obs" stroke="#f97316" strokeWidth={2} dot={false} connectNulls name="obs" />
             <Line type="monotone" dataKey="fc" stroke="#f97316" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls name="fc" />
             </LineChart>
           </ResponsiveContainer>

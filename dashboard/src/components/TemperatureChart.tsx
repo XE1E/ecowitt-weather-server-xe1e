@@ -25,7 +25,7 @@ const PERIODS: { key: Period; label: string; start: string }[] = [
 const METRICS: Record<MetricKey, { label: string; unit: string; color: string; field: keyof HistoryData }> = {
   temp: { label: 'Temperatura', unit: '°C', color: '#f97316', field: 'temperature_outdoor' },
   pressure: { label: 'Presión', unit: 'hPa', color: '#a78bfa', field: 'pressure_relative' },
-  wind: { label: 'Viento', unit: 'km/h', color: '#34d399', field: 'wind_speed' },
+  wind: { label: 'Viento', unit: 'km/h', color: '#22c55e', field: 'wind_speed' },
 }
 
 interface ChartPoint {
@@ -119,12 +119,13 @@ export function TemperatureChart() {
               <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={m.unit} />
               <YAxis yAxisId="humidity" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
               <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
                 labelStyle={{ color: '#e2e8f0' }}
+                cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }}
               />
               <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${m.unit})`} />
-                <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2} dot={false} name="Humedad (%)" />
+                <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#3b82f6" strokeWidth={2} dot={false} name="Humedad (%)" />
               </LineChart>
             </ResponsiveContainer>
           </div>

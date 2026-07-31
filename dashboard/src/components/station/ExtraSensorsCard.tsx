@@ -71,7 +71,7 @@ export function ExtraSensorsCard({ data, history }: { data: WeatherData; history
                 <div>
                   <div className="flex items-center gap-1">
                     <p className="text-xl font-bold text-amber-300">{c.temp !== undefined ? `${u.temp(c.temp)}${u.tempU}` : '--'}</p>
-                    <TrendArrow trend={c.tempTrend} size={18} />
+                    <TrendArrow trend={c.tempTrend} size={20} />
                   </div>
                   <p className="text-xs text-slate-400">Temperatura</p>
                 </div>
@@ -81,7 +81,7 @@ export function ExtraSensorsCard({ data, history }: { data: WeatherData; history
                 <div>
                   <div className="flex items-center gap-1">
                     <p className="text-xl font-bold text-cyan-300">{c.humidity !== undefined ? `${Math.round(c.humidity)}%` : '--'}</p>
-                    <TrendArrow trend={c.humTrend} size={18} />
+                    <TrendArrow trend={c.humTrend} size={20} />
                   </div>
                   <p className="text-xs text-slate-400">Humedad</p>
                 </div>

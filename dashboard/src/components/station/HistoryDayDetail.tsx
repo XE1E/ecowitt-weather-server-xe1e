@@ -181,12 +181,12 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                     <YAxis yAxisId="dir" orientation="right" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]}
-                      tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#84cc16', fontSize: 10 }} width={28} />
+                      tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#22c55e', fontSize: 10 }} width={28} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                      <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                      <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-                      <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#84cc16" />
+                      <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#16a34a" strokeWidth={2} dot={false} connectNulls />
+                      <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#22c55e" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -206,8 +206,8 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                     <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                      <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
-                      <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
+                      <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -248,7 +248,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                     <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
                     <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rateU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                      <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                      <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#38bdf8" radius={[3, 3, 0, 0]} />
                       <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
                     </ComposedChart>
                   </ResponsiveContainer>

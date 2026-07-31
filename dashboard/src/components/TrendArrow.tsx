@@ -6,7 +6,7 @@ interface TrendArrowProps {
 }
 
 export function TrendArrow({ trend, size = 24 }: TrendArrowProps) {
-  const color = trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : '#6b7280'
+  const color = trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : '#94a3b8'
 
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

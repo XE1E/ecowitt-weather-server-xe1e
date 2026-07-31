@@ -110,7 +110,7 @@ export function RemoteStationCard() {
           <WeatherIcon name="thermometer" size={24} />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-amber-300">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
-            <TrendArrow trend={tOutArrow} size={18} />
+            <TrendArrow trend={tOutArrow} size={20} />
           </div>
           <p className="text-xs text-slate-400">Temp</p>
         </div>
@@ -118,7 +118,7 @@ export function RemoteStationCard() {
           <WeatherIcon name="humidity" size={24} />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-cyan-300">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
-            <TrendArrow trend={hOutArrow} size={18} />
+            <TrendArrow trend={hOutArrow} size={20} />
           </div>
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
@@ -148,7 +148,7 @@ export function RemoteStationCard() {
             <p className="text-xl font-bold text-violet-300">
               {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}
             </p>
-            <TrendArrow trend={pArrow} size={18} />
+            <TrendArrow trend={pArrow} size={20} />
           </div>
           <p className="text-xs text-slate-400">{u.pressU}</p>
         </div>

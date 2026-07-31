@@ -326,9 +326,9 @@ export function KioskPage() {
             </div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                {tempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                {tempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                {tempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                {tempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                {tempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                {tempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
               </svg>
             </div>
             <div className="big go ctr rt" style={{ fontSize: 104, paddingRight: 32 }}>
@@ -362,7 +362,7 @@ export function KioskPage() {
                 <text x="2" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">O</text>
                 {dir != null && (
                   <g transform={`rotate(${dir} 50 40)`}>
-                    <polygon points="50,-1 47,6 50,4 53,6" fill="#37d64a" />
+                    <polygon points="50,-1 47,6 50,4 53,6" fill="#22c55e" />
                   </g>
                 )}
               </svg>
@@ -413,9 +413,9 @@ export function KioskPage() {
             </div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                {humTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                {humTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                {humTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                {humTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                {humTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                {humTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
               </svg>
             </div>
             <div className="big gw ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32 }}>
@@ -454,9 +454,9 @@ export function KioskPage() {
             </div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                {pressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                {pressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                {pressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                {pressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                {pressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                {pressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
               </svg>
             </div>
             <div className="big gb ctr rt" style={{ fontSize: 56, paddingRight: 32 }}>
@@ -532,9 +532,9 @@ export function KioskPage() {
                   {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>{u.tempU}</span>
                 </span>
                 <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
-                  {remoteTempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                  {remoteTempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                  {remoteTempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                  {remoteTempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                  {remoteTempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                  {remoteTempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
                 </svg>
               </span>
               <span style={{ position: 'relative', paddingRight: 16 }}>
@@ -542,9 +542,9 @@ export function KioskPage() {
                   {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--y)' }}>%</span>
                 </span>
                 <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
-                  {remoteHumTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                  {remoteHumTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                  {remoteHumTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                  {remoteHumTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                  {remoteHumTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                  {remoteHumTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
                 </svg>
               </span>
             </div>
@@ -583,9 +583,9 @@ export function KioskPage() {
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--g)' }}>GW1100</span></div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-                {remotePressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#37d64a" />}
-                {remotePressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ff4128" />}
-                {remotePressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#888" />}
+                {remotePressTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+                {remotePressTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+                {remotePressTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
               </svg>
             </div>
             <div className="big gg ctr rt" style={{ fontSize: 46, paddingRight: 32 }}>
@@ -736,8 +736,8 @@ export function KioskPage() {
               <XAxis dataKey="label" interval={step} tick={{ fill: '#94a3b8', fontSize: 14 }} stroke="#ffffff20" tickMargin={8} />
               <YAxis yAxisId="t" tick={{ fill: '#fdba74', fontSize: 14 }} stroke="#ffffff20" width={46} domain={['auto', 'auto']} unit={u.tempU} />
               <YAxis yAxisId="h" orientation="right" tick={{ fill: '#67e8f9', fontSize: 14 }} stroke="#ffffff20" width={40} domain={[0, 100]} unit="%" />
-              <Line yAxisId="t" type="monotone" dataKey="temp" stroke="#fb923c" strokeWidth={3} dot={false} isAnimationActive={false} />
-              <Line yAxisId="h" type="monotone" dataKey="hum" stroke="#22d3ee" strokeWidth={2} dot={false} isAnimationActive={false} strokeDasharray="5 4" />
+              <Line yAxisId="t" type="monotone" dataKey="temp" stroke="#f97316" strokeWidth={3} dot={false} isAnimationActive={false} />
+              <Line yAxisId="h" type="monotone" dataKey="hum" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} strokeDasharray="5 4" />
             </LineChart>
           </div>
         )}
