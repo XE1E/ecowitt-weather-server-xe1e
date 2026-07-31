@@ -53,7 +53,7 @@ export function MultiVariableChart({ mode }: Props) {
   }, [mode])
 
   if (loading) {
-    return <div className="h-60 flex items-center justify-center text-slate-400">Cargando...</div>
+    return <div className="h-72 flex items-center justify-center text-slate-400">Cargando...</div>
   }
 
   const tip = {
@@ -61,34 +61,77 @@ export function MultiVariableChart({ mode }: Props) {
     labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
   }
   const cursor = { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
-  const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-  const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
   return (
-    <div className="h-60">
+    <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 5, right: 50, left: -8, bottom: 0 }}>
-          {grid}
-          {xax}
+        <ComposedChart data={data} margin={{ top: 5, right: 80, left: 60, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
+          <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
-          {/* Eje izquierdo: Temperatura */}
+          {/* Eje izquierdo 1: Temperatura °C (rojo) */}
           <YAxis
             yAxisId="temp"
             orientation="left"
-            domain={['auto', 'auto']}
-            tick={{ fill: '#94a3b8', fontSize: 11 }}
-            tickFormatter={(v) => `${v}°`}
-            width={44}
+            domain={[0, 35]}
+            ticks={[0, 5, 10, 15, 20, 25, 30]}
+            tick={{ fill: '#ef4444', fontSize: 10 }}
+            axisLine={{ stroke: '#ef4444' }}
+            tickLine={{ stroke: '#ef4444' }}
+            label={{ value: '°C', angle: 0, position: 'insideTopLeft', fill: '#ef4444', fontSize: 10, dy: -10 }}
+            width={30}
           />
 
-          {/* Eje derecho: Humedad % */}
+          {/* Eje izquierdo 2: Presión hPa (gris) */}
+          <YAxis
+            yAxisId="press"
+            orientation="left"
+            domain={[1000, 1030]}
+            ticks={[1000, 1005, 1010, 1015, 1020, 1025, 1030]}
+            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            axisLine={{ stroke: '#9ca3af' }}
+            tickLine={{ stroke: '#9ca3af' }}
+            label={{ value: 'hPa', angle: 0, position: 'insideTopLeft', fill: '#9ca3af', fontSize: 10, dy: -10 }}
+            width={35}
+          />
+
+          {/* Eje izquierdo 3: Precipitación mm (azul) */}
+          <YAxis
+            yAxisId="rain"
+            orientation="left"
+            domain={[0, 5]}
+            ticks={[0, 1, 2, 3, 4, 5]}
+            tick={{ fill: '#3b82f6', fontSize: 10 }}
+            axisLine={{ stroke: '#3b82f6' }}
+            tickLine={{ stroke: '#3b82f6' }}
+            label={{ value: 'mm', angle: 0, position: 'insideTopLeft', fill: '#3b82f6', fontSize: 10, dy: -10 }}
+            width={25}
+          />
+
+          {/* Eje derecho 1: Viento km/h (verde) */}
+          <YAxis
+            yAxisId="wind"
+            orientation="right"
+            domain={[0, 20]}
+            ticks={[0, 5, 10, 15, 20]}
+            tick={{ fill: '#22c55e', fontSize: 10 }}
+            axisLine={{ stroke: '#22c55e' }}
+            tickLine={{ stroke: '#22c55e' }}
+            label={{ value: 'km/h', angle: 0, position: 'insideTopRight', fill: '#22c55e', fontSize: 10, dy: -10 }}
+            width={35}
+          />
+
+          {/* Eje derecho 2: Humedad % (azul claro) */}
           <YAxis
             yAxisId="hum"
             orientation="right"
             domain={[0, 100]}
-            tick={{ fill: '#94a3b8', fontSize: 11 }}
-            tickFormatter={(v) => `${v}%`}
-            width={40}
+            ticks={[0, 20, 40, 60, 80, 100]}
+            tick={{ fill: '#38bdf8', fontSize: 10 }}
+            axisLine={{ stroke: '#38bdf8' }}
+            tickLine={{ stroke: '#38bdf8' }}
+            label={{ value: '%', angle: 0, position: 'insideTopRight', fill: '#38bdf8', fontSize: 10, dy: -10 }}
+            width={30}
           />
 
           <Tooltip
@@ -100,19 +143,19 @@ export function MultiVariableChart({ mode }: Props) {
             }}
           />
 
-          <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+          <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
 
-          {/* Barras de precipitación */}
+          {/* Barras de precipitación (azul) */}
           <Bar
-            yAxisId="temp"
+            yAxisId="rain"
             dataKey="rain"
             name="Precipitación"
-            fill="#60a5fa"
-            opacity={0.7}
+            fill="#3b82f6"
+            opacity={0.8}
             radius={[2, 2, 0, 0]}
           />
 
-          {/* Línea de temperatura */}
+          {/* Línea de temperatura (rojo) */}
           <Line
             yAxisId="temp"
             type="monotone"
@@ -124,31 +167,31 @@ export function MultiVariableChart({ mode }: Props) {
             connectNulls
           />
 
-          {/* Línea de presión */}
+          {/* Línea de presión (gris) */}
           <Line
-            yAxisId="temp"
+            yAxisId="press"
             type="monotone"
             dataKey="pressure"
-            name="Presión"
-            stroke="#f97316"
+            name="Presión atmosférica"
+            stroke="#9ca3af"
             strokeWidth={2}
             dot={false}
             connectNulls
           />
 
-          {/* Línea de viento */}
+          {/* Línea de viento (verde) */}
           <Line
-            yAxisId="temp"
+            yAxisId="wind"
             type="monotone"
             dataKey="wind"
-            name="Viento"
+            name="Velocidad del viento"
             stroke="#22c55e"
             strokeWidth={2}
             dot={false}
             connectNulls
           />
 
-          {/* Línea de humedad */}
+          {/* Línea de humedad (azul claro) */}
           <Line
             yAxisId="hum"
             type="monotone"
@@ -168,9 +211,9 @@ export function MultiVariableChart({ mode }: Props) {
 function getUnit(name: string, u: any): string {
   switch (name) {
     case 'Temperatura': return u.tempU
-    case 'Presión': return u.pressU
+    case 'Presión atmosférica': return u.pressU
     case 'Precipitación': return 'mm/h'
-    case 'Viento': return u.windU
+    case 'Velocidad del viento': return u.windU
     case 'Humedad': return '%'
     default: return ''
   }
