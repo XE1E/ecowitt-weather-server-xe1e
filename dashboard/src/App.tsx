@@ -16,12 +16,14 @@ import { fetchForecast, ForecastResult } from './forecast'
 
 const API_URL = '/api/current'
 const STATS_URL = '/api/stats/daily'
+const HISTORY_URL = '/api/history?start=-4h'
 const REFRESH_INTERVAL = 60000 // 60 seconds
 const FORECAST_INTERVAL = 30 * 60000 // 30 minutes
 
 function App() {
   const [data, setData] = useState<WeatherData | null>(null)
   const [stats, setStats] = useState<DailyStats | null>(null)
+  const [history, setHistory] = useState<any[]>([])
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +46,16 @@ function App() {
     try {
       const res = await fetch(STATS_URL)
       if (res.ok) setStats(await res.json())
+    } catch {
+      /* ignore */
+    }
+    // History for trend indicators
+    try {
+      const res = await fetch(HISTORY_URL)
+      if (res.ok) {
+        const json = await res.json()
+        setHistory(json.data || [])
+      }
     } catch {
       /* ignore */
     }
@@ -115,7 +127,7 @@ function App() {
 
           {/* Condiciones actuales + precipitación (mismo estilo que /pro) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
-            <CurrentConditions data={data} />
+            <CurrentConditions data={data} history={history} />
             <PrecipitationCard data={data} forecast={forecast} />
           </div>
 
@@ -123,7 +135,7 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-start">
             <WindFlipCard data={data} />
             <InteriorCard data={data} />
-            <ExtraSensorsCard data={data} />
+            <ExtraSensorsCard data={data} history={history} />
           </div>
 
           {/* Pronóstico + Sol y Luna (estilo /pro) */}
