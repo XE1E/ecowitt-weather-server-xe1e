@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Row {
   _time: string
@@ -44,6 +45,7 @@ function shortDay(date: string): string {
 
 export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () => void }) {
   const u = useUnits()
+  const isMobile = useIsMobile()
   const [cur, setCur] = useState(date)
   const [rows, setRows] = useState<Row[] | null>(null)
 
@@ -104,7 +106,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
       <p className={`text-2xl font-bold ${cls}`}>{value}</p>
     </div>
   )
-  const minW = data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px'
+  const minW = isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px') : undefined
 
   const LineCard = ({ title, unit, series }: { title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[] }) => (
     <div className="card">

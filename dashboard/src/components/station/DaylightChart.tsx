@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts'
 import { Sun } from 'lucide-react'
 import { LOCATION } from '../../config'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -67,6 +68,7 @@ function formatShortDate(dayIndex: number): string {
 
 export function DaylightChart() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  const isMobile = useIsMobile()
 
   const { data, todayIndex } = useMemo(() => {
     const year = new Date().getFullYear()
@@ -117,7 +119,7 @@ export function DaylightChart() {
     <div className="card">
       <p className="card-title flex items-center gap-2"><Sun className="w-4 h-4 text-amber-400" /> Duración día</p>
       <div className="h-80 md:h-64 overflow-x-auto">
-        <div style={{ minWidth: '480px', height: '100%' }}>
+        <div style={{ minWidth: isMobile ? '480px' : undefined, height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
             data={data}

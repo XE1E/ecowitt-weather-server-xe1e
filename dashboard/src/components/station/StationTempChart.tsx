@@ -4,6 +4,7 @@ import {
 import { HistoryData } from '../../types'
 import { ForecastResult } from '../../forecast'
 import { useUnits } from '../../units'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Props {
   history: HistoryData[]
@@ -40,7 +41,8 @@ export function StationTempChart({ history, forecast }: Props) {
     new Date(t).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
   const nowMs = Date.now()
 
-  const minW = points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px'
+  const isMobile = useIsMobile()
+  const minW = isMobile ? (points.length > 30 ? `${Math.max(500, points.length * 8)}px` : '500px') : undefined
 
   return (
     <div className="card">

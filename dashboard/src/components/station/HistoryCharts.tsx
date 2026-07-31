@@ -3,6 +3,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 export interface HistPoint {
   x: string
@@ -25,6 +26,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
   period?: 'day' | 'month' | 'year'
 }) {
   const u = useUnits()
+  const isMobile = useIsMobile()
   const tip = {
     contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
     labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
@@ -34,8 +36,8 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
   const xax = <XAxis dataKey="x" tick={{ fill: '#94a3b8', fontSize: 11 }} minTickGap={12} />
 
-  // Ancho mínimo para scroll horizontal según período (móvil)
-  const minW = period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px'
+  // Ancho mínimo para scroll horizontal según período (solo móvil)
+  const minW = isMobile ? (period === 'day' ? '500px' : period === 'month' ? '1000px' : '1500px') : undefined
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

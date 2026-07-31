@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Maximize2, X } from 'lucide-react'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 interface Cloud { cover: string; base: number | null }
 interface Metar {
@@ -59,6 +60,7 @@ function windows(x: number, top: number, w: number, h: number, fill: string, nig
 export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const [now, setNow] = useState(() => new Date())
   const [expanded, setExpanded] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -347,7 +349,7 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
     <>
       {/* Vista normal con scroll horizontal en móvil */}
       <div className="overflow-x-auto md:overflow-visible">
-        <div style={{ minWidth: '500px' }}>
+        <div style={{ minWidth: isMobile ? '500px' : undefined }}>
           {profileContent(false)}
         </div>
       </div>

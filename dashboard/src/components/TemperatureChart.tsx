@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'recharts'
 import { HistoryData } from '../types'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const REFRESH_INTERVAL = 60000 // 60 seconds, matches the rest of the dashboard
 
@@ -39,6 +40,7 @@ export function TemperatureChart() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('24h')
   const [metric, setMetric] = useState<MetricKey>('temp')
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const start = PERIODS.find((p) => p.key === period)!.start
@@ -111,7 +113,7 @@ export function TemperatureChart() {
         </div>
       ) : (
         <div className="h-80 md:h-64 overflow-x-auto">
-          <div style={{ minWidth: data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px', height: '100%' }}>
+          <div style={{ minWidth: isMobile ? (data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px') : undefined, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
