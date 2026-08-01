@@ -575,11 +575,11 @@ export function KioskPage() {
           <div className="cell reloj" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HORA</div>
+                <div style={{ color: 'var(--lbl)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HORA</div>
                 <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>FECHA</div>
+                <div style={{ color: 'var(--lbl)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>FECHA</div>
                 <div style={{ marginTop: 4, lineHeight: 1.02 }}>
                   <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
                   <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
