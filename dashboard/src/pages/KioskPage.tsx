@@ -306,7 +306,13 @@ export function KioskPage() {
         }}>
           {/* Fila 1 */}
           <div className="cell col main">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXTERIOR</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXTERIOR</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="5" fill="#fbbf24" />
+                <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="24" height="48" viewBox="0 0 24 48" fill="none">
                 <rect x="8" y="8" width="8" height="32" rx="4" stroke="#f97316" strokeWidth="2" fill="none" />
@@ -327,7 +333,12 @@ export function KioskPage() {
           </div>
 
           <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12.55a11 11 0 0114 0M8.5 16.05a6 6 0 017 0M12 20h.01" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>Estación Clima XE1E</span>
+            </div>
             <div style={{ color: 'var(--v)', fontSize: 16, fontWeight: 700, letterSpacing: 1, marginTop: 6 }}>VIENTO</div>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
@@ -484,7 +495,13 @@ export function KioskPage() {
 
           {/* Fila 4 */}
           <div className="cell col main">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12l9-9 9 9" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
                 {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -544,7 +561,10 @@ export function KioskPage() {
 
           {/* Fila 5 */}
           <div className="cell col jardin">
-            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
+              <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
+            </div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
