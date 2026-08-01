@@ -40,8 +40,8 @@ export function HomePage() {
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
-      {/* Dos columnas principales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      {/* Tres columnas principales */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Columna izquierda */}
         <div className="space-y-4">
           <CurrentConditions data={data} history={history} />
@@ -49,6 +49,15 @@ export function HomePage() {
           <ForecastCard forecast={forecast} />
           <ForecastCompareCard forecast={forecast} />
           <LocalForecastCard lf={localForecast} />
+        </div>
+        {/* Columna central */}
+        <div className="space-y-4">
+          <PressureCard data={data} stats={stats} history={history} />
+          <UvSolarCard data={data} />
+          <InteriorCard data={data} />
+          <ExtraSensorsCard data={data} history={history} />
+          <RemoteStationCard />
+          <SkyEventsCard />
         </div>
         {/* Columna derecha */}
         <div className="space-y-4">
@@ -62,20 +71,8 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Fila de sensores y extras */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <UvSolarCard data={data} />
-        <InteriorCard data={data} />
-        <ExtraSensorsCard data={data} history={history} />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <RemoteStationCard />
-        <PressureCard data={data} stats={stats} history={history} />
-      </div>
-
-      {/* Próximos eventos y gráficas */}
-      <div className="space-y-4">
-        <SkyEventsCard />
+      {/* Gráficas al final */}
+      <div className="mt-4 space-y-4">
         <StationTempChart history={history} forecast={forecast} />
         <RadarCard />
       </div>
