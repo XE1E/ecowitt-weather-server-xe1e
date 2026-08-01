@@ -88,8 +88,8 @@ function Tile({ label, value, unit, sub, color }: {
 }
 
 // Tarjeta compacta para sensores (interior / canal / remoto).
-function SensorCard({ title, temp, hum, extra, warn }: {
-  title: string; temp: string; hum?: string; extra?: string; warn?: boolean
+function SensorCard({ title, temp, hum, pres, extra, warn }: {
+  title: string; temp: string; hum?: string; pres?: string; extra?: string; warn?: boolean
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 flex flex-col justify-center">
@@ -97,9 +97,11 @@ function SensorCard({ title, temp, hum, extra, warn }: {
         <p className="text-[17px] text-slate-300 font-semibold">{title}</p>
         {warn && <span className="text-[13px] text-amber-400">⚠ batería</span>}
       </div>
-      <p className="text-[44px] leading-none font-bold mt-2 text-orange-200">{temp}</p>
-      <p className="text-[16px] text-slate-400 mt-2">
-        {hum ? <>💧 {hum}</> : null}{extra ? <span className="ml-3">{extra}</span> : null}
+      <p className="text-[44px] leading-none font-bold mt-2" style={{ color: '#f97316' }}>{temp}</p>
+      <p className="text-[16px] mt-2">
+        {hum && <span style={{ color: '#3b82f6' }}>💧 {hum}</span>}
+        {pres && <span style={{ color: '#a78bfa', marginLeft: hum ? 12 : 0 }}>{pres}</span>}
+        {extra && <span className="text-slate-400 ml-3">{extra}</span>}
       </p>
     </div>
   )
@@ -620,11 +622,11 @@ export function KioskPage() {
           <>
             <div className="flex-1 flex gap-6 min-h-0">
               {bigCard('Temperatura', L.temperature != null ? `${u.temp(L.temperature)}` : '--', u.tempU,
-                `mín ${mn.temperature != null ? u.temp(mn.temperature) : '--'}° · máx ${mx.temperature != null ? u.temp(mx.temperature) : '--'}°`, '#fdba74')}
+                `mín ${mn.temperature != null ? u.temp(mn.temperature) : '--'}° · máx ${mx.temperature != null ? u.temp(mx.temperature) : '--'}°`, '#f97316')}
               {bigCard('Humedad', L.humidity != null ? `${L.humidity.toFixed(0)}` : '--', '%',
-                `mín ${mn.humidity?.toFixed(0) ?? '--'}% · máx ${mx.humidity?.toFixed(0) ?? '--'}%`, '#67e8f9')}
+                `mín ${mn.humidity?.toFixed(0) ?? '--'}% · máx ${mx.humidity?.toFixed(0) ?? '--'}%`, '#3b82f6')}
               {bigCard('Presión', L.pressure != null ? `${u.press(L.pressure)}` : '--', u.pressU,
-                `mín ${mn.pressure != null ? u.press(mn.pressure) : '--'} · máx ${mx.pressure != null ? u.press(mx.pressure) : '--'}`, '#c4b5fd')}
+                `mín ${mn.pressure != null ? u.press(mn.pressure) : '--'} · máx ${mx.pressure != null ? u.press(mx.pressure) : '--'}`, '#a78bfa')}
             </div>
             <p className="text-[13px] text-slate-500 mt-2 text-center">
               Actualizado {L.received_at ? relativeTime(L.received_at) : '—'} · mín/máx de hoy
@@ -669,7 +671,7 @@ export function KioskPage() {
             <SensorCard title="📡 Remota (GW1100)"
               temp={remote!.temperature_indoor != null ? `${u.temp(remote!.temperature_indoor)}${u.tempU}` : '--'}
               hum={remote!.humidity_indoor != null ? `${remote!.humidity_indoor.toFixed(0)}%` : undefined}
-              extra={remote!.pressure_relative != null ? `${u.press(remote!.pressure_relative)} ${u.pressU}` : undefined} />
+              pres={remote!.pressure_relative != null ? `${u.press(remote!.pressure_relative)} ${u.pressU}` : undefined} />
           )}
           {!hasIndoor && channels.length === 0 && !hasRemote && (
             <div className="col-span-3 row-span-2 flex items-center justify-center text-slate-500 text-[20px]">
@@ -757,7 +759,7 @@ export function KioskPage() {
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center" style={{ width: 420 }}>
           <WeatherIcon name={cond.icon} size={120} />
           <div className="flex items-start mt-1">
-            <span className="text-[110px] leading-none font-bold text-orange-200">
+            <span className="text-[110px] leading-none font-bold" style={{ color: '#f97316' }}>
               {data?.temperature_outdoor != null ? u.temp(data.temperature_outdoor) : '--'}
             </span>
             <span className="text-[36px] font-semibold text-slate-400 mt-3">{u.tempU}</span>
@@ -770,10 +772,10 @@ export function KioskPage() {
         </div>
 
         <div className="grid grid-cols-3 grid-rows-2 gap-4 flex-1">
-          <Tile label="Humedad" value={`${(data?.humidity_outdoor ?? 0).toFixed(0)}`} unit="%" color="#67e8f9" />
-          <Tile label="Presión" value={u.press(data?.pressure_relative ?? 0, 0)} unit={u.pressU} color="#c4b5fd" />
-          <Tile label="Viento" value={u.wind(data?.wind_speed ?? 0, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#6ee7b7" />
-          <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily ?? 0)} unit={u.rainU} color="#93c5fd" />
+          <Tile label="Humedad" value={`${(data?.humidity_outdoor ?? 0).toFixed(0)}`} unit="%" color="#3b82f6" />
+          <Tile label="Presión" value={u.press(data?.pressure_relative ?? 0, 0)} unit={u.pressU} color="#a78bfa" />
+          <Tile label="Viento" value={u.wind(data?.wind_speed ?? 0, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#22c55e" />
+          <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily ?? 0)} unit={u.rainU} color="#38bdf8" />
           <Tile label="Índice UV" value={`${uv}`} color={uv >= 8 ? '#fca5a5' : uv >= 6 ? '#fdba74' : '#fde047'} />
           <Tile label="IMECA" value={imeca?.available && imeca.imeca != null ? `${imeca.imeca}` : '--'} sub={imeca?.category} color={imeca?.color || '#e2e8f0'} />
         </div>
