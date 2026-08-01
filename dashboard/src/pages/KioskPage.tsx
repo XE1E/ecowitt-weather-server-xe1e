@@ -333,15 +333,15 @@ export function KioskPage() {
           </div>
 
           <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-              <span style={{ color: 'var(--v)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+              <span style={{ color: 'var(--v)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12.55a11 11 0 0114 0M8.5 16.05a6 6 0 017 0M12 20h.01" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
-            <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
+            <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -12 }}>
               <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
                 {/* Óvalo exterior más visible */}
                 <ellipse cx="50" cy="40" rx="49" ry="38" stroke="#555" strokeWidth="1.5" fill="none" />
