@@ -285,7 +285,7 @@ export function KioskPage() {
     const css = `
       @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
       .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
-        --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#c084fc;--brd-clima:#60a5fa;--brd-solar:#fcd34d;--brd-reloj:#6b7280;
+        --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#6b7280;--brd-clima:#ffffff;--brd-solar:#ffffff;--brd-reloj:#ff4128;
         font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
       .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
       .cns .lbl .ac{color:var(--t)} .cns .lbl .acg{color:var(--v)}
@@ -318,7 +318,7 @@ export function KioskPage() {
         style={{ width: 1024, height: 600, background: '#000', overflow: 'hidden' }}>
         <style>{css}</style>
         <div style={{
-          display: 'grid', width: 1024, height: 600, gap: 0,
+          display: 'grid', width: 1024, height: 600, gap: 3,
           gridTemplateColumns: '1fr 1fr 1fr',
           gridTemplateRows: '1.32fr 1.14fr 1.18fr 1.0fr 0.92fr',
           background: '#000',
@@ -427,7 +427,7 @@ export function KioskPage() {
                 {humTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
               </svg>
             </div>
-            <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32 }}>
+            <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32, marginTop: -12 }}>
               {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--h)' }}>%</span>
             </div>
           </div>
@@ -562,7 +562,7 @@ export function KioskPage() {
           {/* Fila 5 */}
           <div className="cell col jardin">
             <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
-            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+            <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
