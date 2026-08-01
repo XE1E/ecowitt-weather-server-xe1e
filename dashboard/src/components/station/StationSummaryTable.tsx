@@ -69,6 +69,16 @@ interface RowData {
   avg?: number | null
   trend?: TrendDir
   extra?: React.ReactNode
+  color?: string
+}
+
+const COLORS = {
+  temp: '#f97316',
+  hum: '#3b82f6',
+  press: '#a78bfa',
+  wind: '#22c55e',
+  rain: '#38bdf8',
+  solar: '#fcd34d',
 }
 
 export function StationSummaryTable({ data, stats, label, indoorPrimary = false }: Props) {
@@ -93,6 +103,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.temperature_outdoor?.max_time,
           avg: s?.temperature_outdoor?.avg,
           trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Humedad',
@@ -104,6 +115,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.humidity_outdoor?.max_time,
           avg: s?.humidity_outdoor?.avg,
           trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+          color: COLORS.hum,
         },
         {
           label: 'Punto de rocío',
@@ -115,6 +127,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.dew_point?.max_time,
           avg: s?.dew_point?.avg,
           trend: getTrend(data.dew_point, s?.dew_point?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Presión atmosférica',
@@ -126,6 +139,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.pressure_relative?.max_time,
           avg: s?.pressure_relative?.avg,
           trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+          color: COLORS.press,
         },
         {
           label: 'Temperatura Interior',
@@ -137,6 +151,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.temperature_indoor?.max_time,
           avg: s?.temperature_indoor?.avg,
           trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Humedad Interior',
@@ -148,6 +163,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.humidity_indoor?.max_time,
           avg: s?.humidity_indoor?.avg,
           trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+          color: COLORS.hum,
         }
       )
     } else {
@@ -163,6 +179,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.temperature_outdoor?.max_time,
           avg: s?.temperature_outdoor?.avg,
           trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Humedad',
@@ -174,6 +191,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.humidity_outdoor?.max_time,
           avg: s?.humidity_outdoor?.avg,
           trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+          color: COLORS.hum,
         },
         {
           label: 'Punto de rocío',
@@ -185,11 +203,13 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.dew_point?.max_time,
           avg: s?.dew_point?.avg,
           trend: getTrend(data.dew_point, s?.dew_point?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Sensación térmica',
           unit: '°C',
           current: data.feels_like,
+          color: COLORS.temp,
         },
         {
           label: 'Presión atmosférica',
@@ -201,6 +221,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.pressure_relative?.max_time,
           avg: s?.pressure_relative?.avg,
           trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+          color: COLORS.press,
         },
         {
           label: 'Velocidad del viento',
@@ -211,6 +232,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           max: s?.wind_speed?.max,
           maxTime: s?.wind_speed?.max_time,
           avg: s?.wind_speed?.avg,
+          color: COLORS.wind,
           extra: data.wind_direction !== undefined ? (
             <div className="flex items-center justify-center gap-2 text-sm text-slate-300">
               <WindArrow deg={data.wind_direction} />
@@ -228,6 +250,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           max: s?.wind_gust?.max,
           maxTime: s?.wind_gust?.max_time,
           avg: s?.wind_gust?.avg,
+          color: COLORS.wind,
         },
         {
           label: 'Tasa de lluvia',
@@ -238,11 +261,13 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           max: s?.rain_rate?.max,
           maxTime: s?.rain_rate?.max_time,
           avg: s?.rain_rate?.avg,
+          color: COLORS.rain,
         },
         {
           label: 'Precipitación',
           unit: 'mm',
           current: data.rain_daily,
+          color: COLORS.rain,
           extra: (
             <div className="text-xs text-slate-400 space-y-0.5">
               <div>{data.rain_hourly?.toFixed(1) ?? '—'} mm / 1h</div>
@@ -260,6 +285,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           max: s?.solar_radiation?.max,
           maxTime: s?.solar_radiation?.max_time,
           avg: s?.solar_radiation?.avg,
+          color: COLORS.solar,
         },
         {
           label: 'Índice UV',
@@ -270,6 +296,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           max: s?.uv_index?.max,
           maxTime: s?.uv_index?.max_time,
           avg: s?.uv_index?.avg,
+          color: COLORS.solar,
         },
         {
           label: 'Temperatura Interior',
@@ -281,6 +308,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.temperature_indoor?.max_time,
           avg: s?.temperature_indoor?.avg,
           trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Humedad Interior',
@@ -292,6 +320,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.humidity_indoor?.max_time,
           avg: s?.humidity_indoor?.avg,
           trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+          color: COLORS.hum,
         },
         {
           label: 'Temperatura WN31 Jardín',
@@ -303,6 +332,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.temperature_ch1?.max_time,
           avg: s?.temperature_ch1?.avg,
           trend: getTrend(data.temperature_ch1, s?.temperature_ch1?.avg),
+          color: COLORS.temp,
         },
         {
           label: 'Humedad WN31 Jardín',
@@ -314,6 +344,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           maxTime: s?.humidity_ch1?.max_time,
           avg: s?.humidity_ch1?.avg,
           trend: getTrend(data.humidity_ch1, s?.humidity_ch1?.avg),
+          color: COLORS.hum,
         }
       )
     }
@@ -359,7 +390,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
                   {row.unit && <span className="text-slate-500 text-xs ml-1">({row.unit})</span>}
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <span className="text-white font-semibold text-base">{fmt(row.current)}</span>
+                  <span className="font-semibold text-base" style={{ color: row.color || '#ffffff' }}>{fmt(row.current)}</span>
                   {row.extra && <div className="mt-1">{row.extra}</div>}
                 </td>
                 <td className="px-4 py-2.5 text-center">
