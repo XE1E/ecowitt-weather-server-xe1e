@@ -87,25 +87,6 @@ function Tile({ label, value, unit, sub, color }: {
   )
 }
 
-// Tarjeta compacta para sensores (interior / canal / remoto).
-function SensorCard({ title, temp, hum, pres, extra, warn }: {
-  title: string; temp: string; hum?: string; pres?: string; extra?: string; warn?: boolean
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 flex flex-col justify-center">
-      <div className="flex items-center justify-between">
-        <p className="text-[17px] text-slate-300 font-semibold">{title}</p>
-        {warn && <span className="text-[13px] text-amber-400">⚠ batería</span>}
-      </div>
-      <p className="text-[44px] leading-none font-bold mt-2" style={{ color: '#f97316' }}>{temp}</p>
-      <p className="text-[16px] mt-2">
-        {hum && <span style={{ color: '#3b82f6' }}>💧 {hum}</span>}
-        {pres && <span style={{ color: '#a78bfa', marginLeft: hum ? 12 : 0 }}>{pres}</span>}
-        {extra && <span className="text-slate-400 ml-3">{extra}</span>}
-      </p>
-    </div>
-  )
-}
 
 /**
  * Página "kiosco" 1024×600 para el display ESP32-S3. El servidor la renderiza
@@ -644,47 +625,84 @@ export function KioskPage() {
     )
   }
 
-  // ── Página 3: sensores interior / adicionales / remoto ──
+  // ── Página 3: sensores interior / jardín / remoto ──
   if (page === '3') {
-    const channels = Array.from({ length: 8 }, (_, i) => i + 1)
-      .map((ch) => ({
-        ch,
-        temp: (data as any)?.[`temperature_ch${ch}`] as number | undefined,
-        hum: (data as any)?.[`humidity_ch${ch}`] as number | undefined,
-        battLow: (data as any)?.[`battery_ch${ch}`] === false,
-      }))
-      .filter((c) => c.temp != null || c.hum != null)
+    const chTemp = data?.temperature_ch1
+    const chHum = data?.humidity_ch1
 
-    const hasIndoor = data?.temperature_indoor != null || data?.humidity_indoor != null
-    const hasRemote = remote && (remote.temperature_indoor != null || remote.humidity_indoor != null)
+    const TempIcon = () => (
+      <svg width="36" height="56" viewBox="0 0 24 48" fill="none">
+        <rect x="8" y="8" width="8" height="32" rx="4" stroke="#f97316" strokeWidth="2" fill="none" />
+        <circle cx="12" cy="36" r="6" fill="#f97316" />
+        <line x1="12" y1="14" x2="12" y2="28" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    )
+    const HumIcon = () => (
+      <svg width="32" height="44" viewBox="0 0 24 32" fill="none">
+        <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#3b82f6" strokeWidth="2" fill="#3b82f6" fillOpacity="0.3" />
+      </svg>
+    )
+    const PressIcon = () => (
+      <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="12" stroke="#a78bfa" strokeWidth="2" fill="none" />
+        <line x1="14" y1="14" x2="20" y2="8" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="14" cy="14" r="3" fill="#a78bfa" />
+      </svg>
+    )
+
+    const BigSensorCard = ({ title, icon, values }: {
+      title: string
+      icon: string
+      values: { label: string; value: string; color: string; iconEl?: React.ReactNode }[]
+    }) => (
+      <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center p-6">
+        <p className="text-[28px] text-slate-200 font-semibold mb-4">{icon} {title}</p>
+        <div className="flex flex-col gap-6 items-center">
+          {values.map((v, i) => (
+            <div key={i} className="flex items-center gap-4">
+              {v.iconEl}
+              <div className="text-center">
+                <p className="text-[72px] leading-none font-bold" style={{ color: v.color }}>{v.value}</p>
+                <p className="text-[18px] text-slate-400 mt-1">{v.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
 
     return shell(
-      <div className="h-full px-8 pt-1 pb-3 flex flex-col">
-        <p className="text-[17px] text-slate-300 mb-2">🏠 Sensores · interior, adicionales y remoto</p>
-        <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-4 min-h-0">
-          {hasIndoor && (
-            <SensorCard title="🛋 Interior (consola)"
-              temp={data?.temperature_indoor != null ? `${u.temp(data.temperature_indoor)}${u.tempU}` : '--'}
-              hum={data?.humidity_indoor != null ? `${data.humidity_indoor.toFixed(0)}%` : undefined} />
-          )}
-          {channels.map((c) => (
-            <SensorCard key={c.ch}
-              title={`Canal ${c.ch}`}
-              temp={c.temp != null ? `${u.temp(c.temp)}${u.tempU}` : '--'}
-              hum={c.hum != null ? `${c.hum.toFixed(0)}%` : undefined}
-              warn={c.battLow} />
-          ))}
-          {hasRemote && (
-            <SensorCard title="📡 Remota (GW1100)"
-              temp={remote!.temperature_indoor != null ? `${u.temp(remote!.temperature_indoor)}${u.tempU}` : '--'}
-              hum={remote!.humidity_indoor != null ? `${remote!.humidity_indoor.toFixed(0)}%` : undefined}
-              pres={remote!.pressure_relative != null ? `${u.press(remote!.pressure_relative)} ${u.pressU}` : undefined} />
-          )}
-          {!hasIndoor && channels.length === 0 && !hasRemote && (
-            <div className="col-span-3 row-span-2 flex items-center justify-center text-slate-500 text-[20px]">
-              Sin sensores adicionales conectados
-            </div>
-          )}
+      <div className="h-full px-6 pt-1 pb-3 flex flex-col">
+        <p className="text-[17px] text-slate-300 mb-2">🏠 Sensores · interior, jardín y remoto</p>
+        <div className="flex-1 flex gap-4 min-h-0">
+          {/* Interior */}
+          <BigSensorCard
+            title="Interior"
+            icon="🛋"
+            values={[
+              { label: 'Temperatura', value: data?.temperature_indoor != null ? `${u.temp(data.temperature_indoor)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
+              { label: 'Humedad', value: data?.humidity_indoor != null ? `${data.humidity_indoor.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
+            ]}
+          />
+          {/* Jardín (CH1) */}
+          <BigSensorCard
+            title="Jardín"
+            icon="🌿"
+            values={[
+              { label: 'Temperatura', value: chTemp != null ? `${u.temp(chTemp)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
+              { label: 'Humedad', value: chHum != null ? `${chHum.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
+            ]}
+          />
+          {/* Remota */}
+          <BigSensorCard
+            title="Remota GW1100"
+            icon="📡"
+            values={[
+              { label: 'Temperatura', value: remote?.temperature_indoor != null ? `${u.temp(remote.temperature_indoor)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
+              { label: 'Humedad', value: remote?.humidity_indoor != null ? `${remote.humidity_indoor.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
+              { label: 'Presión', value: remote?.pressure_relative != null ? `${u.press(remote.pressure_relative)}` : '--', color: '#a78bfa', iconEl: <PressIcon /> },
+            ]}
+          />
         </div>
       </div>
     )
