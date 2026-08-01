@@ -546,7 +546,7 @@ export function KioskPage() {
                 <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                   {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
                 </span>
-                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: 12, right: -2 }}>
                   {remoteTempTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
                   {remoteTempTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
                   {remoteTempTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
@@ -556,7 +556,7 @@ export function KioskPage() {
                 <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
                   {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
                 </span>
-                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: -2, right: -2 }}>
+                <svg width="14" height="18" viewBox="0 0 20 24" fill="none" style={{ position: 'absolute', top: 12, right: -2 }}>
                   {remoteHumTrend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
                   {remoteHumTrend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
                   {remoteHumTrend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
