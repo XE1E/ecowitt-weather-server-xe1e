@@ -285,6 +285,7 @@ export function KioskPage() {
     const css = `
       @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
       .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
+        --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#c084fc;--brd-clima:#60a5fa;--brd-solar:#fcd34d;--brd-reloj:#6b7280;
         font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
       .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
       .cns .lbl .ac{color:var(--t)} .cns .lbl .acg{color:var(--v)}
@@ -301,23 +302,29 @@ export function KioskPage() {
       .cns .u{font-weight:700;vertical-align:top;font-family:'Roboto Condensed','Arial Narrow',system-ui,sans-serif} .cns .ured{color:var(--red)}
       .cns .dec{font-size:0.6em}          /* decimales en tamaño más chico */
       .cns .rt{text-align:right}          /* valor pegado al borde derecho */
-      .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0}
+      .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
+      .cns .cell.main{border-color:var(--brd-main)}
+      .cns .cell.jardin{border-color:var(--brd-jardin)}
+      .cns .cell.remota{border-color:var(--brd-remota)}
+      .cns .cell.clima{border-color:var(--brd-clima)}
+      .cns .cell.solar{border-color:var(--brd-solar)}
+      .cns .cell.reloj{border-color:var(--brd-reloj)}
       .cns .col{display:flex;flex-direction:column}
       .cns .ctr{margin-top:auto;margin-bottom:auto}
       .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
     `
     return (
       <div data-kiosk-ready={ready ? 'true' : 'false'} className="cns"
-        style={{ width: 1024, height: 600, background: '#242424', overflow: 'hidden' }}>
+        style={{ width: 1024, height: 600, background: '#000', overflow: 'hidden' }}>
         <style>{css}</style>
         <div style={{
-          display: 'grid', width: 1024, height: 600, gap: 4,
+          display: 'grid', width: 1024, height: 600, gap: 0,
           gridTemplateColumns: '1fr 1fr 1fr',
           gridTemplateRows: '1.32fr 1.14fr 1.18fr 1.0fr 0.92fr',
-          background: '#3a3a3a',
+          background: '#000',
         }}>
           {/* Fila 1 */}
-          <div className="cell col">
+          <div className="cell col main">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="24" height="48" viewBox="0 0 24 48" fill="none">
@@ -338,8 +345,8 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</div>
+          <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</div>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -8 }}>
               <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
@@ -389,7 +396,7 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell col">
+          <div className="cell col main">
             <div className="bt">
               <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</span>
               <span style={{ color: 'var(--v)', fontSize: 16, fontWeight: 700 }}>{cardinal(dir)}</span>
@@ -406,7 +413,7 @@ export function KioskPage() {
           </div>
 
           {/* Fila 2 */}
-          <div className="cell col">
+          <div className="cell col main">
             <div style={{ color: 'var(--h)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
@@ -427,25 +434,25 @@ export function KioskPage() {
 
           {/* ROCÍO/SENS en fila 2 columna 3 */}
 
-          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
+                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
-                <div className="gw" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--w)' }}>{u.tempU}</span>
+                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Fila 3 */}
-          <div className="cell col">
+          <div className="cell col main">
             <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -466,12 +473,12 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+          <div className="cell clima" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
             <div style={{ marginTop: -12 }}><WeatherIcon name={cond.icon} size={120} className="weather-main-icon" /></div>
           </div>
 
-          <div className="cell">
+          <div className="cell main">
             <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -493,7 +500,7 @@ export function KioskPage() {
           </div>
 
           {/* Fila 4 */}
-          <div className="cell col">
+          <div className="cell col main">
             <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INT</div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
@@ -505,10 +512,10 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell solar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
+                <div style={{ color: '#f59e0b', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
                 <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
                   {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 12, color: 'var(--w)' }}> W/m²</span>
                 </div>
@@ -526,8 +533,8 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell col">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--t)' }}>GW1100</span></div>
+          <div className="cell col remota">
+            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40 }}>
               <span style={{ position: 'relative', paddingRight: 16 }}>
                 <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
@@ -553,8 +560,8 @@ export function KioskPage() {
           </div>
 
           {/* Fila 5 */}
-          <div className="cell col">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
+          <div className="cell col jardin">
+            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -565,23 +572,23 @@ export function KioskPage() {
             </div>
           </div>
 
-          <div className="cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell reloj" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HORA</div>
-                <div className="gg seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
+                <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: 4 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>FECHA</div>
                 <div style={{ marginTop: 4, lineHeight: 1.02 }}>
-                  <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
-                  <div className="gg" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
+                  <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
+                  <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="cell col">
+          <div className="cell col remota">
             <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--p)' }}>GW1100</span></div>
             <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
               <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
