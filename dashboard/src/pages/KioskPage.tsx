@@ -390,10 +390,7 @@ export function KioskPage() {
           </div>
 
           <div className="cell col main">
-            <div className="bt">
-              <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</span>
-              <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
-            </div>
+            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
                 <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" />
@@ -402,6 +399,9 @@ export function KioskPage() {
             </div>
             <div className="big gv ctr rt" style={{ fontSize: 104, marginTop: -10 }}>
               {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 26, color: 'var(--v)' }}> {u.windU}</span>
+            </div>
+            <div style={{ position: 'absolute', bottom: 8, left: 12 }}>
+              <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
             </div>
           </div>
 
