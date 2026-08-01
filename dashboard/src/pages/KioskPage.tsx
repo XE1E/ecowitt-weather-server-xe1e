@@ -400,7 +400,7 @@ export function KioskPage() {
                 <path d="M2 15 H25 a4.5 4.5 0 1 1 -4.5 4.5" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" />
               </svg>
             </div>
-            <div className="big gv ctr rt" style={{ fontSize: 104 }}>
+            <div className="big gv ctr rt" style={{ fontSize: 104, marginTop: -10 }}>
               {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 26, color: 'var(--v)' }}> {u.windU}</span>
             </div>
           </div>
