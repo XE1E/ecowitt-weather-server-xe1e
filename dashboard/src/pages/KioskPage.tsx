@@ -336,7 +336,7 @@ export function KioskPage() {
             <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
               <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12.55a11 11 0 0114 0M8.5 16.05a6 6 0 017 0M12 20h.01" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
@@ -375,13 +375,13 @@ export function KioskPage() {
             {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-evenly', gap: 6, paddingBottom: 2 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--v)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROMEDIO</div>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROMEDIO</div>
                 <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
                   {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--v)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
                 <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
                   {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
                 </div>
@@ -496,7 +496,7 @@ export function KioskPage() {
           {/* Fila 4 */}
           <div className="cell col main">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
+              <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M3 12l9-9 9 9" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
