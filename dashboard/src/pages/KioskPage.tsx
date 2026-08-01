@@ -413,22 +413,26 @@ export function KioskPage() {
             </div>
           </div>
 
-          {/* ROCÍO/SENS en fila 2 columna 3 */}
+          {/* LLUVIA en fila 2 columna 3 */}
 
-          <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
-                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
-                </div>
-              </div>
+          <div className="cell main">
+            <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
+            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <path d="M8 8 L8 18" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                <path d="M14 4 L14 14" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                <path d="M20 10 L20 20" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                <path d="M11 16 L11 24" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                <path d="M17 18 L17 26" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
+              <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>{u.rainU}</span>
+              </span>
+              <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>/h</span>
+              </span>
             </div>
           </div>
 
@@ -459,24 +463,21 @@ export function KioskPage() {
             <div style={{ marginTop: -12 }}><WeatherIcon name={cond.icon} size={120} className="weather-main-icon" /></div>
           </div>
 
-          <div className="cell main">
-            <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
-            <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <path d="M8 8 L8 18" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                <path d="M14 4 L14 14" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                <path d="M20 10 L20 20" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                <path d="M11 16 L11 24" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                <path d="M17 18 L17 26" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
-              <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>{u.rainU}</span>
-              </span>
-              <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>/h</span>
-              </span>
+          {/* ROCÍO/SENS en fila 3 columna 3 */}
+          <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
+                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENS</div>
+                <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
+                  {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+                </div>
+              </div>
             </div>
           </div>
 
