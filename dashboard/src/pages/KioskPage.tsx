@@ -392,7 +392,7 @@ export function KioskPage() {
           <div className="cell col main">
             <div className="bt">
               <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</span>
-              <span style={{ color: 'var(--v)', fontSize: 16, fontWeight: 700 }}>{cardinal(dir)}</span>
+              <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
             </div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
@@ -534,7 +534,13 @@ export function KioskPage() {
           </div>
 
           <div className="cell col remota">
-            <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="5" fill="#fbbf24" />
+                <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
             <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40 }}>
               <span style={{ position: 'relative', paddingRight: 16 }}>
                 <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
