@@ -513,22 +513,22 @@ export function KioskPage() {
           </div>
 
           <div className="cell solar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#f59e0b', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-                <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
-                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 12, color: 'var(--w)' }}> W/m²</span>
+                <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2 }}>
+                  {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 14, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-                <div className="gw seg" style={{ fontSize: 32, fontWeight: 800, marginTop: 2 }}>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>UV</div>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2 }}>
                   {data?.uv_index ?? '--'}
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ color: 'var(--w)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
-                <MoonGlyph size={42} />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
+                <MoonGlyph size={50} />
               </div>
             </div>
           </div>
