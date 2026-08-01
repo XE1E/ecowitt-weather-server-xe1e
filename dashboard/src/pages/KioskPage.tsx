@@ -368,7 +368,7 @@ export function KioskPage() {
                   </g>
                 )}
               </svg>
-              <div className="gv" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
+              <div className="gv" style={{ position: 'absolute', top: '46%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
                 <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28, verticalAlign: 'super' }}>°</span>
               </div>
             </div>
