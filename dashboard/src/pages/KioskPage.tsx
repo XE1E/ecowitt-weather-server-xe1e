@@ -342,7 +342,7 @@ export function KioskPage() {
             </div>
             {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
-              <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0, transform: 'scale(1.2) translateY(-10%)', transformOrigin: 'center center' }}>
+              <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0, transform: 'scale(1.1) translateY(-10%)', transformOrigin: 'center center' }}>
                 {/* Óvalo exterior más visible */}
                 <ellipse cx="50" cy="40" rx="49" ry="38" stroke="#555" strokeWidth="1.5" fill="none" />
                 {/* Marcas de grados cada 30° */}
@@ -466,7 +466,7 @@ export function KioskPage() {
               </svg>
             </div>
             <div className="big gp ctr rt" style={{ fontSize: 56, paddingRight: 32 }}>
-              {u.press(data?.pressure_relative, 0)}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
+              {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
             </div>
           </div>
 
@@ -607,7 +607,7 @@ export function KioskPage() {
               </svg>
             </div>
             <div className="big gp ctr rt" style={{ fontSize: 46, paddingRight: 32 }}>
-              {remote?.pressure_relative != null ? u.press(remote.pressure_relative, 0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--p)' }}> {u.pressU}</span>
+              {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--p)' }}> {u.pressU}</span>
             </div>
           </div>
         </div>
