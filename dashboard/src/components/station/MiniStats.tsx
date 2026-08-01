@@ -71,6 +71,7 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         color="text-sky-300"
       />
       <Tile label="Sensación" value={`${u.temp(data.feels_like)}${u.tempU}`} />
+      <Tile label="Rocío" value={`${u.temp(data.dew_point)}${u.tempU}`} color="text-cyan-200" />
       <Tile
         label="Índice UV"
         value={`${uv}`}

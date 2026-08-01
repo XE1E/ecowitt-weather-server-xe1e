@@ -40,46 +40,42 @@ export function HomePage() {
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
 
-      {/* Fila principal: Temperatura | Presión | Viento + Alertas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 items-start">
-        <CurrentConditions data={data} history={history} />
-        <PressureCard data={data} stats={stats} history={history} />
+      {/* Dos columnas principales */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Columna izquierda */}
+        <div className="space-y-4">
+          <CurrentConditions data={data} history={history} />
+          <PrecipitationCard data={data} forecast={forecast} />
+          <ForecastCard forecast={forecast} />
+          <ForecastCompareCard forecast={forecast} />
+          <LocalForecastCard lf={localForecast} />
+        </div>
+        {/* Columna derecha */}
         <div className="space-y-4">
           <WindFlipCard data={data} />
           <AlertsPanel />
-        </div>
-      </div>
-
-      {/*
-        Resto en columnas independientes (apilado tipo masonry): cada columna
-        fluye por su cuenta, sin forzar misma altura por fila -> sin espacio
-        vacío. Las tarjetas que devuelven null simplemente no ocupan lugar.
-      */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="space-y-4">
-          <ForecastCard forecast={forecast} />
-          <ForecastCompareCard forecast={forecast} />
-          <PrecipitationCard data={data} forecast={forecast} />
-          <LocalForecastCard lf={localForecast} />
-        </div>
-        <div className="space-y-4">
-          <UvSolarCard data={data} />
-          <InteriorCard data={data} />
-          <ExtraSensorsCard data={data} history={history} />
-          <RemoteStationCard />
-          <SkyEventsCard />
-        </div>
-        <div className="space-y-4">
-          <SunMoonCard astro={forecast?.astro ?? null} />
+          <EarthquakesCard />
           <AirQualityCard />
           <ImecaMiniCard />
+          <SunMoonCard astro={forecast?.astro ?? null} />
           <MetarCard />
-          <EarthquakesCard />
         </div>
       </div>
 
-      {/* Gráficas al final */}
-      <div className="mt-4 space-y-4">
+      {/* Fila de sensores y extras */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <UvSolarCard data={data} />
+        <InteriorCard data={data} />
+        <ExtraSensorsCard data={data} history={history} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <RemoteStationCard />
+        <PressureCard data={data} stats={stats} history={history} />
+      </div>
+
+      {/* Próximos eventos y gráficas */}
+      <div className="space-y-4">
+        <SkyEventsCard />
         <StationTempChart history={history} forecast={forecast} />
         <RadarCard />
       </div>
