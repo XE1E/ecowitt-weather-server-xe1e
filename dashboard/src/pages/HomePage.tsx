@@ -63,11 +63,11 @@ export function HomePage() {
           <LocalForecastCard lf={localForecast} />
         </div>
         <div className="space-y-4">
-          <SkyEventsCard />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />
           <RemoteStationCard />
+          <SkyEventsCard />
         </div>
         <div className="space-y-4">
           <SunMoonCard astro={forecast?.astro ?? null} />
