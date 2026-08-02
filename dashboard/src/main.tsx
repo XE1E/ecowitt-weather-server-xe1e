@@ -19,6 +19,7 @@ import { TablesPage } from './pages/TablesPage'
 import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { EmbedWidget } from './pages/EmbedWidget'
 import { KioskPage } from './pages/KioskPage'
+import { ConsolePage } from './pages/ConsolePage'
 import {
   AdminLayout,
   AdminDashboard,
@@ -107,6 +108,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="remota" element={<RemoteStationPage />} />
                 <Route path="tablas" element={<TablesPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
+                <Route path="consola" element={<ConsolePage />} />
                 {/* Redirigir /pro/admin al nuevo panel */}
                 <Route path="admin" element={<Navigate to="/admin" replace />} />
               </Route>

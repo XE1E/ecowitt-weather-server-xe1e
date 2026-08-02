@@ -21,6 +21,7 @@ const NAV_ACTIVE = [
   { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
   { to: '/pro/remota', label: 'Estación remota', end: false },
   { to: '/pro/compartir', label: 'Widget', end: false },
+  { to: '/pro/consola', label: 'Consola', end: false },
 ]
 const NAV_SOON: string[] = []
 
