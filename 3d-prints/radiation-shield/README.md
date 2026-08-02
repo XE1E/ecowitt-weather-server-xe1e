@@ -1,5 +1,7 @@
 # Escudo de Radiación para Sensores Ecowitt
 
+<img src="shield.jpg" alt="Radiation Shield" width="300">
+
 Escudo de radiación (radiation shield) imprimible en 3D para proteger sensores de temperatura y humedad Ecowitt de la radiación solar directa.
 
 ## Compatibilidad
