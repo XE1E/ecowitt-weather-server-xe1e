@@ -46,6 +46,10 @@ Además: **panel de administración** (`/admin`, usuario/contraseña) con **wiza
 
 Frecuencia 915 MHz (América). El **WS2910 basta por sí solo**: envía por *push* con protocolo Ecowitt, sin necesidad de estar en la misma red que el servidor.
 
+### Impresión 3D
+
+**Escudo de radiación** para sensores WN31/WN32/WN35: protege el sensor de la radiación solar directa en instalaciones a la intemperie. Archivos STL en [`3d-prints/radiation-shield/`](3d-prints/radiation-shield/) y en [Printables](https://www.printables.com/model/1616544-ecowitt-sensor-radiation-shield).
+
 ---
 
 ## Arquitectura

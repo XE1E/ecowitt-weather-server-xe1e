@@ -18,14 +18,15 @@
 5. [La página web](#5-la-página-web-pro) (sección por sección)
 6. [Widget para tu sitio](#6-widget-para-tu-sitio)
 7. [Pantallas físicas](#7-pantallas-físicas)
-8. [Panel de administración](#8-panel-de-administración-admin)
-9. [Alertas y notificaciones](#9-alertas-y-notificaciones)
-10. [Publicación a redes públicas](#10-publicación-a-redes-públicas)
-11. [Fuentes de datos externas](#11-fuentes-de-datos-externas)
-12. [API (endpoints)](#12-api-endpoints)
-13. [Operación y mantenimiento](#13-operación-y-mantenimiento)
-14. [Glosario de términos e índices](#14-glosario-de-términos-e-índices)
-15. [Estado y pendientes](#15-estado-y-pendientes)
+8. [Impresión 3D](#8-impresión-3d)
+9. [Panel de administración](#9-panel-de-administración-admin)
+10. [Alertas y notificaciones](#10-alertas-y-notificaciones)
+11. [Publicación a redes públicas](#11-publicación-a-redes-públicas)
+12. [Fuentes de datos externas](#12-fuentes-de-datos-externas)
+13. [API (endpoints)](#13-api-endpoints)
+14. [Operación y mantenimiento](#14-operación-y-mantenimiento)
+15. [Glosario de términos e índices](#15-glosario-de-términos-e-índices)
+16. [Estado y pendientes](#16-estado-y-pendientes)
 
 ---
 
@@ -427,7 +428,36 @@ configuración y OTA. Firmware y documentación:
 
 ---
 
-## 8. Panel de administración (`/admin`)
+## 8. Impresión 3D
+
+Piezas imprimibles en 3D para complementar la estación y proteger los sensores en
+instalaciones exteriores.
+
+### Escudo de radiación para sensores (Radiation Shield)
+
+Un **escudo de radiación** imprimible en 3D diseñado para proteger sensores de
+temperatura y humedad Ecowitt (**WN31**, **WN32**, **WN35**) de la radiación solar
+directa. Ideal para **estaciones remotas** donde el sensor se instala a la intemperie.
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Función** | Protege el sensor del calor radiante del sol para obtener lecturas más precisas de temperatura y humedad ambiental |
+| **Compatibilidad** | Sensores Ecowitt **WN31**, **WN32** y **WN35** |
+| **Material recomendado** | PETG o ASA (resistentes a UV y temperatura); blanco o color claro para máxima reflexión |
+| **Diseño** | Múltiples lamas horizontales que permiten la circulación de aire mientras bloquean la radiación directa |
+
+**Descargar:** los archivos STL están disponibles en
+[Printables](https://www.printables.com/model/1616544-ecowitt-sensor-radiation-shield)
+y en la carpeta [`3d-prints/radiation-shield/`](../3d-prints/radiation-shield/) del
+repositorio.
+
+> **Tip:** para una estación remota con un **GW1100** y un sensor **WN32** a la
+> intemperie, este escudo es esencial para evitar lecturas de temperatura infladas
+> por el sol.
+
+---
+
+## 9. Panel de administración (`/admin`)
 
 Acceso **usuario/contraseña** (sesión de 12 h). Diseño compacto en columnas.
 Permite **editar en caliente** (sin reiniciar) todo lo configurable.
@@ -467,7 +497,7 @@ Si `ADMIN_USER`/`ADMIN_PASSWORD` están vacíos, el panel queda **deshabilitado*
 
 ---
 
-## 9. Alertas y notificaciones
+## 10. Alertas y notificaciones
 
 Se evalúan en cada lectura y avisan **una vez al activarse** y otra **al
 normalizarse** (no spamean). Canales: **Telegram** y/o **correo (SMTP)**, con
@@ -514,7 +544,7 @@ token + chat id en el panel (o en `.env`).
 
 ---
 
-## 10. Publicación a redes públicas
+## 11. Publicación a redes públicas
 
 El servidor reenvía cada lectura (de forma tolerante a fallos) a las redes que
 se activen, con sus credenciales, desde el panel:
@@ -540,7 +570,7 @@ sugerido por cada red aunque la estación reporte cada minuto.
 
 ---
 
-## 11. Fuentes de datos externas
+## 12. Fuentes de datos externas
 
 | Fuente | Qué aporta | Frecuencia / caché |
 |--------|-----------|--------------------|
@@ -558,7 +588,7 @@ sugerido por cada red aunque la estación reporte cada minuto.
 
 ---
 
-## 12. API (endpoints)
+## 13. API (endpoints)
 
 Todos bajo el receiver, servidos vía `/api/*`:
 
@@ -595,7 +625,7 @@ sin el parámetro devuelven la **principal**. Las secundarias se configuran en
 
 ---
 
-## 13. Operación y mantenimiento
+## 14. Operación y mantenimiento
 
 **Servidor:** VPS Oracle ARM, cuenta **PAYG** (para evitar recuperación por
 inactividad de la capa gratuita). Dominio `clima.xe1e.net` tras Cloudflare.
@@ -626,7 +656,7 @@ desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`
 
 ---
 
-## 14. Glosario de términos e índices
+## 15. Glosario de términos e índices
 
 - **Punto de rocío:** temperatura a la que el aire se satura; alto = bochorno.
 - **Sensación térmica (feels like):** cómo se percibe la temperatura combinando
@@ -653,7 +683,7 @@ desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`
 
 ---
 
-## 15. Estado y pendientes
+## 16. Estado y pendientes
 
 **Pendiente:** versión en inglés (i18n) y acciones del usuario (crear bot de
 Telegram, credenciales de las redes públicas).
@@ -662,4 +692,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-07-30.*
+*Última actualización: 2026-08-01.*

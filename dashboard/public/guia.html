@@ -196,14 +196,15 @@
       <li><a href="#web"><span class="num">05</span> La página web</a></li>
       <li><a href="#widget"><span class="num">06</span> Widget para tu sitio</a></li>
       <li><a href="#pantallas"><span class="num">07</span> Pantallas físicas</a></li>
-      <li><a href="#admin"><span class="num">08</span> Administración</a></li>
-      <li><a href="#alertas"><span class="num">09</span> Alertas</a></li>
-      <li><a href="#redes"><span class="num">10</span> Redes públicas</a></li>
-      <li><a href="#fuentes"><span class="num">11</span> Fuentes de datos</a></li>
-      <li><a href="#api"><span class="num">12</span> API</a></li>
-      <li><a href="#operacion"><span class="num">13</span> Operación</a></li>
-      <li><a href="#glosario"><span class="num">14</span> Glosario</a></li>
-      <li><a href="#estado"><span class="num">15</span> Estado y pendientes</a></li>
+      <li><a href="#impresion3d"><span class="num">08</span> Impresión 3D</a></li>
+      <li><a href="#admin"><span class="num">09</span> Administración</a></li>
+      <li><a href="#alertas"><span class="num">10</span> Alertas</a></li>
+      <li><a href="#redes"><span class="num">11</span> Redes públicas</a></li>
+      <li><a href="#fuentes"><span class="num">12</span> Fuentes de datos</a></li>
+      <li><a href="#api"><span class="num">13</span> API</a></li>
+      <li><a href="#operacion"><span class="num">14</span> Operación</a></li>
+      <li><a href="#glosario"><span class="num">15</span> Glosario</a></li>
+      <li><a href="#estado"><span class="num">16</span> Estado y pendientes</a></li>
     </ol>
   </nav>
 
@@ -404,8 +405,25 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
       <p>El servidor expone <code>/api/svitrix</code> con los datos en el formato que espera el reloj; el Ulanzi lo consulta cada 1–5 minutos. Flasher en línea, interfaz web de configuración y OTA. Firmware y documentación: <a href="https://github.com/XE1E/svitrix-firmware-XE1E">svitrix-firmware-XE1E</a>.</p>
     </section>
 
+    <section id="impresion3d">
+      <span class="sec-eyebrow">08 — Impresión 3D</span>
+      <h2>Impresión 3D</h2>
+      <p>Piezas imprimibles en 3D para complementar la estación y proteger los sensores en instalaciones exteriores.</p>
+
+      <h3>Escudo de radiación para sensores (Radiation Shield)</h3>
+      <p>Un <strong>escudo de radiación</strong> imprimible en 3D diseñado para proteger sensores de temperatura y humedad Ecowitt (<strong>WN31</strong>, <strong>WN32</strong>, <strong>WN35</strong>) de la radiación solar directa. Ideal para <strong>estaciones remotas</strong> donde el sensor se instala a la intemperie.</p>
+      <ul>
+        <li><strong>Función:</strong> protege el sensor del calor radiante del sol para obtener lecturas más precisas de temperatura y humedad ambiental.</li>
+        <li><strong>Compatibilidad:</strong> sensores Ecowitt <strong>WN31</strong>, <strong>WN32</strong> y <strong>WN35</strong>.</li>
+        <li><strong>Material recomendado:</strong> PETG o ASA (resistentes a UV y temperatura); blanco o color claro para máxima reflexión.</li>
+        <li><strong>Diseño:</strong> múltiples lamas horizontales que permiten la circulación de aire mientras bloquean la radiación directa.</li>
+      </ul>
+      <p><strong>Descargar:</strong> los archivos STL están disponibles en <a href="https://www.printables.com/model/1616544-ecowitt-sensor-radiation-shield">Printables</a> y en la carpeta <code>3d-prints/radiation-shield/</code> del repositorio.</p>
+      <div class="callout"><p><strong>Tip:</strong> para una estación remota con un <strong>GW1100</strong> y un sensor <strong>WN32</strong> a la intemperie, este escudo es esencial para evitar lecturas de temperatura infladas por el sol.</p></div>
+    </section>
+
     <section id="admin">
-      <span class="sec-eyebrow">08 — Administración</span>
+      <span class="sec-eyebrow">09 — Administración</span>
       <h2>Panel de administración (<code>/admin</code>)</h2>
       <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Diseño compacto en columnas. Permite editar en caliente, sin reiniciar, todo lo configurable.</p>
 
@@ -443,7 +461,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="alertas">
-      <span class="sec-eyebrow">09 — Alertas</span>
+      <span class="sec-eyebrow">10 — Alertas</span>
       <h2>Alertas y notificaciones</h2>
       <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canales: <strong>Telegram</strong> y/o <strong>correo</strong>, con selección por canal de qué categorías recibe cada uno; si ninguno está configurado, quedan en el log. Los umbrales se configuran <strong>por estación</strong>: la principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in). En las <strong>secundarias</strong> solo aplican <strong>temperatura</strong>, <strong>presión</strong> y el aviso de <strong>estación caída</strong> (offline, con su propio watchdog); viento y lluvia no aplican (no tienen WS69).</p>
       <p><strong>Estación principal (WS69):</strong></p>
@@ -483,7 +501,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="redes">
-      <span class="sec-eyebrow">10 — Redes públicas</span>
+      <span class="sec-eyebrow">11 — Redes públicas</span>
       <h2>Publicación a redes públicas</h2>
       <p>El servidor reenvía cada lectura (tolerante a fallos) a las redes que se activen con sus credenciales desde el panel:</p>
       <div class="tablewrap"><table>
@@ -500,7 +518,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="fuentes">
-      <span class="sec-eyebrow">11 — Fuentes</span>
+      <span class="sec-eyebrow">12 — Fuentes</span>
       <h2>Fuentes de datos externas</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Fuente</th><th>Qué aporta</th><th>Frecuencia</th></tr></thead>
@@ -521,7 +539,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="api">
-      <span class="sec-eyebrow">12 — API</span>
+      <span class="sec-eyebrow">13 — API</span>
       <h2>API (endpoints)</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Endpoint</th><th>Devuelve</th></tr></thead>
@@ -554,7 +572,7 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
     </section>
 
     <section id="operacion">
-      <span class="sec-eyebrow">13 — Operación</span>
+      <span class="sec-eyebrow">14 — Operación</span>
       <h2>Operación y mantenimiento</h2>
       <p>Servidor: VPS Oracle ARM, cuenta <strong>PAYG</strong> (evita recuperación por inactividad). Dominio <code>clima.xe1e.net</code> tras Cloudflare.</p>
       <h3>Desplegar / actualizar</h3>
@@ -568,7 +586,7 @@ docker compose ps                 # verificar estado</code></pre>
     </section>
 
     <section id="glosario">
-      <span class="sec-eyebrow">14 — Glosario</span>
+      <span class="sec-eyebrow">15 — Glosario</span>
       <h2>Glosario de términos e índices</h2>
       <div class="tablewrap"><table>
         <thead><tr><th>Término</th><th>Qué es</th></tr></thead>
@@ -593,12 +611,12 @@ docker compose ps                 # verificar estado</code></pre>
     </section>
 
     <section id="estado">
-      <span class="sec-eyebrow">15 — Estado</span>
+      <span class="sec-eyebrow">16 — Estado</span>
       <h2>Estado y pendientes</h2>
       <p><span class="pill warn">Pendiente</span> versión en inglés (i18n) y acciones del usuario (bot de Telegram, credenciales de redes).</p>
     </section>
 
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-07-30 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Estación XE1E · CDMX · Guía actualizada 2026-08-01 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
   </main>
 </div>
 
