@@ -196,7 +196,7 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
         _fmt(data.get("temperature_outdoor")),       # 5: temp °C
         _fmt(data.get("humidity_outdoor")),          # 6: humedad %
         _fmt(data.get("pressure_relative")),         # 7: presión hPa
-        _fmt((data.get("rain_daily") or 0) * 10),    # 8: lluvia diaria (0.1mm)
+        _fmt(data.get("rain_daily") or 0),              # 8: lluvia diaria (mm)
         _fmt(data.get("wind_speed")),                # 9: viento km/h
         _fmt(data.get("wind_direction")),            # 10: dirección
         "",                                          # 11: condición clima
@@ -210,7 +210,7 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
         "",                                          # 19: brillo
         "",                                          # 20: horas sol
         "",                                          # 21: temp suelo
-        _fmt((data.get("rain_rate") or 0) * 10),     # 22: tasa lluvia (0.1mm/h)
+        _fmt(data.get("rain_rate") or 0),              # 22: tasa lluvia (mm/h)
         "ecowitt-xe1e_1.0",                          # 23: software
         str(lon) if lon else "",                     # 24: longitud
         str(lat) if lat else "",                     # 25: latitud
