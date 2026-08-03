@@ -23,8 +23,13 @@ interface Props {
    * se lea a distancia.
    */
   kiosk?: boolean
-  /** Alto en px. Solo se usa con kiosk; si no, manda la clase h-96/md:h-80. */
-  height?: number
+  /**
+   * Alto de la caja. Solo se usa con kiosk; si no, manda la clase h-96/md:h-80.
+   * Acepta '100%' para llenar el hueco que deje el padre, que es lo que hace el
+   * kiosco: el espacio libre entre el header y la barra de pestañas es de ~426 px
+   * y un alto fijo mayor recorta la leyenda.
+   */
+  height?: number | string
   /** Se llama al terminar de cargar (bien o mal). El kiosco lo usa para avisar
    *  al renderer que ya puede capturar la pantalla. */
   onLoaded?: () => void

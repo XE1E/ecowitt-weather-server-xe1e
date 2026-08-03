@@ -797,7 +797,9 @@ export function KioskPage() {
     return shell(
       <div className="h-full px-6 pt-1 pb-2 flex flex-col">
         <p className="text-[17px] text-slate-300 mb-1">📈 Resumen multivariable · últimas 48 h</p>
-        <MultiVariableChart mode="2day" kiosk height={430} onLoaded={() => setMultiReady(true)} />
+        <div className="flex-1 min-h-0">
+          <MultiVariableChart mode="2day" kiosk height="100%" onLoaded={() => setMultiReady(true)} />
+        </div>
       </div>
     )
   }
