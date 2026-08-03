@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { MultiVariableChart } from '../components/station/MultiVariableChart'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
 import { deriveCondition, relativeTime, parseServerDate } from '../weather'
@@ -80,7 +80,7 @@ const TABS = [
   { icon: '📍', label: 'Local' },
   { icon: '🏠', label: 'Sensores' },
   { icon: '📅', label: '7 días' },
-  { icon: '📈', label: '24 h' },
+  { icon: '📈', label: '48 h' },
   { icon: '🖥️', label: 'Consola' },
 ]
 
@@ -121,6 +121,10 @@ export function KioskPage() {
   const [localFetched, setLocalFetched] = useState(false)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<any[]>([])
+  // La gráfica multivariable (página 5) trae sus propios datos de 48 h, así que
+  // el "ready" del renderer tiene que esperarla a ella, no al history de 24 h
+  // del contexto: si no, la captura sale con el "Cargando...".
+  const [multiReady, setMultiReady] = useState(false)
 
   const page = new URLSearchParams(window.location.search).get('page') || '1'
 
@@ -161,7 +165,7 @@ export function KioskPage() {
   const ready =
     page === '2' ? localFetched :
     page === '4' ? !!(forecast?.days?.length) :
-    page === '5' ? (!loading && history.length > 0) :
+    page === '5' ? multiReady :
     (!loading && !!data)   // páginas 1 y 3
 
   const header = (
@@ -784,36 +788,16 @@ export function KioskPage() {
     )
   }
 
-  // ── Página 5: tendencia 24 h ──
+  // ── Página 5: resumen multivariable · últimas 48 h ──
+  // Es LA MISMA gráfica del tab Historia del dashboard (MultiVariableChart),
+  // reusada en modo kiosco y con ventana de 48 h en vez de 24 h. Al reusar el
+  // componente, cualquier mejora que se le haga en el dashboard llega sola al
+  // display, sin duplicar la lógica de ejes ni de agrupación por hora.
   if (page === '5') {
-    const hist = history
-      .map((h) => ({
-        label: (() => { const dt = new Date(parseServerDate(h._time)); return `${pad(dt.getHours())}:${pad(dt.getMinutes())}` })(),
-        temp: h.temperature_outdoor != null ? u.tempN(h.temperature_outdoor) : null,
-        hum: h.humidity_outdoor ?? null,
-      }))
-      .filter((p) => p.temp != null)
-    const step = Math.max(0, Math.floor(hist.length / 8))
     return shell(
-      <div className="h-full px-8 pt-1 pb-2 flex flex-col">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[17px] text-slate-300">📈 Tendencia · últimas 24 h</p>
-          <p className="text-[14px]"><span className="text-orange-300">— temperatura</span> <span className="text-cyan-300 ml-3">-- humedad</span></p>
-        </div>
-        {hist.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-slate-500 text-[20px]">Sin datos históricos</div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <LineChart width={960} height={400} data={hist} margin={{ top: 10, right: 40, left: 0, bottom: 4 }}>
-              <CartesianGrid stroke="#ffffff14" vertical={false} />
-              <XAxis dataKey="label" interval={step} tick={{ fill: '#94a3b8', fontSize: 14 }} stroke="#ffffff20" tickMargin={8} />
-              <YAxis yAxisId="t" tick={{ fill: '#fdba74', fontSize: 14 }} stroke="#ffffff20" width={46} domain={['auto', 'auto']} unit={u.tempU} />
-              <YAxis yAxisId="h" orientation="right" tick={{ fill: '#67e8f9', fontSize: 14 }} stroke="#ffffff20" width={40} domain={[0, 100]} unit="%" />
-              <Line yAxisId="t" type="monotone" dataKey="temp" stroke="#f97316" strokeWidth={3} dot={false} isAnimationActive={false} />
-              <Line yAxisId="h" type="monotone" dataKey="hum" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} strokeDasharray="5 4" />
-            </LineChart>
-          </div>
-        )}
+      <div className="h-full px-6 pt-1 pb-2 flex flex-col">
+        <p className="text-[17px] text-slate-300 mb-1">📈 Resumen multivariable · últimas 48 h</p>
+        <MultiVariableChart mode="2day" kiosk height={430} onLoaded={() => setMultiReady(true)} />
       </div>
     )
   }
