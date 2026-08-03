@@ -26,6 +26,24 @@ function moonPhase(d: Date) {
 
 // Números de la consola: la parte decimal (".4") en fuente más chica, como una
 // consola física. Divide en el punto; si no hay decimal, devuelve el string tal cual.
+// Misma lógica de umbrales que UvSolarCard (tab Inicio), en hex para los estilos
+// inline de la consola. UV: verde→fucsia. Solar: gris (noche)→rojo (pico).
+function uvColor(uv: number): string {
+  if (uv >= 11) return '#e879f9'
+  if (uv >= 8) return '#f87171'
+  if (uv >= 6) return '#fb923c'
+  if (uv >= 3) return '#fde047'
+  return '#34d399'
+}
+
+function solarColor(w: number): string {
+  if (w >= 800) return '#f87171'
+  if (w >= 550) return '#fb923c'
+  if (w >= 250) return '#fcd34d'
+  if (w >= 50) return '#fde047'
+  return '#94a3b8'
+}
+
 function decNum(s: string): ReactNode {
   const i = s.indexOf('.')
   if (i < 0) return s
@@ -307,7 +325,7 @@ export function KioskPage() {
           {/* Fila 1 */}
           <div className="cell col main">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXTERIOR</span>
+              <span style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</span>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="5" fill="#fbbf24" />
                 <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
@@ -390,7 +408,7 @@ export function KioskPage() {
           </div>
 
           <div className="cell col main">
-            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VELOCIDAD</div>
+            <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</div>
             <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
               <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
                 <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" />
@@ -476,7 +494,7 @@ export function KioskPage() {
           </div>
 
           {/* ROCÍO/SENSACIÓN en fila 3 columna 3 */}
-          <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderColor: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
@@ -516,13 +534,13 @@ export function KioskPage() {
             <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2 }}>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
                   {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 14, color: 'var(--w)' }}> W/m²</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2 }}>
+                <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
                   {data?.uv_index ?? '--'}
                 </div>
               </div>
