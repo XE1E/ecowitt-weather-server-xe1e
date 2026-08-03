@@ -13,10 +13,5 @@ module.exports = {
   plugins: ['react-refresh'],
   rules: {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-    // Deuda previa a la llegada de eslint: quedan 5 `any` (App.tsx,
-    // ExtraSensorsCard, MultiVariableChart x2, RemoteStationCard). Se deja como
-    // aviso para que el lint pase en verde mientras se tipan, en vez de
-    // silenciarlo. El codigo nuevo no deberia agregar mas.
-    '@typescript-eslint/no-explicit-any': 'warn',
   },
 }

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { useUnits } from '../../units'
+import { useUnits, type Units } from '../../units'
+import type { HistoryData } from '../../types'
 
 interface DataPoint {
   x: string
@@ -60,7 +61,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
         const raw = json.data || []
         const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 
-        const points: DataPoint[] = raw.map((p: any) => {
+        const points: DataPoint[] = raw.map((p: HistoryData) => {
           const d = new Date(p._time)
           let label: string
           let key: string
@@ -355,7 +356,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   )
 }
 
-function getUnit(name: string, u: any): string {
+function getUnit(name: string, u: Units): string {
   switch (name) {
     case 'Temperatura': return u.tempU
     case 'Presión atmosférica': return u.pressU

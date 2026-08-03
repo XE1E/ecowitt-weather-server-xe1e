@@ -69,6 +69,11 @@ export interface WeatherData {
   received_at?: string
 }
 
+/**
+ * Fila de /api/history, con los campos que se declaran uno por uno. Se usa
+ * donde el codigo los lee como claves fijas (los charts hacen `keyof
+ * HistoryData`, que solo sirve si el tipo NO tiene indice).
+ */
 export interface HistoryData {
   _time: string
   temperature_outdoor?: number
@@ -78,6 +83,14 @@ export interface HistoryData {
   rain_rate?: number
   pressure_relative?: number
 }
+
+/**
+ * La misma fila admitiendo ademas los campos que no vale la pena declarar uno
+ * por uno: los sensores por canal (temperature_ch3, humidity_ch5...) que
+ * algunas tarjetas leen por nombre calculado. /api/history devuelve todo lo que
+ * reporto la estacion, no solo los campos de HistoryData.
+ */
+export type HistoryRow = HistoryData & { [key: string]: number | string | undefined }
 
 export interface StatEntry {
   min: number | null

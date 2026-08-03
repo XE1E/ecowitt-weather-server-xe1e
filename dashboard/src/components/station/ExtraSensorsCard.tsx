@@ -1,4 +1,4 @@
-import { WeatherData } from '../../types'
+import { WeatherData, HistoryRow } from '../../types'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
 import { parseServerDate } from '../../weather'
@@ -9,15 +9,12 @@ const CHANNEL_NAMES: Record<number, string> = {
   1: 'Jardín',
 }
 
-interface HistoryPoint {
-  _time: string
-  [key: string]: any
-}
-
-function getHistoricValue(history: HistoryPoint[], field: string, hoursAgo: number): number | null {
+// Se usa HistoryRow y no HistoryData porque aqui los campos se leen por nombre
+// calculado (temperature_ch3, humidity_ch5...), no como claves fijas.
+function getHistoricValue(history: HistoryRow[], field: string, hoursAgo: number): number | null {
   if (!history || history.length === 0) return null
   const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-  let closest: HistoryPoint | null = null
+  let closest: HistoryRow | null = null
   let closestDiff = Infinity
   for (const h of history) {
     const t = new Date(parseServerDate(h._time)).getTime()
@@ -32,7 +29,7 @@ function getHistoricValue(history: HistoryPoint[], field: string, hoursAgo: numb
   return typeof val === 'number' ? val : null
 }
 
-export function ExtraSensorsCard({ data, history }: { data: WeatherData; history?: HistoryPoint[] }) {
+export function ExtraSensorsCard({ data, history }: { data: WeatherData; history?: HistoryRow[] }) {
   const u = useUnits()
   const historyData = history || []
 

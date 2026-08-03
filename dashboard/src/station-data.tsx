@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { WeatherData, DailyStats, HistoryData } from './types'
+import { WeatherData, DailyStats, HistoryRow } from './types'
 import { fetchForecast, ForecastResult } from './forecast'
 
 export interface Comparison {
@@ -18,7 +18,9 @@ export interface LocalForecast {
 interface StationData {
   data: WeatherData | null
   stats: DailyStats['stats'] | null
-  history: HistoryData[]
+  // HistoryRow y no HistoryData: /api/history trae ademas los sensores por
+  // canal, que ExtraSensorsCard lee por nombre calculado.
+  history: HistoryRow[]
   forecast: ForecastResult | null
   compare: Comparison | null
   localForecast: LocalForecast | null
@@ -33,7 +35,7 @@ const FORECAST_REFRESH = 30 * 60000
 export function StationDataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<WeatherData | null>(null)
   const [stats, setStats] = useState<DailyStats['stats'] | null>(null)
-  const [history, setHistory] = useState<HistoryData[]>([])
+  const [history, setHistory] = useState<HistoryRow[]>([])
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [compare, setCompare] = useState<Comparison | null>(null)
   const [localForecast, setLocalForecast] = useState<LocalForecast | null>(null)

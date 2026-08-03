@@ -10,7 +10,7 @@ import { ForecastCard } from './components/station/ForecastCard'
 import { SunMoonCard } from './components/station/SunMoonCard'
 import { TemperatureChart } from './components/TemperatureChart'
 import { StatsSummary } from './components/StatsSummary'
-import { WeatherData, DailyStats } from './types'
+import { WeatherData, DailyStats, HistoryRow } from './types'
 import { deriveCondition, relativeTime, isStale } from './weather'
 import { fetchForecast, ForecastResult } from './forecast'
 
@@ -23,7 +23,7 @@ const FORECAST_INTERVAL = 30 * 60000 // 30 minutes
 function App() {
   const [data, setData] = useState<WeatherData | null>(null)
   const [stats, setStats] = useState<DailyStats | null>(null)
-  const [history, setHistory] = useState<any[]>([])
+  const [history, setHistory] = useState<HistoryRow[]>([])
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

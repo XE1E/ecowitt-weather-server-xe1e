@@ -6,7 +6,7 @@ import { relativeTime, isStale, parseServerDate } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
 
-function getHistoricValue(history: RemoteHistRow[], field: string, hoursAgo: number): number | null {
+function getHistoricValue(history: RemoteHistRow[], field: keyof RemoteHistRow, hoursAgo: number): number | null {
   if (!history || history.length === 0) return null
   const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
   let closest: RemoteHistRow | null = null
@@ -20,7 +20,7 @@ function getHistoricValue(history: RemoteHistRow[], field: string, hoursAgo: num
     }
   }
   if (!closest || closestDiff > 30 * 60 * 1000) return null
-  const val = (closest as any)[field]
+  const val = closest[field]
   return typeof val === 'number' ? val : null
 }
 
