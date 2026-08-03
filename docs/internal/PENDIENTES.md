@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-07-25.
+> Última actualización: 2026-08-03.
 
 ## 1. Cuando llegue el WN32 (~2026-08-08) — depende de hardware
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -13,6 +13,28 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       trampa). Al quitarla, la humedad del GW1100 vuelve a `humidity_indoor` → hay que
       **agregar regla de humedad interior** en `alerts.py` (hoy solo evalúa
       `humidity_outdoor`) y mover ahí el umbral de moho.
+- [ ] **Barrido interior/exterior en TODO el servidor.** Al quitar la trampa dejan de
+      coincidir "lo que el GW1100 manda" con "lo que el servidor rotula", así que hay
+      que revisar a detalle, extremo a extremo, que las lecturas del **WN32 salgan
+      como exteriores** y las del **integrado del GW1100 como interiores**. No basta
+      con el toggle: la trampa se aplica en `main.py` al ingerir (`treat_indoor_as_outdoor`,
+      hoy en `main.py:391`, default `False` en `settings_store.py`), pero el rótulo
+      interior/exterior se decide por separado en cada consumidor. Repasar al menos:
+      - `_detect_sensors_detail` en `main.py` (qué fila muestra cada sensor).
+      - Tarjetas del dashboard: `RemoteStationCard`, `InteriorCard`, `ExtraSensorsCard`,
+        `AtmosphericProfile`, `StationSummaryTable` y la página `/pro/remota`.
+      - `ConsoleReplica`: la celda REMOTA y PRESIÓN GW1100 leen `temperature_indoor` /
+        `humidity_indoor` del GW1100; con WN32 hay que decidir si esa celda pasa a
+        exterior o se separa en dos.
+      - Datos derivados de la remota: punto de rocío (`dewPointC` en `remote.ts`) y
+        cualquier sensación térmica — con la trampa se calculaban sobre lecturas
+        rotuladas exterior.
+      - Salidas hacia afuera: `/api/svitrix` (reloj Ulanzi), widget embebible,
+        `/api/display.jpg` y la publicación a redes públicas (WU/AWEKAS), donde mandar
+        una lectura interior como exterior sí tiene consecuencias.
+      - Histórico ya guardado: las filas del 2026-07-24 en adelante quedaron con la
+        semántica de la trampa. Decidir si se reetiquetan o se deja la discontinuidad
+        documentada.
 - [x] Presión: la lógica "presión en fila Exterior cuando no hay sensor interior"
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
