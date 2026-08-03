@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Optional, Dict, List, Any
 from collections import deque
 import asyncio
+import json
 import logging
 import os
 import platform
@@ -808,10 +809,51 @@ async def admin_system_info(authorization: Optional[str] = Header(default=None))
 
 
 # ── Sensor local del display kiosco (BME280 del ESP32) ──
-# Se guarda APARTE de los datos meteorológicos (no toca InfluxDB ni la Principal).
-# En memoria: último valor + min/max del día local; se reinicia al cambiar de día.
+# Se guarda APARTE de los datos meteorológicos (no toca InfluxDB ni la Principal):
+# último valor + min/max del DÍA LOCAL, que se reinician al cambiar de día.
+#
+# Se persiste en el volumen /data porque solo vivía en memoria: cualquier reinicio
+# del contenedor (y todo `docker compose up --build`) borraba los min/max a media
+# tarde y la página 2 del kiosco volvía a arrancar con min = max = lectura actual.
 _MX_TZ = ZoneInfo("America/Mexico_City")
+_KIOSK_LOCAL_FILE = os.environ.get("KIOSK_LOCAL_FILE", "/data/kiosk_local.json")
 _kiosk_local: Dict[str, Any] = {"latest": None, "day": None, "min": {}, "max": {}}
+
+
+def _kiosk_local_load() -> None:
+    """Restaura el estado persistido, si hay. El `day` se carga tal cual: si es de
+    un día anterior, el primer POST que llegue detecta el cambio y reinicia los
+    min/max, igual que si el proceso no se hubiera reiniciado."""
+    try:
+        with open(_KIOSK_LOCAL_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return                      # no existe, o quedó corrupto: se empieza limpio
+    if not isinstance(data, dict):
+        return
+    _kiosk_local.update(
+        latest=data.get("latest"),
+        day=data.get("day"),
+        min=data.get("min") or {},
+        max=data.get("max") or {},
+    )
+    print(f"[kiosk] estado local restaurado (día {_kiosk_local['day']})", flush=True)
+
+
+def _kiosk_local_save() -> None:
+    """Guarda con escritura atómica (archivo temporal + replace) para no dejar un
+    JSON truncado si el contenedor muere justo durante el guardado."""
+    tmp = f"{_KIOSK_LOCAL_FILE}.tmp"
+    try:
+        os.makedirs(os.path.dirname(_KIOSK_LOCAL_FILE) or ".", exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(_kiosk_local, fh)
+        os.replace(tmp, _KIOSK_LOCAL_FILE)
+    except OSError as e:
+        print(f"[kiosk] no se pudo guardar {_KIOSK_LOCAL_FILE}: {e}", flush=True)
+
+
+_kiosk_local_load()
 
 
 @app.post("/api/kiosk/local")
@@ -829,6 +871,7 @@ async def kiosk_local_post(body: dict = Body(...)):
             _kiosk_local["min"][k] = round(min(_kiosk_local["min"].get(k, fv), fv), 1)
             _kiosk_local["max"][k] = round(max(_kiosk_local["max"].get(k, fv), fv), 1)
     _kiosk_local["latest"] = {**vals, "received_at": datetime.utcnow().isoformat()}
+    _kiosk_local_save()
     return {"ok": True}
 
 
