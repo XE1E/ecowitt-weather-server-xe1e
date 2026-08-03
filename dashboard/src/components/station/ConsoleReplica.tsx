@@ -88,6 +88,16 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
   )
 }
 
+// Fila del histórico de la remota (/api/history?station=gw1100). No se reusa
+// HistoryData porque el GW1100 reporta su temperatura y humedad en los campos
+// *_indoor, que ese tipo no declara.
+interface RemoteHistoryRow {
+  _time: string
+  temperature_indoor?: number
+  humidity_indoor?: number
+  pressure_relative?: number
+}
+
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
@@ -119,7 +129,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const u = useUnits()
   const [now, setNow] = useState(() => new Date())
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
-  const [remoteHistory, setRemoteHistory] = useState<any[]>([])
+  const [remoteHistory, setRemoteHistory] = useState<RemoteHistoryRow[]>([])
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -147,10 +157,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const dir = data?.wind_direction
 
   // Tendencias: comparar actual vs valor de hace N horas en el histórico.
-  const historicValue = (rows: any[] | undefined, field: string, hoursAgo: number): number | null => {
+  // `pick` elige el campo en vez de indexar por string, así cada histórico
+  // conserva su propio tipo y no hace falta castear la fila.
+  const historicValue = <T extends { _time: string }>(
+    rows: T[] | undefined,
+    pick: (row: T) => number | undefined,
+    hoursAgo: number,
+  ): number | null => {
     if (!rows || rows.length === 0) return null
     const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-    let closest: any = null
+    let closest: T | null = null
     let closestDiff = Infinity
     for (const h of rows) {
       const t = new Date(parseServerDate(h._time)).getTime()
@@ -159,7 +175,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     }
     // Sólo usar si está dentro de 30 min del objetivo
     if (!closest || closestDiff > 30 * 60 * 1000) return null
-    return (closest as any)[field] ?? null
+    return pick(closest) ?? null
   }
 
   const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): Trend => {
@@ -171,14 +187,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   }
 
   // Temp/humedad: comparar con hace 1 hora, presión: con hace 3 horas
-  const tempTrend = getTrend(data?.temperature_outdoor, historicValue(history, 'temperature_outdoor', 1), 0.5)  // ±0.5°C
-  const humTrend = getTrend(data?.humidity_outdoor, historicValue(history, 'humidity_outdoor', 1), 3)           // ±3%
-  const pressTrend = getTrend(data?.pressure_relative, historicValue(history, 'pressure_relative', 3), 1)       // ±1 hPa
+  const tempTrend = getTrend(data?.temperature_outdoor, historicValue(history, (r) => r.temperature_outdoor, 1), 0.5)  // ±0.5°C
+  const humTrend = getTrend(data?.humidity_outdoor, historicValue(history, (r) => r.humidity_outdoor, 1), 3)           // ±3%
+  const pressTrend = getTrend(data?.pressure_relative, historicValue(history, (r) => r.pressure_relative, 3), 1)       // ±1 hPa
 
   // Tendencias estación remota (GW1100)
-  const remoteTempTrend = getTrend(remote?.temperature_indoor, historicValue(remoteHistory, 'temperature_indoor', 1), 0.5)
-  const remoteHumTrend = getTrend(remote?.humidity_indoor, historicValue(remoteHistory, 'humidity_indoor', 1), 3)
-  const remotePressTrend = getTrend(remote?.pressure_relative, historicValue(remoteHistory, 'pressure_relative', 3), 1)
+  const remoteTempTrend = getTrend(remote?.temperature_indoor, historicValue(remoteHistory, (r) => r.temperature_indoor, 1), 0.5)
+  const remoteHumTrend = getTrend(remote?.humidity_indoor, historicValue(remoteHistory, (r) => r.humidity_indoor, 1), 3)
+  const remotePressTrend = getTrend(remote?.pressure_relative, historicValue(remoteHistory, (r) => r.pressure_relative, 3), 1)
 
   const chTemp = data?.temperature_ch1
   const chHum = data?.humidity_ch1
