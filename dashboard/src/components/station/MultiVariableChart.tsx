@@ -268,6 +268,10 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
           />
 
           {/* Barras de precipitación (azul claro) */}
+          {/* En el kiosco la animación de entrada tiene que ir APAGADA: el
+              renderer captura la pantalla en cuanto la página avisa que tiene
+              datos, y con la animación activa la foto sale en el frame 0, con
+              ejes y rejilla dibujados pero las líneas y barras todavía en cero. */}
           <Bar
             yAxisId="rain"
             dataKey="rain"
@@ -276,6 +280,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             opacity={0.85}
             radius={[2, 2, 0, 0]}
             barSize={barSize}
+            isAnimationActive={!kiosk}
           />
 
           {/* Línea de temperatura (naranja) */}
@@ -288,6 +293,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             strokeWidth={2.5}
             dot={false}
             connectNulls
+            isAnimationActive={!kiosk}
           />
 
           {/* Línea de presión (morado) */}
@@ -300,6 +306,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             strokeWidth={2}
             dot={false}
             connectNulls
+            isAnimationActive={!kiosk}
           />
 
           {/* Línea de viento (verde) */}
@@ -312,6 +319,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             strokeWidth={2}
             dot={false}
             connectNulls
+            isAnimationActive={!kiosk}
           />
 
           {/* Línea de humedad (azul oscuro) */}
@@ -324,6 +332,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             strokeWidth={2}
             dot={false}
             connectNulls
+            isAnimationActive={!kiosk}
           />
         </ComposedChart>
   )
