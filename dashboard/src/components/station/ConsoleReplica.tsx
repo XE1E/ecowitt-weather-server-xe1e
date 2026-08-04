@@ -265,8 +265,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
           </div>
-          {/* marginTop -10 = mismo centrado vertical que la celda VEL */}
-          <div className="big gt ctr rt" style={{ fontSize: 104, paddingRight: 32, marginTop: 0 }}>
+          {/* marginTop -10 = misma altura que VEL, que es de la misma fuente y con
+              etiqueta del mismo tamaño, así que el mismo valor las iguala. */}
+          <div className="big gt ctr rt" style={{ fontSize: 104, paddingRight: 32, marginTop: -10 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
         </div>
@@ -307,7 +308,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <text x="50" y="77" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">S</text>
               <text x="2" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">O</text>
             </svg>
-            <div className="gv" style={{ position: 'absolute', top: '46%', left: '50%', transform: 'translate(-50%,-50%)', fontWeight: 800 }}>
+            {/* 52.4% y no 50%: el transform vive en el <svg>, no en este contenedor,
+                así que el centro de la elipse quedó 2.4% más abajo que el centro de la
+                caja (su translateY(2%) amplificado por el scale(1.2)). Con 50% el
+                número flotaba arriba del óvalo. Los 3 px extra son la corrección medida:
+                la caja de línea del DSEG7 no está centrada sobre su dibujo. */}
+            <div className="gv" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800 }}>
               <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28, verticalAlign: 'super' }}>°</span>
             </div>
           </div>
@@ -406,7 +412,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</div>
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            <MeteoGlyph name="barometer" size={58} color="#a78bfa" title="presión" />
+            {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
+                el barómetro le quedaba encima. */}
+            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
@@ -509,7 +517,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
           </div>
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -7 }}>
+          {/* marginTop -10 = misma altura que INTERIOR */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
