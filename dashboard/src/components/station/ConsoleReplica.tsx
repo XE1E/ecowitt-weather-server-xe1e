@@ -260,13 +260,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <MeteoGlyph name="clear-day" size={40} color="#fbbf24" title="sol" />
           </div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <MeteoGlyph name="thermometer" size={83} color="#f97316" title="temperatura" />
+            <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
           </div>
           {/* marginTop -10 = mismo centrado vertical que la celda VEL */}
-          <div className="big gt ctr rt" style={{ fontSize: 104, paddingRight: 32, marginTop: -10 }}>
+          <div className="big gt ctr rt" style={{ fontSize: 104, paddingRight: 32, marginTop: -9 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
         </div>
@@ -354,7 +354,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
-          <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32, marginTop: -12 }}>
+          <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32, marginTop: -10 }}>
             {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--h)' }}>%</span>
           </div>
         </div>
@@ -363,15 +363,32 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell main">
           <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <MeteoGlyph name="raindrops" size={58} color="#38bdf8" title="lluvia" />
+            <MeteoGlyph name="raindrops" size={46} color="#38bdf8" title="lluvia" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
-            <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
-              {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>{u.rainU}</span>
-            </span>
-            <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
-              {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 20, color: 'var(--r)' }}>/h</span>
-            </span>
+          {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
+              viento: AHORA es la intensidad (mm/h), EVENTO lo caído en el chubasco
+              en curso y HOY el acumulado del día. Con 46 px no caben tres, y sin
+              etiqueta tres cifras de lluvia son indistinguibles entre sí. */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
+                        gap: 2, marginTop: -6, paddingLeft: 46 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>AHORA</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.rain(data?.rain_event))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>HOY</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -384,7 +401,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
           </div>
-          <div className="big gp ctr rt" style={{ fontSize: 56, paddingRight: 32 }}>
+          <div className="big gp ctr rt" style={{ marginTop: 2, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
         </div>
@@ -422,7 +439,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </svg>
           </div>
           {/* marginTop: la fila se salia 1 px por abajo y los dígitos rozaban el borde */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -8 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
             <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
               {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -460,7 +477,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <MeteoGlyph name="clear-day" size={34} color="#fbbf24" title="sol" />
           </div>
           {/* mismo ajuste que INTERIOR: se salia 1 px por abajo */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -8 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -482,7 +499,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
           </div>
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -16 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -513,7 +530,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={remotePressTrend} />
           </div>
-          <div className="big gp ctr rt" style={{ fontSize: 46, paddingRight: 32 }}>
+          <div className="big gp ctr rt" style={{ marginTop: -2, fontSize: 46, paddingRight: 32 }}>
             {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
         </div>

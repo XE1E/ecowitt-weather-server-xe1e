@@ -1,5 +1,5 @@
 /**
- * Glifo de Meteocons TEÑIBLE, para la réplica de consola.
+ * Glifo de Meteocons TEÑIBLE y RECORTADO, para la réplica de consola.
  *
  * Por qué no vale `<WeatherIcon>` aquí: ése carga el SVG como `<img>`, y una
  * imagen no se puede recolorear. La consola necesita cada icono del color de su
@@ -10,8 +10,14 @@
  * termómetro viene rojo `#DC2626`), ni la `monochrome` tal cual porque trae
  * `fill="black"` fijo —negro sobre la consola negra es invisible—.
  *
- * Solución: se importa el SVG `monochrome` en crudo, se cambia su negro por
- * `currentColor` y se inyecta inline, así hereda el `color` del contenedor.
+ * Se hacen dos cosas:
+ *  1. TEÑIR: se importa el SVG `monochrome` en crudo, se cambia su negro por
+ *     `currentColor` y se inyecta inline, así hereda el `color` del contenedor.
+ *  2. RECORTAR: los archivos traen mucho relleno vacío dentro de su lienzo de
+ *     128×128 —el termómetro son 26 px de ancho de 128—, así que el dibujo salía
+ *     pequeño y, sobre todo, MUY metido hacia la derecha: un icono "pegado a la
+ *     izquierda" aparecía a 33 px del borde. Se sustituye el viewBox por la caja
+ *     real de la tinta, medida con `getBBox()` en el navegador.
  */
 import { useMemo } from 'react'
 
@@ -26,11 +32,26 @@ const CRUDOS: Record<string, string> = {
   thermometer, humidity, barometer, raindrops, windsock, 'clear-day': clearDay,
 }
 
+/**
+ * Caja de la tinta de cada icono dentro de su lienzo de 128×128: `x y ancho alto`.
+ * Medida con `svg.getBBox()` sobre la página real, no estimada. Si se agrega un
+ * icono nuevo hay que medirlo (scratchpad/tinta.py) o se verá descentrado.
+ */
+const TINTA: Record<string, [number, number, number, number]> = {
+  thermometer: [51, 32, 26, 64],
+  humidity: [44, 32, 42, 65],
+  raindrops: [34, 32, 62, 65],
+  barometer: [26, 26, 77, 77],
+  windsock: [42, 30, 46, 66],
+  'clear-day': [0, 0, 128, 128],   // este ya llena su lienzo
+}
+
 /** Nombres disponibles como glifo teñible. */
 export type GlyphName = keyof typeof CRUDOS
 
 interface Props {
   name: GlyphName | string
+  /** ALTO del glifo en px. El ancho sale de la proporción real de la tinta. */
   size: number
   /** Color del glifo. Se aplica por `color`, que el SVG hereda. */
   color: string
@@ -38,28 +59,37 @@ interface Props {
 }
 
 export function MeteoGlyph({ name, size, color, title }: Props) {
-  const svg = useMemo(() => {
+  const prep = useMemo(() => {
     const crudo = CRUDOS[name]
     if (!crudo) return null
-    return crudo
+    const caja = TINTA[name] ?? [0, 0, 128, 128]
+    const [, , w, h] = caja
+    const svg = crudo
       // el negro fijo del paquete pasa a heredar el color del contenedor
       .replace(/fill="black"/g, 'fill="currentColor"')
       .replace(/stroke="black"/g, 'stroke="currentColor"')
-      // el tamaño lo manda el contenedor, no el atributo del archivo
-      .replace(/<svg /, '<svg width="100%" height="100%" ')
+      // viewBox recortado a la tinta + el tamaño lo manda el contenedor
+      .replace(/<svg[^>]*?viewBox="[^"]*"/, `<svg width="100%" height="100%" viewBox="${caja.join(' ')}"`)
+    return { svg, ratio: w / h }
   }, [name])
 
-  if (!svg) return null
+  if (!prep) return null
   return (
     <span
       role="img"
       aria-label={title ?? String(name)}
       // `block` y no `inline-block`: en inline el elemento se asienta sobre la
       // línea base y deja unos 3 px de hueco abajo, lo que descentraba los iconos
-      // que van absolutos con translateY(-50%) en la consola.
-      style={{ display: 'block', width: size, height: size, color, lineHeight: 0 }}
+      // que van absolutos con translateY(-50%).
+      style={{
+        display: 'block',
+        height: size,
+        width: Math.round(size * prep.ratio),
+        color,
+        lineHeight: 0,
+      }}
       // Contenido estático de un paquete npm, no entrada de usuario.
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: prep.svg }}
     />
   )
 }
