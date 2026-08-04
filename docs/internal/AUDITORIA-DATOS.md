@@ -791,6 +791,186 @@ lluvia convierte ausencia en cero, así que un día sin datos se grafica como d�
 
 ---
 
+## Tercera pasada (alertas, pronóstico, climatología, tablas)
+
+### 40. Un pico filtrado por el QC dispara "Sensor sin contacto" (**A**) — `alerts.py:294-304` + `quality.py:103`
+
+El hallazgo más interesante de esta pasada, porque cruza dos subsistemas que por separado están
+bien.
+
+`spike_check` anula un valor imposible poniéndolo a `None` (correcto). Pero ese `None` **sí queda
+en el dict** que se pasa a `alert_service.process`, y la regla de presencia hace:
+
+```python
+present = data.get(skey) is not None
+rules[f"sensor_{skey}"] = (not present, "📡 Sensor sin contacto: ...")
+```
+
+Y `sensor_*` está **exento de histéresis** (`_persist_exempt`, líneas 62-67), así que **una sola
+lectura con un pico rechazado manda de inmediato la alerta de sensor perdido**. Cuanto mejor
+funciona el QC, más falsos avisos genera.
+
+Arreglo posible: distinguir "el campo no vino" de "el campo vino y el QC lo anuló" (pasando los
+rechazados a `process`), o quitarle la exención de histéresis a `sensor_*`.
+
+### 41. La alerta de moho del GW1100 está inoperativa ahora mismo (**A**, activo) — `alerts.py:271-276`
+
+Las reglas de humedad solo miran `humidity_outdoor`:
+
+```python
+hum = data.get("humidity_outdoor")
+```
+
+Con la trampa `treat_indoor_as_outdoor` **ya retirada**, la humedad del GW1100 llega en
+`humidity_indoor`, así que la regla no se evalúa y el umbral de moho (65 %) no vigila nada. Está
+anotado en `PENDIENTES.md` sección 1 como tarea futura; conviene saber que **ya es un hueco
+activo**, no una previsión.
+
+Relacionado: `_SENSOR_PRESENCE` (líneas 70-75) no incluye `temperature_indoor`, así que tampoco
+hay "sensor perdido" del interior.
+
+### 42. La página Tablas ignora el selector de unidades (**A**) — `StationSummaryTable.tsx`
+
+El componente **no tiene una sola referencia a `useUnits`** y lleva 13 unidades escritas a mano
+(`'°C'` ×8, `'hPa'` ×2, `'km/h'` ×2, `'mm'`). Vive en `/pro/tablas`, cuyo `StationLayout` muestra
+el toggle métrico/imperial en su propia barra superior (`StationLayout.tsx:85-89`).
+
+Resultado: se pone el sitio en imperial y esa tabla sigue entera en métrico. El dato es correcto
+y la etiqueta también —no es el error de #2— pero contradice al resto de la página.
+
+**`StatsSummary` y `TemperatureChart` tienen el mismo patrón** (cero `useUnits`, 5 y 3 unidades
+fijas) y se usan en `App.tsx`, la **vista clásica** de `/`, que hoy no ofrece el selector.
+Decisión del operador: **la vista clásica también debe tenerlo**, así que esto cuenta como
+carencia y no como diseño. El trabajo son tres piezas: añadir el toggle a `App.tsx` y convertir
+en los dos componentes.
+
+### 43. El pronóstico horario usa iconos de día por la noche (**B**) — `forecast.ts:40-53`
+
+`wmoToIcon` devuelve siempre la variante `-day` (`clear-day`, `partly-cloudy-day`,
+`overcast-day`, `fog-day`…) y se aplica también a las horas (línea 261). No existe ninguna rama
+`-night`. → **a las 3 de la mañana se muestra un sol**, en Inicio, Pronóstico y las páginas 1 y 4
+del kiosco.
+
+### 44. El periodo de lluvia cae en "por la mañana" por defecto (**A**) — `forecast.ts:210`
+
+```ts
+const maxP = Math.max(pMorning, pAfternoon, pNight, d.precipitation_probability_max?.[i] ?? 0)
+const periodo = maxP === pAfternoon ? 'por la tarde' : maxP === pNight ? 'por la noche' : 'por la mañana'
+```
+
+El periodo se elige comparando por **igualdad** con el máximo, pero `maxP` incluye el dato diario
+de Open-Meteo, que puede ser **mayor que los tres periodos horarios**; entonces ninguna igualdad
+se cumple y cae al `else`. Con `pMorning=10, pAfternoon=40, pNight=20, diario=50` la frase sale
+*"Posibilidad de lluvia por la mañana (50%)"* cuando el riesgo era por la tarde.
+
+### 45. `dominantCode` es el máximo, no el dominante (**B**) — `forecast.ts:139-142`
+
+```ts
+return codes.reduce((a, b) => (cloudRank(b) > cloudRank(a) ? b : a))
+```
+
+Toma el código de mayor severidad del periodo, así que **una sola hora con tormenta hace que el
+día entero se describa como "tormentas"**. El nombre sugiere moda estadística.
+
+### 46. Dos fuentes distintas de fase lunar y de amanecer (**B**) — `forecast.ts:56-112` vs `almanac.py`
+
+El pronóstico calcula la fase con una aproximación lineal del mes sinódico desde una época de
+2000; Astronomía usa **pyephem**. Pueden discrepar en el nombre de la fase cerca de los cuartos,
+y `upcomingMoonEvents` puede dar fechas ±1 día respecto a Astronomía — además usa `toISOString()`
+(línea 107), que para un evento de la tarde en hora local adelanta la fecha un día. Lo mismo con
+el amanecer: `astro.sunrise` sale de Open-Meteo y `/api/almanac` de pyephem.
+
+### 47. Otros de esta pasada
+
+- **`alerts.py:218-223`**: `wind_high` cae a `wind_gust` si falta la velocidad sostenida, y
+  entonces evalúa una **ráfaga** contra el umbral de sostenido (50 km/h en vez de 70) y la
+  anuncia como "Viento fuerte".
+- **`alerts.py:445`**: los avisos de normalización reutilizan el mensaje de alerta, así que llega
+  *"✅ Normalizado — 🌡️ Temperatura alta: 22 °C (≥ 35 °C)"*, contradictorio. Las reglas de
+  tendencia sí tienen texto propio para el caso normal (líneas 260, 266).
+- **`alerts.py:295-304`**: `known_sensors` nunca se olvida, así que retirar un sensor a propósito
+  deja su alerta activa indefinidamente (mitigable con `alert_rules_disabled`).
+- **`alerts.py:330-343`**: `_delta_over_window` exige que la línea base tenga al menos media
+  ventana de antigüedad (bien), pero no comprueba que no sea **demasiado vieja**: tras un hueco,
+  un delta de 110 min se rotula "/60min".
+- **`WindCard.tsx:85-86`**: `wind_direction ?? 0` hace que la aguja apunte al **Norte** cuando
+  falta el dato —y 0° es un valor válido, así que es indistinguible—, y `beaufort(wind_speed ?? 0)`
+  reporta "Calma".
+- **`UvSolarCard.tsx:59`**: `solar_radiation ?? 0` muestra 0 W/m², indistinguible de la noche.
+- **`ClimatePage.tsx:50`**: `YEAR_NOW = 2026` fijo y el selector ofrece `[2026, 2025, 2024]`. En
+  2027 la página seguirá abriendo en 2026 y no ofrecerá el año en curso. `StatisticsPage` hace lo
+  correcto con `new Date().getFullYear()`.
+- **`ClimatePage.tsx:135-136`**: grados-día y ET₀ sin convertir ni unidad variable — el hallazgo
+  #5, ahora en una segunda página.
+- **`StatsSummary.tsx:22`**: `rain_daily` con promedio y mínimo — el hallazgo #9, tercer sitio. Y
+  el título *"Resumen de hoy (24h)"* mezcla dos periodos distintos.
+- **`forecast.ts:165-173`**: Open-Meteo se consulta **desde el navegador**, sin caché de servidor
+  ni copia de respaldo. Si cae, la página se queda sin pronóstico, mientras `smn.py` sí sobrevive
+  a las caídas de su origen. Y cada visitante gasta cuota propia.
+- **`HistoryDayDetail.tsx:53-54`**: `06:00:00Z` escrito a mano como medianoche local. Correcto
+  mientras México no tenga horario de verano, pero codifica la zona en el frontend.
+- **`forecast.ts:143-154`**: `cardinalWord` (8 rumbos en palabras) y `windDescriptor` (umbrales
+  propios) suman una cuarta convención de rumbos y una segunda escala de viento junto a
+  `beaufort()`. Refuerza el hallazgo #29.
+
+### 48. "Sismos cerca de la estación" no filtra por distancia cuando la fuente es el SSN (**B**) — `earthquakes.py:138, 147`
+
+`get_earthquakes(lat, lon, radius_km=800, min_mag=4.0, limit=6)` recibe radio y magnitud mínima,
+pero **esos parámetros solo se aplican en la rama de USGS**:
+
+```python
+quakes = await _from_ssn(limit)          # sin lat/lon, sin radio, sin min_mag
+...
+quakes = await _from_usgs(lat, lon, radius_km, min_mag, limit)
+```
+
+El SSN devuelve los últimos sismos de **todo México** sin filtrar. Como se intenta primero, en
+el caso normal la tarjeta puede mostrar un sismo de magnitud 3.2 a 900 km mientras el endpoint
+se documenta como *"Sismos recientes cerca de la estación"*. Y el criterio **cambia según qué
+fuente respondió**: el mismo componente muestra cosas distintas sin avisarlo.
+
+También: el SSN se consulta por **HTTP plano** (`_SSN_URL`), y `_es_place` traduce `\bof\b` → "de"
+en cualquier contexto ("Gulf of California" → "Gulf de California").
+
+### 49. Décimo sitio del patrón ausencia→cero (**C**) — `ConsoleReplica.tsx:374`
+
+```tsx
+{decNum((data?.humidity_outdoor ?? 0).toFixed(0))}
+```
+
+La réplica de la consola convierte bien todo lo demás (14 usos de los formateadores de unidades),
+pero aquí muestra **0 %** de humedad si el dato falta. Es la vista más visible del kiosco.
+
+### Verificado como correcto en esta pasada
+
+- **`RemoteStationPage` pasa `station` en las tres llamadas** (`/api/current`, `/api/stats/daily`,
+  `/api/history`), así que la limitación de `/api/wind/rose` y `/api/stats/records` —que no
+  aceptan estación— **no la afecta**: no los usa.
+- **`EmbedWidget`** resuelve bien su caso: toma las unidades de `?units=` (lo correcto para un
+  iframe, que no puede leer el contexto del sitio anfitrión), convierte con los factores correctos
+  y **distingue la ausencia con `'--'`** en las tres magnitudes. Su único problema es duplicar
+  conversores que ya existen en `units.tsx`.
+- **`ConsoleReplica` sí respeta el selector de unidades** (14 usos de los formateadores).
+- **`earthquakes.py`** usa correctamente la hora local de México al parsear el SSN
+  (`replace(tzinfo=_MX).timestamp()`) y expone `source`, de modo que la UI puede decir de dónde
+  viene el dato.
+- **`smn.py` es el módulo mejor resuelto del backend**: su caché **sobrevive a las caídas de
+  CONAGUA** (que responde HTTP 500 con frecuencia) sirviendo la copia guardada y marcándola con
+  `stale` y `age_minutes`; el caché horario tiene evicción acotada (`_MAX_HOURLY`), lo que
+  contrasta con `air_quality.py`/`imeca.py`; y `fetched_at` refleja cuándo se descargó el dato y
+  no cuándo se respondió, con el bug previo documentado en el comentario.
+- **`ClimatePage` ya marca los meses parciales** con trama diagonal y los explica, que era el
+  pendiente sobre el climograma: un julio de 13 días no se presenta como mes completo.
+- **`HistoryDayDetail.shiftDay`** construye la fecha a mediodía local antes de desplazarla, que es
+  la técnica correcta para no cruzar el día al convertir.
+- **`NasaSatelliteCard.isoOffset`** sí debe usar `toISOString()`: GIBS indexa por día **UTC**.
+- **`alerts.py`** usa `uv_index` con la clave correcta (justo lo que fallaba en `quality.py` y
+  `publishers.py`), aísla el estado por estación, y sus exenciones de histéresis están razonadas.
+- **Los umbrales de `AdminAlertas`** están en métrico fijo a propósito: el backend los evalúa en
+  métrico.
+
+---
+
 ## Verificado como correcto
 
 Conviene registrarlo para no volver a auditarlo, y porque descarta sospechas iniciales:
@@ -828,24 +1008,26 @@ Conviene registrarlo para no volver a auditarlo, y porque descarta sospechas ini
 
 ---
 
-## Pendiente de revisar
+## Cobertura de la revisión
 
-Páginas y componentes que aún no he auditado:
+**Revisado a fondo:** todo el pipeline de ingesta y almacenamiento (`parser`, `converter`,
+`calibration`, `quality`, `storage`, `aggregator`, `windrose`), los servicios externos (`smn`,
+`metar`, `imeca`, `air_quality`, `earthquakes`, `almanac`, `forecaster`, `satellite`),
+`publishers`, `alerts`, `svitrix`, todos los endpoints de `main.py`, y las páginas Inicio,
+Pronóstico, Historia, Estadísticas, Climatología, Calidad del aire, Aeronáutica, Tablas, Consola,
+Estación remota, Kiosco y Widget, más los dos repos de firmware (Kiosko y Svitrix).
 
-- Historia (`HistoryPage`, `HistoryCharts`, `HistoryDayDetail`, `StationTempChart`)
-- Climatología (`ClimatePage`)
-- Tablas (`TablesPage`, `StationSummaryTable`)
-- Consola (`ConsoleReplica`) — 571 líneas
-- Estación remota (`RemoteStationPage`, `RemoteStationCard`)
-- Pronóstico (`ForecastPage`, `forecast.ts`, `ForecastCompareCard`, `LocalForecastCard`)
-- Aeronáutica (`AeronauticaPage`, `MetarCard`, `AtmosphericProfile`) y `metar.py`
-- Astronomía (`AstronomyPage`, `SunMoonDetailCard`, `DaylightChart`)
-- Sismos (`EarthquakesPage`, `quakes.ts`) y `earthquakes.py`
-- Inicio y Mi Tablero (`HomePage`, `MiTableroPage`), `WindCard`, `WindRose`, `PressureCard`,
-  `UvSolarCard`, `ExtraSensorsCard`, `AlmanacCard`, `HistoricalRecords`
-- Widget embebible (`EmbedWidget`, `ShareEmbedPage`)
-- `smn.py`, `satellite.py`, `publishers.py` (publicación a redes públicas), `alerts.py`
-- Panel de administración
+**Barrido por patrones sobre todo el frontend** (no solo los archivos leídos íntegros), buscando
+los cuatro modos de fallo que la auditoría fue encontrando: `?? 0` sobre datos de sensor,
+`new Date()` sobre campos del servidor sin `parseServerDate`, `toISOString()` donde se necesita la
+fecha local, y unidades escritas a mano donde debería mandar el selector.
+
+**Revisado solo por patrones, no línea a línea:** el panel de administración (~3 000 líneas). Es
+configuración y estado, no dato meteorológico desplegado, así que queda fuera del foco de esta
+auditoría; el barrido no encontró en él ninguno de los cuatro patrones salvo los umbrales en
+métrico fijo, que ahí son correctos. Tampoco entré en `DaylightChart`, `WindRose`,
+`SunMoonDetailCard` ni `HistoryCharts` más allá del barrido: son componentes de dibujo cuyos datos
+ya se auditaron en su origen.
 
 ## Decisiones sobre los repos externos — resueltas
 
