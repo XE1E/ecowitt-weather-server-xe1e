@@ -23,6 +23,8 @@ export interface Units {
   tempN: (c: number) => number
   windN: (kmh: number) => number
   pressN: (hpa: number) => number
+  rainN: (mm: number) => number
+  rateN: (mmh: number) => number
 }
 
 const UnitsContext = createContext<Units | null>(null)
@@ -46,6 +48,8 @@ function build(system: UnitSystem, toggle: () => void): Units {
     tempN: (c) => (imp ? c * 9 / 5 + 32 : c),
     windN: (kmh) => (imp ? kmh / 1.60934 : kmh),
     pressN: (hpa) => (imp ? hpa * 0.0295299830714 : hpa),
+    rainN: (mm) => (imp ? mm / 25.4 : mm),
+    rateN: (mmh) => (imp ? mmh / 25.4 : mmh),
   }
 }
 

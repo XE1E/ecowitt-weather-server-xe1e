@@ -370,7 +370,9 @@ export function KioskPage() {
   // ── Página 1: estación ──
   const cond = data ? deriveCondition(data) : { icon: '', label: '' }
   const t = stats?.temperature_outdoor
-  const uv = data?.uv_index ?? 0
+  // `?? null`, NO `?? 0`: si el sensor no reporta hay que mostrar "--". Un 0 en
+  // el display se lee como medición real (y una presión de 0 mb, como avería).
+  const uv = data?.uv_index ?? null
   const hours = forecast?.hours?.slice(0, 6) ?? []
 
   return shell(
@@ -392,11 +394,11 @@ export function KioskPage() {
         </div>
 
         <div className="grid grid-cols-3 grid-rows-2 gap-4 flex-1">
-          <Tile label="Humedad" value={`${(data?.humidity_outdoor ?? 0).toFixed(0)}`} unit="%" color="#3b82f6" />
-          <Tile label="Presión" value={u.press(data?.pressure_relative ?? 0, 0)} unit={u.pressU} color="#a78bfa" />
-          <Tile label="Viento" value={u.wind(data?.wind_speed ?? 0, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#22c55e" />
-          <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily ?? 0)} unit={u.rainU} color="#38bdf8" />
-          <Tile label="Índice UV" value={`${uv}`} color={uv >= 8 ? '#fca5a5' : uv >= 6 ? '#fdba74' : '#fde047'} />
+          <Tile label="Humedad" value={data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--'} unit="%" color="#3b82f6" />
+          <Tile label="Presión" value={u.press(data?.pressure_relative, 0)} unit={u.pressU} color="#a78bfa" />
+          <Tile label="Viento" value={u.wind(data?.wind_speed, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#22c55e" />
+          <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily)} unit={u.rainU} color="#38bdf8" />
+          <Tile label="Índice UV" value={uv != null ? `${uv}` : '--'} color={uv == null ? '#94a3b8' : uv >= 8 ? '#fca5a5' : uv >= 6 ? '#fdba74' : '#fde047'} />
           <Tile label="IMECA" value={imeca?.available && imeca.imeca != null ? `${imeca.imeca}` : '--'} sub={imeca?.category} color={imeca?.color || '#e2e8f0'} />
         </div>
       </div>

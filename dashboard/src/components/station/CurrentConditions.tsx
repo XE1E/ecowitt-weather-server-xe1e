@@ -62,13 +62,15 @@ export function CurrentConditions({ data, history }: { data: WeatherData; histor
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Humedad</p>
           <div className="flex items-center gap-1">
-            <p className="text-xl font-bold text-cyan-300">{(data.humidity_outdoor ?? 0).toFixed(0)}%</p>
+            <p className="text-xl font-bold text-cyan-300">
+              {data.humidity_outdoor != null ? `${data.humidity_outdoor.toFixed(0)}%` : '--'}
+            </p>
             <TrendArrow trend={humTrend} size={20} />
           </div>
         </div>
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Índice UV</p>
-          <p className="text-xl font-bold text-yellow-300">{data.uv_index ?? 0}</p>
+          <p className="text-xl font-bold text-yellow-300">{data.uv_index ?? '--'}</p>
         </div>
         <div className="rounded-lg bg-white/5 px-3 py-2">
           <p className="text-xs text-slate-400">Presión</p>

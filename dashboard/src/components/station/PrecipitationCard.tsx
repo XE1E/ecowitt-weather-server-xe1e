@@ -40,9 +40,11 @@ export function PrecipitationCard({ data, forecast }: Props) {
     const rainHour = next.find((h) => (h.precipProb ?? 0) > 30)
     if (rainHour) {
       const h = new Date(rainHour.time).getHours()
-      return `Lluvia posible ${h}:00`
+      return `Lluvia posible ${String(h).padStart(2, '0')}:00`
     }
-    return '24h sin lluvia'
+    // El texto sale de `next.length` y no de un "24h" fijo: la ventana son las
+    // horas que se grafican abajo (8), y afirmar 24 h era simplemente falso.
+    return `Sin lluvia en ${next.length} h`
   }
 
   return (
@@ -64,17 +66,19 @@ export function PrecipitationCard({ data, forecast }: Props) {
           <p className="text-2xl font-bold text-sky-400 tabular-nums">{u.rate(data.rain_rate)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">{u.rateU}</p>
         </div>
+        {/* La unidad va en las cuatro columnas: sin ella, tres cifras de lluvia
+            juntas no dicen si son mm o pulgadas (y cambian con el sistema). */}
         <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_event ?? 0)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Evento</p>
+          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_event)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Evento · {u.rainU}</p>
         </div>
         <div>
           <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_daily)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Hoy</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Hoy · {u.rainU}</p>
         </div>
         <div>
           <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_monthly)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Mes</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Mes · {u.rainU}</p>
         </div>
       </div>
 

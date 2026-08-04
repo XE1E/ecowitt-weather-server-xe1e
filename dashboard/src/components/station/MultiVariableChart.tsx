@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { useUnits, type Units } from '../../units'
+import { useUnits } from '../../units'
 import type { HistoryData } from '../../types'
 
 interface DataPoint {
@@ -10,7 +10,17 @@ interface DataPoint {
   k?: string          // clave de agrupacion (puede diferir de la etiqueta visible)
   temp?: number | null
   pressure?: number | null
+  /**
+   * Serie de lluvia GRAFICADA. Cambia de magnitud con el modo, a proposito:
+   *   day/2day -> intensidad (rain_rate, mm/h): el maximo de la hora.
+   *   week     -> acumulado (rain_daily, mm): lo que cayo ese dia.
+   * En una vista semanal interesa cuanto llovio cada dia, no el pico de
+   * intensidad. Antes se SUMABAN las tasas horarias, que no da ni mm ni mm/h
+   * (lloviznar a 2 mm/h todo el dia daba una barra de 2880).
+   */
   rain?: number | null
+  rate?: number | null      // rain_rate crudo (metrico)
+  daily?: number | null     // rain_daily crudo (metrico)
   wind?: number | null
   humidity?: number | null
 }
@@ -80,7 +90,8 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             k: key,
             temp: p.temperature_outdoor ?? null,
             pressure: p.pressure_relative ?? null,
-            rain: p.rain_rate ?? 0,
+            rate: p.rain_rate ?? null,
+            daily: p.rain_daily ?? null,
             wind: p.wind_speed ?? null,
             humidity: p.humidity_outdoor ?? null,
           }
@@ -97,16 +108,51 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
+  // `data` se guarda siempre en METRICO (como llega del API) y se convierte aqui
+  // al sistema activo. Asi cambiar de unidades no obliga a volver a pedir datos.
+  // Antes no se convertia NADA: los valores iban en metrico y solo el tooltip
+  // consultaba el sistema, de modo que en imperial decia "28.6 °F" sobre 28.6 °C.
+  const shown = useMemo(
+    () =>
+      data.map((d) => ({
+        ...d,
+        temp: d.temp == null ? null : u.tempN(d.temp),
+        pressure: d.pressure == null ? null : u.pressN(d.pressure),
+        wind: d.wind == null ? null : u.windN(d.wind),
+        // La lluvia es acumulado (mm) en semana e intensidad (mm/h) en dia: la
+        // conversion a imperial es /25.4 en ambos casos, pero la unidad difiere.
+        rain: d.rain == null ? null : (mode === 'week' ? u.rainN(d.rain) : u.rateN(d.rain)),
+        // humedad: % en los dos sistemas
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, u.system, mode]
+  )
+
   // Calcular dominios dinámicos basados en los datos
   const domains = useMemo(() => {
-    if (data.length === 0) {
+    if (shown.length === 0) {
       return {
-        temp: [0, 30],
-        press: [1000, 1030],
-        rain: [0, 5],
-        wind: [0, 15],
+        temp: [u.tempN(0), u.tempN(30)].map(Math.round),
+        press: [u.pressN(1000), u.pressN(1030)],
+        rain: [0, u.system === 'imperial' ? 0.2 : 5],
+        wind: [0, Math.round(u.windN(15))],
         hum: [0, 100],
       }
+    }
+
+    // Rango MINIMO de cada eje, en la unidad activa. Ojo con la temperatura: es
+    // un DELTA, y tempN es afín (multiplica y suma 32), asi que no sirve aqui —
+    // 5 °C de rango son 9 °F, no 41. Presion y viento si son multiplicativos.
+    const minTemp = u.system === 'imperial' ? 5 * 9 / 5 : 5
+    const minPress = u.pressN(5)
+
+    // Redondeo de los limites del eje. No vale redondear a entero siempre: la
+    // presion en inHg vive en ~30.2 y floor/ceil daria un eje [30, 31] con casi
+    // todos los ticks repetidos. Los decimales salen del ancho del rango.
+    const snap = (v: number, range: number, dir: 'down' | 'up') => {
+      const dec = range >= 20 ? 0 : range >= 2 ? 1 : 2
+      const f = Math.pow(10, dec)
+      return (dir === 'down' ? Math.floor(v * f) : Math.ceil(v * f)) / f
     }
 
     const calcDomain = (values: (number | null | undefined)[], padding = 0.1, minRange = 5) => {
@@ -116,32 +162,43 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
       const max = Math.max(...valid)
       const range = Math.max(max - min, minRange)
       const pad = range * padding
-      return [Math.floor(min - pad), Math.ceil(max + pad)]
+      return [snap(min - pad, range, 'down'), snap(max + pad, range, 'up')]
     }
 
     const calcDomainPress = (values: (number | null | undefined)[]) => {
       const valid = values.filter((v): v is number => v != null)
-      if (valid.length === 0) return [1000, 1030]
+      if (valid.length === 0) return [u.pressN(1000), u.pressN(1030)]
       const min = Math.min(...valid)
       const max = Math.max(...valid)
-      const range = Math.max(max - min, 5)
-      return [Math.floor(min - range * 0.2), Math.ceil(max + range * 0.2)]
+      const range = Math.max(max - min, minPress)
+      return [snap(min - range * 0.2, range, 'down'), snap(max + range * 0.2, range, 'up')]
     }
+
+    const maxOf = (values: (number | null | undefined)[]) => {
+      const valid = values.filter((v): v is number => v != null)
+      return valid.length ? Math.max(...valid) : 0
+    }
+    const rainTop = maxOf(shown.map((d) => d.rain)) * 1.3
+    const windTop = maxOf(shown.map((d) => d.wind)) * 1.3
 
     return {
-      temp: calcDomain(data.map((d) => d.temp), 0.15, 5),
-      press: calcDomainPress(data.map((d) => d.pressure)),
-      rain: [0, Math.max(2, Math.ceil(Math.max(...data.map((d) => d.rain ?? 0)) * 1.3))],
-      wind: [0, Math.max(3, Math.ceil(Math.max(...data.map((d) => d.wind ?? 0)) * 1.3))],
-      hum: calcDomain(data.map((d) => d.humidity), 0.1, 20),
+      temp: calcDomain(shown.map((d) => d.temp), 0.15, minTemp),
+      press: calcDomainPress(shown.map((d) => d.pressure)),
+      rain: [0, Math.max(u.system === 'imperial' ? 0.1 : 2, snap(rainTop, rainTop, 'up'))],
+      wind: [0, Math.max(u.system === 'imperial' ? 2 : 3, snap(windTop, windTop, 'up'))],
+      hum: calcDomain(shown.map((d) => d.humidity), 0.1, 20),
     }
-  }, [data])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown])
 
-  // Generar ticks dinámicos
+  // Generar ticks dinámicos. Los decimales siguen al PASO: con la presión en
+  // inHg el paso es ~0.1 y redondear a entero dejaría los 5 ticks repetidos.
   const genTicks = (domain: number[], count: number) => {
     const [min, max] = domain
     const step = (max - min) / (count - 1)
-    return Array.from({ length: count }, (_, i) => Math.round(min + step * i))
+    const dec = step >= 5 ? 0 : step >= 1 ? 1 : 2
+    const f = Math.pow(10, dec)
+    return Array.from({ length: count }, (_, i) => Math.round((min + step * i) * f) / f)
   }
 
   if (loading) {
@@ -161,6 +218,20 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   // Con 48 puntos hay que saltarse etiquetas o el eje X queda ilegible.
   const xInterval = kiosk ? (mode === '2day' ? 3 : 1) : undefined
 
+  // La serie de lluvia cambia de magnitud con el modo, asi que su nombre y su
+  // unidad tambien: acumulado del dia en semana, intensidad en dia/48 h.
+  const rainName = mode === 'week' ? 'Precipitación' : 'Intensidad de lluvia'
+  const rainUnit = mode === 'week' ? u.rainU : u.rateU
+  // Unidad por nombre de serie, para el tooltip. Sale del sistema activo, igual
+  // que los datos y las etiquetas de los ejes: los tres tienen que coincidir.
+  const UNITS: Record<string, string> = {
+    Temperatura: u.tempU,
+    'Presión atmosférica': u.pressU,
+    [rainName]: rainUnit,
+    'Velocidad del viento': u.windU,
+    Humedad: '%',
+  }
+
   const tip = {
     contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
     labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
@@ -171,7 +242,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   const minW = data.length > 12 ? `${Math.max(600, data.length * 40)}px` : '600px'
 
   const chart = (
-        <ComposedChart data={data} margin={{ top: 20, right: kiosk ? 20 : 70, left: kiosk ? 10 : 70, bottom: 5 }}>
+        <ComposedChart data={shown} margin={{ top: 20, right: kiosk ? 20 : 70, left: kiosk ? 10 : 70, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
 
           <XAxis
@@ -191,7 +262,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tick={{ fill: COL.temp, fontSize: fsY }}
             axisLine={{ stroke: COL.temp }}
             tickLine={{ stroke: COL.temp }}
-            label={{ value: '°C', position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
+            label={{ value: u.tempU, position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
             width={w(25, 34)}
           />
 
@@ -204,7 +275,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tick={{ fill: COL.press, fontSize: fsY }}
             axisLine={{ stroke: COL.press }}
             tickLine={{ stroke: COL.press }}
-            label={{ value: 'hPa', position: 'top', offset: 12, fill: COL.press, fontSize: fsL }}
+            label={{ value: u.pressU, position: 'top', offset: 12, fill: COL.press, fontSize: fsL }}
             width={w(32, 46)}
           />
 
@@ -217,7 +288,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tick={{ fill: COL.rain, fontSize: fsY }}
             axisLine={{ stroke: COL.rain }}
             tickLine={{ stroke: COL.rain }}
-            label={{ value: 'mm', position: 'top', offset: 12, fill: COL.rain, fontSize: fsL }}
+            label={{ value: rainUnit, position: 'top', offset: 12, fill: COL.rain, fontSize: fsL }}
             width={w(20, 28)}
           />
 
@@ -230,7 +301,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tick={{ fill: COL.wind, fontSize: fsY }}
             axisLine={{ stroke: COL.wind }}
             tickLine={{ stroke: COL.wind }}
-            label={{ value: 'km/h', position: 'top', offset: 12, fill: COL.wind, fontSize: fsL }}
+            label={{ value: u.windU, position: 'top', offset: 12, fill: COL.wind, fontSize: fsL }}
             width={w(28, 40)}
           />
 
@@ -253,10 +324,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             <Tooltip
               cursor={cursor}
               {...tip}
-              formatter={(v: number, name: string) => {
-                const unit = getUnit(name, u)
-                return [`${nf(v)} ${unit}`, name]
-              }}
+              formatter={(v: number, name: string) => [`${nf(v)} ${UNITS[name] ?? ''}`, name]}
             />
           )}
 
@@ -276,7 +344,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
           <Bar
             yAxisId="rain"
             dataKey="rain"
-            name="Precipitación"
+            name={rainName}
             fill={COL.rain}
             opacity={0.85}
             radius={[2, 2, 0, 0]}
@@ -293,7 +361,6 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             stroke={COL.temp}
             strokeWidth={2.5}
             dot={false}
-            connectNulls
             isAnimationActive={!kiosk}
           />
 
@@ -306,7 +373,6 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             stroke={COL.press}
             strokeWidth={2}
             dot={false}
-            connectNulls
             isAnimationActive={!kiosk}
           />
 
@@ -319,7 +385,6 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             stroke={COL.wind}
             strokeWidth={2}
             dot={false}
-            connectNulls
             isAnimationActive={!kiosk}
           />
 
@@ -332,7 +397,6 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             stroke={COL.hum}
             strokeWidth={2}
             dot={false}
-            connectNulls
             isAnimationActive={!kiosk}
           />
         </ComposedChart>
@@ -356,17 +420,6 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   )
 }
 
-function getUnit(name: string, u: Units): string {
-  switch (name) {
-    case 'Temperatura': return u.tempU
-    case 'Presión atmosférica': return u.pressU
-    case 'Precipitación': return 'mm/h'
-    case 'Velocidad del viento': return u.windU
-    case 'Humedad': return '%'
-    default: return ''
-  }
-}
-
 function groupByHour(points: DataPoint[]): DataPoint[] {
   const map = new Map<string, DataPoint[]>()
   const order: string[] = []
@@ -387,7 +440,8 @@ function groupByHour(points: DataPoint[]): DataPoint[] {
       k: key,
       temp: avg(pts.map((p) => p.temp)),
       pressure: avg(pts.map((p) => p.pressure)),
-      rain: Math.max(...pts.map((p) => p.rain ?? 0)),
+      // Intensidad: el pico de la hora (promediarla la diluiria a casi nada).
+      rain: maxOrNull(pts.map((p) => p.rate)),
       wind: avg(pts.map((p) => p.wind)),
       humidity: avg(pts.map((p) => p.humidity)),
     }
@@ -412,7 +466,9 @@ function groupByDay(points: DataPoint[]): DataPoint[] {
       k: key,
       temp: avg(pts.map((p) => p.temp)),
       pressure: avg(pts.map((p) => p.pressure)),
-      rain: sum(pts.map((p) => p.rain ?? 0)),
+      // Acumulado del dia: rain_daily es el contador de la consola, que se
+      // reinicia a medianoche local, asi que su MAXIMO del dia = lo que llovio.
+      rain: maxOrNull(pts.map((p) => p.daily)),
       wind: avg(pts.map((p) => p.wind)),
       humidity: avg(pts.map((p) => p.humidity)),
     }
@@ -424,6 +480,8 @@ function avg(arr: (number | null | undefined)[]): number | null {
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null
 }
 
-function sum(arr: number[]): number {
-  return arr.reduce((a, b) => a + b, 0)
+/** Maximo, o null si no hay ningun valor: null es "sin dato", no "cero". */
+function maxOrNull(arr: (number | null | undefined)[]): number | null {
+  const valid = arr.filter((v): v is number => v != null)
+  return valid.length ? Math.max(...valid) : null
 }

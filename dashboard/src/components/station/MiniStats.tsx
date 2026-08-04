@@ -56,7 +56,7 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         sub={t?.min != null ? `mín ${u.temp(t.min)}${u.tempU}` : undefined}
         color="text-orange-300"
       />
-      <Tile label="Humedad" value={`${(data.humidity_outdoor ?? 0).toFixed(0)}%`} color="text-cyan-300" />
+      <Tile label="Humedad" value={data.humidity_outdoor != null ? `${data.humidity_outdoor.toFixed(0)}%` : '--'} color="text-cyan-300" />
       <Tile label="Presión" value={u.press(data.pressure_relative, 0)} sub={u.pressU} color="text-violet-300" />
       <Tile
         label="Viento máx"
