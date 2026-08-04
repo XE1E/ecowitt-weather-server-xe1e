@@ -29,7 +29,20 @@ interface SmnHour {
   prob_precip: number | null; precip: number | null; sky: string | null
   wind: number | null; wind_dir: string | null; gust: number | null
 }
-interface SmnData { source: string; municipio: string; fetched_at?: string; days: SmnDay[]; hours: SmnHour[] }
+interface SmnData {
+  source: string; municipio: string; fetched_at?: string; days: SmnDay[]; hours: SmnHour[]
+  /** true = el SMN no respondió al refrescar y esto viene de la copia guardada. */
+  stale?: boolean
+  /** Antigüedad del dato en minutos (del dato, no de la respuesta). */
+  age_minutes?: number | null
+}
+
+/** "de hace 40 min" / "de hace 3 h" / "de hace 2 d", en corto. */
+function fmtEdad(min: number): string {
+  if (min < 90) return `${Math.round(min)} min`
+  const h = min / 60
+  return h < 36 ? `${Math.round(h)} h` : `${Math.round(h / 24)} d`
+}
 interface Muni { ides: string; idmun: string; nmun: string; nes: string }
 
 // Descripción de cielo del SMN → ícono meteocons.
@@ -57,7 +70,10 @@ export function ForecastPage() {
   const [source, setSource] = useState<'om' | 'smn'>('om')
   const [tab, setTab] = useState<'days' | 'hourly'>('days')
   const [smn, setSmn] = useState<SmnData | null>(null)
-  const [smnErr, setSmnErr] = useState(false)
+  // Se distingue POR QUÉ falló: el webservice de CONAGUA se cae seguido (responde
+  // HTTP 500), y decir "no hay datos para este municipio" en ese caso desorienta
+  // —parece culpa del municipio elegido cuando está caído el SMN entero—.
+  const [smnErr, setSmnErr] = useState<null | 'caido' | 'sin-municipio'>(null)
   const [munis, setMunis] = useState<Muni[]>([])
   const [sel, setSel] = useState<Muni>({ ides: '9', idmun: '14', nmun: 'Benito Juárez', nes: 'Ciudad de México' })
 
@@ -75,11 +91,22 @@ export function ForecastPage() {
   useEffect(() => {
     if (source !== 'smn') return
     let cancel = false
-    setSmn(null); setSmnErr(false)
-    const load = () => fetch(`/api/smn?ides=${sel.ides}&idmun=${sel.idmun}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (!cancel) { if (j && j.days?.length) { setSmn(j); setSmnErr(false) } else setSmnErr(true) } })
-      .catch(() => !cancel && setSmnErr(true))
+    setSmn(null); setSmnErr(null)
+    // 502 = el servidor no pudo traerlo del SMN (ni tenía copia guardada).
+    // 200 con days vacío = el SMN respondió pero no cubre ese municipio.
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/smn?ides=${sel.ides}&idmun=${sel.idmun}`)
+        if (cancel) return
+        if (!r.ok) { setSmn(null); setSmnErr('caido'); return }
+        const j: SmnData = await r.json()
+        if (cancel) return
+        if (j?.days?.length) { setSmn(j); setSmnErr(null) }
+        else { setSmn(null); setSmnErr('sin-municipio') }
+      } catch {
+        if (!cancel) { setSmn(null); setSmnErr('caido') }
+      }
+    }
     load()
     const i = setInterval(load, 1800000) // 30 min
     return () => { cancel = true; clearInterval(i) }
@@ -121,12 +148,33 @@ export function ForecastPage() {
       ) : (
         <div className="space-y-4">
           <SmnSearch munis={munis} current={sel} onSelect={setSel} />
-          {smnErr ? (
-            <div className="card text-slate-400">No se pudo obtener el pronóstico del SMN para este municipio.</div>
+          {smnErr === 'caido' ? (
+            <div className="card">
+              <p className="text-slate-300 font-medium">El SMN no está disponible ahora</p>
+              <p className="text-sm text-slate-400 mt-1">
+                El servicio de CONAGUA no está respondiendo. No es un problema de esta
+                estación: se reintenta solo cada 30 minutos. Mientras tanto puedes usar el
+                pronóstico de <button className="text-sky-400 hover:text-sky-300 underline"
+                  onClick={() => setSource('om')}>Open-Meteo</button>.
+              </p>
+            </div>
+          ) : smnErr === 'sin-municipio' ? (
+            <div className="card text-slate-400">El SMN no publica pronóstico para este municipio. Prueba con otro.</div>
           ) : !smn ? (
             <div className="h-64 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
           ) : (
-            <SmnView smn={smn} tab={tab} u={u} T={T} />
+            <>
+              {smn.stale && (
+                <div className="card border-amber-500/30 bg-amber-500/5">
+                  <p className="text-sm text-amber-200">
+                    ⚠ El SMN no responde en este momento, así que se muestra el último
+                    pronóstico que alcanzó a publicar
+                    {smn.age_minutes != null && <> —de hace <strong>{fmtEdad(smn.age_minutes)}</strong>—</>}.
+                  </p>
+                </div>
+              )}
+              <SmnView smn={smn} tab={tab} u={u} T={T} />
+            </>
           )}
         </div>
       )}

@@ -15,7 +15,7 @@ import gzip
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -66,11 +66,37 @@ async def _fetch(method: int) -> List[Dict[str, Any]]:
     return json.loads(raw)
 
 
+def _edad_min(ts: float) -> Optional[float]:
+    """Minutos desde que se descargó algo, o None si nunca se descargó."""
+    return None if not ts else (time.time() - ts) / 60.0
+
+
+def _iso_utc(ts: float) -> str:
+    """UTC naive en ISO, como el resto de las marcas de tiempo de la API.
+    (`utcfromtimestamp` está deprecado, de ahí el rodeo por `timezone.utc`.)"""
+    return datetime.fromtimestamp(ts, timezone.utc).replace(tzinfo=None).isoformat()
+
+
 async def _daily_all() -> List[Dict[str, Any]]:
+    """Diario completo, con caché que SOBREVIVE a las caídas del origen.
+
+    El webservice del SMN se cae con frecuencia (responde HTTP 500). Antes, al
+    expirar el TTL se descartaba la copia buena y el endpoint devolvía 502: una
+    caída de CONAGUA de unas horas dejaba la página sin nada, teniendo un
+    pronóstico de hace rato que seguía siendo útil. Ahora, si la descarga falla y
+    hay copia --aunque haya expirado-- se sirve ésa y se marca como `stale`.
+    """
     now = time.time()
     if _daily_cache["rows"] and (now - _daily_cache["ts"]) < _TTL:
         return _daily_cache["rows"]
-    rows = await _fetch(1)
+    try:
+        rows = await _fetch(1)
+    except Exception as e:
+        if _daily_cache["rows"]:
+            logger.warning("SMN diario no responde (%s); se sirve la copia de hace %.0f min",
+                           e, _edad_min(_daily_cache["ts"]) or 0)
+            return _daily_cache["rows"]
+        raise
     _daily_cache.update(ts=now, rows=rows)
     return rows
 
@@ -80,7 +106,15 @@ async def municipios() -> List[Dict[str, Any]]:
     now = time.time()
     if _muni_cache["list"] and (now - _muni_cache["ts"]) < _TTL:
         return _muni_cache["list"]
-    rows = await _daily_all()
+    try:
+        rows = await _daily_all()
+    except Exception as e:
+        # La lista de municipios no cambia casi nunca: una copia vieja sirve igual.
+        if _muni_cache["list"]:
+            logger.warning("SMN municipios no responde (%s); se sirve la lista de hace %.0f min",
+                           e, _edad_min(_muni_cache["ts"]) or 0)
+            return _muni_cache["list"]
+        raise
     seen: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for r in rows:
         key = (str(r.get("ides")), str(r.get("idmun")))
@@ -98,7 +132,14 @@ async def _hourly_for(ides: str, idmun: str) -> List[Dict[str, Any]]:
     c = _hourly_cache.get(key)
     if c and (now - c["ts"]) < _TTL:
         return c["hours"]
-    rows = await _fetch(3)
+    try:
+        rows = await _fetch(3)
+    except Exception as e:
+        if c:  # misma idea que el diario: mejor el horario viejo que ninguno
+            logger.warning("SMN horario no responde (%s); se sirve la copia de hace %.0f min",
+                           e, _edad_min(c["ts"]) or 0)
+            return c["hours"]
+        raise
     mine = [x for x in rows if str(x.get("ides")) == ides and str(x.get("idmun")) == idmun]
     if len(_hourly_cache) >= _MAX_HOURLY:  # evicción del más viejo
         oldest = min(_hourly_cache, key=lambda k: _hourly_cache[k]["ts"])
@@ -145,13 +186,20 @@ async def get_forecast(ides: str = IDES, idmun: str = IDMUN, hourly: bool = True
             logger.error(f"SMN hourly failed: {e}")
 
     m0 = mine[0]
+    # `fetched_at` es cuándo se descargó EL DATO, no cuándo se respondió: antes era
+    # utcnow(), así que una copia de hace 5 h se anunciaba como recién traída.
+    edad = _edad_min(_daily_cache["ts"])
     return {
         "source": "SMN CONAGUA",
         "ides": ides, "idmun": idmun,
         "municipio": f"{m0.get('nmun')}, {m0.get('nes')}",
         "nmun": m0.get("nmun"), "nes": m0.get("nes"),
         "lat": _f(m0.get("lat")), "lon": _f(m0.get("lon")),
-        "fetched_at": datetime.utcnow().isoformat(),
+        "fetched_at": _iso_utc(_daily_cache["ts"]) if _daily_cache["ts"]
+                      else datetime.utcnow().isoformat(),
+        "age_minutes": round(edad, 1) if edad is not None else None,
+        # stale = el SMN no respondió al refrescar y esto viene de la copia guardada.
+        "stale": bool(edad is not None and edad > _TTL / 60.0),
         "days": days,
         "hours": hours,
     }

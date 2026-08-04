@@ -22,19 +22,25 @@ function skyIcon(sky: string | null): string {
 }
 
 interface SmnDay { tmax: number | null; tmin: number | null; prob_precip: number | null; sky: string | null }
-interface SmnData { municipio: string; days: SmnDay[] }
+interface SmnData { municipio: string; days: SmnDay[]; stale?: boolean }
 
 // Comparativa compacta del pronóstico de HOY: Open-Meteo (modelo) vs SMN (oficial).
 export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | null }) {
   const u = useUnits()
   const [smn, setSmn] = useState<SmnData | null>(null)
+  // El webservice de CONAGUA se cae seguido; hay que poder DECIRLO en vez de
+  // dejar la columna con valores vacíos que parecen un pronóstico real.
+  const [smnErr, setSmnErr] = useState(false)
 
   useEffect(() => {
     let cancel = false
     // hourly=0 → solo el diario (evita descargar el archivo horario grande).
     fetch('/api/smn?hourly=0').then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (!cancel && j?.days?.length) setSmn(j) })
-      .catch(() => {})
+      .then((j) => {
+        if (cancel) return
+        if (j?.days?.length) { setSmn(j); setSmnErr(false) } else setSmnErr(true)
+      })
+      .catch(() => { if (!cancel) setSmnErr(true) })
     return () => { cancel = true }
   }, [])
 
@@ -44,8 +50,12 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
 
   const T = (c?: number | null) => (c == null ? '--' : `${Math.round(u.tempN(c))}°`)
 
-  const Col = ({ label, icon, alt, max, min, prob }: {
-    label: string; icon: string; alt: string; max?: number | null; min?: number | null; prob: number
+  // `prob` es anulable a propósito: cuando no hay dato hay que mostrar "--" y no
+  // "0%", porque un 0% se lee como "no va a llover" —un pronóstico— en vez de
+  // "no hay pronóstico".
+  const Col = ({ label, icon, alt, max, min, prob, nota }: {
+    label: string; icon: string; alt: string
+    max?: number | null; min?: number | null; prob?: number | null; nota?: string
   }) => (
     <div className="rounded-lg bg-white/5 p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">{label}</p>
@@ -56,7 +66,11 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
             <span className="text-orange-300">{T(max)}</span>
             <span className="text-sky-300 text-sm"> / {T(min)}</span>
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">💧 {Math.round(prob)}%</p>
+          {nota ? (
+            <p className="text-[11px] text-slate-500 mt-0.5">{nota}</p>
+          ) : (
+            <p className="text-[11px] text-slate-400 mt-0.5">💧 {prob == null ? '--' : `${Math.round(prob)}%`}</p>
+          )}
         </div>
       </div>
     </div>
@@ -66,11 +80,16 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
     <div className="card">
       <p className="card-title">Pronóstico de hoy · comparativa</p>
       <div className="grid grid-cols-2 gap-3">
-        <Col label="Open-Meteo" icon={om?.icon ?? 'not-available'} alt="" max={om?.tempMax} min={om?.tempMin} prob={om?.precipProb ?? 0} />
-        <Col label="SMN oficial" icon={sd ? skyIcon(sd.sky) : 'not-available'} alt={sd?.sky ?? ''} max={sd?.tmax} min={sd?.tmin} prob={sd?.prob_precip ?? 0} />
+        <Col label="Open-Meteo" icon={om?.icon ?? 'not-available'} alt="" max={om?.tempMax} min={om?.tempMin} prob={om?.precipProb} />
+        <Col label="SMN oficial" icon={sd ? skyIcon(sd.sky) : 'not-available'} alt={sd?.sky ?? ''}
+          max={sd?.tmax} min={sd?.tmin} prob={sd?.prob_precip}
+          nota={!sd ? (smnErr ? 'SMN no disponible' : 'cargando…') : undefined} />
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-slate-500">Modelo global vs. oficial (SMN)</span>
+        <span className="text-[11px] text-slate-500">
+          Modelo global vs. oficial (SMN)
+          {smn?.stale && <span className="text-amber-400/80"> · SMN de la última publicación</span>}
+        </span>
         <Link to="/pro/pronostico" className="text-xs text-blue-400 hover:text-blue-300">Ver pronóstico →</Link>
       </div>
     </div>
