@@ -1,8 +1,13 @@
 # Guía completa — Estación meteorológica XE1E
 
-> Documento descriptivo y de operación de todo el sistema: qué es el proyecto,
-> el hardware, cómo fluye y se procesa el dato, qué muestra cada página de la
-> web y cómo administrarla y mantenerla.
+> **Documentación técnica** del sistema: hardware, arquitectura, cómo se procesa
+> el dato, endpoints, administración, despliegue y operación.
+>
+> **¿Buscas cómo usar el sitio o qué significa un dato?** Eso está en el
+> **[manual de usuario](../dashboard/public/guia.html)**
+> (<https://clima.xe1e.net/guia.html>): recorrido por cada página e interpretación
+> de cada número, sin tecnicismos. Los dos documentos son **complementarios y no
+> se repiten** — si algo cabe en los dos, va en el manual y aquí se enlaza.
 >
 > **Sitio público:** https://clima.xe1e.net
 > **Ubicación:** Benito Juárez, Ciudad de México, México · 19.380359, −99.174564 · ~2250 m
@@ -15,7 +20,7 @@
 2. [Hardware](#2-hardware)
 3. [Arquitectura y flujo de datos](#3-arquitectura-y-flujo-de-datos)
 4. [Procesamiento del dato local](#4-procesamiento-del-dato-local)
-5. [La página web](#5-la-página-web-pro) (sección por sección)
+5. [La página web](#5-la-página-web-pro) (rutas y estado; el recorrido está en el manual)
 6. [Widget para tu sitio](#6-widget-para-tu-sitio)
 7. [Pantallas físicas](#7-pantallas-físicas)
 8. [Impresión 3D](#8-impresión-3d)
@@ -193,169 +198,27 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 ## 5. La página web (`/pro`)
 
-### Barra superior y navegación
-- **Título y ubicación** de la estación.
-- **Reloj** en vivo (hora y fecha local).
-- **Botón de unidades:** conmuta métrico (°C · km/h · mm · mb) ↔ imperial
-  (°F · mph · in · inHg). Afecta a todo el sitio.
-- **Botón de tema:** ☀️ claro / 🌙 oscuro. Se recuerda entre visitas y aplica a
-  ambas vistas.
-- **Botón FX:** activa/desactiva los **efectos de clima** (lluvia, nieve, etc.)
-  animados de fondo según la condición actual.
-- **Vista clásica:** enlace a `/`.
-- **Cintillo** de secciones: Inicio · Mi tablero · Pronóstico · Historia ·
-  Estadísticas · Climatología · Radar · Astronomía · Calidad del aire ·
-  Aeronáutica · Estación remota · Widget.
+> **El recorrido página por página vive en el manual de usuario**, no aquí:
+> [`dashboard/public/guia.html`](../dashboard/public/guia.html) — publicado en
+> <https://clima.xe1e.net/guia.html>. Ahí está qué es cada pestaña, qué muestra
+> cada tarjeta y **cómo se interpreta** cada dato, en lenguaje para cualquiera.
+> Este documento no lo repite: se quedó con lo técnico.
 
-### 5.1 Inicio
-Panel principal con el estado actual:
+Lo que sí corresponde a este documento:
 
-- **Mini-estadísticas (barra):** máx de hoy, viento máx, precipitación, UV,
-  sensación, presión, prob. de lluvia, humedad y **"vs ayer"**.
-- **Condiciones actuales:** temperatura grande + ícono + descripción; sensación,
-  punto de rocío, bulbo húmedo, **humidex** y **base de nubes**; y humedad, UV y
-  presión (en cajas).
-- **Viento:** **brújula-instrumento** (aguja de compás que apunta al origen del
-  viento, coloreada por intensidad Beaufort, con anillo graduado y velocidad al
-  centro); **gira** (flip) a la **rosa de vientos** al pulsar "Rosa de vientos".
-- **Presión:** valor, mín/máx del día, **tendencia** y gráfica de 24 h con la hora.
-- **Pronóstico local:** texto propio según la **tendencia del barómetro**.
-- **Pronóstico (Open-Meteo)** y **comparativa de hoy** (Open-Meteo vs **SMN
-  oficial**); **gráfica de temperatura**, **precipitación** (con aviso "sin lluvia
-  prevista" cuando no se espera), **UV y radiación solar** (coloreadas por nivel)
-  y **Sol y Luna**.
-- **METAR** del aeropuerto: **categoría de vuelo** (VFR/MVFR/IFR/LIFR) explicada,
-  temperatura, viento, visibilidad, presión (QNH) y cielo por capas.
-- **Calidad del aire (AQI)** e **IMECA**; **último sismo**; **alertas**;
-  **próximos eventos** (fases lunares).
-- **Interior** (temp/humedad) y **sensores adicionales WN31** (por canal, con
-  nombre configurable — p. ej. "Jardín"). Abajo, el **radar**.
+- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 14
+  pestañas) y la clásica de una sola página en `/`. El panel vive en `/admin`, el
+  kiosco en `/kiosko?page=N` y el widget embebible en `/widget`.
+- **Estado compartido.** `StationDataProvider` (`dashboard/src/station-data.tsx`)
+  centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
+  los refresca cada 60 s (el pronóstico cada 30 min). Las páginas consumen el
+  contexto en vez de pedir cada una lo suyo.
+- **Unidades.** `useUnits()` (`dashboard/src/units.tsx`) convierte en la vista, no
+  en el servidor: el backend siempre guarda y sirve métrico. La preferencia se
+  persiste en `localStorage`.
+- **Convenciones visuales** (colores por variable, umbrales de tendencia, tamaños
+  de icono): `docs/CONVENCIONES.md`.
 
-### 5.2 Mi tablero
-Vista **personalizable**: con el botón «Personalizar» eliges qué tarjetas mostrar
-u ocultar (las mismas del Inicio) y, con ese modo activo, puedes **arrastrarlas
-para reordenarlas** a tu gusto (con soporte táctil). Tanto la selección como el
-orden se guardan **en tu dispositivo**. La tarjeta de condiciones actuales queda
-fija arriba. Entre las tarjetas disponibles está la de la **Estación remota**
-(resumen compacto de la segunda estación; ver §5.11).
-
-### 5.3 Pronóstico
-Con **selector de fuente** (solo se ve una a la vez, sin saturar):
-- **Open-Meteo** (modelo global `best_match`): pestañas **por día** y **por hora**,
-  tarjeta resumen y **descripciones en lenguaje natural** (NLG), con la explicación
-  de qué son los modelos y por qué es probabilidad, no certeza.
-- **SMN oficial** (Servicio Meteorológico Nacional · CONAGUA): el pronóstico
-  **oficial por municipio** (4 días + 48 h) para Benito Juárez, y un **buscador de
-  municipios** (autocompletar) para ver el de **cualquier municipio de México**
-  (~2,460). Se actualiza cada hora.
-
-En el Inicio hay además una **mini-comparativa de hoy** (Open-Meteo vs SMN).
-
-### 5.4 Historia
-El **archivo de la estación** con granularidad **Día / Mes / Año** y cinco grupos
-de **gráficas interactivas** (temperatura; viento con dirección; humedad y punto
-de rocío; radiación UV/solar; y **precipitación y presión**, que incluye la
-**tasa máxima de lluvia**). **Tabla diaria/mensual** con día/mes en insignia y su
-nombre, y columnas máx/mín/prom/precipitación/viento; clicable para abrir el
-**detalle diario**; **exportación a CSV**.
-
-### 5.5 Estadísticas
-Con **selector de año**: **resumen del año**, **promedios mensuales**,
-**contadores de días** (cálidos, noches frescas, con/sin lluvia), **grados-día**
-y **evapotranspiración**, **récords históricos** en pestañas por categoría (cada
-uno con su **top 5** y fecha), estadísticas por periodo y una **rosa de vientos**
-(16 sectores, **apilada por bandas de velocidad**: cada pétalo muestra la
-frecuencia por dirección dividida en bandas de color de menor a mayor velocidad,
-con leyenda y detalle al pasar el cursor).
-
-### 5.6 Climatología
-**Climatología Local** sobre el resumen diario:
-- Tarjetas **Ayer / Este mes / Este año** (temperatura, humedad, viento, lluvia,
-  grados-día y ET).
-- **Climograma** anual (barras de lluvia + líneas de temperatura por mes).
-- **Récords por mes calendario**.
-- **Reporte estilo NOAA** (diario/mensual/anual, base 18.3 °C; "día con lluvia"
-  ≥ 0.2 mm; ET por Hargreaves).
-- **"En este día"** (años previos).
-
-### 5.7 Radar y satélite
-Mapa interactivo de **Ventusky** (radar, nubes, viento, temperatura…) e **imagen
-satelital diaria de NASA GIBS** (color real, con selector de capa y fecha),
-centrados en la estación.
-
-### 5.8 Astronomía
-- **Sol** y **Luna** con **arco de trayectoria** y estadísticas (elevación,
-  azimut, iluminación, edad, distancia…).
-- Fila de **fases lunares**.
-- **Gráfica de duración del día**: muestra la variación de amanecer, ocaso y
-  duración del día a lo largo del año. Áreas apiladas (noche/día/noche), línea
-  naranja de ocaso, línea azul del día actual. Al pasar el mouse se muestra el
-  día seleccionado con sus datos en la tabla inferior.
-- **Almanaque** (pyephem, local): los tres **crepúsculos** (civil −6°, náutico
-  −12°, astronómico −18°) y los **planetas** visibles (Mercurio…Saturno) con
-  orto/ocaso, altitud y magnitud.
-
-### 5.9 Calidad del aire
-- **AQI** (escala US EPA) de **WAQI/aqicn** (requiere token gratuito, se pone en
-  el panel).
-- **IMECA** estimado con las tablas oficiales de la norma **NADF-009-AIRE-2017**
-  a partir de concentraciones modeladas (Open-Meteo/CAMS): valor y categoría con
-  color, **medidor visual**, sub-índices por contaminante, **recomendaciones de
-  salud**, **pronóstico del IMECA por horas** y **aviso de contingencia**.
-
-### 5.10 Aeronáutica
-**METAR** (observación) y **TAF** (pronóstico) **decodificados** al español, con
-la **categoría de vuelo** (VFR/MVFR/IFR/LIFR) y un **perfil atmosférico visual**
-(capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH;
-dibuja lluvia/rayos según el reporte). Buscador de cualquier código **ICAO** y
-accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).
-
-### 5.11 Tablas
-Resumen tabular de todas las variables meteorológicas en formato de **tabla
-compacta**. Con **selector de estación** (Principal WS2910 / Remota GW1100) para
-ver los datos de cada una: valores actuales junto con mínimo, promedio y máximo
-del día. Útil para una vista rápida de todos los parámetros en un solo lugar.
-
-### 5.12 Estación remota
-Página para una **segunda estación** (p. ej. un Ecowitt **GW1100**) que envía al
-mismo servidor. Sus datos se guardan **separados** de la principal, así que **no
-la afectan**. Tiene **alertas propias** (temperatura, humedad, presión, punto de
-rocío y offline, con umbrales independientes) y puede publicar a redes si se
-activa desde el panel (ver §8). Muestra:
-- **Condiciones actuales:** temperatura (con **tendencia** a 3 h), humedad y **punto de rocío**.
-- **Presión** con su tendencia.
-- **Estadística** (mín/prom/máx) de temperatura, humedad y presión, con selector **24 h / 7 d / 30 d**.
-- **Histórico** con selector **Temp y humedad / Presión** y el mismo rango de tiempo.
-
-Un **resumen compacto** de esta estación está disponible también como tarjeta
-opcional en **Mi tablero** (§5.2).
-
-### 5.13 Vista clásica (`/`)
-Tablero sencillo para consulta rápida, **unificado con el estilo de `/pro`**
-(reutiliza sus tarjetas: condiciones actuales, viento, interior, sensores,
-pronóstico, sol y luna…). Incluye enlace **"App completa →"** a `/pro`.
-
-### 5.14 Pie de página
-Tres columnas (Estación / Datos / Proyecto) con hardware, ubicación, fuentes de
-datos y enlaces; un párrafo descriptivo; y enlaces a **Widget** y **⚙ Admin**.
-
-### 5.15 Widget e instalar (PWA)
-- **Widget** (`/pro/compartir`): elige **unidades, tema y tamaño**, ve la
-  **vista previa** y copia el **código `<iframe>`** para incrustarlo. El widget
-  (`/embed`) es una tarjeta compacta que se actualiza cada minuto y acepta
-  `?units=` y `?theme=`.
-- **PWA (Progressive Web App):** el sitio se puede **instalar como aplicación**
-  en cualquier dispositivo. Una vez instalada, abre en pantalla completa (sin
-  barra del navegador), tiene su propio ícono y funciona como una app nativa.
-  - **En móvil (iOS/Android):** abre `clima.xe1e.net/pro` en el navegador → menú
-    «Compartir» (iOS) o «⋮» (Android) → **«Añadir a pantalla de inicio»**.
-  - **En escritorio (Chrome/Edge):** abre el sitio → clic en el ícono de
-    instalación en la barra de direcciones (o menú → «Instalar aplicación»).
-  - **Ventajas:** acceso directo desde el home/escritorio, abre la vista completa
-    (`/pro`) directamente, notificaciones (si se habilitan), y funciona offline
-    con los últimos datos cacheados.
-
----
 
 ## 6. Widget para tu sitio
 
@@ -396,17 +259,34 @@ muestran el clima en tiempo real sin necesidad de abrir un navegador.
 ### Waveshare ESP32-S3 (pantalla táctil 7")
 
 Una **pantalla táctil de 1024×600** basada en **ESP32-S3** que actúa como
-«display tonto»: el servidor genera cada pantalla como JPEG y el ESP32 solo la
-muestra. Un toque cambia de página.
+«display tonto»: el servidor renderiza cada pantalla en headless Chromium y la
+sirve como JPEG (`GET /api/display.jpg?page=N`); el ESP32 solo la baja y la
+pinta. Se navega tocando la **barra inferior de 6 pestañas**.
 
-| Página | Contenido |
-|--------|-----------|
-| 1 | Estación: temperatura, tiles de resumen, pronóstico 6 h |
-| 2 | Sensor local BME280 (temperatura, humedad y presión del propio display) |
+| Página | `?page=` | Contenido | Fuente en el repo |
+|--------|----------|-----------|-------------------|
+| 1 | `1` | Estación: temperatura, tiles de resumen, pronóstico de 6 h | `KioskPage.tsx` |
+| 2 | `2` | Sensor local BME280 del propio display, con mín/máx del día | `KioskPage.tsx` · `/api/kiosk/local` |
+| 3 | `3` | Sensores: interior, jardín (CH1) y remota GW1100 | `KioskPage.tsx` |
+| 4 | `4` | Pronóstico de 7 días | `KioskPage.tsx` |
+| 5 | `5` | Resumen multivariable de 48 h (temp, presión, lluvia, viento, humedad) | `MultiVariableChart` en modo `2day` + `kiosk` |
+| 6 | `consola` | Réplica de la consola física Ecowitt, pantalla completa sin barra | `ConsoleReplica` en modo `kiosk` |
+
+> El **orden y el número** de pestañas deben coincidir con `NUM_PAGES` del
+> firmware, que mapea el toque en la franja inferior a la página según la X.
+> Página N → `TABS[N-1]` en `KioskPage.tsx`. La página 6 es full-screen y un
+> toque en cualquier parte regresa a la 1.
+
+La página 5 y la 6 **reusan componentes del dashboard** (`MultiVariableChart` y
+`ConsoleReplica`), no copias: cualquier mejora que se les haga en la web llega
+sola al display. `ConsoleReplica` es además la misma vista del tab
+[Consola](#5-la-página-web-pro) (`/pro/consola`), con un prop `mode` como única
+diferencia.
 
 El display tiene un **BME280 integrado** que envía sus lecturas al servidor
-(`POST /api/kiosk/local`), mostrándolas en la página 2. Configuración WiFi por
-portal cautivo (*WiFiManager*). Firmware y documentación:
+(`POST /api/kiosk/local`), mostrándolas en la página 2; los mín/máx del día se
+persisten en `/data/kiosk_local.json` para sobrevivir reinicios del contenedor.
+Configuración WiFi por portal cautivo (*WiFiManager*). Firmware y documentación:
 [ecowitt-display-kiosk-xe1e](https://github.com/XE1E/ecowitt-display-kiosk-xe1e).
 
 ### SVITRIX-XE1E (Ulanzi TC001)

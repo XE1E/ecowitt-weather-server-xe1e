@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b1120">
 <link rel="icon" href="/weather.svg">
 <script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
-<title>Guía — Estación XE1E</title>
+<title>Manual de usuario — Estación XE1E</title>
 <style>
   :root {
     --bg: #f4f7fa;
@@ -170,17 +170,16 @@
 </head>
 <body>
 
-
 <header class="plate">
   <div class="wrap plate-inner">
-    <p class="eyebrow">Guía completa · Manual de la estación</p>
-    <h1>Estación meteorológica XE1E</h1>
-    <p class="subtitle">Cómo funciona todo el sistema: del hardware al sitio web. Qué mide, cómo procesa el dato, qué muestra cada página y cómo se administra y mantiene.</p>
+    <p class="eyebrow">Manual de usuario</p>
+    <h1>Cómo leer la estación XE1E</h1>
+    <p class="subtitle">Qué mide esta estación, qué hay en cada página y —sobre todo— <strong>qué te está diciendo cada número</strong>. No hace falta saber meteorología: cada dato viene con su interpretación.</p>
     <div class="readout">
       <div><span class="k">Sitio</span><span class="v"><a href="https://clima.xe1e.net">clima.xe1e.net</a></span></div>
       <div><span class="k">Ubicación</span><span class="v">Benito Juárez, CDMX</span></div>
-      <div><span class="k">Coordenadas</span><span class="v">19.380359, −99.174564</span></div>
       <div><span class="k">Altitud</span><span class="v">~2250 m</span></div>
+      <div><span class="k">Ficha técnica</span><span class="v"><a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></span></div>
     </div>
   </div>
 </header>
@@ -189,436 +188,518 @@
   <nav class="toc" aria-label="Índice">
     <p class="toc-label">Contenido</p>
     <ol>
-      <li><a href="#proyecto"><span class="num">01</span> El proyecto</a></li>
-      <li><a href="#hardware"><span class="num">02</span> Hardware</a></li>
-      <li><a href="#arquitectura"><span class="num">03</span> Arquitectura y datos</a></li>
-      <li><a href="#procesamiento"><span class="num">04</span> Procesamiento local</a></li>
-      <li><a href="#web"><span class="num">05</span> La página web</a></li>
-      <li><a href="#widget"><span class="num">06</span> Widget para tu sitio</a></li>
+      <li><a href="#empieza"><span class="num">01</span> Empieza aquí</a></li>
+      <li><a href="#leer"><span class="num">02</span> Cómo leer los números</a></li>
+      <li><a href="#inicio"><span class="num">03</span> Inicio</a></li>
+      <li><a href="#paginas"><span class="num">04</span> Las demás páginas</a></li>
+      <li><a href="#significados"><span class="num">05</span> Qué significan los datos</a></li>
+      <li><a href="#alertas"><span class="num">06</span> Alertas</a></li>
       <li><a href="#pantallas"><span class="num">07</span> Pantallas físicas</a></li>
-      <li><a href="#impresion3d"><span class="num">08</span> Impresión 3D</a></li>
-      <li><a href="#admin"><span class="num">09</span> Administración</a></li>
-      <li><a href="#alertas"><span class="num">10</span> Alertas</a></li>
-      <li><a href="#redes"><span class="num">11</span> Redes públicas</a></li>
-      <li><a href="#fuentes"><span class="num">12</span> Fuentes de datos</a></li>
-      <li><a href="#api"><span class="num">13</span> API</a></li>
-      <li><a href="#operacion"><span class="num">14</span> Operación</a></li>
-      <li><a href="#glosario"><span class="num">15</span> Glosario</a></li>
-      <li><a href="#estado"><span class="num">16</span> Estado y pendientes</a></li>
+      <li><a href="#widget"><span class="num">08</span> Widget e instalar</a></li>
+      <li><a href="#glosario"><span class="num">09</span> Glosario</a></li>
     </ol>
   </nav>
 
   <main>
-    <section id="proyecto">
-      <span class="sec-eyebrow">01 — Proyecto</span>
-      <h2>El proyecto</h2>
-      <p>Es un <strong>proyecto personal sobre el clima</strong>: una estación meteorológica propia, instalada en un punto exacto de la Ciudad de México (Benito Juárez), que publica en tiempo casi real las condiciones de ese lugar y las conserva para consultar su histórico, estadísticas y climatología.</p>
-      <p>Lo que lo distingue es que <strong>todo está hecho a la medida</strong>: el servidor que recibe los datos, la base de series de tiempo, la API y el sitio web se desarrollaron específicamente para esta estación y viven en un <strong>VPS propio</strong> —no una plataforma comercial «de caja»—. Eso permite decidir qué se mide, cómo se calcula y cómo se presenta, y hacer crecer la plataforma a voluntad.</p>
+
+    <!-- ══════════════════ 01 ══════════════════ -->
+    <section id="empieza">
+      <span class="sec-eyebrow">01 — Empieza aquí</span>
+      <h2>Empieza aquí</h2>
+
+      <p>Lo que ves en <a href="https://clima.xe1e.net">clima.xe1e.net</a> no es un pronóstico de internet: son las <strong>condiciones reales medidas en un sitio de Benito Juárez</strong>, en la Ciudad de México, a unos 2250 metros de altitud. Los sensores están ahí y reportan cada minuto.</p>
+
+      <p>Esa diferencia importa más de lo que parece. Cuando una app del clima te dice «23 °C en CDMX», está interpolando un modelo para toda la ciudad. Aquí el número viene de un termómetro concreto, en un punto concreto, y por eso puede no coincidir con lo que dice tu teléfono. <strong>Ninguno de los dos está mal:</strong> miden cosas distintas.</p>
+
+      <h3>Cada cuánto se actualiza</h3>
+      <p>La estación envía una lectura <strong>cada minuto</strong>. La página se refresca sola, así que no necesitas recargarla. Arriba a la derecha verás siempre cuándo llegó el último dato:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Indicador</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill">EN VIVO</span></td><td>El último dato llegó hace menos de 5 minutos. Todo lo que ves es actual.</td></tr>
+            <tr><td><span class="pill warn">SIN CONEXIÓN</span></td><td>Pasaron más de 5 minutos sin recibir nada. Los números siguen en pantalla, pero son <strong>los últimos conocidos</strong>, no los de ahora. Suele ser un corte de luz o de internet, y se recupera solo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Dos estaciones, no una</h3>
+      <p>El sitio muestra datos de dos equipos distintos, y conviene no confundirlos:</p>
       <ul>
-        <li><strong>Objetivo principal:</strong> aprovechar al máximo el <strong>dato local</strong> de la estación —real, cercano y del sitio exacto, no la interpolación de un modelo— y, a la par, <strong>desarrollar y evolucionar una plataforma propia</strong> (servidor + API + web) hecha a la medida en el VPS, además de compartir el dato con redes públicas.</li>
-        <li><strong>Alcance:</strong> meteorología en sentido amplio —condiciones actuales, histórico, estadísticas y climatología, pronóstico, radar y satélite— más los campos vecinos que enriquecen la lectura del cielo: <strong>astronomía</strong> (sol, luna, almanaque), <strong>calidad del aire</strong> (AQI e IMECA), <strong>meteorología aeronáutica</strong> (METAR/TAF) y <strong>sismos</strong> de la región.</li>
-        <li><strong>Más de un sitio:</strong> además de la estación principal, el servidor admite una <strong>estación remota</strong> (p. ej. un GW1100 en otra ubicación) que envía al mismo VPS; sus datos se guardan por separado y tienen su propia página, para comparar el clima de dos puntos distintos.</li>
+        <li><strong>Principal (WS2910).</strong> La estación completa: temperatura y humedad exterior, viento, lluvia, radiación solar y UV. Es la que alimenta casi todo el sitio. Cuando una página dice «exterior» sin más, es ésta.</li>
+        <li><strong>Remota (GW1100).</strong> Un segundo equipo en otra ubicación, con menos sensores. Tiene su propia página y su tarjeta aparte. Sirve para comparar dos puntos.</li>
       </ul>
-      <p>El sitio tiene dos vistas: <code>/</code> — <strong>vista clásica</strong> (tablero simple de un vistazo, unificado con el estilo de <code>/pro</code>) — y <code>/pro</code> — <strong>vista completa</strong>, con sus secciones, unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA). También hay una <strong>pantalla física ESP32-S3 Waveshare</strong> que muestra las condiciones en tiempo real.</p>
-    </section>
+      <p>Además hay <strong>sensores sueltos por canal</strong> (el del jardín, por ejemplo) que aparecen agrupados en su propia tarjeta.</p>
 
-    <section id="hardware">
-      <span class="sec-eyebrow">02 — Hardware</span>
-      <h2>Hardware</h2>
-      <p>Kit <strong>Ecowitt WS2910</strong> + sensor <strong>WS69</strong> + termohigrómetros <strong>WN31</strong>.</p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Equipo</th><th>Qué es</th><th>Qué mide / hace</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Consola WS2910</strong></td><td>Pantalla + puente Wi-Fi</td><td>Presión (barómetro), temp/humedad interior; <strong>envía todos los datos</strong> al servidor por Wi-Fi (protocolo Ecowitt)</td></tr>
-          <tr><td><strong>WS69 (7-en-1)</strong></td><td>Sensor exterior integrado</td><td>Temp y humedad exterior, viento y dirección, ráfaga, lluvia (tasa/evento/día…), radiación solar e índice UV</td></tr>
-          <tr><td><strong>WN31 (×8)</strong></td><td>Termohigrómetros de canal</td><td>Temperatura y humedad en hasta <strong>8 canales</strong> independientes</td></tr>
-          <tr><td><strong>GW1100</strong> <em>(remota, opcional)</em></td><td>Gateway Wi-Fi Ecowitt</td><td><strong>Estación secundaria</strong>: envía al mismo servidor; sus lecturas se guardan aparte y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede <strong>disparar alertas propias</strong> (y publicar/MQTT) activándolas por estación</td></tr>
-        </tbody>
-      </table></div>
-      <p><strong>Baterías:</strong> la WS69, la consola y cada canal WN31 reportan su estado (OK / baja); el sistema avisa cuando alguna está baja. <strong>Señal RF:</strong> el sistema soporta el nivel de señal por sensor (0-4) <em>si el dispositivo lo envía</em>; la consola <strong>WS2910</strong> no lo incluye en su push (solo batería), así que aparece vacío — los gateways tipo GW1100/GW3000 sí lo reportan. <strong>Envío:</strong> la consola se configura en <em>Weather Services → Customized</em> con protocolo Ecowitt hacia <code>clima.xe1e.net</code>, ruta <code>/data/report/</code>, una lectura cada ~16–60 s.</p>
-      
-      <h3>Endpoint Ecowitt (configurar el datalogger)</h3>
-      <p>La consola o gateway envía por <strong>HTTP POST</strong> (protocolo Ecowitt) al servidor. En <em>WS View Plus → Weather Services → Customized</em>:</p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
-        <tbody>
-          <tr><td>Protocol Type</td><td><strong>Ecowitt</strong></td></tr>
-          <tr><td>Server IP / Hostname</td><td><code>163.192.147.208</code></td></tr>
-          <tr><td>Port</td><td><code>8080</code></td></tr>
-          <tr><td>Path</td><td><code>/data/report/</code></td></tr>
-          <tr><td>Upload Interval</td><td>60 s</td></tr>
-        </tbody>
-      </table></div>
-      <p>URL completa: <code>http://163.192.147.208:8080/data/report/</code> (o <code>https://clima.xe1e.net/data/report/</code> por dominio). Las unidades de entrada son imperiales (°F, mph, inHg); el servidor las convierte a métrico. El <strong>PASSKEY</strong> que envía cada dispositivo se deriva de su <strong>dirección MAC</strong>; el servidor lo usa para identificar la estación de origen.</p>
-
-      <h3>Seguridad del endpoint</h3>
-      <p>Opcional, desde <em>Admin → Integraciones → Seguridad del endpoint</em> (desactivado por defecto):</p>
+      <h3>Dos cosas que puedes cambiar</h3>
       <ul>
-        <li><strong>Token secreto:</strong> el push debe incluir <code>?token=…</code> en el Path (<code>/data/report/?token=EL_TOKEN</code>); si no coincide, el servidor responde <code>403</code>.</li>
-        <li><strong>Allowlist de IP:</strong> solo acepta datos desde ciertas IPs de origen. Útil solo con IP pública <strong>fija</strong>; con IP doméstica dinámica no conviene (te bloquearías).</li>
+        <li><strong>Unidades.</strong> El botón <code>°C · km/h</code> de la barra superior cambia todo el sitio al sistema imperial (°F, mph, inHg, pulgadas) y de vuelta. Se recuerda en tu navegador.</li>
+        <li><strong>Tema claro u oscuro.</strong> El botón de la luna. También se recuerda.</li>
       </ul>
-      <p><strong>Principal vs. secundarias:</strong> cada dispositivo manda un <code>PASSKEY</code>. La estación principal es cualquier PASSKEY no mapeado; las secundarias (p. ej. GW1100) se registran mapeando su PASSKEY a un nombre en <em>Admin → Estaciones</em>.</p>
-      <div class="callout"><p>Referencia completa (payload de ejemplo y comandos de verificación) en <code>docs/ENDPOINT-ECOWITT.md</code> del repositorio.</p></div>
+      <p>Ninguno de los dos cambia el dato: sólo cómo se te presenta.</p>
     </section>
 
-    <section id="arquitectura">
-      <span class="sec-eyebrow">03 — Arquitectura</span>
-      <h2>Arquitectura y flujo de datos</h2>
-      <pre><code>WS2910 + WS69 + WN31
-     │  push HTTP (protocolo Ecowitt)
-     ▼
-Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
-                                        │
-                                        ▼
-                              Receiver (FastAPI) → InfluxDB 2.7 (histórico)
-                                        ├─ MQTT / Home Assistant (opcional)
-                                        ├─ Alertas (Telegram / log)
-                                        └─ Redes públicas (WU, Windy, PWS, OWM, CWOP)</code></pre>
-      <p>Componentes (contenedores Docker): <strong>receiver</strong> (FastAPI) recibe, procesa, guarda y expone la API; <strong>influxdb</strong> guarda el histórico; <strong>dashboard</strong> (React) sirve la web y hace de proxy de <code>/api</code>; <strong>caddy</strong> gestiona TLS con certificado Origin; <strong>Cloudflare</strong> hace de proxy y protección delante del VPS.</p>
-      <h3>Frecuencia de actualización</h3>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Qué</th><th>Cada</th></tr></thead>
-        <tbody>
-          <tr><td>Datos actuales, stats del día, «vs ayer», pronóstico local</td><td>60 s</td></tr>
-          <tr><td>Historia (página)</td><td>5 min</td></tr>
-          <tr><td>Pronóstico (Open-Meteo y SMN) y astronomía</td><td>30 min</td></tr>
-          <tr><td>METAR, calidad del aire, almanaque (caché servidor)</td><td>10 min</td></tr>
-          <tr><td>Resumen diario (Dayfile)</td><td>arranque (90 d) + hoy/ayer cada hora</td></tr>
-        </tbody>
-      </table></div>
+    <!-- ══════════════════ 02 ══════════════════ -->
+    <section id="leer">
+      <span class="sec-eyebrow">02 — Convenciones</span>
+      <h2>Cómo leer los números</h2>
+
+      <p>Todo el sitio usa las mismas reglas visuales. Si aprendes estas cuatro, cualquier página se vuelve legible de un golpe de vista.</p>
+
+      <h3>1. Cada variable tiene su color, siempre el mismo</h3>
+      <p>El naranja es temperatura en <em>todas</em> las páginas, gráficas y pantallas. Nunca cambia de significado:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Color</th><th>Variable</th><th>Por qué ese</th></tr></thead>
+          <tbody>
+            <tr><td><span style="color:#f97316;font-weight:640">■ Naranja</span></td><td>Temperatura</td><td>Convención universal: cálido = rojo/naranja</td></tr>
+            <tr><td><span style="color:#3b82f6;font-weight:640">■ Azul</span></td><td>Humedad</td><td>Agua</td></tr>
+            <tr><td><span style="color:#38bdf8;font-weight:640">■ Azul claro</span></td><td>Lluvia y precipitación</td><td>Agua, en tono más claro para distinguirla de la humedad</td></tr>
+            <tr><td><span style="color:#a78bfa;font-weight:640">■ Morado</span></td><td>Presión atmosférica y UV</td><td>Convención de barómetros</td></tr>
+            <tr><td><span style="color:#22c55e;font-weight:640">■ Verde</span></td><td>Viento</td><td>—</td></tr>
+            <tr><td><span style="color:#f59e0b;font-weight:640">■ Ámbar</span></td><td>Radiación solar</td><td>Sol</td></tr>
+            <tr><td><span style="color:#10b981;font-weight:640">■ Esmeralda</span></td><td>Punto de rocío</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>En las gráficas de temperatura hay una excepción útil: la <strong>máxima va en naranja y la mínima en azul claro</strong>, porque azul = frío es más intuitivo que dos tonos de naranja.</p>
+
+      <h3>2. Las flechas comparan con el pasado, no con un ideal</h3>
+      <p>Junto a varios números verás una de estas tres:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Flecha</th><th>Significa</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><svg width="22" height="22" viewBox="0 0 24 24" style="vertical-align:-5px"><path d="M12 4L20 14H15V20H9V14H4L12 4Z" fill="#22c55e"/></svg> <strong style="color:#22c55e">Subiendo</strong></td>
+              <td>El valor es más alto que hace un rato</td>
+            </tr>
+            <tr>
+              <td><svg width="22" height="22" viewBox="0 0 24 24" style="vertical-align:-5px"><path d="M12 20L20 10H15V4H9V10H4L12 20Z" fill="#ef4444"/></svg> <strong style="color:#ef4444">Bajando</strong></td>
+              <td>El valor es más bajo que hace un rato</td>
+            </tr>
+            <tr>
+              <td><svg width="22" height="22" viewBox="0 0 24 24" style="vertical-align:-5px"><path d="M4 10H20V14H4V10Z" fill="#94a3b8"/></svg> <strong style="color:#94a3b8">Estable</strong></td>
+              <td>Se movió tan poco que no cuenta como cambio</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>No significan «bueno» o «malo»: significan <strong>hacia dónde va</strong>. Y cada variable tiene su propio umbral para no marear con cambios triviales:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Se compara con</th><th>Cambia la flecha si se movió más de</th></tr></thead>
+          <tbody>
+            <tr><td>Temperatura</td><td>hace 1 hora</td><td>±0.5 °C</td></tr>
+            <tr><td>Humedad</td><td>hace 1 hora</td><td>±3 %</td></tr>
+            <tr><td>Presión</td><td>hace 3 horas</td><td>±1 hPa</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Por eso la raya gris es lo más común y es buena señal: quiere decir «estable». Y por eso la presión se compara con <strong>3 horas</strong> y no con una: la presión se mueve despacio, y lo que interesa es la tendencia sostenida, no el vaivén de un rato.</p>
+
+      <h3>3. <code>--</code> no es cero</h3>
+      <p>Cuando un valor aparece como <code>--</code> significa <strong>«no hay dato»</strong>, que es muy distinto de «vale cero». Puede ser porque el sensor no existe en esa estación, porque todavía no ha reportado, o porque el valor no aplica a esa hora (el índice UV de madrugada sí es <strong>0</strong> de verdad, y ése sí lo verás como 0).</p>
+
+      <h3>4. Los decimales están donde importan</h3>
+      <p>La temperatura se muestra con un decimal (22.9 °C) porque medio grado se nota. La humedad va redondeada a entero, porque el sensor no es más preciso que eso y un 58.3 % daría una falsa sensación de exactitud. La presión lleva un decimal. No es capricho: cada variable se muestra con la precisión que el sensor realmente tiene.</p>
     </section>
 
-    <section id="procesamiento">
-      <span class="sec-eyebrow">04 — Procesamiento</span>
-      <h2>Procesamiento del dato local</h2>
-      <p>Cada lectura pasa por un <strong>pipeline</strong> (inspirado en WeeWX) antes de guardarse:</p>
-      <pre><code>parsear → convertir a métrico → calibrar → QC rangos → QC picos → derivar
-        → guardar (InfluxDB) → MQTT → alertas → publicar a redes</code></pre>
+    <!-- ══════════════════ 03 ══════════════════ -->
+    <section id="inicio">
+      <span class="sec-eyebrow">03 — La página</span>
+      <h2>Inicio</h2>
+
+      <p>Es la portada y responde la pregunta «<strong>¿cómo está el clima ahora?</strong>». Está organizada en cuatro bloques que bajan de lo inmediato a lo contextual: <strong>ahora mismo</strong>, <strong>los sensores</strong>, <strong>lo que viene</strong> y <strong>el entorno</strong>.</p>
+
+      <h3>Ahora mismo</h3>
+      <p>Arriba, la <strong>tira de resumen</strong> con los números del día: máxima y mínima, humedad, presión, viento máximo, lluvia acumulada, probabilidad de lluvia, sensación, rocío e índice UV. Es el vistazo de dos segundos.</p>
+      <p>Debajo, las <strong>condiciones actuales</strong>: la temperatura grande, el icono del cielo y tres derivados que vale la pena entender, porque no los mide ningún sensor —se calculan:</p>
       <ul>
-        <li><strong>Conversión a métrico:</strong> °F→°C, inHg→hPa, in→mm, mph→km/h.</li>
-        <li><strong>Calibración</strong> (opcional): corrige sesgos del sensor con offsets (temp/humedad/presión) y multiplicadores (viento/lluvia).</li>
-        <li><strong>QC por rangos:</strong> descarta valores físicamente imposibles (temp −80 °C, humedad 150 %, presión absurda para CDMX…).</li>
-        <li><strong>QC por picos:</strong> descarta un valor que salta de forma imposible respecto a la lectura anterior (glitch); no filtra viento ni lluvia y se omite si la previa tiene más de 15 min.</li>
-        <li><strong>Variables derivadas:</strong> punto de rocío, sensación térmica, índice de calor, sensación por frío/viento, humidex y base de nubes.</li>
-        <li><strong>Guardado:</strong> en InfluxDB, más el <strong>resumen diario</strong> («Dayfile»): un registro por día con mín/máx/prom/total y la hora de cada extremo.</li>
+        <li><strong>Sensación térmica.</strong> Lo que <em>sientes</em>, no lo que marca el termómetro. Con calor y humedad alta el cuerpo suda peor y la sensación sube; con frío y viento se pierde calor más rápido y baja. Si es igual a la temperatura, es que ni la humedad ni el viento están alterando nada.</li>
+        <li><strong>Punto de rocío.</strong> La temperatura a la que el aire se saturaría y empezaría a condensar. Es el mejor indicador de bochorno que existe, mejor que la humedad relativa: por debajo de 10 °C el aire se siente seco y agradable; de 16 °C ya se nota pegajoso; arriba de 20 °C es bochorno franco. Además, <strong>si la temperatura baja hasta el punto de rocío, se forma niebla o rocío</strong> —de ahí el nombre—. En CDMX suele quedar bastante abajo.</li>
+        <li><strong>Bulbo húmedo.</strong> La temperatura más baja que se puede alcanzar evaporando agua. Es la que manda para saber si el cuerpo puede enfriarse sudando.</li>
       </ul>
-      <p>Todos estos ajustes se editan <strong>en caliente</strong> desde el panel, sin reiniciar.</p>
+      <div class="callout">
+        <p><strong>Truco para leer los tres juntos:</strong> si la temperatura y el punto de rocío están <em>cerca</em>, el aire está húmedo y cargado. Si están <em>lejos</em>, el aire está seco. La distancia entre ambos dice más que el porcentaje de humedad.</p>
+      </div>
+
+      <h3>Los sensores</h3>
+      <ul>
+        <li><strong>Viento.</strong> La tarjeta se voltea: de un lado la velocidad y la dirección, del otro la rosa de vientos. Ojo con la convención: la dirección es <strong>de dónde viene</strong> el viento, no hacia dónde va. «Viento del norte» sopla desde el norte. Verás también la <strong>ráfaga</strong>, que es el pico instantáneo, siempre mayor o igual que la velocidad sostenida, y la escala <strong>Beaufort</strong>, que traduce los km/h a algo palpable («brisa débil», «hojas que se mueven»).</li>
+        <li><strong>Presión.</strong> El número importa menos que su tendencia. Aquí sale la presión <strong>relativa</strong>, es decir corregida a nivel del mar; la absoluta que mide el barómetro a 2250 m es mucho más baja (~780 hPa) y no sirve para comparar con nadie. La corrección es lo que permite que ~1013 hPa signifique lo mismo aquí que en la costa.</li>
+        <li><strong>Precipitación.</strong> Distingue dos cosas distintas: la <strong>intensidad</strong> (mm/h, qué tan fuerte llueve <em>en este momento</em>) y el <strong>acumulado</strong> (mm caídos hoy, este evento, este mes). Puede haber 0 mm/h de intensidad y 12 mm acumulados: dejó de llover, pero llovió.</li>
+        <li><strong>UV y radiación solar.</strong> Dos cosas relacionadas pero no iguales: la radiación solar (W/m²) es toda la energía que llega, y el índice UV es sólo la parte que quema la piel. Ambos van por colores de riesgo. A 2250 m el UV pega más fuerte que a nivel del mar con el mismo sol, porque hay menos atmósfera filtrando.</li>
+        <li><strong>Interior, sensores adicionales y remota.</strong> Las lecturas de dentro de la casa, los sensores por canal (jardín) y el segundo equipo. Con sus propias flechas de tendencia.</li>
+      </ul>
+
+      <h3>Lo que viene</h3>
+      <ul>
+        <li><strong>Pronóstico.</strong> Por hora y por día. Esto <strong>sí</strong> viene de modelos externos, no de la estación —un sensor mide el presente, no el futuro—.</li>
+        <li><strong>Pronóstico local.</strong> El único que sale de la propia estación: aplica la regla clásica del barómetro sobre la tendencia de presión medida aquí. Es tosco comparado con un modelo, pero es <em>tuyo</em> y a veces se anticipa.</li>
+        <li><strong>Comparativa de pronósticos.</strong> Pone lado a lado dos fuentes para el mismo día. Cuando coinciden, más confianza; cuando difieren, ya sabes que el día está incierto.</li>
+      </ul>
+
+      <h3>El entorno</h3>
+      <ul>
+        <li><strong>Calidad del aire.</strong> Verás dos números que casi nunca coinciden y no es un error: el <strong>AQI</strong> es el índice internacional y el <strong>IMECA</strong> el oficial mexicano. Usan escalas y fórmulas distintas sobre los mismos contaminantes. Para CDMX el que manda oficialmente es el IMECA.</li>
+        <li><strong>Sol y luna.</strong> Amanecer, atardecer, horas de luz y fase lunar, con los eventos del cielo próximos.</li>
+        <li><strong>METAR.</strong> El reporte del aeropuerto, ya traducido. Es la observación aeronáutica oficial más cercana y sirve de contraste independiente para tus propias lecturas.</li>
+        <li><strong>Radar y sismos.</strong> Radar de lluvia de la región y últimos sismos relevantes cerca.</li>
+        <li><strong>Alertas.</strong> Si algún umbral está excedido en este momento, aparece aquí.</li>
+      </ul>
     </section>
 
-    <section id="web">
-      <span class="sec-eyebrow">05 — Sitio web</span>
-      <h2>La página web (<code>/pro</code>)</h2>
-      <p><strong>Barra superior:</strong> título y ubicación, reloj en vivo, botón de <strong>unidades</strong> (métrico ↔ imperial), botón de <strong>tema</strong> (☀️/🌙), botón <strong>FX</strong> (efectos de clima animados), enlace a la Vista clásica y el <strong>cintillo</strong> de secciones. Tema y unidades se recuerdan entre visitas.</p>
+    <!-- ══════════════════ 04 ══════════════════ -->
+    <section id="paginas">
+      <span class="sec-eyebrow">04 — Recorrido</span>
+      <h2>Las demás páginas</h2>
 
-      <h3>Inicio</h3>
-      <p>Estado actual: mini-estadísticas (máx de hoy, viento, precipitación, UV, sensación, presión, prob. de lluvia, humedad, «vs ayer»); <strong>condiciones actuales</strong> (temp + ícono + sensación, punto de rocío, bulbo húmedo, humidex, base de nubes, con humedad/UV/presión en cajas); <strong>viento</strong> (brújula-instrumento con aguja de compás coloreada por intensidad; <strong>gira</strong> a la rosa de vientos al pulsar); <strong>presión</strong> (mín/máx/tendencia y gráfica de 24 h con hora); <strong>pronóstico local</strong> (por tendencia del barómetro); pronóstico Open-Meteo y <strong>comparativa de hoy (Open-Meteo vs SMN oficial)</strong>; gráfica de temperatura; precipitación (con aviso «sin lluvia prevista»); UV y radiación solar; sol y luna; <strong>METAR</strong> del aeropuerto (categoría de vuelo, temp, viento, visibilidad, presión, cielo); <strong>calidad del aire (AQI) e IMECA</strong>; último sismo; alertas; próximos eventos; e <strong>interior</strong> y <strong>sensores adicionales WN31</strong>. Abajo, el radar.</p>
+      <p>La barra superior tiene 14 pestañas. Una forma rápida de ubicarte: <strong>Inicio, Mi tablero, Tablas y Estación remota</strong> son el <em>ahora</em>; <strong>Historia, Estadísticas y Climatología</strong> son el <em>pasado</em>; <strong>Pronóstico</strong> es el <em>futuro</em>; y <strong>Radar, Astronomía, Calidad del aire y Aeronáutica</strong> son el <em>entorno</em>. <strong>Widget</strong> y <strong>Consola</strong> son herramientas.</p>
 
       <h3>Mi tablero</h3>
-      <p>Una vista <strong>personalizable</strong>: con el botón «Personalizar» eliges qué tarjetas mostrar u ocultar (las mismas del Inicio) y, con ese modo activo, puedes <strong>arrastrarlas para reordenarlas</strong> a tu gusto (con soporte táctil). Tanto la selección como el orden se guardan <strong>en tu dispositivo</strong>. La tarjeta de condiciones actuales queda fija arriba. Entre las disponibles está la de la <strong>Estación remota</strong> (resumen compacto de la segunda estación).</p>
+      <p>La misma información del Inicio, pero <strong>a tu medida</strong>. Pulsa <em>Personalizar</em> para mostrar u ocultar cada tarjeta, y con el modo activo puedes <strong>arrastrarlas</strong> para reordenarlas. La tarjeta de condiciones actuales queda fija arriba.</p>
+      <p>Tu selección <strong>se guarda en este navegador y en este dispositivo</strong>: no afecta a otros visitantes, y si abres el sitio en el teléfono verás la configuración del teléfono, no la de la computadora.</p>
 
       <h3>Pronóstico</h3>
-      <p>Con <strong>selector de fuente</strong> (solo se ve una a la vez): <strong>Open-Meteo</strong> (modelo global <code>best_match</code>, pestañas por día/por hora con <strong>descripciones en lenguaje natural</strong> y explicación de los modelos) y <strong>SMN oficial</strong> (Servicio Meteorológico Nacional · CONAGUA): pronóstico oficial por municipio (4 días + 48 h) para Benito Juárez, con <strong>buscador de municipios</strong> para ver cualquier municipio de México (~2,460). En el Inicio hay además una <strong>mini-comparativa de hoy</strong> (Open-Meteo vs SMN).</p>
+      <p>Aquí no hay dato de la estación: es el futuro y sólo los modelos lo estiman. Verás <strong>dos fuentes</strong> por separado, y eso es intencional:</p>
+      <ul>
+        <li><strong>Open-Meteo</strong>, un modelo global, por hora y por día, con descripciones en lenguaje natural generadas automáticamente a partir de sus números.</li>
+        <li><strong>SMN / CONAGUA</strong>, el pronóstico <strong>oficial mexicano por municipio</strong>. Trae un buscador para consultar cualquier municipio del país, no sólo el de la estación.</li>
+      </ul>
+      <div class="callout">
+        <p><strong>Cómo usarlo bien:</strong> cuando las dos fuentes dicen lo mismo, puedes confiar. Cuando difieren, el mensaje real es «el día está incierto» —y eso también es información útil—.</p>
+      </div>
 
       <h3>Historia</h3>
-      <p>El archivo de la estación con <strong>granularidad Día / Mes / Año</strong> y cinco grupos de <strong>gráficas interactivas</strong> (temperatura; viento con dirección; humedad y punto de rocío; radiación UV/solar; y <strong>precipitación y presión</strong>, que incluye la <strong>tasa máxima de lluvia</strong>). <strong>Tabla diaria/mensual</strong> (día/mes en insignia + nombre, máx/mín/prom/precipitación/viento), clicable al detalle diario, y <strong>exportación a CSV</strong>.</p>
+      <p>El archivo de la estación. Eliges la granularidad —<strong>día, mes o año</strong>— y comparas temperatura, viento, humedad y punto de rocío, radiación UV y solar, precipitación y presión en gráficas interactivas: pasa el cursor por encima para ver los valores exactos. Al hacer clic en un día o mes de la tabla se abre su detalle.</p>
+      <p>Todo viene de las mediciones que la estación guarda cada minuto, resumidas por periodo. Es decir: no es una muestra ni una estimación, es el registro real comprimido.</p>
 
       <h3>Estadísticas</h3>
-      <p>Con selector de año: <strong>resumen del año</strong>, <strong>promedios mensuales</strong>, <strong>contadores de días</strong> (cálidos, noches frescas, con/sin lluvia), <strong>grados-día y evapotranspiración</strong>, <strong>récords históricos</strong> en pestañas por categoría (cada uno con su <strong>top 5</strong> y fecha), estadísticas por periodo y una <strong>rosa de vientos apilada por bandas de velocidad</strong> (16 sectores; cada pétalo divide la frecuencia por dirección en bandas de color por velocidad, con leyenda y detalle al pasar el cursor).</p>
-
-      <h3>Climatología</h3>
-      <p><strong>Climatología Local</strong> a partir del resumen diario: tarjetas de ayer / mes / año (temperatura, humedad, viento, lluvia, grados-día y ET), un <strong>climograma</strong> (lluvia + temperatura por mes), <strong>récords por mes</strong>, el <strong>reporte estilo NOAA</strong> (diario/mensual/anual, base 18.3 °C) y <strong>«en este día»</strong> (años previos).</p>
-
-      <h3>Radar y satélite</h3>
-      <p>Mapa interactivo de <strong>Ventusky</strong> (radar, nubes, viento, temperatura…) e <strong>imagen satelital diaria de NASA GIBS</strong> (color real, con selector de capa y fecha), ambos centrados en la estación.</p>
-
-      <h3>Astronomía</h3>
-      <p><strong>Sol</strong> y <strong>Luna</strong> con arco de trayectoria y estadísticas (elevación, azimut, iluminación, edad, distancia…), fila de <strong>fases lunares</strong>. <strong>Gráfica de duración del día</strong>: muestra la variación de amanecer, ocaso y duración del día a lo largo del año con áreas apiladas (noche/día/noche), línea naranja de ocaso y línea azul del día actual; al pasar el mouse se muestra el día seleccionado con sus datos en la tabla inferior. El <strong>almanaque</strong> (pyephem, local) incluye los tres crepúsculos (civil −6°, náutico −12°, astronómico −18°) y los planetas visibles (Mercurio…Saturno) con orto/ocaso, altitud y magnitud.</p>
-
-      <h3>Calidad del aire</h3>
-      <p><strong>AQI</strong> (escala US EPA, vía WAQI/aqicn) e <strong>IMECA</strong> estimado con las tablas oficiales de la norma <strong>NADF-009-AIRE-2017</strong> a partir de concentraciones modeladas (Open-Meteo/CAMS): valor y categoría con color, medidor visual, sub-índices por contaminante, <strong>recomendaciones de salud</strong>, <strong>pronóstico del IMECA por horas</strong> y aviso de contingencia. El AQI usa un token gratuito de WAQI (se pone en el panel).</p>
-
-      <h3>Aeronáutica</h3>
-      <p><strong>METAR</strong> (observación) y <strong>TAF</strong> (pronóstico) decodificados al español, con la <strong>categoría de vuelo</strong> (VFR/MVFR/IFR/LIFR) y un <strong>perfil atmosférico visual</strong> (capas de nubes por altitud, silueta de la ciudad con volcanes, viento y QNH; dibuja lluvia/rayos según el reporte). Con buscador de cualquier código ICAO y accesos a los principales aeropuertos de México. Fuente: aviationweather.gov (NOAA).</p>
+      <p>Donde el histórico se convierte en conclusiones. Además del resumen del año (máximas, mínimas, lluvia, ráfaga), los promedios mensuales y los récords por categoría con su top 5 y fecha, hay dos cosas que conviene saber leer:</p>
+      <ul>
+        <li><strong>Contadores de días.</strong> Cuántos días cálidos, cuántas noches frescas, cuántos con y sin lluvia. Es la manera honesta de responder «¿este mes llovió mucho?»: no por el total de milímetros, sino por cuántos días efectivamente llovió.</li>
+        <li><strong>Grados-día.</strong> Miden <strong>cuánto y por cuánto tiempo</strong> la temperatura se alejó de los 18.3 °C (la base que usa la NOAA). Sirven para estimar consumo de energía en calefacción o enfriamiento, y en agricultura para saber cuánto «calor acumulado» recibió un cultivo. Un día a 25 °C aporta más grados-día que dos días a 20 °C.</li>
+        <li><strong>Evapotranspiración.</strong> Cuánta agua perdió el suelo y las plantas por evaporación. Es el número que usa el riego: dice cuánto hay que reponer.</li>
+        <li><strong>Rosa de vientos.</strong> De qué direcciones sopló y con qué fuerza, acumulado en el periodo. Revela el patrón dominante del sitio, que una lectura instantánea nunca te dará.</li>
+      </ul>
 
       <h3>Tablas</h3>
-      <p>Resumen tabular de todas las variables meteorológicas en formato de <strong>tabla compacta</strong>. Con <strong>selector de estación</strong> (Principal WS2910 / Remota GW1100) para ver los datos de cada una: valores actuales junto con mínimo, promedio y máximo del día. Útil para una vista rápida de todos los parámetros en un solo lugar.</p>
+      <p>El resumen tabular de todas las variables, sin gráficas. Es la vista para cuando quieres <strong>leer un valor exacto</strong> en lugar de interpretar una curva, o para copiar datos.</p>
+
+      <h3>Climatología</h3>
+      <p>La diferencia con Historia es de fondo: Historia te muestra <em>qué pasó</em>, y Climatología <em>qué es lo normal</em>. Trae resúmenes de ayer, este mes y este año; el <strong>climograma</strong> (barras de lluvia y líneas de temperatura por mes, la gráfica clásica del clima); los récords por mes; un reporte estilo NOAA con tabla diaria, mensual y anual; y la efeméride «en este día».</p>
+      <div class="callout">
+        <p><strong>Ten paciencia con esta página.</strong> La climatología describe comportamientos típicos, y para eso hacen falta años de datos. Esta estación arrancó en julio de 2026, así que hoy el climograma cubre pocos meses y algunos están incompletos. Se enriquece con cada día que pasa.</p>
+      </div>
+
+      <h3>Radar y satélite</h3>
+      <p>El <strong>radar</strong> (Ventusky) muestra dónde está lloviendo ahora y con qué intensidad; anima la línea de tiempo para ver <strong>hacia dónde se mueve</strong> —que es la pregunta útil: no «¿está lloviendo?» sino «¿me va a llegar?»—. La <strong>imagen satelital</strong> (NASA GIBS) es la foto de color real del día y deja ver la nubosidad y los sistemas sobre la región.</p>
+      <p>Son datos externos de referencia general: a diferencia del resto del sitio, no provienen de la estación.</p>
+
+      <h3>Astronomía</h3>
+      <p>Todo se calcula localmente para estas coordenadas, sin servicios externos. Del <strong>Sol</strong>: salida, ocaso, mediodía solar, duración del día y <strong>su cambio respecto a ayer</strong> (el detalle que te deja notar que los días ya se están acortando), más elevación y azimut actuales. De la <strong>Luna</strong>: salida y ocaso, fase, iluminación, edad, distancia y las próximas fases.</p>
+      <p>El <strong>almanaque</strong> añade los tres crepúsculos y los planetas visibles con su orto, ocaso, altitud y magnitud. Los crepúsculos no son adorno, cada uno marca algo concreto:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Crepúsculo</th><th>Sol a</th><th>Qué puedes hacer</th></tr></thead>
+          <tbody>
+            <tr><td>Civil</td><td>−6°</td><td>Todavía se puede leer y andar sin luz artificial</td></tr>
+            <tr><td>Náutico</td><td>−12°</td><td>Se distingue el horizonte; ya se ven las estrellas brillantes</td></tr>
+            <tr><td>Astronómico</td><td>−18°</td><td>Oscuridad real: es cuando empieza la observación seria del cielo</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Calidad del aire</h3>
+      <p>Se muestran <strong>dos índices</strong> y casi nunca coinciden. No es un error:</p>
+      <ul>
+        <li><strong>AQI</strong>, la escala de la US EPA, vía WAQI/aqicn.</li>
+        <li><strong>IMECA</strong>, el índice <strong>oficial de la Ciudad de México</strong>, estimado aquí con las tablas de la norma NADF-009-AIRE-2017 a partir de concentraciones modeladas (Open-Meteo/CAMS).</li>
+      </ul>
+      <p>Ambos resumen los mismos contaminantes —PM2.5, PM10, O₃, NO₂, SO₂ y CO— pero con escalas y fórmulas distintas, y de ahí la diferencia. El <strong>contaminante dominante</strong> es el que marca el nivel: si el índice está alto por ozono, la recomendación no es la misma que si está alto por partículas. Son datos externos de referencia, no medidos por la estación.</p>
+
+      <h3>Aeronáutica</h3>
+      <p>Meteorología para volar, que resulta ser también el mejor contraste independiente para tus lecturas. El <strong>METAR</strong> es la observación del aeropuerto (cada hora) y el <strong>TAF</strong> el pronóstico aeronáutico (~24-30 h). La <strong>categoría de vuelo</strong> resume las condiciones en una palabra: <strong>VFR</strong> (visual, buen tiempo), <strong>MVFR</strong> (marginal), <strong>IFR</strong> y <strong>LIFR</strong> (las peores). El <strong>perfil atmosférico</strong> dibuja las capas de nubes por altitud, el viento y el QNH del reporte.</p>
+      <p>Fuente: aviationweather.gov (NOAA), en unidades aeronáuticas —nudos, millas terrestres, hPa— y con las horas ya convertidas a tu zona local.</p>
 
       <h3>Estación remota</h3>
-      <p>Página para una <strong>segunda estación</strong> (p. ej. un Ecowitt <strong>GW1100</strong>) que envía al mismo servidor. Sus datos se guardan <strong>separados</strong> de la principal, así que no la afectan. Tiene <strong>alertas propias</strong> (temperatura, presión y offline, con umbrales independientes) y puede publicar a redes si se activa desde el panel. Muestra condiciones actuales (temperatura con <strong>tendencia</strong> a 3 h, humedad y <strong>punto de rocío</strong>), <strong>presión</strong> con su tendencia, <strong>estadística</strong> (mín/prom/máx con selector 24 h / 7 d / 30 d) e <strong>histórico</strong> (Temp y humedad / Presión). Hay un resumen compacto como tarjeta opcional en <strong>Mi tablero</strong>.</p>
+      <p>El detalle completo del GW1100: sus valores actuales con tendencia y sus gráficas por periodo. Útil sobre todo para <strong>comparar dos puntos</strong>: dos sitios cercanos pueden diferir varios grados por sombra, viento o superficie, y esta página lo hace evidente.</p>
 
-      <h3>Vista clásica · Widget · Instalar</h3>
-      <p>La <strong>Vista clásica</strong> (<code>/</code>) es un tablero sencillo para consulta rápida, unificado con el estilo de <code>/pro</code>. En <strong>Widget</strong> (<code>/pro/compartir</code>) generas un <strong><code>&lt;iframe&gt;</code></strong> con las condiciones actuales para insertarlo en otra web (eliges unidades, tema y tamaño).</p>
-      <p><strong>PWA (Progressive Web App):</strong> el sitio se puede <strong>instalar como aplicación</strong> en cualquier dispositivo. Una vez instalada, abre en pantalla completa (sin barra del navegador), tiene su propio ícono y funciona como una app nativa.</p>
+      <h3>Sismos</h3>
+      <p>No está en la barra: se llega desde la tarjeta del Inicio. Lista los sismos recientes cerca de la estación, del más nuevo al más antiguo, con <strong>esquema híbrido</strong>: primero el <strong>SSN</strong> (Servicio Sismológico Nacional, UNAM), la fuente oficial de México, y si no está disponible el <strong>USGS</strong> de EE. UU. (magnitud ≥ 4 en ~800 km). El color indica la magnitud.</p>
+      <p>Es información sísmica externa, ajena a los sensores meteorológicos. Ten en cuenta que <strong>las magnitudes y profundidades iniciales se revisan después</strong>: el primer número que publica un servicio sismológico es preliminar.</p>
+
+      <h3>Consola</h3>
+      <p>Una <strong>réplica de la consola física Ecowitt</strong>, con su tipografía de siete segmentos y su rejilla de celdas. Es exactamente la vista que se despliega en la pantalla del kiosco, así que sirve para verla desde el navegador. Todo lo que muestra son los mismos datos que el resto del sitio, sólo presentados como una consola de estación.</p>
+
+      <h3>Vista clásica</h3>
+      <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas. Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>
+    </section>
+
+    <!-- ══════════════════ 05 ══════════════════ -->
+    <section id="significados">
+      <span class="sec-eyebrow">05 — Interpretación</span>
+      <h2>Qué significan los datos</h2>
+
+      <p>Esta sección es para cuando ya sabes <em>dónde</em> está cada número y quieres saber <em>qué</em> te está diciendo.</p>
+
+      <h3>Temperatura: por qué no coincide con tu app</h3>
+      <p>Un termómetro mide el aire <strong>en un punto</strong>. Su lectura depende de la altura del sensor, de si le da sol, del viento y de la superficie de abajo —el asfalto radia calor, el pasto no—. Por eso dos estaciones a cinco calles de distancia pueden diferir 2 o 3 °C, y ninguna está mal. Un pronóstico de ciudad es un promedio modelado; esta estación es una medición puntual.</p>
+      <p>Los sensores están en un <strong>escudo de radiación</strong> ventilado precisamente para que el sol no caliente el termómetro y falsee la lectura.</p>
+
+      <h3>Humedad relativa contra punto de rocío</h3>
+      <p>La humedad relativa engaña, y vale la pena entender por qué. Es un <strong>porcentaje de lo que el aire aguanta a esa temperatura</strong>, y esa capacidad cambia con la temperatura. Consecuencia: el mismo aire, sin ganar ni perder una gota de agua, pasa de 90 % de humedad en la madrugada fría a 40 % al mediodía. No se secó: sólo se calentó.</p>
+      <p>El <strong>punto de rocío</strong> no tiene ese problema, porque es una temperatura, no un porcentaje. Mide el agua que hay en el aire en términos absolutos:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Punto de rocío</th><th>Cómo se siente</th></tr></thead>
+          <tbody>
+            <tr><td>menos de 10 °C</td><td>Seco y agradable</td></tr>
+            <tr><td>10 – 16 °C</td><td>Cómodo</td></tr>
+            <tr><td>16 – 20 °C</td><td>Se empieza a notar pegajoso</td></tr>
+            <tr><td>más de 20 °C</td><td>Bochorno franco</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Y una consecuencia práctica: <strong>si la temperatura desciende hasta el punto de rocío, se forma rocío o niebla</strong>. Cuando en la tarde ves que las dos curvas se acercan, tienes una pista de niebla nocturna.</p>
+
+      <h3>Presión: absoluta, relativa y por qué manda la tendencia</h3>
+      <p>El barómetro de la estación mide la presión <strong>absoluta</strong>, que a 2250 m ronda los <strong>780 hPa</strong>: hay menos aire encima que a nivel del mar. Ese número es correcto pero incomparable —cualquier estación de costa marcaría ~1013 sin que el tiempo sea distinto—.</p>
+      <p>Por eso el sitio muestra la presión <strong>relativa</strong>: la absoluta corregida a nivel del mar usando la altitud. Así ~1013 hPa significa lo mismo aquí que en Veracruz, y se pueden comparar mapas y estaciones.</p>
+      <div class="callout">
+        <p><strong>Lo que de verdad importa no es el valor, es el cambio.</strong> Un 1015 estable no dice nada; un 1015 que viene cayendo desde 1020 dice bastante.</p>
+      </div>
+      <p>La regla clásica del barómetro, que es la que usa el «pronóstico local» del sitio:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>La presión…</th><th>Suele anunciar</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Cae</strong>, y más si cae rápido</td><td>Mal tiempo: aire ascendente, nubes, lluvia o tormenta</td></tr>
+            <tr><td><strong>Sube</strong></td><td>Estabilidad: aire descendente, cielos despejados. Una subida marcada suele venir con la entrada de aire frío</td></tr>
+            <tr><td><strong>Se mantiene</strong></td><td>Más de lo mismo</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Viento: sostenido, ráfaga y de dónde viene</h3>
       <ul>
-        <li><strong>En móvil (iOS/Android):</strong> abre <code>clima.xe1e.net/pro</code> en el navegador → menú «Compartir» (iOS) o «⋮» (Android) → <strong>«Añadir a pantalla de inicio»</strong>.</li>
-        <li><strong>En escritorio (Chrome/Edge):</strong> abre el sitio → clic en el ícono de instalación en la barra de direcciones (o menú → «Instalar aplicación»).</li>
-        <li><strong>Ventajas:</strong> acceso directo desde el home/escritorio, abre la vista completa (<code>/pro</code>) directamente, notificaciones (si se habilitan), y funciona offline con los últimos datos cacheados.</li>
+        <li><strong>Sostenido</strong> es el promedio de un intervalo; <strong>ráfaga</strong> es el pico instantáneo. La ráfaga siempre es mayor o igual, y es la que rompe cosas: para decidir si amarras algo, mira la ráfaga.</li>
+        <li>La <strong>dirección es de dónde viene</strong>, siempre. «Viento del norte» significa que sopla <em>desde</em> el norte hacia el sur. Es la convención meteorológica universal y la fuente de confusión más común.</li>
+        <li>La <strong>escala Beaufort</strong> traduce la velocidad a efectos observables. Es útil porque «18 km/h» no le dice nada a nadie, pero «brisa débil, se mueven las hojas» sí.</li>
+        <li>La <strong>rosa de vientos</strong> acumula dirección y fuerza durante un periodo. Un solo dato instantáneo es anécdota; la rosa revela el patrón del sitio.</li>
       </ul>
-    </section>
 
-    <section id="widget">
-      <span class="sec-eyebrow">06 — Widget</span>
-      <h2>Widget para tu sitio (<code>/pro/compartir</code>)</h2>
-      <p>Cualquiera puede poner el clima en vivo de la estación en su web o blog con un <strong>widget <code>&lt;iframe&gt;</code></strong>. La página <a href="https://clima.xe1e.net/pro/compartir">Widget para tu sitio</a> es un generador: eliges <strong>unidades</strong> (°C/°F), <strong>tema</strong> (claro/oscuro) y <strong>tamaño</strong>, ves una vista previa y copias el código listo para pegar.</p>
-      <h3>Cómo insertarlo</h3>
-      <ol>
-        <li>Ajusta unidades, tema y tamaño hasta que la vista previa te guste.</li>
-        <li>Pulsa <strong>«Copiar código»</strong>.</li>
-        <li>Pega el código en el HTML de tu página: en <strong>WordPress</strong> un bloque «HTML personalizado»; en <strong>Blogger/Wix</strong> un elemento «Insertar código»; en <strong>HTML puro</strong>, dentro del <code>&lt;body&gt;</code>.</li>
-      </ol>
-      <p>Ejemplo del código:</p>
-      <pre><code>&lt;iframe src="https://clima.xe1e.net/embed?units=metric&amp;theme=dark"
-  width="360" height="210"
-  style="border:0;border-radius:16px;max-width:100%"
-  title="Clima CDMX" loading="lazy"&gt;&lt;/iframe&gt;</code></pre>
+      <h3>Lluvia: intensidad contra acumulado</h3>
+      <p>Son dos preguntas distintas y el sitio las separa:</p>
       <ul>
-        <li><strong>Ruta base:</strong> <code>/embed</code>, con parámetros opcionales <code>?units=metric|imperial</code> y <code>&amp;theme=light|dark</code>.</li>
-        <li><strong>Muestra:</strong> temperatura, sensación y condición, más presión, humedad y viento; se actualiza solo cada minuto.</li>
-        <li><strong>Responsivo</strong> (<code>max-width:100%</code>), sin cuentas ni permisos; al hacer clic abre el sitio completo.</li>
+        <li><strong>Intensidad</strong> (mm/h): qué tan fuerte llueve <em>ahora mismo</em>. Es una tasa, como los km/h del coche: 20 mm/h no significa que caerán 20 mm, significa que <em>a ese ritmo</em> caerían en una hora.</li>
+        <li><strong>Acumulado</strong> (mm): cuánta agua cayó de verdad en el evento, el día, el mes o el año.</li>
       </ul>
-    </section>
+      <p>Un milímetro de lluvia es un litro por metro cuadrado. Y para hacerse una idea: hasta ~2.5 mm/h es lluvia ligera, 2.5-10 moderada, 10-50 fuerte, y por encima de 50 mm/h es un aguacero de los que inundan.</p>
 
-    <section id="pantallas">
-      <span class="sec-eyebrow">07 — Pantallas</span>
-      <h2>Pantallas físicas</h2>
-      <p>Además del sitio web, el servidor alimenta <strong>pantallas físicas dedicadas</strong> que muestran el clima en tiempo real sin necesidad de abrir un navegador.</p>
+      <h3>UV y radiación solar</h3>
+      <p>La <strong>radiación solar</strong> (W/m²) es toda la energía que llega del sol; el <strong>índice UV</strong> es sólo la fracción ultravioleta, la que quema la piel. Suben y bajan juntos, pero no son lo mismo.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Índice UV</th><th>Riesgo</th><th>Qué hacer</th></tr></thead>
+          <tbody>
+            <tr><td>0 – 2</td><td>Bajo</td><td>Nada especial</td></tr>
+            <tr><td>3 – 5</td><td>Moderado</td><td>Sombra al mediodía; protector solar</td></tr>
+            <tr><td>6 – 7</td><td>Alto</td><td>Protector, gorra, lentes</td></tr>
+            <tr><td>8 – 10</td><td>Muy alto</td><td>Evita el sol directo entre 11 y 16 h</td></tr>
+            <tr><td>11 o más</td><td>Extremo</td><td>La piel se quema en minutos</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <p><strong>A 2250 m el UV pega más fuerte.</strong> Hay menos atmósfera filtrando, así que con el mismo sol el índice sale más alto que a nivel del mar. En CDMX es normal ver valores «muy alto» o «extremo» en primavera, incluso con temperatura agradable —el UV no calienta, y esa es justo la trampa—.</p>
+      </div>
 
-      <h3>Waveshare ESP32-S3 (pantalla táctil 7")</h3>
-      <p>Una <strong>pantalla táctil de 1024×600</strong> basada en <strong>ESP32-S3</strong> que actúa como «display tonto»: el servidor genera cada pantalla como JPEG y el ESP32 solo la muestra. Un toque cambia de página.</p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Página</th><th>Contenido</th></tr></thead>
-        <tbody>
-          <tr><td>1</td><td>Estación: temperatura, tiles de resumen, pronóstico 6 h</td></tr>
-          <tr><td>2</td><td>Sensor local BME280 (temperatura, humedad y presión del propio display)</td></tr>
-        </tbody>
-      </table></div>
-      <p>El display tiene un <strong>BME280 integrado</strong> que envía sus lecturas al servidor (<code>POST /api/kiosk/local</code>), mostrándolas en la página 2. Configuración WiFi por portal cautivo (<em>WiFiManager</em>). Firmware y documentación: <a href="https://github.com/XE1E/ecowitt-display-kiosk-xe1e">ecowitt-display-kiosk-xe1e</a>.</p>
-
-      <h3>SVITRIX-XE1E (Ulanzi TC001)</h3>
-      <p>Firmware personalizado para el <strong>reloj píxel Ulanzi TC001</strong> (matriz LED 32×8). Muestra el clima de la estación en apps rotativas con iconos animados:</p>
+      <h3>Los derivados: sensación, bulbo húmedo, humidex</h3>
+      <p>Ninguno se mide: todos se calculan de la temperatura, la humedad y el viento.</p>
       <ul>
-        <li><strong>Apps de clima:</strong> temperatura exterior, humedad, presión, calidad del aire, UV, viento, radiación solar y precipitación.</li>
-        <li><strong>Apps nativas:</strong> hora (varios modos), fecha, fase lunar, temperatura/humedad interna, batería.</li>
-        <li><strong>Efectos:</strong> overlays de lluvia, nieve, tormenta; 20+ efectos de fondo.</li>
-        <li><strong>Integración:</strong> API HTTP/MQTT, auto-discovery en Home Assistant, notificaciones push.</li>
+        <li><strong>Sensación térmica.</strong> Combina el <em>heat index</em> cuando hace calor (la humedad impide sudar, así que se siente más) y el <em>wind chill</em> cuando hace frío (el viento arranca calor del cuerpo, así que se siente menos).</li>
+        <li><strong>Bulbo húmedo.</strong> La temperatura mínima alcanzable evaporando agua. Es el límite físico del enfriamiento por sudor: si el bulbo húmedo se acerca a la temperatura del cuerpo, sudar deja de servir. Es el indicador más serio de estrés por calor.</li>
+        <li><strong>Humidex.</strong> El índice canadiense de bochorno, útil por encima de ~20 °C.</li>
+        <li><strong>Base de nubes.</strong> Estimación de a qué altura se forman las nubes, a partir de la separación entre temperatura y punto de rocío.</li>
       </ul>
-      <p>El servidor expone <code>/api/svitrix</code> con los datos en el formato que espera el reloj; el Ulanzi lo consulta cada 1–5 minutos. Flasher en línea, interfaz web de configuración y OTA. Firmware y documentación: <a href="https://github.com/XE1E/svitrix-firmware-XE1E">svitrix-firmware-XE1E</a>.</p>
+
+      <h3>AQI contra IMECA</h3>
+      <p>Miden lo mismo y dan números distintos porque son <strong>escalas distintas</strong>, no porque una esté mal. Cada índice toma la concentración de cada contaminante, la convierte a puntos con su propia tabla, y se queda con el peor. El AQI usa las tablas de la EPA estadounidense; el IMECA, la norma mexicana. En CDMX el oficial es el IMECA.</p>
+      <p>Lo importante en ambos casos es el <strong>contaminante dominante</strong>: un índice alto por ozono es un problema de tarde soleada y afecta sobre todo al ejercicio al aire libre; uno alto por partículas es distinto y las mascarillas sí ayudan.</p>
     </section>
 
-    <section id="impresion3d">
-      <span class="sec-eyebrow">08 — Impresión 3D</span>
-      <h2>Impresión 3D</h2>
-      <p>Piezas imprimibles en 3D para complementar la estación y proteger los sensores en instalaciones exteriores.</p>
-
-      <h3>Escudo de radiación para sensores (Radiation Shield)</h3>
-      <p>Un <strong>escudo de radiación</strong> imprimible en 3D diseñado para proteger sensores de temperatura y humedad Ecowitt (<strong>WN31</strong>, <strong>WN32</strong>, <strong>WN35</strong>) de la radiación solar directa. Ideal para <strong>estaciones remotas</strong> donde el sensor se instala a la intemperie.</p>
-      <ul>
-        <li><strong>Función:</strong> protege el sensor del calor radiante del sol para obtener lecturas más precisas de temperatura y humedad ambiental.</li>
-        <li><strong>Compatibilidad:</strong> sensores Ecowitt <strong>WN31</strong>, <strong>WN32</strong> y <strong>WN35</strong>.</li>
-        <li><strong>Material recomendado:</strong> PETG o ASA (resistentes a UV y temperatura); blanco o color claro para máxima reflexión.</li>
-        <li><strong>Diseño:</strong> múltiples lamas horizontales que permiten la circulación de aire mientras bloquean la radiación directa.</li>
-      </ul>
-      <p><strong>Descargar:</strong> los archivos STL están disponibles en <a href="https://www.printables.com/model/1616544-ecowitt-sensor-radiation-shield">Printables</a> y en la carpeta <code>3d-prints/radiation-shield/</code> del repositorio.</p>
-      <div class="callout"><p><strong>Tip:</strong> para una estación remota con un <strong>GW1100</strong> y un sensor <strong>WN32</strong> a la intemperie, este escudo es esencial para evitar lecturas de temperatura infladas por el sol.</p></div>
-    </section>
-
-    <section id="admin">
-      <span class="sec-eyebrow">09 — Administración</span>
-      <h2>Panel de administración (<code>/admin</code>)</h2>
-      <p>Acceso <strong>usuario/contraseña</strong> (sesión de 12 h). Diseño compacto en columnas. Permite editar en caliente, sin reiniciar, todo lo configurable.</p>
-
-      <h3>Wizard de configuración inicial</h3>
-      <p>La primera vez que se accede al panel, un <strong>asistente de 5 pasos</strong> guía la configuración: <strong>1)</strong> Bienvenida, <strong>2)</strong> Verificación de estación (sensores, ubicación, zona horaria), <strong>3)</strong> Alertas con <strong>Telegram y correo SMTP</strong> (ambos con botón «Probar»), <strong>4)</strong> Publicación a redes, <strong>5)</strong> Resumen final. Se puede saltar y reacceder más tarde.</p>
-
-      <h3>Dashboard</h3>
-      <p>Vista general con <strong>indicador en tiempo real</strong> (pulso verde), <strong>tiles de resumen</strong> (última lectura, uptime, retención, versión), <strong>historial de alertas</strong> de las últimas 24 h (activo/resuelto), <strong>resumen de batería</strong> por estación y una <strong>tarjeta «Endpoint Ecowitt»</strong> con la URL de push (botón copiar). Botón <strong>«Probar conexiones»</strong> que prueba Telegram, correo y MQTT de una. Estado de servicios agrupado en <strong>Notificaciones</strong> (InfluxDB, Telegram, Correo) e <strong>Integraciones</strong> (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar».</p>
-
-      <h3>Estaciones</h3>
-      <p>Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. Botón <strong>«+ Agregar estación»</strong> para crear secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden <strong>eliminarse</strong> (con confirmación). Cada fila enlaza a su configuración individual.</p>
-
-      <h3>Configuración por estación</h3>
-      <p>Nombre/etiqueta, <strong>watchdog</strong> (activar/desactivar y timeout en minutos). <strong>Servicios individuales</strong>: activar alertas, publicación a redes y MQTT <strong>por estación</strong> (secundarias por defecto solo almacenan datos). <strong>Sensores WN31</strong> con nombres personalizados (ej. «Sala», «Recámara»). En secundarias, opción <strong>«a la intemperie»</strong>: trata el sensor integrado (que reporta como <em>interior</em>) como <strong>exterior</strong> en todo el sistema (alertas, calibración, página remota y publicación).</p>
-
-      <h3>Alertas</h3>
-      <p>Toggle global y por tipo, con <strong>selector de estación</strong>. En la <strong>principal (WS69)</strong>, umbrales en línea: <strong>Temperatura</strong> (alta/baja °C), <strong>Humedad</strong> (alta/baja %), <strong>Viento</strong> (sostenido/ráfaga km/h), <strong>Lluvia</strong> (tasa/diaria mm), <strong>Presión</strong> (alta/baja hPa), <strong>UV</strong> (índice alto), <strong>Radiación solar</strong> (alta W/m²), <strong>Punto de rocío</strong> (alto/bajo °C), <strong>Sensación térmica</strong> (alta/baja °C), <strong>tendencias</strong> (temp y presión subiendo/bajando), más <strong>batería baja</strong>, <strong>sensor perdido</strong>, <strong>estación offline</strong> (minutos) y <strong>calidad del aire</strong> (AQI/IMECA). En <strong>secundarias (GW1100)</strong> aplican <strong>temperatura</strong>, <strong>humedad</strong>, <strong>presión</strong>, <strong>punto de rocío</strong>, <strong>tendencias</strong> y <strong>«offline después de»</strong> (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69).</p>
-
-      <h3>Calibración</h3>
-      <p>Toggle global y <strong>por estación</strong> (selector). <strong>Offsets</strong>: temperatura (°C), humedad (%), presión (hPa). <strong>Multiplicadores</strong>: viento, lluvia, solar y UV (factor). Se aplican antes de guardar en InfluxDB. En <strong>secundarias (GW1100)</strong> solo aparece lo aplicable: <strong>sensor integrado</strong> (temp/humedad, etiquetado <em>Exterior</em> o <em>Interior</em> según el «a la intemperie») + <strong>presión</strong> (sin viento/lluvia/solar/UV ni canales WN31).</p>
-
-      <h3>Publicación</h3>
-      <p>Activar y configurar credenciales de redes públicas: <strong>Weather Underground</strong> (Station ID + Key), <strong>PWSWeather</strong> (ID + Password), <strong>Windy</strong> (API Key), <strong>OpenWeatherMap</strong> (API Key + Station ID), <strong>CWOP/APRS</strong> (Callsign + Passcode + coordenadas) y <strong>AWEKAS</strong> (Usuario + Contraseña). Cada red tiene un <strong>intervalo de envío</strong> propio (en minutos; CWOP recomienda 10–15; <code>0</code> = en cada dato recibido) y un <strong>badge de estado</strong> (✓ Configurado / ⚠ Falta configurar).</p>
-
-      <h3>Notificaciones</h3>
-      <p>Dos canales: <strong>Telegram</strong> (Bot Token + Chat ID) y <strong>Correo (SMTP)</strong> (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). Cada canal elige <strong>qué categorías de alerta recibe</strong> (temperatura, viento, lluvia, presión, estación offline, batería, sensor, aire) de forma independiente. Botón <strong>«Enviar prueba»</strong> por canal, badges de estado y validación que impide guardar un canal incompleto. Los campos secretos tienen ojo <strong>mostrar/ocultar</strong>.</p>
-
-      <h3>Integraciones</h3>
-      <p><strong>MQTT / Home Assistant</strong>: broker, puerto, topic, usuario y contraseña. Toggle de <strong>auto-discovery</strong> y prefijo. <strong>Indicador de conexión</strong> (conectado/desconectado con último error), botón <strong>«Probar conexión»</strong> (sin afectar la activa) y <strong>«Reconectar»</strong>. <strong>WAQI</strong>: token API para calidad del aire (AQI). <strong>🔒 Seguridad del endpoint (push)</strong>: <strong>token secreto</strong> (el datalogger debe enviar a <code>/data/report/?token=…</code>) y <strong>allowlist de IP</strong> de origen; desactivado por defecto (ver sección Hardware para el detalle).</p>
-
-      <h3>Sistema</h3>
-      <p><strong>Información</strong>: versión, número de estaciones, última lectura, estado de InfluxDB. <strong>Control de calidad (QC)</strong>: toggle de QC habilitado y filtro de picos. <strong>Visor de logs</strong>: filtra por nivel (todos/warning/error) con refresco en tiempo real. <strong>Enlaces</strong> útiles (sitio público, guía, GitHub, API). Stack tecnológico.</p>
-
-      <p style="margin-top:18px">Los tokens/claves se muestran <strong>enmascarados</strong> y si se dejan en blanco al guardar, se conservan. Todo se guarda en <code>/data/settings.json</code> y se aplica al instante. Si <code>ADMIN_USER</code>/<code>ADMIN_PASSWORD</code> están vacíos, el panel queda deshabilitado.</p>
-    </section>
-
+    <!-- ══════════════════ 06 ══════════════════ -->
     <section id="alertas">
-      <span class="sec-eyebrow">10 — Alertas</span>
-      <h2>Alertas y notificaciones</h2>
-      <p>Se evalúan en cada lectura y avisan una vez al activarse y otra al normalizarse. Canales: <strong>Telegram</strong> y/o <strong>correo</strong>, con selección por canal de qué categorías recibe cada uno; si ninguno está configurado, quedan en el log. Los umbrales se configuran <strong>por estación</strong>: la principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in). En las <strong>secundarias</strong> solo aplican <strong>temperatura</strong>, <strong>presión</strong> y el aviso de <strong>estación caída</strong> (offline, con su propio watchdog); viento y lluvia no aplican (no tienen WS69).</p>
-      <p><strong>Estación principal (WS69):</strong></p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Alerta</th><th>Se dispara cuando…</th></tr></thead>
-        <tbody>
-          <tr><td>Temp alta / baja</td><td>temp ≥ / ≤ umbral</td></tr>
-          <tr><td>Humedad alta / baja</td><td>humedad ≥ / ≤ umbral</td></tr>
-          <tr><td>Viento fuerte · Ráfaga</td><td>viento sostenido / ráfaga ≥ umbral</td></tr>
-          <tr><td>Lluvia intensa · diaria</td><td>tasa o acumulado del día ≥ umbral</td></tr>
-          <tr><td>Presión alta / baja</td><td>presión ≥ / ≤ umbral</td></tr>
-          <tr><td>UV alto</td><td>índice UV ≥ umbral</td></tr>
-          <tr><td>Radiación solar alta</td><td>radiación ≥ umbral W/m²</td></tr>
-          <tr><td>Punto de rocío alto / bajo</td><td>punto de rocío ≥ / ≤ umbral</td></tr>
-          <tr><td>Sensación térmica alta / baja</td><td>sensación ≥ / ≤ umbral</td></tr>
-          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
-          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
-          <tr><td>Estación caída</td><td>no llegan datos en N minutos</td></tr>
-          <tr><td>Batería baja</td><td>un sensor (WN31/WS69/consola) reporta batería baja</td></tr>
-          <tr><td>Sensor perdido</td><td>un sensor visto antes deja de reportar (se normaliza al volver)</td></tr>
-          <tr><td>Calidad del aire</td><td>el AQI o el IMECA superan su umbral (se revisa cada ~30 min)</td></tr>
-        </tbody>
-      </table></div>
-      <p><strong>Estación remota (GW1100):</strong></p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Alerta</th><th>Se dispara cuando…</th></tr></thead>
-        <tbody>
-          <tr><td>Temp alta / baja</td><td>temp ≥ / ≤ umbral</td></tr>
-          <tr><td>Humedad alta / baja</td><td>humedad ≥ / ≤ umbral</td></tr>
-          <tr><td>Presión alta / baja</td><td>presión ≥ / ≤ umbral</td></tr>
-          <tr><td>Punto de rocío alto / bajo</td><td>punto de rocío ≥ / ≤ umbral</td></tr>
-          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
-          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
-          <tr><td>Estación caída</td><td>no llegan datos en N minutos (watchdog propio)</td></tr>
-        </tbody>
-      </table></div>
+      <span class="sec-eyebrow">06 — Alertas</span>
+      <h2>Alertas</h2>
+
+      <p>La estación vigila sus propias lecturas y avisa por <strong>Telegram</strong> o <strong>correo</strong> cuando algo se sale de rango. Tres cosas que definen cómo se comportan:</p>
+      <ul>
+        <li><strong>Avisan dos veces:</strong> una al activarse y otra al normalizarse. No repiten mientras la condición sigue.</li>
+        <li><strong>Anti-spam.</strong> La condición debe sostenerse unos minutos (3 por defecto) antes de que llegue el aviso. Así un pico de un segundo no te despierta. La única excepción es la <strong>ráfaga</strong>, que avisa de inmediato porque un pico peligroso no puede esperar.</li>
+        <li><strong>Cada umbral es configurable</strong> desde el panel, y cada alerta se puede apagar por separado. Los valores de abajo son los de fábrica.</li>
+      </ul>
+
+      <h3>Temperatura y humedad</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td>Temperatura alta / baja</td><td>≥ 35 °C · ≤ 0 °C</td><td>Calor o helada. Los defaults son conservadores para CDMX: si suenan, es de verdad excepcional</td></tr>
+            <tr><td>Tendencia de temperatura</td><td>±3 °C (aviso) o ±5 °C (fuerte) en la ventana</td><td>Un cambio brusco. <strong>Una caída rápida suele ser la llegada de una tormenta</strong>: el aire frío del frente baja antes que la lluvia</td></tr>
+            <tr><td>Humedad alta / baja</td><td>≥ 85 % · ≤ 25 %</td><td>Aire saturado (lluvia cerca, riesgo de moho) o muy seco</td></tr>
+            <tr><td>Punto de rocío alto / bajo</td><td>≥ 20 °C · ≤ −5 °C</td><td>Bochorno franco, o aire tan seco que se siente en la piel y la garganta</td></tr>
+            <tr><td>Sensación térmica alta / baja</td><td>≥ 38 °C · ≤ −2 °C</td><td>Lo que el cuerpo <em>siente</em> se salió de rango, aunque el termómetro no</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Viento y lluvia</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td>Viento fuerte</td><td>≥ 50 km/h sostenido</td><td>Viento sostenido, no un pico</td></tr>
+            <tr><td>Ráfaga fuerte</td><td>≥ 70 km/h</td><td>Pico peligroso. <strong>Avisa de inmediato</strong>, sin esperar</td></tr>
+            <tr><td>Lluvia intensa</td><td>≥ 10 mm/h</td><td>Está lloviendo fuerte <em>en este momento</em></td></tr>
+            <tr><td>Lluvia acumulada alta</td><td>≥ 40 mm en el día</td><td>Ya cayó mucha agua hoy, aunque ahora no llueva</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Presión</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td>Presión alta / baja</td><td>≥ 1035 · ≤ 1000 hPa</td><td>Valores extremos del barómetro</td></tr>
+            <tr><td>Presión cayendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible tormenta.</strong> Es la alerta más útil de todas: se anticipa a la lluvia</td></tr>
+            <tr><td>Presión subiendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible frente frío.</strong> Estabilización y entrada de aire más frío</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>La <strong>ventana</strong> es configurable y son 60 minutos por defecto. Las dos tendencias tienen <strong>dos niveles</strong> —aviso y fuerte— para distinguir un cambio notable de uno serio.</p>
+
+      <h3>Sol</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td>Índice UV alto</td><td>≥ 8</td><td>«Muy alto» según la OMS: evita el sol directo. A 2250 m se alcanza con facilidad</td></tr>
+            <tr><td>Radiación solar alta</td><td>≥ 1000 W/m²</td><td>Irradiancia de pico</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Estas dos <strong>sólo existen en la estación principal</strong>, que es la única con esos sensores.</p>
+
+      <h3>Estado de los equipos</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué hacer</th></tr></thead>
+          <tbody>
+            <tr><td>Estación caída</td><td>No llegan datos en 15 min</td><td>Revisar luz, internet o el datalogger. Cada estación tiene su propia vigilancia</td></tr>
+            <tr><td>Batería baja</td><td>Un sensor lo reporta</td><td>Cambiar las pilas de ese sensor</td></tr>
+            <tr><td>Sensor perdido</td><td>Un sensor que antes reportaba dejó de hacerlo</td><td>Suele ser alcance de radio o batería agotada. Se normaliza solo al volver</td></tr>
+            <tr><td>Calidad del aire</td><td>AQI o IMECA sobre su umbral</td><td>Se revisa cada ~30 min. Es dato externo, no de la estación</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, estación, batería, sensor y aire— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
+      </div>
     </section>
 
-    <section id="redes">
-      <span class="sec-eyebrow">11 — Redes públicas</span>
-      <h2>Publicación a redes públicas</h2>
-      <p>El servidor reenvía cada lectura (tolerante a fallos) a las redes que se activen con sus credenciales desde el panel:</p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Red</th><th>Aporta / recibe</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Weather Underground</strong></td><td>mayor audiencia, página propia, histórico, apps</td></tr>
-          <tr><td><strong>Windy.com</strong></td><td>visibilidad en el mapa</td></tr>
-          <tr><td><strong>PWSWeather</strong></td><td>respaldo, ecosistema Aeris</td></tr>
-          <tr><td><strong>OpenWeatherMap</strong></td><td>acceso a su API a cambio</td></tr>
-          <tr><td><strong>CWOP / APRS</strong></td><td>entra a MADIS → modelos de NOAA (mayor aporte científico)</td></tr>
-          <tr><td><strong>AWEKAS</strong></td><td>red europea con mapa interactivo y estadísticas</td></tr>
-        </tbody>
-      </table></div>
+    <!-- ══════════════════ 07 ══════════════════ -->
+    <section id="pantallas">
+      <span class="sec-eyebrow">07 — Hardware</span>
+      <h2>Pantallas físicas</h2>
+
+      <p>Además del sitio web, el servidor alimenta <strong>pantallas dedicadas</strong> que muestran el clima sin abrir un navegador.</p>
+
+      <h3>Pantalla táctil de 7" (kiosco)</h3>
+      <p>Una pantalla de 1024×600 colgada en la pared. Funciona con un reparto de trabajo poco común: <strong>el servidor dibuja la pantalla completa como imagen y la pantalla sólo la muestra</strong>. Eso la vuelve muy simple y permite rediseñar lo que se ve sin volver a programar el aparato.</p>
+      <p>Se navega tocando la <strong>barra inferior</strong>, con seis páginas:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>Página</th><th>Qué muestra</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>☀️ Estación</td><td>Temperatura grande, tarjetas de resumen y el pronóstico de las próximas horas</td></tr>
+            <tr><td>2</td><td>📍 Local</td><td>El sensor propio de la pantalla (temperatura, humedad y presión) con sus mínimas y máximas del día</td></tr>
+            <tr><td>3</td><td>🏠 Sensores</td><td>Interior, jardín y estación remota, uno al lado del otro</td></tr>
+            <tr><td>4</td><td>📅 7 días</td><td>Pronóstico de la semana</td></tr>
+            <tr><td>5</td><td>📈 48 h</td><td>Gráfica multivariable de las últimas 48 horas: temperatura, presión, lluvia, viento y humedad juntas</td></tr>
+            <tr><td>6</td><td>🖥️ Consola</td><td>La réplica de la consola física, a pantalla completa y sin barra. Tócala en cualquier parte para volver a la página 1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>La página 2 es la curiosa: la pantalla <strong>tiene su propio sensor</strong> y le manda sus lecturas al servidor, así que además de mostrar el clima también lo mide. Es un tercer punto de medición, el de dentro de la casa donde está colgada.</p>
+
+      <h3>Reloj de píxeles (Ulanzi TC001)</h3>
+      <p>Un reloj de matriz LED con firmware propio que baja el clima de la estación y lo rota en pequeñas apps con iconos animados: temperatura exterior, humedad, presión, calidad del aire, UV, viento, radiación solar y precipitación, además de hora, fecha, fase lunar y temperatura interior. Consulta al servidor cada 1 a 5 minutos.</p>
     </section>
 
-    <section id="fuentes">
-      <span class="sec-eyebrow">12 — Fuentes</span>
-      <h2>Fuentes de datos externas</h2>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Fuente</th><th>Qué aporta</th><th>Frecuencia</th></tr></thead>
-        <tbody>
-          <tr><td>Estación Ecowitt (push)</td><td>todo el dato local (real)</td><td>~16–60 s</td></tr>
-          <tr><td>Open-Meteo</td><td>pronóstico y astronomía base</td><td>30 min</td></tr>
-          <tr><td>SMN / CONAGUA</td><td>pronóstico oficial por municipio (4 días + 48 h), cualquier municipio de México</td><td>30 min</td></tr>
-          <tr><td>Ventusky</td><td>radar y mapas interactivos</td><td>en vivo</td></tr>
-          <tr><td>NASA GIBS</td><td>imagen satelital de color real</td><td>diaria</td></tr>
-          <tr><td>aviationweather.gov (NOAA)</td><td>METAR y TAF (aeropuertos)</td><td>10 min</td></tr>
-          <tr><td>WAQI / aqicn</td><td>calidad del aire (AQI)</td><td>10 min</td></tr>
-          <tr><td>Open-Meteo Air Quality (CAMS)</td><td>concentraciones → IMECA estimado</td><td>30 min</td></tr>
-          <tr><td>USGS / SSN</td><td>sismos recientes cercanos</td><td>10 min</td></tr>
-          <tr><td>pyephem (local)</td><td>almanaque: crepúsculos, luna, planetas</td><td>10 min</td></tr>
-          <tr><td>InfluxDB (propio)</td><td>histórico, estadísticas, climatología</td><td>en vivo</td></tr>
-        </tbody>
-      </table></div>
+    <!-- ══════════════════ 08 ══════════════════ -->
+    <section id="widget">
+      <span class="sec-eyebrow">08 — Compartir</span>
+      <h2>Widget e instalar como app</h2>
+
+      <h3>Poner el clima en tu propia página</h3>
+      <p>En la pestaña <strong>Widget</strong> eliges las opciones que quieres, copias el código que se genera y lo pegas en tu web o blog. Se <strong>actualiza solo cada minuto</strong>, sin que tengas que hacer nada más. Es la forma de llevar el dato de esta estación a otro sitio.</p>
+
+      <h3>Instalarlo como aplicación</h3>
+      <p>El sitio se puede instalar como app en el teléfono o la computadora: queda con su propio icono, abre a pantalla completa y sin barra de navegador. En el móvil suele estar en <em>Añadir a la pantalla de inicio</em>; en escritorio, en el icono de instalar de la barra de direcciones.</p>
+      <p>Sigue necesitando internet para traer datos nuevos —no guarda el histórico en el teléfono—, pero arranca más rápido y se siente como una app nativa.</p>
     </section>
 
-    <section id="api">
-      <span class="sec-eyebrow">13 — API</span>
-      <h2>API (endpoints)</h2>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Endpoint</th><th>Devuelve</th></tr></thead>
-        <tbody>
-          <tr><td><code>GET /api/current</code></td><td>última lectura</td></tr>
-          <tr><td><code>GET /api/history?start=-24h</code></td><td>histórico crudo</td></tr>
-          <tr><td><code>GET /api/stats/daily</code></td><td>mín/máx/prom del día</td></tr>
-          <tr><td><code>GET /api/stats/records?start=-30d</code></td><td>mín/máx/prom del rango</td></tr>
-          <tr><td><code>GET /api/compare</code></td><td>24 h vs 24 h previas</td></tr>
-          <tr><td><code>GET /api/forecast/local</code></td><td>pronóstico por tendencia barométrica</td></tr>
-          <tr><td><code>GET /api/smn</code> · <code>/api/smn/municipios</code></td><td>pronóstico oficial SMN por municipio (4 días + 48 h) y lista de municipios</td></tr>
-          <tr><td><code>GET /api/climate/daily</code></td><td>resúmenes diarios</td></tr>
-          <tr><td><code>GET /api/climate/records</code></td><td>récords (siempre, por mes, este mes/año, ayer)</td></tr>
-          <tr><td><code>GET /api/climate/onthisday</code></td><td>efeméride: mismo día en años previos</td></tr>
-          <tr><td><code>GET /api/climate/noaa?year=&month=</code></td><td>reporte NOAA mensual/anual</td></tr>
-          <tr><td><code>GET /api/wind/rose?start=-7d</code></td><td>rosa de vientos (16 sectores)</td></tr>
-          <tr><td><code>GET /api/almanac</code></td><td>almanaque astronómico</td></tr>
-          <tr><td><code>GET /api/alerts</code></td><td>alertas activas</td></tr>
-          <tr><td><code>GET /api/metar?station=</code> · <code>/api/taf?station=</code></td><td>METAR y TAF de un aeropuerto</td></tr>
-          <tr><td><code>GET /api/airquality</code> · <code>/api/airquality/imeca</code></td><td>AQI e IMECA estimado (+ pronóstico)</td></tr>
-          <tr><td><code>GET /api/satellite</code></td><td>imagen satelital NASA GIBS (proxy)</td></tr>
-          <tr><td><code>GET /api/earthquakes</code></td><td>sismos recientes (USGS / SSN)</td></tr>
-          <tr><td><code>GET /api/svitrix</code></td><td>datos para SVITRIX-XE1E (Ulanzi TC001)</td></tr>
-          <tr><td><code>GET /api/display.jpg?page=N</code></td><td>imagen JPEG para pantalla Waveshare</td></tr>
-          <tr><td><code>POST /api/kiosk/local</code></td><td>recibe lecturas del BME280 de la pantalla Waveshare</td></tr>
-          <tr><td><code>POST /data/report/</code></td><td><strong>entrada</strong> del push de la estación</td></tr>
-        </tbody>
-      </table></div>
-      <p><strong>Multi-estación:</strong> <code>/api/current</code>, <code>/api/history</code> y <code>/api/stats/daily</code> aceptan <code>?station=&lt;nombre&gt;</code> (p. ej. <code>gw1100</code>) para consultar una <strong>estación secundaria</strong>; sin el parámetro devuelven la <strong>principal</strong>. Las secundarias se configuran en <code>SECONDARY_STATIONS</code> del <code>.env</code> con el formato <code>passkey:nombre</code>.</p>
-    </section>
-
-    <section id="operacion">
-      <span class="sec-eyebrow">14 — Operación</span>
-      <h2>Operación y mantenimiento</h2>
-      <p>Servidor: VPS Oracle ARM, cuenta <strong>PAYG</strong> (evita recuperación por inactividad). Dominio <code>clima.xe1e.net</code> tras Cloudflare.</p>
-      <h3>Desplegar / actualizar</h3>
-      <pre><code>cd ~/ecowitt-weather-server-xe1e
-git pull
-docker compose up -d --build      # --build al cambiar dependencias o imágenes
-docker compose ps                 # verificar estado</code></pre>
-      <p>Los ajustes del panel viven en el volumen <code>receiver-data</code> (<code>/data/settings.json</code>), así que sobreviven a reinicios y reconstrucciones.</p>
-      <h3>Estación en operación</h3>
-      <p>El WS2910 está <strong>instalado y enviando datos reales</strong> desde ~2026-07-19. La consola apunta a <code>clima.xe1e.net</code>, ruta <code>/data/report/</code> (<em>Weather Services → Customized → Ecowitt</em>), y las lecturas reales se ven en <code>/api/current</code> y en la web.</p>
-    </section>
-
+    <!-- ══════════════════ 09 ══════════════════ -->
     <section id="glosario">
-      <span class="sec-eyebrow">15 — Glosario</span>
-      <h2>Glosario de términos e índices</h2>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Término</th><th>Qué es</th></tr></thead>
-        <tbody>
-          <tr><td>Punto de rocío</td><td>temperatura a la que el aire se satura; alto = bochorno</td></tr>
-          <tr><td>Sensación térmica</td><td>cómo se percibe la temperatura (calor+humedad o frío+viento)</td></tr>
-          <tr><td>Índice de calor</td><td>temperatura aparente con calor + humedad (≥ 27 °C, ≥ 40 % HR)</td></tr>
-          <tr><td>Wind chill</td><td>enfriamiento por viento (≤ 10 °C, viento ≥ 4.8 km/h)</td></tr>
-          <tr><td>Humidex</td><td>índice de bochorno (temp + humedad), útil sobre 20 °C</td></tr>
-          <tr><td>Bulbo húmedo</td><td>temperatura con evaporación máxima; relevante para salud/calor</td></tr>
-          <tr><td>Base de nubes</td><td>altura estimada de la base de nubes (≈125 m por °C entre temp y rocío)</td></tr>
-          <tr><td>Tendencia barométrica</td><td>cambio de presión en ~3 h; base del pronóstico local</td></tr>
-          <tr><td>Grados-día</td><td>demanda de calefacción/refrigeración respecto a una base (18.3 °C)</td></tr>
-          <tr><td>Crepúsculos</td><td>Sol 6°/12°/18° bajo el horizonte (civil/náutico/astronómico)</td></tr>
-          <tr><td>AQI</td><td>índice de calidad del aire, escala US EPA (mayor = peor)</td></tr>
-          <tr><td>IMECA</td><td>Índice Metropolitano de la Calidad del Aire (CDMX); aquí <em>estimado</em> desde concentraciones modeladas</td></tr>
-          <tr><td>METAR / TAF</td><td>observación / pronóstico meteorológico aeronáutico de un aeropuerto</td></tr>
-          <tr><td>Categoría de vuelo</td><td>VFR / MVFR / IFR / LIFR: de mejores a peores condiciones para volar</td></tr>
-          <tr><td>Beaufort</td><td>escala de fuerza del viento (0 calma … 12 huracán)</td></tr>
-        </tbody>
-      </table></div>
+      <span class="sec-eyebrow">09 — Glosario</span>
+      <h2>Glosario</h2>
+
+      <p>En lenguaje llano, sin fórmulas.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Término</th><th>En corto</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Acumulado</strong></td><td>Agua que ya cayó, en milímetros. Un milímetro es un litro por metro cuadrado.</td></tr>
+            <tr><td><strong>AQI</strong></td><td>Índice de calidad del aire de la EPA estadounidense.</td></tr>
+            <tr><td><strong>Azimut</strong></td><td>Hacia qué punto del horizonte está un astro, en grados desde el norte.</td></tr>
+            <tr><td><strong>Base de nubes</strong></td><td>Altura estimada a la que empiezan las nubes.</td></tr>
+            <tr><td><strong>Beaufort</strong></td><td>Escala que traduce la velocidad del viento a efectos visibles.</td></tr>
+            <tr><td><strong>Bulbo húmedo</strong></td><td>Temperatura mínima que se alcanza evaporando agua. El límite del enfriamiento por sudor.</td></tr>
+            <tr><td><strong>Crepúsculo</strong></td><td>La penumbra antes del amanecer y después del ocaso. Tiene tres etapas: civil, náutico y astronómico.</td></tr>
+            <tr><td><strong>Evapotranspiración</strong></td><td>Agua que el suelo y las plantas pierden por evaporación. Dice cuánto hay que regar.</td></tr>
+            <tr><td><strong>Grados-día</strong></td><td>Cuánto y por cuánto tiempo la temperatura se alejó de 18.3 °C. Se usa para energía y agricultura.</td></tr>
+            <tr><td><strong>hPa</strong></td><td>Hectopascal, la unidad de presión. Equivale al milibar (mb).</td></tr>
+            <tr><td><strong>Humedad relativa</strong></td><td>Porcentaje del agua que el aire aguanta <em>a esa temperatura</em>. Cambia al calentarse el aire aunque el agua sea la misma.</td></tr>
+            <tr><td><strong>Humidex</strong></td><td>Índice canadiense de bochorno.</td></tr>
+            <tr><td><strong>IMECA</strong></td><td>Índice oficial de calidad del aire de la Ciudad de México.</td></tr>
+            <tr><td><strong>Intensidad de lluvia</strong></td><td>Ritmo al que llueve ahora, en mm/h. Es una tasa, no una cantidad.</td></tr>
+            <tr><td><strong>METAR</strong></td><td>Reporte del tiempo observado en un aeropuerto, cada hora.</td></tr>
+            <tr><td><strong>Presión absoluta</strong></td><td>La que mide el barómetro donde está. A 2250 m ronda 780 hPa.</td></tr>
+            <tr><td><strong>Presión relativa</strong></td><td>La absoluta corregida a nivel del mar, para poder comparar con otros lugares.</td></tr>
+            <tr><td><strong>Punto de rocío</strong></td><td>Temperatura a la que el aire empezaría a condensar. El mejor indicador de bochorno.</td></tr>
+            <tr><td><strong>QNH</strong></td><td>La presión relativa, en jerga aeronáutica.</td></tr>
+            <tr><td><strong>Ráfaga</strong></td><td>Pico instantáneo de viento. Siempre igual o mayor que el sostenido.</td></tr>
+            <tr><td><strong>Radiación solar</strong></td><td>Energía del sol que llega, en W/m². Distinta del índice UV.</td></tr>
+            <tr><td><strong>Rosa de vientos</strong></td><td>Gráfica que muestra de qué direcciones sopló y con qué fuerza en un periodo.</td></tr>
+            <tr><td><strong>Sensación térmica</strong></td><td>Lo que se siente, ajustando la temperatura por humedad o viento.</td></tr>
+            <tr><td><strong>TAF</strong></td><td>Pronóstico aeronáutico para un aeropuerto, ~24-30 h.</td></tr>
+            <tr><td><strong>UV (índice)</strong></td><td>Cuánto quema el sol, de 0 a 11+. No tiene que ver con el calor.</td></tr>
+            <tr><td><strong>VFR / IFR</strong></td><td>Categorías de vuelo: VFR es buen tiempo, IFR y LIFR son las peores condiciones.</td></tr>
+            <tr><td><strong>Viento sostenido</strong></td><td>Promedio del viento en un intervalo, sin los picos.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
-    <section id="estado">
-      <span class="sec-eyebrow">16 — Estado</span>
-      <h2>Estado y pendientes</h2>
-      <p><span class="pill warn">Pendiente</span> versión en inglés (i18n) y acciones del usuario (bot de Telegram, credenciales de redes).</p>
-    </section>
-
-    <footer>Estación XE1E · CDMX · Guía actualizada 2026-08-01 · github.com/XE1E/ecowitt-weather-server-xe1e</footer>
+    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-08-04 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
+
 
 <script>
   // Resalta en el índice la sección visible

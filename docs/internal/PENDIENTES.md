@@ -91,6 +91,51 @@ se reconstruyeron los resúmenes `weather_daily` de esos días con
 absoluta (~790 hPa) del 07-24 22:42-22:44Z. Resultado: presión histórica real
 (~1024-1032 hPa). El GW1100 se dejó igual (usa la altitud de su propia consola).
 
+## 7. Uniformar la iconografía — hacerlo más visual
+Meter iconos **en todo** el sitio y **más grandes**, para uniformizar y que se lea de
+un vistazo. Falta definir juntos **dónde y cuáles**. También se van a **agregar**
+algunos que hoy no existen.
+
+Inventario de partida (verificado 2026-08-03):
+
+- **Meteocons** (`@meteocons/svg` 0.1.0, MIT) para lo meteorológico animado: hay
+  **475 iconos por variante** (`fill`, `flat`, `line`, `monochrome`) y sólo se usan
+  **50**, todos de `fill`. Hay mucho sin explotar (viento por intensidad, presión,
+  fases lunares completas, alertas, banderas de temperatura…).
+- **Lucide** (`lucide-react` 0.303.0, ISC) para la UI: 26 importados.
+- Casos que NO salen de ninguna librería y conviene decidir si se unifican:
+  - La barra de pestañas del **kiosco** usa **emoji** (☀️ 📍 🏠 📅 📈 🖥️).
+  - `ConsoleReplica` usa **SVG dibujados a mano** ahí mismo (termómetro, gota,
+    barómetro, luna, flechas de tendencia).
+  - `TrendArrow` también trae su propio SVG, aunque `CONVENCIONES.md` dice que la
+    tendencia usa `ArrowUp`/`ArrowDown` de Lucide. Hay que decidir cuál es la
+    fuente de verdad y alinear el documento con el código.
+- Los tamaños estándar ya están en `docs/CONVENCIONES.md` (UI 16/20/24/32 px;
+  meteorológicos 24/32/48/64/96/120 px). Si se agrandan, hay que actualizar esa tabla.
+
+## 8. Revisiones detectadas el 2026-08-03
+- [ ] **SMN sin datos — es caída de CONAGUA, no nuestra.** `/api/smn` y
+      `/api/smn/municipios` devuelven 502 porque el webservice de origen responde
+      **HTTP 500**: `https://smn.conagua.gob.mx/tools/GUI/webservices/?method=1`.
+      Verificado que falla **igual desde el VPS y desde otra red**, así que no es
+      bloqueo de IP. Nada que arreglar del lado del servidor, pero **falta
+      degradar con gracia**: hoy la página queda sin contenido en vez de decir
+      "el SMN no está disponible". Considerar además cachear la última respuesta
+      buena para sobrevivir estas caídas.
+- [ ] **Mi Tablero no muestra tendencias.** Confirmado: `MiTableroPage.tsx` tiene
+      **cero** usos de `TrendArrow`, `getTrend` y `TrendBadge`, mientras Inicio y la
+      consola sí las pintan. Hay que decidir si los widgets del tablero llevan
+      flecha (y con qué umbrales: los de `CONVENCIONES.md`, ±0.5 °C / ±3 % / ±1 hPa).
+- [ ] **Climograma se ve raro — falta señalar meses parciales.** No es un bug de
+      dibujo: `/api/climate/noaa?year=2026` devuelve **sólo 2 meses** (julio y
+      agosto) porque la estación arrancó el 2026-07-19. Julio sale con 68.1 mm
+      siendo un mes **incompleto** (del 19 en adelante) y agosto con 0.5 mm de 3
+      días, presentados como si fueran totales mensuales — eso es lo que
+      desconcierta. Un climograma es por definición una figura de 12 meses. Opciones:
+      marcar visualmente los meses parciales, no graficarlos hasta tener el mes
+      completo, o mostrar el aviso de "climatología en construcción" hasta juntar
+      un año. Decidir cuál.
+
 ---
 ### Hecho reciente (referencia)
 - Alertas: humedad, tendencia de presión (2 niveles), histéresis anti‑spam,
