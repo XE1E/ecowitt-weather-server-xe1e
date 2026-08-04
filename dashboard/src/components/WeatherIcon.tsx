@@ -35,8 +35,19 @@ import uvIndex10 from '@meteocons/svg/fill/uv-index-10.svg'
 import uvIndex11 from '@meteocons/svg/fill/uv-index-11.svg'
 import uvIndex11Plus from '@meteocons/svg/fill/uv-index-11-plus.svg'
 import raindrops from '@meteocons/svg/fill/raindrops.svg'
-import compass from '@meteocons/svg/fill/compass.svg'
 import notAvailable from '@meteocons/svg/fill/not-available.svg'
+// Familias graduadas (ver src/theme/icons.ts): el icono cambia con el valor
+import codeGreen from '@meteocons/svg/fill/code-green.svg'
+import codeYellow from '@meteocons/svg/fill/code-yellow.svg'
+import codeOrange from '@meteocons/svg/fill/code-orange.svg'
+import codeRed from '@meteocons/svg/fill/code-red.svg'
+import codePurple from '@meteocons/svg/fill/code-purple.svg'
+import pressureHigh from '@meteocons/svg/fill/pressure-high.svg'
+import pressureLow from '@meteocons/svg/fill/pressure-low.svg'
+import dust from '@meteocons/svg/fill/dust.svg'
+import windAlert from '@meteocons/svg/fill/wind-alert.svg'
+import uvIndexAlert from '@meteocons/svg/fill/uv-index-alert.svg'
+import raindrop from '@meteocons/svg/fill/raindrop.svg'
 // Forecast + astronomy
 import partlyCloudyDayDrizzle from '@meteocons/svg/fill/partly-cloudy-day-drizzle.svg'
 import partlyCloudyDayRain from '@meteocons/svg/fill/partly-cloudy-day-rain.svg'
@@ -89,7 +100,6 @@ const ICONS: Record<string, string> = {
   'uv-index-11': uvIndex11,
   'uv-index-11-plus': uvIndex11Plus,
   raindrops,
-  compass,
   'partly-cloudy-day-drizzle': partlyCloudyDayDrizzle,
   'partly-cloudy-day-rain': partlyCloudyDayRain,
   'overcast-day-sleet': overcastDaySleet,
@@ -105,6 +115,17 @@ const ICONS: Record<string, string> = {
   'moon-waning-gibbous': moonWaningGibbous,
   'moon-last-quarter': moonLastQuarter,
   'moon-waning-crescent': moonWaningCrescent,
+  'code-green': codeGreen,
+  'code-yellow': codeYellow,
+  'code-orange': codeOrange,
+  'code-red': codeRed,
+  'code-purple': codePurple,
+  'pressure-high': pressureHigh,
+  'pressure-low': pressureLow,
+  'dust': dust,
+  'wind-alert': windAlert,
+  'uv-index-alert': uvIndexAlert,
+  'raindrop': raindrop,
 }
 
 interface WeatherIconProps {

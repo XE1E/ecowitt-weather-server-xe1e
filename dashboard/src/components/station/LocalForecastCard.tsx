@@ -1,5 +1,7 @@
 import { LocalForecast } from '../../station-data'
 import { useUnits } from '../../units'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconTendenciaPresion } from '../../theme/icons'
 
 interface Props {
   lf: LocalForecast | null
@@ -25,10 +27,15 @@ export function LocalForecastCard({ lf }: Props) {
 
   const trend = lf.trend
   const color = trend ? TREND_COLOR[trend.code] ?? 'text-slate-300' : 'text-slate-300'
+  // Chevron de tendencia (rojo sube / azul baja); nada si está estable.
+  const icoTend = iconTendenciaPresion(lf.delta_3h ?? null)
 
   return (
     <div className="card">
-      <p className="card-title">Pronóstico local</p>
+      <div className="flex items-center gap-2 mb-1">
+        {icoTend && <WeatherIcon name={icoTend} size={ICON.card} alt="" className="shrink-0" />}
+        <p className="card-title mb-0">Pronóstico local</p>
+      </div>
       <p className="text-xs text-slate-500 -mt-1 mb-2">Por tendencia del barómetro · datos de la estación</p>
 
       <p className="text-slate-100 leading-snug">{lf.forecast}</p>

@@ -2,6 +2,8 @@ import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tool
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
 import { historicValue } from '../../weather'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconTendenciaPresion } from '../../theme/icons'
 
 const hourFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit' })
 const stampFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -41,10 +43,14 @@ export function PressureCard({ data, stats, history }: Props) {
     else if (d < -1) { trend = 'Bajando'; trendColor = 'text-red-500' }
   }
 
-  const box = (label: string, value: string, color = 'text-slate-100') => (
+  const box = (label: string, value: string, color = 'text-slate-100', icono?: string | null) => (
     <div className="rounded-lg bg-white/5 px-3 py-2">
       <p className="text-xs text-slate-400">{label}</p>
-      <p className={`text-lg font-bold ${color}`}>{value}</p>
+      <p className={`text-lg font-bold ${color} flex items-center gap-1`}>
+        {/* Chevron solo si hay tendencia: estable no lleva icono (ver theme/icons.ts) */}
+        {icono && <WeatherIcon name={icono} size={ICON.compact} alt="" className="shrink-0 -my-1" />}
+        {value}
+      </p>
     </div>
   )
 
@@ -59,7 +65,7 @@ export function PressureCard({ data, stats, history }: Props) {
       <div className="grid grid-cols-3 gap-2 mt-3">
         {box('Mín', s?.min != null ? u.press(s.min) : '--', 'text-sky-300')}
         {box('Máx', s?.max != null ? u.press(s.max) : '--', 'text-orange-300')}
-        {box('Tendencia', trend, trendColor)}
+        {box('Tendencia', trend, trendColor, iconTendenciaPresion(p != null && prev != null ? p - prev : null))}
       </div>
 
       {series.length > 1 && (

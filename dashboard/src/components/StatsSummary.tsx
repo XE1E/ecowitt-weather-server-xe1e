@@ -18,7 +18,7 @@ const METRICS: Metric[] = [
   { key: 'humidity_outdoor', label: 'Humedad', unit: '%', icon: 'humidity', color: 'text-sky-300' },
   { key: 'wind_speed', label: 'Viento', unit: 'km/h', icon: 'windsock', color: 'text-emerald-300' },
   { key: 'wind_gust', label: 'Ráfaga', unit: 'km/h', icon: 'windsock', color: 'text-emerald-300' },
-  { key: 'pressure_relative', label: 'Presión', unit: 'hPa', icon: 'barometer', color: 'text-violet-300' },
+  { key: 'pressure_relative', label: 'Presión', unit: 'hPa', icon: 'pressure-high', color: 'text-violet-300' },
   { key: 'rain_daily', label: 'Lluvia', unit: 'mm', icon: 'raindrops', color: 'text-blue-300' },
 ]
 

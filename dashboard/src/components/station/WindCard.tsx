@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { WeatherData } from '../../types'
 import { beaufort, cardinal } from '../../weather'
 import { useUnits } from '../../units'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconViento } from '../../theme/icons'
 
 // Color por intensidad (escala Beaufort). Cue de severidad, no serie categórica:
 // calma→verde, moderado→amarillo, fuerte→naranja, temporal→rojo.
@@ -86,7 +88,10 @@ export function WindCard({ data, onFlip }: { data: WeatherData; onFlip?: () => v
   return (
     <div className="card">
       <div className="flex items-center justify-between">
-        <p className="card-title">Viento</p>
+        <p className="card-title flex items-center gap-2">
+          <WeatherIcon name={iconViento(data.wind_speed)} size={ICON.card} alt="" className="shrink-0" />
+          Viento
+        </p>
         {onFlip
           ? <button onClick={onFlip} className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</button>
           : <Link to="/pro/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>}

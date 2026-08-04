@@ -5,6 +5,7 @@ import { useUnits } from '../../units'
 import { relativeTime, isStale, historicValue } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
+import { ICON } from '../../theme/icons'
 
 const REFRESH = 60000 // 1 min
 
@@ -125,7 +126,7 @@ export function RemoteStationCard() {
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="barometer" size={24} />
+          <WeatherIcon name="pressure-high" size={ICON.inline} alt="" />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-violet-300">
               {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}

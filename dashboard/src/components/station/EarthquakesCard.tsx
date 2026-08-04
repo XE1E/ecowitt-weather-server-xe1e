@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Activity } from 'lucide-react'
 import { Quake, magColor, timeAgo } from './quakes'
 
 export function EarthquakesCard() {
@@ -22,7 +23,9 @@ export function EarthquakesCard() {
   return (
     <div className="card">
       <div className="flex items-center justify-between">
-        <p className="card-title">Último sismo</p>
+        <p className="card-title flex items-center gap-2">
+          <Activity className="w-5 h-5 text-amber-400 shrink-0" /> Último sismo
+        </p>
         <Link to="/pro/sismos" className="text-xs text-blue-400 hover:text-blue-300">Ver todos →</Link>
       </div>
       {!q ? (

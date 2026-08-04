@@ -1,6 +1,8 @@
 import { WeatherData } from '../../types'
 import { ForecastResult } from '../../forecast'
 import { useUnits } from '../../units'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconLluvia } from '../../theme/icons'
 import { useState, useEffect } from 'react'
 
 interface Props {
@@ -46,7 +48,10 @@ export function PrecipitationCard({ data, forecast }: Props) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <p className="card-title mb-0">Precipitaciones</p>
+        <div className="flex items-center gap-2">
+          <WeatherIcon name={iconLluvia(data.rain_rate, data.rain_daily)} size={ICON.card} alt="" className="shrink-0" />
+          <p className="card-title mb-0">Precipitaciones</p>
+        </div>
         {lastRain?.date && (
           <p className="text-xs text-slate-500">
             Última lluvia: <span className="text-slate-400">{formatLastRain(lastRain.date)}</span>

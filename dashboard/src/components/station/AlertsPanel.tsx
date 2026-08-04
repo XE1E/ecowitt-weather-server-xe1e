@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconAlerta } from '../../theme/icons'
 
 interface Alert {
   key: string
@@ -53,6 +55,8 @@ export function AlertsPanel() {
                 >
                   {stationLabel}
                 </span>
+                {/* Icono por variable: dice DE QUE es la alerta, no solo que hay una */}
+                <WeatherIcon name={iconAlerta(a.key)} size={ICON.inline} alt="" className="shrink-0" />
                 <span>{msg}</span>
               </div>
             )

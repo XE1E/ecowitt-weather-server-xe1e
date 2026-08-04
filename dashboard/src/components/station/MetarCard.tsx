@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Plane } from 'lucide-react'
 import { useUnits } from '../../units'
 
 const STATION = 'MMMX'   // Aeropuerto Internacional de la Ciudad de México
@@ -73,7 +74,10 @@ export function MetarCard() {
 
   const header = (
     <div className="flex items-start justify-between gap-2">
-      <p className="card-title mb-0">✈️ METAR</p>
+      <div className="flex items-center gap-2">
+          <Plane className="w-6 h-6 text-sky-400 shrink-0" />
+          <p className="card-title mb-0">METAR</p>
+        </div>
       {m?.station && (
         <div className="text-right leading-tight">
           <p className="font-semibold tabular-nums">{m.station}</p>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LOCATION } from '../../config'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconAire } from '../../theme/icons'
 
 interface AQ {
   aqi: number | null
@@ -42,7 +44,10 @@ export function AirQualityCard() {
           <span className="text-[9px] text-slate-400">AQI</span>
         </div>
         <div className="min-w-0 text-right">
-          <p className="font-semibold" style={{ color: cat.color }}>{cat.label}</p>
+          <p className="font-semibold flex items-center justify-end gap-1.5" style={{ color: cat.color }}>
+            <WeatherIcon name={iconAire(aq.aqi)} size={ICON.compact} alt="" className="shrink-0" />
+            {cat.label}
+          </p>
           {aq.dominant && <p className="text-xs text-slate-400">Principal: {aq.dominant.toUpperCase()}</p>}
           <p className="text-xs text-blue-400 mt-1">Ver detalle →</p>
         </div>

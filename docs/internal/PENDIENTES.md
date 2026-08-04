@@ -113,6 +113,30 @@ Inventario de partida (verificado 2026-08-03):
 - Los tamaños estándar ya están en `docs/CONVENCIONES.md` (UI 16/20/24/32 px;
   meteorológicos 24/32/48/64/96/120 px). Si se agrandan, hay que actualizar esa tabla.
 
+## 9. Kiosco — celda LLUVIA con los 3 datos de precipitación
+Hoy la celda LLUVIA de la réplica de consola (`ConsoleReplica`, fila 2 columna 3)
+muestra **solo 2**: `rain_daily` y `rain_rate` (la tasa, rotulada `/h`).
+
+El servidor maneja **8** campos de lluvia y la tarjeta web (`PrecipitationCard`) ya
+usa 4. Verificado en producción el 2026-08-04:
+
+| Campo | Ejemplo | Qué es |
+|-------|---------|--------|
+| `rain_rate` | 3.0 | intensidad ahora (mm/h) — **ya está** |
+| `rain_event` | 6.8 | el evento de lluvia en curso |
+| `rain_hourly` | 5.0 | última hora |
+| `rain_daily` | 6.8 | hoy — **ya está** |
+| `rain_weekly` | 6.8 | semana |
+| `rain_monthly` | 7.3 | mes |
+| `rain_yearly` / `rain_total` | 75.4 | año |
+
+- [ ] Decidir **cuáles 3** van (probable: tasa + evento + hoy, o tasa + hoy + mes) y
+      rediseñar la celda: hoy son 2 números grandes centrados y con 3 hay que
+      repartir el espacio sin que se encimen, cuidando que el ancho de celda es
+      ~339 px y la fuente DSEG7 es ancha.
+- [ ] Aplicar el mismo criterio al tab **Consola** del dashboard: es el MISMO
+      componente (`ConsoleReplica`), así que se arregla en un solo lugar.
+
 ## 8. Revisiones detectadas el 2026-08-03
 - [ ] **SMN sin datos — es caída de CONAGUA, no nuestra.** `/api/smn` y
       `/api/smn/municipios` devuelven 502 porque el webservice de origen responde

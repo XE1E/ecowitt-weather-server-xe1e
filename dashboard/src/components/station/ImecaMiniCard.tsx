@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LOCATION } from '../../config'
+import { WeatherIcon } from '../WeatherIcon'
+import { ICON, iconAire } from '../../theme/icons'
 
 interface Imeca {
   available: boolean
@@ -31,7 +33,10 @@ export function ImecaMiniCard() {
           <span className="text-[9px] text-slate-400">IMECA</span>
         </div>
         <div className="min-w-0 text-right">
-          <p className="font-semibold" style={{ color: d.color }}>{d.category}</p>
+          <p className="font-semibold flex items-center justify-end gap-1.5" style={{ color: d.color }}>
+            <WeatherIcon name={iconAire(d.imeca)} size={ICON.compact} alt="" className="shrink-0" />
+            {d.category}
+          </p>
           {d.dominant && <p className="text-xs text-slate-400">Principal: {d.dominant}</p>}
           <p className="text-xs text-blue-400 mt-1">Ver detalle →</p>
         </div>

@@ -121,7 +121,7 @@ export function StatisticsPage() {
     { key: 'humidity_outdoor', label: 'Humedad', icon: 'humidity', unit: '%', color: 'text-sky-300', fmt: (v) => v.toFixed(0) },
     { key: 'wind_speed', label: 'Viento', icon: 'windsock', unit: u.windU, color: 'text-emerald-300', fmt: (v) => u.wind(v) },
     { key: 'wind_gust', label: 'Ráfaga', icon: 'windsock', unit: u.windU, color: 'text-emerald-300', fmt: (v) => u.wind(v) },
-    { key: 'pressure_relative', label: 'Presión', icon: 'barometer', unit: u.pressU, color: 'text-violet-300', fmt: (v) => u.press(v) },
+    { key: 'pressure_relative', label: 'Presión', icon: 'pressure-high', unit: u.pressU, color: 'text-violet-300', fmt: (v) => u.press(v) },
     { key: 'rain_daily', label: 'Lluvia diaria', icon: 'raindrops', unit: u.rainU, color: 'text-blue-300', fmt: (v) => u.rain(v) },
   ]
   const available = stats ? metrics.filter((m) => stats[m.key]) : []

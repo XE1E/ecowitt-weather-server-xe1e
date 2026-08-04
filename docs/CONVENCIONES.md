@@ -105,37 +105,76 @@ cursor: { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
 ## Iconos
 
-### Librería principal
-`lucide-react` - iconos usados:
-- Activity, AlertTriangle, ArrowDown, ArrowUp
-- BarChart3, CalendarDays, Check, CloudSun, Code2
-- GripVertical, History, Info, LayoutGrid
-- Maximize2, Minus, Moon, MoonStar
-- Plane, Radar, RefreshCw, Search
-- SlidersHorizontal, Sun, Sunrise, Wind, X
+> **Fuente de verdad en código:** `dashboard/src/theme/icons.ts`. La escala y las
+> familias graduadas viven ahí; este documento las describe, no las define.
+> Si cambian los tamaños, hay que actualizar ambos.
 
-### Iconos meteorológicos
-`WeatherIcon` component (basweather)
+### Qué librería usar
 
-### Tamaños estándar
+| Para | Librería | Regla |
+|------|----------|-------|
+| Variables meteorológicas | **Meteocons** (`@meteocons/svg`, MIT) | Siempre. Vía `<WeatherIcon name="...">` |
+| UI (flechas, menús, botones) | **Lucide** (`lucide-react`, ISC) | Siempre |
+| Conceptos que Meteocons no cubre | Lucide | **Solo si no hay de otra** — ver lista abajo |
 
-**Iconos UI (lucide-react)**:
-| Tamaño | Clase | Uso |
-|--------|-------|-----|
-| 16px | `w-4 h-4` | Badges, inline text |
-| 20px | `w-5 h-5` | Tendencias, botones pequeños |
-| 24px | `w-6 h-6` | Títulos de tarjeta |
-| 32px | `w-8 h-8` | Spinners de carga |
+**No mezclar estilos en el mismo rol.** Si un dato meteorológico ya tiene icono en
+Meteocons, no se usa Lucide para él aunque el de Lucide se vea mejor.
 
-**Iconos meteorológicos (WeatherIcon)**:
-| Tamaño | Uso |
-|--------|-----|
-| 24px | Tarjetas compactas |
-| 32px | Tarjetas estándar |
-| 48px | Destacados |
-| 64px | Pronóstico principal |
-| 96px | Condiciones actuales |
-| 120px | Kiosko pantalla completa |
+Casos legítimos de "no hay de otra" (Meteocons es una galería *meteorológica* y
+estos no son variables del clima):
+
+- **Interior / exterior.** Una casita para la lectura de dentro y otra marcada
+  expresamente para la de fuera. Meteocons no tiene el par.
+- **Señal WiFi / RF por sensor**, estado de batería, sensor perdido.
+- **Avión** para METAR, **actividad sísmica** para sismos.
+- Controles de UI: menús, flechas de navegación, botones, arrastre.
+
+En estos casos el icono se tiñe con el color de la variable que acompaña
+(`currentColor` en Lucide), para que siga leyéndose como parte del mismo sistema.
+
+### Escala de tamaños
+
+Cinco pasos. Antes había **12 tamaños distintos** en uso (18/20/24/28/32/34/36/40/
+64/72/96/120) y no coincidían con lo que decía este documento.
+
+| Token | px | Uso |
+|-------|-----|-----|
+| `ICON.inline` | 32 | Inline en texto, celdas de tabla, chips |
+| `ICON.compact` | 48 | Tarjetas compactas, tiras de resumen |
+| `ICON.card` | 64 | Tarjeta estándar (el valor por defecto) |
+| `ICON.hero` | 96 | Destacados: condiciones actuales, encabezados |
+| `ICON.kiosk` | 140 | Kiosco y pantalla completa |
+
+### Familias graduadas
+
+El icono **cambia con el valor**, así que informa en vez de decorar:
+
+| Función | Qué hace |
+|---------|----------|
+| `iconTendenciaPresion(delta)` | Chevron rojo si sube, azul si baja, **nada si está estable** |
+| `iconViento(kmh)` | Manga normal; `wind-alert` con temporal (Beaufort ≥ 8) |
+| `iconAire(indice)` | `code-green/yellow/orange/red/purple` por nivel de AQI o IMECA |
+| `iconUv(uv)` | El numerado del paquete; `uv-index-alert` de 11 en adelante |
+| `iconLluvia(tasa, acum)` | Distingue "llueve ahora" de "hay acumulado" |
+| `iconAlerta(clave)` | Icono por VARIABLE de la alerta, no un triángulo genérico |
+
+### Regla de contraste: si no se lee, no se pone
+
+Un icono que no se distingue al tamaño en que se usa no vale la pena. Se verifica
+midiendo, no a ojo: `scratchpad/audita_contraste.py` renderiza cada icono sobre el
+color real de `.card` (`#131c2e`) y calcula la diferencia media de luminancia.
+Referencia: la mayoría del conjunto queda entre 50 y 130.
+
+**Descartados por esta regla:**
+
+| Icono | Δ luminancia | Por qué |
+|-------|--------------|---------|
+| `barometer` y sus 5 variantes | **26** | Carátula gris oscuro sobre fondo oscuro: borrón del que solo se ve la aguja, incluso a 96 px. Se usan los chevrones `pressure-high/low` |
+| `compass` | 33 | Mismo problema; 0 usos reales |
+| `wind-beaufort-0..12` | — | Trazo blanco muy fino con número diminuto: no se lee ni a 72 px, aunque calce 1 a 1 con el grado |
+
+**Casos inherentes, no defectos:** `moon-new` es oscura porque una luna nueva **es**
+oscura, y `not-available` es un marcador de "sin dato" a propósito.
 
 ## Pendientes
 
