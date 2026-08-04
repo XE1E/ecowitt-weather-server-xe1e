@@ -42,6 +42,16 @@ Severidades:
 | 47a | `WindCard`: sin dirección no se dibuja la aguja, y Beaufort muestra `--` | `WindCard.tsx` |
 | 47b | `UvSolarCard` y `ConsoleReplica`: UV, radiación y humedad muestran `--` | 2 componentes |
 | 47c | `ClimatePage`: el año en curso se calcula, ya no es el literal 2026 | `ClimatePage.tsx` |
+| 42 (parcial) | **Vista clásica**: gana el selector de unidades, y sus dos componentes lo respetan | `App.tsx`, `StatsSummary.tsx`, `TemperatureChart.tsx` |
+
+Detalle de #42 parcial: la vista clásica comparte el `localStorage` de `/pro`, así que estaba
+**atada** a lo elegido allá sin poder cambiarlo — y encima sus dos componentes ignoraban el
+valor. Ahora tiene su propio botón en el header y ambos convierten. `TemperatureChart` guarda
+los valores métricos y convierte en un `useMemo`, igual que la multivariable, de modo que
+cambiar de unidades no vuelve a pedir el histórico.
+
+**Sigue pendiente `StationSummaryTable`** (`/pro/tablas`): 21 unidades fijas y cero usos de
+`useUnits`. Es el mismo defecto, en la página que sí tenía el toggle desde el principio.
 
 Detalle de #5: se añadió `dTempN` a `units.tsx`, que convierte una **diferencia** de temperatura
 (×9/5 **sin** el +32). Era la pieza que faltaba: los grados-día son un delta acumulado, y usar
