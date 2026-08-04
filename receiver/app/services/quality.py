@@ -33,7 +33,9 @@ BOUNDS: Dict[str, Tuple[float, float]] = {
     "wind_gust_max_daily": (0.0, 320.0),
     "wind_direction": (0.0, 360.0),
     "rain_rate": (0.0, 500.0),
-    "uv": (0.0, 20.0),
+    # OJO con el nombre: el campo es "uv_index" (así lo mapea parser.py). Con la
+    # clave "uv" este límite NUNCA se aplicaba, porque no existe en el dato.
+    "uv_index": (0.0, 20.0),
     "solar_radiation": (0.0, 1500.0),
 }
 

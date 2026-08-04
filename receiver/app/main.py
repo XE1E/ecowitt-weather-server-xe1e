@@ -553,7 +553,7 @@ async def get_daily_stats(station: Optional[str] = None, start: Optional[str] = 
            puede ser ventana Flux ("-24h") o timestamp ISO.
     """
     if start is None:
-        start_iso, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        start_iso, _, _ = aggregator.local_day_bounds_utc()
         start = start_iso
     try:
         secsvc.validate_flux_time(start, "start")
@@ -1789,7 +1789,7 @@ async def get_display_data():
 
     # === STATS (min/max del día calendario local) ===
     try:
-        today_start, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        today_start, _, _ = aggregator.local_day_bounds_utc()
         stats_response = await storage.get_daily_stats(start=today_start, station=None)
         result["stats"] = stats_response.get("stats", {})
     except Exception as e:
@@ -1994,7 +1994,7 @@ async def get_display_data():
 
     # 2. Daily stats (min/max/avg) - día calendario local
     try:
-        today_start, _, _ = aggregator.local_day_bounds_utc(datetime.now())
+        today_start, _, _ = aggregator.local_day_bounds_utc()
         stats = await storage.get_daily_stats(start=today_start)
         result["stats"] = stats.get("stats", {})
     except Exception as e:

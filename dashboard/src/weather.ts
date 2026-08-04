@@ -102,7 +102,11 @@ export function cardinal(deg: number): string {
  * trae zona para parsearlo correctamente como UTC.
  */
 export function parseServerDate(iso: string): number {
-  const s = /[zZ]$|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + 'Z'
+  // Algunas fuentes separan fecha y hora con ESPACIO en vez de 'T' (p. ej. el
+  // reportTime de aviationweather: "2026-08-04 21:00:00"). Sin normalizarlo, el
+  // 'Z' que añadimos abajo produce un string que Date no parsea de forma fiable.
+  const withT = iso.includes('T') ? iso : iso.replace(' ', 'T')
+  const s = /[zZ]$|[+-]\d\d:?\d\d$/.test(withT) ? withT : withT + 'Z'
   return new Date(s).getTime()
 }
 

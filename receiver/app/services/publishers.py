@@ -117,7 +117,8 @@ async def _wu_like(client, url, station_id, password, data, name) -> bool:
         "rainin": _mm_to_in(data.get("rain_hourly")),
         "dailyrainin": _mm_to_in(data.get("rain_daily")),
         "solarradiation": data.get("solar_radiation"),
-        "UV": data.get("uv"),
+        # "uv_index", no "uv": con la clave corta nunca se publicaba el UV.
+        "UV": data.get("uv_index"),
         "indoortempf": _c_to_f(data.get("temperature_indoor")),
         "indoorhumidity": data.get("humidity_indoor"),
     })
@@ -136,7 +137,7 @@ async def _windy(client, data, api_key) -> bool:
         "dewpoint": data.get("dew_point"),
         "pressure": (data["pressure_relative"] * 100) if data.get("pressure_relative") else None,
         "precip": data.get("rain_hourly"),
-        "uv": data.get("uv"),
+        "uv": data.get("uv_index"),
     })
     url = f"https://stations.windy.com/pws/update/{api_key}"
     return await _get(client, url, params, "Windy")
@@ -178,7 +179,11 @@ async def _owm(client, data, api_key, station_id) -> bool:
 async def _awekas(client, data, username, password, lat, lon) -> bool:
     """
     Publica a AWEKAS usando su formato de 25 campos semicolon-delimited.
-    Unidades: °C, km/h, hPa, lluvia en décimas de mm.
+    Unidades: °C, km/h, hPa y lluvia en **mm directos**.
+
+    Ojo: la documentación de AWEKAS dice "décimas de mm" para el campo 8, pero es
+    incorrecta — se verificó contra el dato ya publicado y lo que espera son mm.
+    No "corrijas" esto multiplicando por 10: se publicaría 10x la lluvia real.
     """
     now = datetime.utcnow()
     password_hash = hashlib.md5(password.encode()).hexdigest()
@@ -206,7 +211,7 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
         "",                                          # 15: tendencia
         _fmt(data.get("wind_gust")),                 # 16: ráfaga km/h
         _fmt(data.get("solar_radiation")),           # 17: radiación solar
-        _fmt(data.get("uv")),                        # 18: UV index
+        _fmt(data.get("uv_index")),                  # 18: UV index
         "",                                          # 19: brillo
         "",                                          # 20: horas sol
         "",                                          # 21: temp suelo

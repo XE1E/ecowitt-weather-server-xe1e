@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Maximize2, X } from 'lucide-react'
+import { parseServerDate } from '../../weather'
 
 interface Cloud { cover: string; base: number | null }
 interface Metar {
@@ -80,7 +81,11 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
 
   const clock = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   const dateStr = now.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: '2-digit' })
-  const ageMin = m.observed ? Math.max(0, Math.round((now.getTime() - new Date(m.observed).getTime()) / 60000)) : null
+  // parseServerDate y no `new Date()`: el reportTime del METAR llega en UTC pero
+  // SIN zona ("2026-08-04 21:00:00"), así que new Date() lo tomaba como hora local
+  // y la diferencia salía negativa — el Math.max la aplanaba a 0 y la tarjeta
+  // anunciaba "hace 0 min" para un METAR de horas atrás.
+  const ageMin = m.observed ? Math.max(0, Math.round((now.getTime() - parseServerDate(m.observed)) / 60000)) : null
 
   const stars = night
     ? Array.from({ length: 60 }, (_, i) => ({

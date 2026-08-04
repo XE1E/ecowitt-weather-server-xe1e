@@ -23,12 +23,19 @@ except Exception:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
-def local_day_bounds_utc(day: "datetime") -> Tuple[str, str, datetime]:
+def local_day_bounds_utc(day: Optional["datetime"] = None) -> Tuple[str, str, datetime]:
     """
     Dado un date/datetime (se usa solo la fecha), devuelve:
       (inicio_utc_iso, fin_utc_iso, inicio_utc_datetime)
     para el día LOCAL correspondiente. Los ISO llevan sufijo 'Z' para Flux.
+
+    Sin argumento usa el día local de HOY. Conviene llamarla así y NO pasarle
+    `datetime.now()`: eso devuelve un naive en la zona del proceso (el contenedor
+    usa TZ=UTC por defecto), y entre las 18:00 y medianoche locales la fecha UTC ya
+    avanzó al día siguiente — el rango arrancaría en el futuro y las estadísticas
+    del día saldrían vacías. La zona se resuelve aquí, con _TZ.
     """
+    day = day or datetime.now(_TZ)
     start_local = datetime(day.year, day.month, day.day, 0, 0, 0, tzinfo=_TZ)
     end_local = start_local + timedelta(days=1)
     start_utc = start_local.astimezone(timezone.utc)

@@ -15,6 +15,13 @@ function weekdayName(dateIso: string): string {
   const [y, mo, da] = dateIso.split('-').map(Number)
   return DIAS[new Date(y, mo - 1, da).getDay()]
 }
+// "YYYY-MM-DD" de una fecha en hora LOCAL. No vale `toISOString().slice(0,10)`:
+// eso da la fecha en UTC, así que entre las 18:00 y medianoche en México el
+// selector abriría MAÑANA y pediría el detalle de un día que aún no ocurrió.
+function localDayIso(d: Date): string {
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+}
 
 interface Rec { value: number; date: string }
 interface NoaaDay {
@@ -39,7 +46,7 @@ type Gran = 'day' | 'month' | 'year'
 export function HistoryPage() {
   const u = useUnits()
   const now = new Date()
-  const todayIso = now.toISOString().slice(0, 10)
+  const todayIso = localDayIso(now)
 
   const [gran, setGran] = useState<Gran>('month')
   const [pDay, setPDay] = useState(todayIso)
