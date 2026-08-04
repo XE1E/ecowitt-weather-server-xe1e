@@ -1,5 +1,43 @@
 import { useMemo } from 'react'
 import { WeatherData, DailyStats } from '../../types'
+import { useUnits, type Units } from '../../units'
+
+/**
+ * Tipo de magnitud de cada fila. Se declara el KIND y de él salen la unidad y el
+ * formato, en vez de escribir la unidad a mano en cada fila: así no pueden volver
+ * a separarse del valor, que es justo como apareció este defecto (la tabla tenía
+ * 22 unidades fijas en métrico y no consultaba el selector).
+ */
+type Kind = 'temp' | 'hum' | 'press' | 'wind' | 'rain' | 'rate' | 'solar' | 'uv'
+
+function unitOf(kind: Kind, u: Units): string {
+  switch (kind) {
+    case 'temp': return u.tempU
+    case 'press': return u.pressU
+    case 'wind': return u.windU
+    case 'rain': return u.rainU
+    case 'rate': return u.rateU
+    case 'hum': return '%'
+    case 'solar': return 'W/m²'
+    case 'uv': return ''
+  }
+}
+
+function fmtOf(kind: Kind, u: Units, v: number | string | undefined | null): string {
+  if (v == null) return '—'
+  if (typeof v === 'string') return v
+  switch (kind) {
+    // Los formateadores de units ya ajustan los decimales por sistema (la presión
+    // en inHg necesita 2, en hPa basta 1).
+    case 'temp': return u.temp(v)
+    case 'press': return u.press(v)
+    case 'wind': return u.wind(v)
+    case 'rain': return u.rain(v)
+    case 'rate': return u.rate(v)
+    // Humedad, radiación y UV son iguales en los dos sistemas.
+    default: return v.toFixed(1)
+  }
+}
 
 interface Props {
   data: WeatherData
@@ -60,7 +98,7 @@ function formatTimestamp(iso?: string): string {
 
 interface RowData {
   label: string
-  unit: string
+  kind: Kind
   current: number | string | undefined | null
   min?: number | null
   minTime?: string
@@ -82,6 +120,7 @@ const COLORS = {
 }
 
 export function StationSummaryTable({ data, stats, label, indoorPrimary = false }: Props) {
+  const u = useUnits()
   const s = stats
 
   // Para remota (indoorPrimary): T/H exterior es del WN32, interior del GW1100
@@ -95,7 +134,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
       list.push(
         {
           label: 'Temperatura',
-          unit: '°C',
+          kind: 'temp',
           current: data.temperature_outdoor,
           min: s?.temperature_outdoor?.min,
           minTime: s?.temperature_outdoor?.min_time,
@@ -107,7 +146,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Humedad',
-          unit: '%',
+          kind: 'hum',
           current: data.humidity_outdoor,
           min: s?.humidity_outdoor?.min,
           minTime: s?.humidity_outdoor?.min_time,
@@ -119,7 +158,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Punto de rocío',
-          unit: '°C',
+          kind: 'temp',
           current: data.dew_point,
           min: s?.dew_point?.min,
           minTime: s?.dew_point?.min_time,
@@ -131,7 +170,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Presión atmosférica',
-          unit: 'hPa',
+          kind: 'press',
           current: data.pressure_relative,
           min: s?.pressure_relative?.min,
           minTime: s?.pressure_relative?.min_time,
@@ -143,7 +182,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Temperatura Interior',
-          unit: '°C',
+          kind: 'temp',
           current: data.temperature_indoor,
           min: s?.temperature_indoor?.min,
           minTime: s?.temperature_indoor?.min_time,
@@ -155,7 +194,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Humedad Interior',
-          unit: '%',
+          kind: 'hum',
           current: data.humidity_indoor,
           min: s?.humidity_indoor?.min,
           minTime: s?.humidity_indoor?.min_time,
@@ -171,7 +210,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
       list.push(
         {
           label: 'Temperatura',
-          unit: '°C',
+          kind: 'temp',
           current: data.temperature_outdoor,
           min: s?.temperature_outdoor?.min,
           minTime: s?.temperature_outdoor?.min_time,
@@ -183,7 +222,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Humedad',
-          unit: '%',
+          kind: 'hum',
           current: data.humidity_outdoor,
           min: s?.humidity_outdoor?.min,
           minTime: s?.humidity_outdoor?.min_time,
@@ -195,7 +234,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Punto de rocío',
-          unit: '°C',
+          kind: 'temp',
           current: data.dew_point,
           min: s?.dew_point?.min,
           minTime: s?.dew_point?.min_time,
@@ -207,13 +246,13 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Sensación térmica',
-          unit: '°C',
+          kind: 'temp',
           current: data.feels_like,
           color: COLORS.temp,
         },
         {
           label: 'Presión atmosférica',
-          unit: 'hPa',
+          kind: 'press',
           current: data.pressure_relative,
           min: s?.pressure_relative?.min,
           minTime: s?.pressure_relative?.min_time,
@@ -225,7 +264,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Velocidad del viento',
-          unit: 'km/h',
+          kind: 'wind',
           current: data.wind_speed,
           min: s?.wind_speed?.min,
           minTime: s?.wind_speed?.min_time,
@@ -243,7 +282,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Ráfagas de viento',
-          unit: 'km/h',
+          kind: 'wind',
           current: data.wind_gust,
           min: s?.wind_gust?.min,
           minTime: s?.wind_gust?.min_time,
@@ -254,7 +293,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Tasa de lluvia',
-          unit: 'mm/h',
+          kind: 'rate',
           current: data.rain_rate,
           min: s?.rain_rate?.min,
           minTime: s?.rain_rate?.min_time,
@@ -265,20 +304,20 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Precipitación',
-          unit: 'mm',
+          kind: 'rain',
           current: data.rain_daily,
           color: COLORS.rain,
           extra: (
             <div className="text-xs text-slate-400 space-y-0.5">
-              <div>{data.rain_hourly?.toFixed(1) ?? '—'} mm / 1h</div>
-              <div>{data.rain_daily?.toFixed(1) ?? '—'} mm / hoy</div>
-              <div>{data.rain_monthly?.toFixed(1) ?? '—'} mm / mes</div>
+              <div>{u.rain(data.rain_hourly)} {u.rainU} / 1h</div>
+              <div>{u.rain(data.rain_daily)} {u.rainU} / hoy</div>
+              <div>{u.rain(data.rain_monthly)} {u.rainU} / mes</div>
             </div>
           ),
         },
         {
           label: 'Radiación solar',
-          unit: 'W/m²',
+          kind: 'solar',
           current: data.solar_radiation,
           min: s?.solar_radiation?.min,
           minTime: s?.solar_radiation?.min_time,
@@ -289,7 +328,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Índice UV',
-          unit: '',
+          kind: 'uv',
           current: data.uv_index,
           min: s?.uv_index?.min,
           minTime: s?.uv_index?.min_time,
@@ -300,7 +339,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Temperatura Interior',
-          unit: '°C',
+          kind: 'temp',
           current: data.temperature_indoor,
           min: s?.temperature_indoor?.min,
           minTime: s?.temperature_indoor?.min_time,
@@ -312,7 +351,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Humedad Interior',
-          unit: '%',
+          kind: 'hum',
           current: data.humidity_indoor,
           min: s?.humidity_indoor?.min,
           minTime: s?.humidity_indoor?.min_time,
@@ -324,7 +363,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Temperatura WN31 Jardín',
-          unit: '°C',
+          kind: 'temp',
           current: data.temperature_ch1,
           min: s?.temperature_ch1?.min,
           minTime: s?.temperature_ch1?.min_time,
@@ -336,7 +375,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
         },
         {
           label: 'Humedad WN31 Jardín',
-          unit: '%',
+          kind: 'hum',
           current: data.humidity_ch1,
           min: s?.humidity_ch1?.min,
           minTime: s?.humidity_ch1?.min_time,
@@ -350,13 +389,10 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
     }
 
     return list
-  }, [data, s, indoorPrimary])
-
-  const fmt = (v: number | string | undefined | null, decimals = 1): string => {
-    if (v == null) return '—'
-    if (typeof v === 'string') return v
-    return v.toFixed(decimals)
-  }
+    // u.system entra en las deps porque `extra` (la precipitación) ya formatea
+    // con las unidades activas: sin ella no se refrescaría al cambiar de sistema.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, s, indoorPrimary, u.system])
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-white/10 overflow-hidden">
@@ -383,20 +419,25 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {rows.map((row, i) => {
+              // Unidad y formato salen del kind de la fila, así que la etiqueta y
+              // el número siempre hablan del mismo sistema.
+              const unit = unitOf(row.kind, u)
+              const val = (v: number | string | undefined | null) => fmtOf(row.kind, u, v)
+              return (
               <tr key={row.label} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-white/[0.02]' : ''}`}>
                 <td className="px-4 py-2.5 text-slate-300 font-medium">
                   {row.label}
-                  {row.unit && <span className="text-slate-500 text-xs ml-1">({row.unit})</span>}
+                  {unit && <span className="text-slate-500 text-xs ml-1">({unit})</span>}
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <span className="font-semibold text-base" style={{ color: row.color || '#ffffff' }}>{fmt(row.current)}</span>
+                  <span className="font-semibold text-base" style={{ color: row.color || '#ffffff' }}>{val(row.current)}</span>
                   {row.extra && <div className="mt-1">{row.extra}</div>}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {row.min !== undefined ? (
                     <>
-                      <span className="text-slate-200">{fmt(row.min)}</span>
+                      <span className="text-slate-200">{val(row.min)}</span>
                       <div className="text-xs text-sky-400">{formatTime(row.minTime)}</div>
                     </>
                   ) : '—'}
@@ -404,7 +445,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
                 <td className="px-4 py-2.5 text-center">
                   {row.max !== undefined ? (
                     <>
-                      <span className="text-slate-200">{fmt(row.max)}</span>
+                      <span className="text-slate-200">{val(row.max)}</span>
                       <div className="text-xs text-red-400">{formatTime(row.maxTime)}</div>
                     </>
                   ) : '—'}
@@ -412,13 +453,14 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
                 <td className="px-4 py-2.5 text-center">
                   {row.avg !== undefined ? (
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-slate-300">{fmt(row.avg)}</span>
+                      <span className="text-slate-300">{val(row.avg)}</span>
                       {row.trend && <TrendIcon dir={row.trend} />}
                     </div>
                   ) : '—'}
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
