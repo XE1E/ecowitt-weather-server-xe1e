@@ -54,7 +54,10 @@ export function MeteoGlyph({ name, size, color, title }: Props) {
     <span
       role="img"
       aria-label={title ?? String(name)}
-      style={{ display: 'inline-block', width: size, height: size, color, lineHeight: 0 }}
+      // `block` y no `inline-block`: en inline el elemento se asienta sobre la
+      // línea base y deja unos 3 px de hueco abajo, lo que descentraba los iconos
+      // que van absolutos con translateY(-50%) en la consola.
+      style={{ display: 'block', width: size, height: size, color, lineHeight: 0 }}
       // Contenido estático de un paquete npm, no entrada de usuario.
       dangerouslySetInnerHTML={{ __html: svg }}
     />

@@ -253,9 +253,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       }}>
         {/* Fila 1 */}
         <div className="cell col main">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</span>
-            <MeteoGlyph name="clear-day" size={47} color="#fbbf24" title="sol" />
+          <div style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
+          {/* El sol va ABSOLUTO: dentro del flex hacía crecer la fila del
+              encabezado al alto del icono y empujaba el valor hacia abajo. */}
+          <div style={{ position: 'absolute', top: 6, right: 8 }}>
+            <MeteoGlyph name="clear-day" size={40} color="#fbbf24" title="sol" />
           </div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
             <MeteoGlyph name="thermometer" size={83} color="#f97316" title="temperatura" />
@@ -448,9 +450,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell col remota">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></span>
-            <MeteoGlyph name="clear-day" size={47} color="#fbbf24" title="sol" />
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
+          <div style={{ position: 'absolute', top: 6, right: 8 }}>
+            <MeteoGlyph name="clear-day" size={34} color="#fbbf24" title="sol" />
           </div>
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
