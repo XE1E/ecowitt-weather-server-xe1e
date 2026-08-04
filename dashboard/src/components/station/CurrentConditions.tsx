@@ -1,5 +1,5 @@
 import { WeatherData } from '../../types'
-import { deriveCondition, wetBulb, parseServerDate } from '../../weather'
+import { deriveCondition, wetBulb, historicValue } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
 import { TrendArrow, getTrend } from '../TrendArrow'
@@ -11,25 +11,11 @@ interface HistoryPoint {
   pressure_relative?: number
 }
 
-function getHistoricValue(history: HistoryPoint[], field: keyof HistoryPoint, hoursAgo: number): number | null {
-  if (!history || history.length === 0) return null
-  const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-  let closest: HistoryPoint | null = null
-  let closestDiff = Infinity
-  for (const h of history) {
-    const t = new Date(parseServerDate(h._time)).getTime()
-    const diff = Math.abs(t - targetTime)
-    if (diff < closestDiff) {
-      closestDiff = diff
-      closest = h
-    }
-  }
-  if (!closest || closestDiff > 30 * 60 * 1000) return null
-  const val = closest[field]
-  return typeof val === 'number' ? val : null
-}
-
-export function CurrentConditions({ data, history }: { data: WeatherData; history?: HistoryPoint[] }) {
+// `history` NO es opcional a proposito: es de donde salen las flechas de
+// tendencia, y cuando era opcional Mi Tablero lo omitio sin que nada fallara
+// --las flechas simplemente quedaban todas en "estable"--. Obligandolo, olvidarlo
+// es un error de compilacion en vez de un bug silencioso.
+export function CurrentConditions({ data, history }: { data: WeatherData; history: HistoryPoint[] }) {
   const u = useUnits()
   const cond = deriveCondition(data)
   const temp = data.temperature_outdoor
@@ -38,10 +24,9 @@ export function CurrentConditions({ data, history }: { data: WeatherData; histor
       ? wetBulb(temp, data.humidity_outdoor)
       : undefined
 
-  const historyData = history || []
-  const tempPrev = getHistoricValue(historyData, 'temperature_outdoor', 1)
-  const humPrev = getHistoricValue(historyData, 'humidity_outdoor', 1)
-  const pressPrev = getHistoricValue(historyData, 'pressure_relative', 3)
+  const tempPrev = historicValue(history, (h) => h.temperature_outdoor, 1)
+  const humPrev = historicValue(history, (h) => h.humidity_outdoor, 1)
+  const pressPrev = historicValue(history, (h) => h.pressure_relative, 3)
 
   const tempTrend = getTrend(data.temperature_outdoor, tempPrev, 0.5)
   const humTrend = getTrend(data.humidity_outdoor, humPrev, 3)

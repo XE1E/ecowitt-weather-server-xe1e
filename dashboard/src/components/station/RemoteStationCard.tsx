@@ -2,27 +2,9 @@ import { useState, useEffect } from 'react'
 import { WeatherData } from '../../types'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
-import { relativeTime, isStale, parseServerDate } from '../../weather'
+import { relativeTime, isStale, historicValue } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
-
-function getHistoricValue(history: RemoteHistRow[], field: keyof RemoteHistRow, hoursAgo: number): number | null {
-  if (!history || history.length === 0) return null
-  const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-  let closest: RemoteHistRow | null = null
-  let closestDiff = Infinity
-  for (const h of history) {
-    const t = new Date(parseServerDate(h._time)).getTime()
-    const diff = Math.abs(t - targetTime)
-    if (diff < closestDiff) {
-      closestDiff = diff
-      closest = h
-    }
-  }
-  if (!closest || closestDiff > 30 * 60 * 1000) return null
-  const val = closest[field]
-  return typeof val === 'number' ? val : null
-}
 
 const REFRESH = 60000 // 1 min
 
@@ -83,15 +65,15 @@ export function RemoteStationCard() {
   const dewOut = dewPointC(tOut, hOut)
 
   // Tendencias con flechas (comparar con hace 1h para temp/hum, 3h para presión)
-  const tOutPrev = getHistoricValue(history, 'temperature_outdoor', 1)
-  const hOutPrev = getHistoricValue(history, 'humidity_outdoor', 1)
+  const tOutPrev = historicValue(history, (h) => h.temperature_outdoor, 1)
+  const hOutPrev = historicValue(history, (h) => h.humidity_outdoor, 1)
   const tOutArrow = getTrend(tOut, tOutPrev, 0.5)
   const hOutArrow = getTrend(hOut, hOutPrev, 3)
 
   // Interior (GW1100)
   const tIn = data.temperature_indoor
   const hIn = data.humidity_indoor
-  const pPrev = getHistoricValue(history, 'pressure_relative', 3)
+  const pPrev = historicValue(history, (h) => h.pressure_relative, 3)
   const pArrow = getTrend(data.pressure_relative, pPrev, 1)
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { deriveCondition, parseServerDate } from '../../weather'
+import { deriveCondition, historicValue } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 
 /**
@@ -155,28 +155,6 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
   const cond = data ? deriveCondition(data) : { icon: '', label: '' }
   const dir = data?.wind_direction
-
-  // Tendencias: comparar actual vs valor de hace N horas en el histórico.
-  // `pick` elige el campo en vez de indexar por string, así cada histórico
-  // conserva su propio tipo y no hace falta castear la fila.
-  const historicValue = <T extends { _time: string }>(
-    rows: T[] | undefined,
-    pick: (row: T) => number | undefined,
-    hoursAgo: number,
-  ): number | null => {
-    if (!rows || rows.length === 0) return null
-    const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-    let closest: T | null = null
-    let closestDiff = Infinity
-    for (const h of rows) {
-      const t = new Date(parseServerDate(h._time)).getTime()
-      const diff = Math.abs(t - targetTime)
-      if (diff < closestDiff) { closestDiff = diff; closest = h }
-    }
-    // Sólo usar si está dentro de 30 min del objetivo
-    if (!closest || closestDiff > 30 * 60 * 1000) return null
-    return pick(closest) ?? null
-  }
 
   const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): Trend => {
     if (current == null || previous == null) return 'stable'

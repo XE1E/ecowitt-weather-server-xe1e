@@ -97,7 +97,7 @@ export function MiTableroPage() {
     { key: 'alerts', label: 'Alertas', span: 1, render: () => <AlertsPanel /> },
     { key: 'sky', label: 'Próximos eventos del cielo', span: 1, render: () => <SkyEventsCard /> },
     { key: 'interior', label: 'Interior', span: 1, render: () => <InteriorCard data={data!} /> },
-    { key: 'extra', label: 'Sensores adicionales', span: 1, render: () => <ExtraSensorsCard data={data!} /> },
+    { key: 'extra', label: 'Sensores adicionales', span: 1, render: () => <ExtraSensorsCard data={data!} history={history} /> },
     { key: 'remote', label: 'Estación remota', span: 1, render: () => <RemoteStationCard /> },
     { key: 'radar', label: 'Radar', span: 3, render: () => <RadarCard /> },
   ]
@@ -189,9 +189,11 @@ export function MiTableroPage() {
         </div>
       )}
 
-      {/* Tarjeta fija: condiciones actuales */}
+      {/* Tarjeta fija: condiciones actuales. `history` es obligatorio para que
+          salgan las flechas de tendencia: sin él la tarjeta no tiene con qué
+          comparar y todas quedan en "estable". */}
       <div className="mb-4">
-        <CurrentConditions data={data} />
+        <CurrentConditions data={data} history={history} />
       </div>
 
       {shown.length === 0 ? (

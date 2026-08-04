@@ -106,6 +106,38 @@ export function parseServerDate(iso: string): number {
   return new Date(s).getTime()
 }
 
+/**
+ * Valor de un histórico lo más cerca posible de hace `hoursAgo` horas, para
+ * calcular tendencias. Devuelve null si el punto más cercano se aleja más de
+ * 30 min del objetivo, de modo que tras un arranque o un hueco de datos no se
+ * invente una tendencia con lo primero que haya.
+ *
+ * `pick` elige el campo en vez de indexar por string, así cada histórico
+ * conserva su propio tipo. Si el campo no es numérico se devuelve null.
+ *
+ * Ojo con la alternativa tentadora de "restar N posiciones del arreglo"
+ * (`rows[len-1] - rows[len-7]`): /api/history devuelve UN PUNTO POR MINUTO, así
+ * que eso compara con 6 minutos atrás, no con 3 horas, y la tendencia sale
+ * "estable" siempre. Este helper razona con TIEMPO, no con índices.
+ */
+export function historicValue<T extends { _time: string }>(
+  rows: T[] | undefined,
+  pick: (row: T) => number | string | null | undefined,
+  hoursAgo: number,
+): number | null {
+  if (!rows || rows.length === 0) return null
+  const target = Date.now() - hoursAgo * 60 * 60 * 1000
+  let closest: T | null = null
+  let closestDiff = Infinity
+  for (const r of rows) {
+    const diff = Math.abs(parseServerDate(r._time) - target)
+    if (diff < closestDiff) { closestDiff = diff; closest = r }
+  }
+  if (!closest || closestDiff > 30 * 60 * 1000) return null
+  const v = pick(closest)
+  return typeof v === 'number' ? v : null
+}
+
 /** Human-friendly relative time, e.g. "hace 12 s" / "hace 3 min". */
 export function relativeTime(iso?: string): string {
   if (!iso) return '—'

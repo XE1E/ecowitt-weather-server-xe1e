@@ -1,7 +1,7 @@
 import { WeatherData, HistoryRow } from '../../types'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
-import { parseServerDate } from '../../weather'
+import { historicValue } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 
 // Nombres personalizados por canal (WN31)
@@ -9,36 +9,18 @@ const CHANNEL_NAMES: Record<number, string> = {
   1: 'Jardín',
 }
 
-// Se usa HistoryRow y no HistoryData porque aqui los campos se leen por nombre
-// calculado (temperature_ch3, humidity_ch5...), no como claves fijas.
-function getHistoricValue(history: HistoryRow[], field: string, hoursAgo: number): number | null {
-  if (!history || history.length === 0) return null
-  const targetTime = Date.now() - hoursAgo * 60 * 60 * 1000
-  let closest: HistoryRow | null = null
-  let closestDiff = Infinity
-  for (const h of history) {
-    const t = new Date(parseServerDate(h._time)).getTime()
-    const diff = Math.abs(t - targetTime)
-    if (diff < closestDiff) {
-      closestDiff = diff
-      closest = h
-    }
-  }
-  if (!closest || closestDiff > 30 * 60 * 1000) return null
-  const val = closest[field]
-  return typeof val === 'number' ? val : null
-}
-
-export function ExtraSensorsCard({ data, history }: { data: WeatherData; history?: HistoryRow[] }) {
+// `history` NO es opcional: ver la nota en CurrentConditions. Sin el, las flechas
+// de tendencia por canal quedan todas en "estable" sin que nada avise.
+export function ExtraSensorsCard({ data, history }: { data: WeatherData; history: HistoryRow[] }) {
   const u = useUnits()
-  const historyData = history || []
 
   const channels = Array.from({ length: 8 }, (_, i) => i + 1)
     .map((ch) => {
       const temp = data[`temperature_ch${ch}` as keyof WeatherData] as number | undefined
       const humidity = data[`humidity_ch${ch}` as keyof WeatherData] as number | undefined
-      const tempPrev = getHistoricValue(historyData, `temperature_ch${ch}`, 1)
-      const humPrev = getHistoricValue(historyData, `humidity_ch${ch}`, 1)
+      // El campo se arma por nombre calculado; HistoryRow declara el indice.
+      const tempPrev = historicValue(history, (h) => h[`temperature_ch${ch}`], 1)
+      const humPrev = historicValue(history, (h) => h[`humidity_ch${ch}`], 1)
       return {
         ch,
         temp,

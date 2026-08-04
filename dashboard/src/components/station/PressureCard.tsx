@@ -1,6 +1,7 @@
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
+import { historicValue } from '../../weather'
 
 const hourFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit' })
 const stampFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -21,15 +22,21 @@ export function PressureCard({ data, stats, history }: Props) {
     .filter((h) => h.pressure_relative !== undefined)
     .map((h) => ({ t: h._time, v: h.pressure_relative as number }))
     .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
-  const raw = pts.map((p) => p.v)
   const step = Math.max(1, Math.floor(pts.length / 60))
   const series = pts.filter((_, i) => i % step === 0).map((pt) => ({ t: new Date(pt.t).getTime(), p: u.pressN(pt.v) }))
 
-  // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparar con ~3h atrás
+  // Tendencia: sobre valores MÉTRICOS crudos (hPa), comparando con hace 3 h y con
+  // el umbral de ±1 hPa de docs/CONVENCIONES.md.
+  //
+  // Antes esto restaba 7 POSICIONES del arreglo creyendo que eran ~3 h, pero
+  // /api/history devuelve un punto por minuto: comparaba con 6 minutos atrás, y
+  // como la presión no se mueve 1 hPa en 6 min, la tarjeta decía "Estable"
+  // siempre. Ahora se busca por tiempo, igual que el resto de las tendencias.
   let trend = 'Estable'
   let trendColor = 'text-slate-300'
-  if (raw.length > 6) {
-    const d = raw[raw.length - 1] - raw[Math.max(0, raw.length - 7)]
+  const prev = historicValue(history, (h) => h.pressure_relative, 3)
+  if (p != null && prev != null) {
+    const d = p - prev
     if (d > 1) { trend = 'Subiendo'; trendColor = 'text-green-500' }
     else if (d < -1) { trend = 'Bajando'; trendColor = 'text-red-500' }
   }
