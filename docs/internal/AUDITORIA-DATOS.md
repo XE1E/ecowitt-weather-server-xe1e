@@ -31,6 +31,30 @@ Severidades:
 | 33 | Selector de día de Historia con fecha local | `HistoryPage.tsx` |
 | 35 | Antigüedad del METAR con `parseServerDate` (que ahora normaliza el separador) | `AtmosphericProfile.tsx`, `weather.ts` |
 | 32 | Docstring de AWEKAS corregido: son mm directos, con advertencia de no "arreglarlo" | `publishers.py` |
+| 2 + 8 | La gráfica multivariable convierte al sistema activo; ejes, tooltip y datos coinciden | `MultiVariableChart.tsx`, `units.tsx` |
+| 3 | `groupByDay` usa el máximo de `rain_daily` en vez de sumar tasas | `MultiVariableChart.tsx` |
+| 16 | Fuera `connectNulls`: los huecos de datos se ven como huecos | `MultiVariableChart.tsx` |
+| 19 | Ausencia → `--` en lugar de `0` (kiosco, Inicio, MiniStats, Precipitación) | 4 componentes |
+| 13 | "Sin lluvia en N h" derivado de la ventana real, no un "24h" fijo | `PrecipitationCard.tsx` |
+
+Detalle de #2: `data` se mantiene en métrico y un `useMemo` lo convierte según el sistema, así
+que cambiar de unidades no vuelve a pedir datos. Se añadieron `rainN` y `rateN` a `units.tsx`,
+que solo tenía conversores numéricos de temperatura, viento y presión.
+
+Dos trampas que aparecieron al convertir, ambas resueltas:
+
+- **El rango mínimo de los ejes era un delta en unidades métricas.** Para temperatura no vale
+  `tempN`, que es afín: 5 °C de rango son **9 °F**, no 41. Presión y viento sí son
+  multiplicativos y `pressN(5)` funciona como delta.
+- **Los límites y ticks se redondeaban a entero.** Con la presión en inHg (~30.3) eso dejaba
+  el eje en `[30, 31]` y **los cinco ticks en "30"**. Ahora los decimales salen del ancho del
+  rango. Verificado: en inHg salen `30.2 / 30.25 / 30.3 / 30.34 / 30.39`.
+
+Detalle de #3: la serie de lluvia cambia de magnitud con el modo, a propósito — intensidad
+(mm/h, pico de la hora) en día y 48 h, acumulado (mm, máximo de `rain_daily`) en semana. El
+nombre de la serie y la unidad del eje siguen al modo, porque presentar las dos como
+"Precipitación · mm" era parte del problema. Con las lecturas de un día de lluvia real: antes
+la barra semanal marcaba 7 "mm" de sumar tasas, ahora marca los **6.8 mm** que cayeron.
 
 Verificación: `npx tsc --noEmit` limpio, `pytest receiver/tests` 97 pasan, y cada arreglo
 probado contra su síntoma:
