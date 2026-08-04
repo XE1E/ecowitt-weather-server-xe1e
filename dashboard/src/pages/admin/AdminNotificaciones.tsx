@@ -20,11 +20,17 @@ interface NotifSettings {
 }
 
 // Categorías de alerta (deben coincidir con alerts.ALERT_CATEGORIES del backend)
+// Debe cubrir TODAS las claves de alerts.ALERT_CATEGORIES: lo que no aparezca
+// aqui no se puede seleccionar y, si el canal tiene una lista explicita, esas
+// alertas se descartan en silencio (_channel_allows hace `category in cats`).
+// 'temp' incluye rocio y sensacion termica; 'sun' es UV + radiacion solar.
 const CATEGORIES = [
   { key: 'temp', icon: '🌡️', label: 'Temperatura' },
+  { key: 'humidity', icon: '💧', label: 'Humedad' },
   { key: 'wind', icon: '💨', label: 'Viento' },
   { key: 'rain', icon: '🌧️', label: 'Lluvia' },
   { key: 'pressure', icon: '📊', label: 'Presion' },
+  { key: 'sun', icon: '😎', label: 'UV y solar' },
   { key: 'station', icon: '📡', label: 'Estacion offline' },
   { key: 'battery', icon: '🔋', label: 'Bateria baja' },
   { key: 'sensor', icon: '📶', label: 'Sensor perdido' },

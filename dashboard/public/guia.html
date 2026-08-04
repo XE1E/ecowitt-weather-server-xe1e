@@ -477,8 +477,8 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td>Radiación solar alta</td><td>radiación ≥ umbral W/m²</td></tr>
           <tr><td>Punto de rocío alto / bajo</td><td>punto de rocío ≥ / ≤ umbral</td></tr>
           <tr><td>Sensación térmica alta / baja</td><td>sensación ≥ / ≤ umbral</td></tr>
-          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp en 1 h ≥ umbral</td></tr>
-          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión en 3 h ≥ umbral</td></tr>
+          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
+          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
           <tr><td>Estación caída</td><td>no llegan datos en N minutos</td></tr>
           <tr><td>Batería baja</td><td>un sensor (WN31/WS69/consola) reporta batería baja</td></tr>
           <tr><td>Sensor perdido</td><td>un sensor visto antes deja de reportar (se normaliza al volver)</td></tr>
@@ -493,8 +493,8 @@ Cloudflare (HTTPS) → Caddy (TLS) → Dashboard (React, sirve web + proxy /api)
           <tr><td>Humedad alta / baja</td><td>humedad ≥ / ≤ umbral</td></tr>
           <tr><td>Presión alta / baja</td><td>presión ≥ / ≤ umbral</td></tr>
           <tr><td>Punto de rocío alto / bajo</td><td>punto de rocío ≥ / ≤ umbral</td></tr>
-          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp en 1 h ≥ umbral</td></tr>
-          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión en 3 h ≥ umbral</td></tr>
+          <tr><td>Tendencia temp (subiendo/bajando)</td><td>cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
+          <tr><td>Tendencia presión (subiendo/bajando)</td><td>cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte)</td></tr>
           <tr><td>Estación caída</td><td>no llegan datos en N minutos (watchdog propio)</td></tr>
         </tbody>
       </table></div>

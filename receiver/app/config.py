@@ -58,6 +58,26 @@ class Settings(BaseSettings):
     alert_pressure_rise_warn: float = 1.5
     alert_pressure_rise_strong: float = 3.0
     alert_pressure_trend_window_min: int = 60
+    # UV y radiación solar. Solo las reporta la principal (WS69); en una estación
+    # sin esos sensores la regla simplemente no se evalúa. El 8 de UV coincide con
+    # el umbral "muy alto" de la OMS y con el rojo de UvSolarCard. A 2250 m la
+    # irradiancia de mediodía es alta, así que 1000 W/m² es un pico real, no ruido.
+    alert_uv_high: float = 8.0
+    alert_solar_high: float = 1000.0
+    # Punto de rocío: alto = bochorno (el aire ya no admite más humedad), bajo =
+    # aire muy seco. Se deriva de temp+humedad, así que aplica a ambas estaciones.
+    alert_dew_high: float = 20.0
+    alert_dew_low: float = -5.0
+    # Sensación térmica (feels_like: heat index si hace calor, wind chill si frío).
+    alert_feels_high: float = 38.0
+    alert_feels_low: float = -2.0
+    # Tendencia de temperatura: cambio (°C) dentro de la ventana, 2 niveles por
+    # dirección. Una caída rápida suele ser la llegada de una tormenta.
+    alert_temp_drop_warn: float = 3.0
+    alert_temp_drop_strong: float = 5.0
+    alert_temp_rise_warn: float = 3.0
+    alert_temp_rise_strong: float = 5.0
+    alert_temp_trend_window_min: int = 60
     # Histéresis anti-spam: la condición debe sostenerse estos minutos antes de
     # avisar (y estar despejada otro tanto antes de normalizar). 0 = inmediato.
     alert_persist_minutes: float = 3.0
@@ -80,7 +100,8 @@ class Settings(BaseSettings):
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
     # Categorías de alerta que van a Telegram (None = todas). Claves válidas en
-    # alerts.ALERT_CATEGORIES: temp, wind, rain, pressure, station, battery, sensor, air
+    # alerts.ALERT_CATEGORIES: temp (incluye rocío y sensación), humidity, wind,
+    # rain, pressure, sun (UV y radiación), station, battery, sensor, air
     telegram_categories: Optional[List[str]] = None
 
     # Notificaciones por correo (SMTP)

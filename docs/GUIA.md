@@ -520,8 +520,8 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | Radiación solar alta | radiación ≥ umbral W/m² |
 | Punto de rocío alto / bajo | punto de rocío ≥/≤ umbral |
 | Sensación térmica alta / baja | sensación ≥/≤ umbral |
-| Tendencia temp (subiendo/bajando) | cambio de temp en 1 h ≥ umbral |
-| Tendencia presión (subiendo/bajando) | cambio de presión en 3 h ≥ umbral |
+| Tendencia temp (subiendo/bajando) | cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
+| Tendencia presión (subiendo/bajando) | cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
@@ -535,8 +535,8 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | Humedad alta / baja | humedad ≥/≤ umbral |
 | Presión alta / baja | presión ≥/≤ umbral |
 | Punto de rocío alto / bajo | punto de rocío ≥/≤ umbral |
-| Tendencia temp (subiendo/bajando) | cambio de temp en 1 h ≥ umbral |
-| Tendencia presión (subiendo/bajando) | cambio de presión en 3 h ≥ umbral |
+| Tendencia temp (subiendo/bajando) | cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
+| Tendencia presión (subiendo/bajando) | cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
 | **Estación caída** | no llegan datos en N minutos (watchdog propio) |
 
 **Telegram:** se crea un bot con @BotFather, se obtiene el `chat_id` y se pega

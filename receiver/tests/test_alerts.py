@@ -24,6 +24,17 @@ def make_settings(**kw):
         alert_pressure_rise_warn=1.5,
         alert_pressure_rise_strong=3.0,
         alert_pressure_trend_window_min=60,
+        alert_uv_high=8.0,
+        alert_solar_high=1000.0,
+        alert_dew_high=20.0,
+        alert_dew_low=-5.0,
+        alert_feels_high=38.0,
+        alert_feels_low=-2.0,
+        alert_temp_drop_warn=3.0,
+        alert_temp_drop_strong=5.0,
+        alert_temp_rise_warn=3.0,
+        alert_temp_rise_strong=5.0,
+        alert_temp_trend_window_min=60,
         # 0 = inmediato: mantiene el comportamiento clásico salvo donde se prueba
         # la persistencia explícitamente.
         alert_persist_minutes=0.0,
@@ -194,6 +205,29 @@ def test_category_mapping():
     assert _category_for("battery_ch1") == "battery"
     assert _category_for("sensor_temperature_ch1") == "sensor"
     assert _category_for("aqi_high") == "air"
+    # Rocío y sensación viajan con temperatura; UV y solar tienen su propia categoría
+    assert _category_for("dew_high") == "temp"
+    assert _category_for("feels_low") == "temp"
+    assert _category_for("temp_drop") == "temp"
+    assert _category_for("uv_high") == "sun"
+    assert _category_for("solar_high") == "sun"
+
+
+def test_all_categories_are_declared():
+    """Ninguna regla debe caer en 'other': eso la volvería inseleccionable en el
+    panel y, si el canal tiene lista explícita, se descartaría en silencio."""
+    from app.services.alerts import ALERT_CATEGORIES
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({
+        "temperature_outdoor": 20, "humidity_outdoor": 50, "wind_speed": 10,
+        "wind_gust": 20, "rain_rate": 0, "rain_daily": 0, "pressure_relative": 1015,
+        "dew_point": 9, "feels_like": 20, "uv_index": 3, "solar_radiation": 400,
+        "battery_ch1": True,
+    })
+    for key in r:
+        cat = _category_for(key)
+        assert cat != "other", f"la regla {key} no tiene categoría"
+        assert cat in ALERT_CATEGORIES, f"{cat} no está en ALERT_CATEGORIES"
 
 
 # ── Humedad exterior ──
@@ -260,6 +294,109 @@ def test_pressure_trend_isolated_per_station():
     svc.evaluate({"pressure_relative": 1030}, now=t0, station="gw1100")
     r = svc.evaluate({"pressure_relative": 1030}, now=t0 + timedelta(minutes=60), station="gw1100")
     assert r["pressure_drop"][0] is False and r["pressure_rise"][0] is False  # estable
+
+
+# ── Rocío, sensación térmica, UV y radiación solar ──
+def test_dew_point_thresholds():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"dew_point": 22})
+    assert r["dew_high"][0] is True      # 22 >= 20 (bochorno)
+    assert r["dew_low"][0] is False
+    r = svc.evaluate({"dew_point": -8})
+    assert r["dew_low"][0] is True       # -8 <= -5 (aire seco)
+    assert r["dew_high"][0] is False
+
+
+def test_feels_like_thresholds():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"feels_like": 40})
+    assert r["feels_high"][0] is True    # 40 >= 38
+    assert r["feels_low"][0] is False
+    r = svc.evaluate({"feels_like": -5})
+    assert r["feels_low"][0] is True     # -5 <= -2
+
+
+def test_uv_and_solar_thresholds():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"uv_index": 9, "solar_radiation": 1050})
+    assert r["uv_high"][0] is True       # 9 >= 8
+    assert r["solar_high"][0] is True    # 1050 >= 1000
+    r = svc.evaluate({"uv_index": 4, "solar_radiation": 500})
+    assert r["uv_high"][0] is False
+    assert r["solar_high"][0] is False
+
+
+def test_sun_rules_absent_without_sensors():
+    """La remota no trae UV ni radiación: esas reglas no deben ni registrarse,
+    para que no aparezcan como 'normalizadas' en /api/alerts."""
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"temperature_outdoor": 20, "humidity_outdoor": 50})
+    assert "uv_high" not in r
+    assert "solar_high" not in r
+
+
+def test_dew_uses_per_station_override():
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"dew_point": 16}, station="gw1100",
+                     thresholds={"alert_dew_high": 15.0})
+    assert r["dew_high"][0] is True      # 16 >= 15 (umbral propio de la remota)
+
+
+# ── Tendencia de temperatura (2 niveles) ──
+def test_temp_trend_needs_history():
+    from datetime import datetime
+    svc = AlertService(make_settings(), notifier=Collector())
+    r = svc.evaluate({"temperature_outdoor": 22}, now=datetime(2026, 8, 3, 12, 0, 0))
+    assert "temp_drop" not in r and "temp_rise" not in r
+
+
+def test_temp_drop_levels():
+    from datetime import datetime, timedelta
+    t0 = datetime(2026, 8, 3, 12, 0, 0)
+    # Cae 4 °C en 1 h -> aviso (>=3, <5)
+    svc = AlertService(make_settings(), notifier=Collector())
+    svc.evaluate({"temperature_outdoor": 26}, now=t0)
+    r = svc.evaluate({"temperature_outdoor": 22}, now=t0 + timedelta(minutes=60))
+    assert r["temp_drop"][0] is True and "aviso" in r["temp_drop"][1]
+    assert r["temp_rise"][0] is False
+    # Cae 6 °C -> fuerte
+    svc2 = AlertService(make_settings(), notifier=Collector())
+    svc2.evaluate({"temperature_outdoor": 26}, now=t0)
+    r2 = svc2.evaluate({"temperature_outdoor": 20}, now=t0 + timedelta(minutes=60))
+    assert r2["temp_drop"][0] is True and "fuerte" in r2["temp_drop"][1]
+
+
+def test_temp_rise_level():
+    from datetime import datetime, timedelta
+    t0 = datetime(2026, 8, 3, 8, 0, 0)
+    svc = AlertService(make_settings(), notifier=Collector())
+    svc.evaluate({"temperature_outdoor": 14}, now=t0)
+    r = svc.evaluate({"temperature_outdoor": 20}, now=t0 + timedelta(minutes=60))
+    assert r["temp_rise"][0] is True and "fuerte" in r["temp_rise"][1]  # +6 >= 5
+    assert r["temp_drop"][0] is False
+
+
+def test_temp_trend_isolated_per_station():
+    from datetime import datetime, timedelta
+    t0 = datetime(2026, 8, 3, 12, 0, 0)
+    svc = AlertService(make_settings(), notifier=Collector())
+    # La principal se desploma; la remota se mantiene estable
+    svc.evaluate({"temperature_outdoor": 30}, now=t0)
+    svc.evaluate({"temperature_outdoor": 20}, now=t0, station="gw1100")
+    r = svc.evaluate({"temperature_outdoor": 20}, now=t0 + timedelta(minutes=60), station="gw1100")
+    assert r["temp_drop"][0] is False and r["temp_rise"][0] is False
+
+
+def test_temp_trend_does_not_share_buffer_with_pressure():
+    """Regresión: los dos buffers usan el mismo helper, no deben mezclarse."""
+    from datetime import datetime, timedelta
+    t0 = datetime(2026, 8, 3, 12, 0, 0)
+    svc = AlertService(make_settings(), notifier=Collector())
+    svc.evaluate({"temperature_outdoor": 26, "pressure_relative": 1020}, now=t0)
+    r = svc.evaluate({"temperature_outdoor": 20, "pressure_relative": 1020},
+                     now=t0 + timedelta(minutes=60))
+    assert r["temp_drop"][0] is True         # -6 °C
+    assert r["pressure_drop"][0] is False    # la presión no se movió
 
 
 # ── Histéresis / persistencia ──

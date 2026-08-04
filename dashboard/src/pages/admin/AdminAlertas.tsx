@@ -18,6 +18,17 @@ interface AlertSettings {
   alert_pressure_rise_warn: number
   alert_pressure_rise_strong: number
   alert_pressure_trend_window_min: number
+  alert_uv_high: number
+  alert_solar_high: number
+  alert_dew_high: number
+  alert_dew_low: number
+  alert_feels_high: number
+  alert_feels_low: number
+  alert_temp_drop_warn: number
+  alert_temp_drop_strong: number
+  alert_temp_rise_warn: number
+  alert_temp_rise_strong: number
+  alert_temp_trend_window_min: number
   alert_persist_minutes: number
   alert_rules_disabled: string[]
   alert_station_offline_minutes: number
@@ -40,6 +51,12 @@ const THRESHOLD_KEYS = [
   'alert_humidity_high', 'alert_humidity_low',
   'alert_pressure_drop_warn', 'alert_pressure_drop_strong',
   'alert_pressure_rise_warn', 'alert_pressure_rise_strong',
+  'alert_dew_high', 'alert_dew_low', 'alert_feels_high', 'alert_feels_low',
+  'alert_temp_drop_warn', 'alert_temp_drop_strong',
+  'alert_temp_rise_warn', 'alert_temp_rise_strong',
+  // UV y solar solo los reporta la principal, pero se dejan sobreescribibles por
+  // si algún día una secundaria trae esos sensores.
+  'alert_uv_high', 'alert_solar_high',
 ] as const
 
 interface StationOpt { name: string; label: string }
@@ -343,6 +360,65 @@ export function AdminAlertas() {
               </div>
             </div>
           </div>
+
+          {/* Punto de rocío: se deriva de temp+humedad, así que existe en ambas. */}
+          <div>
+            <p className="text-sm font-medium mb-1">🥵 Punto de rocío</p>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('dew_high')} onToggle={() => toggleRule('dew_high')} />
+                <span className="text-slate-400 w-14">Alto</span>
+                <NumField value={settings.alert_dew_high} onChange={(v) => update('alert_dew_high', v)} min={-20} max={35} step={0.5} off={isOff('dew_high')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('dew_low')} onToggle={() => toggleRule('dew_low')} />
+                <span className="text-slate-400 w-14">Bajo</span>
+                <NumField value={settings.alert_dew_low} onChange={(v) => update('alert_dew_low', v)} min={-40} max={25} step={0.5} off={isOff('dew_low')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sensación térmica (heat index con calor, wind chill con frío). */}
+          <div>
+            <p className="text-sm font-medium mb-1">🌡️ Sensación térmica</p>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('feels_high')} onToggle={() => toggleRule('feels_high')} />
+                <span className="text-slate-400 w-14">Alta</span>
+                <NumField value={settings.alert_feels_high} onChange={(v) => update('alert_feels_high', v)} min={0} max={60} step={0.5} off={isOff('feels_high')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('feels_low')} onToggle={() => toggleRule('feels_low')} />
+                <span className="text-slate-400 w-14">Baja</span>
+                <NumField value={settings.alert_feels_low} onChange={(v) => update('alert_feels_low', v)} min={-40} max={30} step={0.5} off={isOff('feels_low')} />
+                <span className="text-xs text-slate-500">°C</span>
+              </div>
+            </div>
+          </div>
+
+          {/* UV y radiación solar: solo la principal trae esos sensores (WS69). */}
+          {isPrincipal && (
+            <div>
+              <p className="text-sm font-medium mb-1">😎 Sol</p>
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('uv_high')} onToggle={() => toggleRule('uv_high')} />
+                  <span className="text-slate-400 w-14">UV</span>
+                  <NumField value={settings.alert_uv_high} onChange={(v) => update('alert_uv_high', v)} min={0} max={16} step={1} off={isOff('uv_high')} />
+                  <span className="text-xs text-slate-500">índice</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isOff('solar_high')} onToggle={() => toggleRule('solar_high')} />
+                  <span className="text-slate-400 w-14">Radiación</span>
+                  <NumField value={settings.alert_solar_high} onChange={(v) => update('alert_solar_high', v)} min={0} max={1500} step={50} off={isOff('solar_high')} />
+                  <span className="text-xs text-slate-500">W/m²</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -373,6 +449,39 @@ export function AdminAlertas() {
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-slate-400">Ventana</span>
               <NumField value={settings.alert_pressure_trend_window_min} onChange={(v) => update('alert_pressure_trend_window_min', v)} min={15} max={180} step={15} />
+              <span className="text-xs text-slate-500">min (global)</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tendencia de temperatura (2 niveles). Misma mecánica que la de presión. */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <p className="text-sm font-medium mb-2">
+          🌡️ Tendencia de temperatura <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (una caída rápida suele ser la llegada de una tormenta)</span>
+        </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <RuleGate on={!isOff('temp_drop')} onToggle={() => toggleRule('temp_drop')} />
+            <span className="text-slate-400">Caída</span>
+            <span className="text-xs text-slate-500">aviso</span>
+            <NumField value={settings.alert_temp_drop_warn} onChange={(v) => update('alert_temp_drop_warn', v)} min={0} max={25} step={0.5} off={isOff('temp_drop')} />
+            <span className="text-xs text-slate-500">fuerte</span>
+            <NumField value={settings.alert_temp_drop_strong} onChange={(v) => update('alert_temp_drop_strong', v)} min={0} max={25} step={0.5} off={isOff('temp_drop')} />
+          </div>
+          <div className="flex items-center gap-2">
+            <RuleGate on={!isOff('temp_rise')} onToggle={() => toggleRule('temp_rise')} />
+            <span className="text-slate-400">Subida</span>
+            <span className="text-xs text-slate-500">aviso</span>
+            <NumField value={settings.alert_temp_rise_warn} onChange={(v) => update('alert_temp_rise_warn', v)} min={0} max={25} step={0.5} off={isOff('temp_rise')} />
+            <span className="text-xs text-slate-500">fuerte</span>
+            <NumField value={settings.alert_temp_rise_strong} onChange={(v) => update('alert_temp_rise_strong', v)} min={0} max={25} step={0.5} off={isOff('temp_rise')} />
+          </div>
+          <span className="text-xs text-slate-500">°C</span>
+          {isPrincipal && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-slate-400">Ventana</span>
+              <NumField value={settings.alert_temp_trend_window_min} onChange={(v) => update('alert_temp_trend_window_min', v)} min={15} max={180} step={15} />
               <span className="text-xs text-slate-500">min (global)</span>
             </div>
           )}

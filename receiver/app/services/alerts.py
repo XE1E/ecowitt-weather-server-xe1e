@@ -24,13 +24,19 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "station", "battery", "sensor", "air"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air"]
 
 
 def _category_for(rule_key: str) -> str:
     """Mapea una clave de regla (temp_high, battery_ch1, ...) a su categoría."""
     if rule_key.startswith("temp_"):
         return "temp"
+    # Rocío y sensación térmica son familia de temperatura: se derivan de ella y
+    # quien quiere avisos de calor/frío los quiere juntos, no en otro canal.
+    if rule_key.startswith("dew_") or rule_key.startswith("feels_"):
+        return "temp"
+    if rule_key in ("uv_high", "solar_high"):
+        return "sun"
     if rule_key in ("wind_high", "gust_high"):
         return "wind"
     if rule_key.startswith("rain_"):
@@ -95,9 +101,10 @@ class AlertService:
         # None = principal. Aísla la detección entre estaciones.
         self.known_sensors: Dict[Optional[str], set] = {}
         self.known_batteries: Dict[Optional[str], set] = {}
-        # Historial de presión POR ESTACIÓN para la tendencia: deque de
-        # (datetime, hPa). None = principal. Se aísla entre estaciones.
+        # Historial POR ESTACIÓN para las tendencias: deque de (datetime, valor).
+        # None = principal. Se aísla entre estaciones.
         self._pressure_hist: Dict[Optional[str], deque] = {}
+        self._temp_hist: Dict[Optional[str], deque] = {}
         # Histéresis: momento en que una regla EMPEZÓ a cumplirse / a despejarse
         # (por clave namespaceada). Se usa para exigir persistencia antes de
         # avisar o normalizar. {nkey: datetime}
@@ -158,6 +165,55 @@ class AlertService:
             rules["temp_high"] = (temp >= t_hi, f"🌡️ Temperatura alta: {temp}°C (≥ {t_hi}°C)")
             rules["temp_low"] = (temp <= t_lo, f"🥶 Temperatura baja: {temp}°C (≤ {t_lo}°C)")
 
+            # Tendencia de temperatura: misma mecánica que la de presión (buffer
+            # por estación + línea base de hace ~ventana). Una caída rápida suele
+            # ser la llegada de una tormenta; una subida rápida, insolación fuerte.
+            t_win = int(T("alert_temp_trend_window_min", 60))
+            t_delta = self._push_and_delta(self._temp_hist, station, now, temp, t_win)
+            if t_delta is not None:
+                t_drop = -t_delta  # positivo si BAJÓ
+                lvl = self._two_level(t_drop, T("alert_temp_drop_warn", 3.0),
+                                      T("alert_temp_drop_strong", 5.0))
+                if lvl:
+                    rules["temp_drop"] = (True, f"🌡️↓ Temperatura cayendo {t_drop:.1f}°C/{t_win}min ({lvl})")
+                else:
+                    rules["temp_drop"] = (False, f"Temperatura sin caída relevante ({t_delta:+.1f}°C/{t_win}min)")
+                lvl = self._two_level(t_delta, T("alert_temp_rise_warn", 3.0),
+                                      T("alert_temp_rise_strong", 5.0))
+                if lvl:
+                    rules["temp_rise"] = (True, f"🌡️↑ Temperatura subiendo {t_delta:.1f}°C/{t_win}min ({lvl})")
+                else:
+                    rules["temp_rise"] = (False, f"Temperatura sin subida relevante ({t_delta:+.1f}°C/{t_win}min)")
+
+        # Punto de rocío: alto = bochorno; bajo = aire muy seco. Derivado de
+        # temp+humedad, así que existe también en la remota.
+        dew = data.get("dew_point")
+        if dew is not None:
+            d_hi = T("alert_dew_high", 20.0)
+            d_lo = T("alert_dew_low", -5.0)
+            rules["dew_high"] = (dew >= d_hi, f"🥵 Punto de rocío alto: {dew}°C (≥ {d_hi}°C) — ambiente bochornoso")
+            rules["dew_low"] = (dew <= d_lo, f"🌵 Punto de rocío bajo: {dew}°C (≤ {d_lo}°C) — aire muy seco")
+
+        # Sensación térmica: heat index si hace calor, wind chill si hace frío.
+        feels = data.get("feels_like")
+        if feels is not None:
+            f_hi = T("alert_feels_high", 38.0)
+            f_lo = T("alert_feels_low", -2.0)
+            rules["feels_high"] = (feels >= f_hi, f"🥵 Sensación térmica alta: {feels}°C (≥ {f_hi}°C)")
+            rules["feels_low"] = (feels <= f_lo, f"🧊 Sensación térmica baja: {feels}°C (≤ {f_lo}°C)")
+
+        # UV y radiación solar: solo la principal las trae (WS69). Si la estación
+        # no tiene esos sensores, la regla no se registra y no aparece en /api/alerts.
+        uv = data.get("uv_index")
+        if uv is not None:
+            uv_hi = T("alert_uv_high", 8.0)
+            rules["uv_high"] = (uv >= uv_hi, f"😎 Índice UV alto: {uv} (≥ {uv_hi}) — evita el sol directo")
+
+        solar = data.get("solar_radiation")
+        if solar is not None:
+            s_hi = T("alert_solar_high", 1000.0)
+            rules["solar_high"] = (solar >= s_hi, f"☀️ Radiación solar alta: {solar} W/m² (≥ {s_hi} W/m²)")
+
         # Viento sostenido
         wind = data.get("wind_speed")
         if wind is None:
@@ -193,25 +249,18 @@ class AlertService:
 
             # Tendencia de presión: cambio dentro de la ventana (buffer por estación).
             window = int(T("alert_pressure_trend_window_min", 60))
-            hist = self._pressure_hist.setdefault(station, deque(maxlen=1440))
-            hist.append((now, press))
-            cutoff = now - timedelta(minutes=window * 2)
-            while hist and hist[0][0] < cutoff:
-                hist.popleft()
-            delta = self._pressure_delta(hist, now, window)
+            delta = self._push_and_delta(self._pressure_hist, station, now, press, window)
             if delta is not None:
                 drop = -delta  # positivo si CAYÓ
-                d_warn = T("alert_pressure_drop_warn", 1.5)
-                d_strong = T("alert_pressure_drop_strong", 3.0)
-                r_warn = T("alert_pressure_rise_warn", 1.5)
-                r_strong = T("alert_pressure_rise_strong", 3.0)
-                if drop >= d_warn:
-                    lvl = "fuerte" if drop >= d_strong else "aviso"
+                lvl = self._two_level(drop, T("alert_pressure_drop_warn", 1.5),
+                                      T("alert_pressure_drop_strong", 3.0))
+                if lvl:
                     rules["pressure_drop"] = (True, f"⛈️ Presión cayendo {drop:.1f} hPa/{window}min ({lvl}) — posible tormenta")
                 else:
                     rules["pressure_drop"] = (False, f"Presión sin caída relevante ({delta:+.1f} hPa/{window}min)")
-                if delta >= r_warn:
-                    lvl = "fuerte" if delta >= r_strong else "aviso"
+                lvl = self._two_level(delta, T("alert_pressure_rise_warn", 1.5),
+                                      T("alert_pressure_rise_strong", 3.0))
+                if lvl:
                     rules["pressure_rise"] = (True, f"🌬️ Presión subiendo {delta:.1f} hPa/{window}min ({lvl}) — posible frente frío")
                 else:
                     rules["pressure_rise"] = (False, f"Presión sin subida relevante ({delta:+.1f} hPa/{window}min)")
@@ -256,8 +305,30 @@ class AlertService:
 
         return rules
 
-    def _pressure_delta(self, hist: deque, now: datetime, window_min: int) -> Optional[float]:
-        """Cambio de presión (hPa) = actual − línea base de hace ~`window_min`.
+    def _push_and_delta(self, store: Dict[Optional[str], deque], station: Optional[str],
+                        now: datetime, value: float, window_min: int) -> Optional[float]:
+        """Guarda la lectura en el buffer de esa estación y devuelve su tendencia.
+
+        Comparte la mecánica entre presión y temperatura: mantiene un deque por
+        estación, poda lo que ya cae fuera del doble de la ventana y delega el
+        cálculo en `_delta_over_window`.
+        """
+        hist = store.setdefault(station, deque(maxlen=1440))
+        hist.append((now, value))
+        cutoff = now - timedelta(minutes=window_min * 2)
+        while hist and hist[0][0] < cutoff:
+            hist.popleft()
+        return self._delta_over_window(hist, now, window_min)
+
+    @staticmethod
+    def _two_level(delta: Optional[float], warn: float, strong: float) -> Optional[str]:
+        """Nivel de una tendencia: None si no llega al aviso, si no 'aviso'/'fuerte'."""
+        if delta is None or delta < warn:
+            return None
+        return "fuerte" if delta >= strong else "aviso"
+
+    def _delta_over_window(self, hist: deque, now: datetime, window_min: int) -> Optional[float]:
+        """Cambio del valor = actual − línea base de hace ~`window_min`.
 
         Devuelve None si aún no hay historia suficiente (línea base con al menos
         media ventana de antigüedad), de modo que tras un reinicio no dispara

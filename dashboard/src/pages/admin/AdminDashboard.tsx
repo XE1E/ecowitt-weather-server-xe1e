@@ -61,16 +61,22 @@ function timeAgo(iso: string | null): string {
 }
 
 // Nombres de los chips de categoría de alerta y a qué mapea cada clave de regla.
-const ALERT_CHIPS = ['Temperatura', 'Humedad', 'Viento', 'Lluvia', 'Presion', 'Tendencia', 'Offline', 'Bateria', 'Sensor', 'Aire']
+const ALERT_CHIPS = ['Temperatura', 'Humedad', 'Rocio', 'Sensacion', 'Viento', 'Lluvia', 'Presion', 'Tendencia', 'Sol', 'Offline', 'Bateria', 'Sensor', 'Aire']
 
 function alertChipLabel(key: string): string | null {
   const k = key.includes(':') ? key.split(':')[1] : key   // quita el prefijo de estación
+  // Las tendencias van juntas en su propio chip, así que se revisan ANTES del
+  // prefijo temp_ (si no, temp_drop/temp_rise caerían en 'Temperatura').
+  if (k === 'pressure_drop' || k === 'pressure_rise') return 'Tendencia'
+  if (k === 'temp_drop' || k === 'temp_rise') return 'Tendencia'
   if (k.startsWith('temp_')) return 'Temperatura'
   if (k.startsWith('humidity_')) return 'Humedad'
+  if (k.startsWith('dew_')) return 'Rocio'
+  if (k.startsWith('feels_')) return 'Sensacion'
+  if (k === 'uv_high' || k === 'solar_high') return 'Sol'
   if (k === 'wind_high' || k === 'gust_high') return 'Viento'
   if (k.startsWith('rain_')) return 'Lluvia'
   if (k === 'pressure_high' || k === 'pressure_low') return 'Presion'
-  if (k === 'pressure_drop' || k === 'pressure_rise') return 'Tendencia'
   if (k.startsWith('station_offline')) return 'Offline'
   if (k.startsWith('battery_')) return 'Bateria'
   if (k.startsWith('sensor_')) return 'Sensor'
