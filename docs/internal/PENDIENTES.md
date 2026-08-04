@@ -130,9 +130,13 @@ usa 4. Verificado en producción el 2026-08-04:
 | `rain_monthly` | 7.3 | mes |
 | `rain_yearly` / `rain_total` | 75.4 | año |
 
-- [x] **Hecho el 2026-08-04.** Van `rain_event` (AHORA), `rain_rate` (TASA) y
+- [x] **Hecho el 2026-08-04.** Van `rain_event` (EVENTO), `rain_rate` (TASA) y
       `rain_daily` (DÍA), en tres columnas de 30 px con etiqueta cada una: sin
       etiqueta, tres cifras de lluvia son indistinguibles entre sí.
+      **`rain_event` se rotula EVENTO y no "AHORA"**: sobrevive al cambio de día, así
+      que se ve acumulado del chubasco de anoche junto a un día en 0.0. Lo reinicia la
+      estación --medido sobre 14 días: casi siempre ~24 h después de dejar de llover,
+      siempre en hora en punto--, no el servidor, que sólo lo pasa de pulgadas a mm.
 - [x] El tab **Consola** del dashboard quedó igual sin trabajo extra: es el MISMO
       componente (`ConsoleReplica`), así que se arregló en un solo lugar.
 

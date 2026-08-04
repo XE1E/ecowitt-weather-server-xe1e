@@ -382,13 +382,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <MeteoGlyph name="raindrops" size={46} color="#38bdf8" title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
-              viento: AHORA es la intensidad (mm/h), EVENTO lo caído en el chubasco
-              en curso y HOY el acumulado del día. Con 46 px no caben tres, y sin
-              etiqueta tres cifras de lluvia son indistinguibles entre sí. */}
+              viento: EVENTO es lo caído en el chubasco (`rain_event`), TASA la
+              intensidad de ahora en mm/h (`rain_rate`) y DÍA el acumulado del día
+              (`rain_daily`). Sin etiqueta, tres cifras de lluvia son indistinguibles
+              entre sí.
+
+              EVENTO y no "AHORA", que es lo que decía antes: `rain_event` SOBREVIVE al
+              cambio de día. Verificado en el histórico de producción --el 4 ago 2026 la
+              consola mostraba evento 6.8 mm con tasa 0.0 y día 0.0, porque esos 6.8 mm
+              cayeron la noche anterior y el contador del día se reinició a medianoche
+              mientras el del evento no--. Rotularlo "AHORA" leía como que estaba
+              lloviendo cuando no. Lo reinicia la estación, no el servidor: medido sobre
+              14 días, casi siempre ~24 h después de que deja de llover. La tarjeta web
+              (`PrecipitationCard`) ya lo llamaba "Evento". */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
                         gap: 2, marginTop: -6, paddingLeft: 46 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>AHORA</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
                 {decNum(u.rain(data?.rain_event))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
