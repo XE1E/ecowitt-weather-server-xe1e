@@ -10,7 +10,9 @@ export interface HistPoint {
   vmed?: number | null; vmax?: number | null; dir?: number | null
   hum?: number | null; dew?: number | null
   uv?: number | null; solar?: number | null
-  pprom?: number | null; lluvia?: number; rrate?: number | null
+  // `lluvia` admite null como el resto: un día sin datos no es un día sin lluvia.
+  // Recharts simplemente no dibuja la barra.
+  pprom?: number | null; lluvia?: number | null; rrate?: number | null
 }
 
 const CARDINAL = ['N', 'E', 'S', 'O', 'N']

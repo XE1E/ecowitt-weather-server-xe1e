@@ -210,13 +210,16 @@ export function StatisticsPage() {
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-slate-300 mb-3">Grados-día y evapotranspiración · {year}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SummaryCard label="Grados-día de enfriamiento" color="text-orange-300" value={sum!.cdd != null ? sum!.cdd.toFixed(0) : '--'} unit="°C·día" />
-            <SummaryCard label="Grados-día de calefacción" color="text-sky-300" value={sum!.hdd != null ? sum!.hdd.toFixed(0) : '--'} unit="°C·día" />
-            <SummaryCard label="Evapotranspiración (ET₀)" color="text-emerald-300" value={sum!.et_total != null ? sum!.et_total.toFixed(0) : '--'} unit="mm" />
+            {/* Grados-día son un DELTA acumulado: se convierten con dTempN (x9/5,
+                sin el +32). Y la ET₀ está en mm, así que sigue a la unidad de lluvia. */}
+            <SummaryCard label="Grados-día de enfriamiento" color="text-orange-300" value={sum!.cdd != null ? u.dTempN(sum!.cdd).toFixed(0) : '--'} unit={`${u.tempU}·día`} />
+            <SummaryCard label="Grados-día de calefacción" color="text-sky-300" value={sum!.hdd != null ? u.dTempN(sum!.hdd).toFixed(0) : '--'} unit={`${u.tempU}·día`} />
+            <SummaryCard label="Evapotranspiración (ET₀)" color="text-emerald-300" value={sum!.et_total != null ? u.rain(sum!.et_total, 0) : '--'} unit={u.rainU} />
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Grados-día con base 18.3 °C (estándar NOAA): acumulan cuánto y por cuánto tiempo la temperatura
-            media supera (enfriamiento) o queda por debajo (calefacción) de esa base. ET₀ estimada por Hargreaves.
+            Grados-día con base {u.temp(18.3)} {u.tempU} (la de NOAA, 65 °F): acumulan cuánto y por cuánto
+            tiempo la temperatura media supera (enfriamiento) o queda por debajo (calefacción) de esa base.
+            ET₀ estimada por Hargreaves.
           </p>
         </div>
       )}
@@ -277,7 +280,7 @@ export function StatisticsPage() {
           los <span className="font-semibold">grados-día</span> y la <span className="font-semibold">evapotranspiración</span>,
           los <span className="font-semibold">récords históricos</span> por categoría (con su top 5 y fecha), las
           {' '}estadísticas por periodo y la <span className="font-semibold">rosa de vientos</span>. Los grados-día miden
-          cuánto y por cuánto tiempo la temperatura se aleja de los 18.3 °C (base NOAA), útil para energía y agricultura.
+          cuánto y por cuánto tiempo la temperatura se aleja de los {u.temp(18.3)} {u.tempU} (base NOAA), útil para energía y agricultura.
         </p>
       </PageInfo>
     </div>

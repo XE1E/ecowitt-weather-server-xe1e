@@ -79,7 +79,8 @@ export function HistoryPage() {
   const tN = (v?: number | null) => (v == null ? null : Math.round(u.tempN(v) * 10) / 10)
   const wN = (v?: number | null) => (v == null ? null : +u.wind(v))
   const pN = (v?: number | null) => (v == null ? null : +u.press(v))
-  const rN = (v?: number | null) => (v == null ? 0 : +u.rain(v))
+  // null, no 0: un día sin datos se graficaba como día seco.
+  const rN = (v?: number | null) => (v == null ? null : +u.rain(v))
   const rrN = (v?: number | null) => (v == null ? null : +u.rate(v))   // tasa de lluvia
 
   const apply = () => setSel({ gran, day: pDay, month: pMonth, year: pYear })
@@ -123,13 +124,31 @@ export function HistoryPage() {
     : (l: string) => `${l} ${sel.year}`
 
   const downloadCsv = () => {
+    // El CSV sale en la MISMA unidad que la pantalla, y con la unidad escrita en
+    // el encabezado. Antes se exportaban los valores métricos crudos con cabeceras
+    // sin unidad: se veía la tabla en °F y se descargaba un archivo en °C.
+    const imp = u.system === 'imperial'
+    const sT = imp ? 'F' : 'C'
+    const sW = imp ? 'mph' : 'kmh'
+    const sP = imp ? 'inHg' : 'hPa'
+    const sR = imp ? 'in' : 'mm'
+    // Vacío si no hay dato: un 0 se leería como medición.
+    const c = (v: number | null | undefined) => (v == null ? '' : String(v))
+
     let header: string, body: string[]
     if (isMonth) {
-      header = 'fecha,temp_max,temp_min,temp_prom,hum_prom,lluvia,tasa_lluvia_max,viento_max,presion_prom,uv_max,solar_max'
-      body = (month?.days ?? []).map((d) => [d.date, d.high ?? '', d.low ?? '', d.mean_temp ?? '', d.hum_avg ?? '', d.rain ?? '', d.rain_rate_max ?? '', d.gust_max ?? '', d.press_avg ?? '', d.uv_max ?? '', d.solar_max ?? ''].join(','))
+      header = `fecha,temp_max_${sT},temp_min_${sT},temp_prom_${sT},hum_prom_pct,lluvia_${sR},tasa_lluvia_max_${sR}h,viento_max_${sW},presion_prom_${sP},uv_max,solar_max_wm2`
+      body = (month?.days ?? []).map((d) => [
+        d.date, c(tN(d.high)), c(tN(d.low)), c(tN(d.mean_temp)), c(d.hum_avg),
+        c(rN(d.rain)), c(rrN(d.rain_rate_max)), c(wN(d.gust_max)), c(pN(d.press_avg)),
+        c(d.uv_max), c(d.solar_max),
+      ].join(','))
     } else {
-      header = 'mes,temp_max,temp_min,temp_prom,lluvia_total,dias_lluvia,viento_max'
-      body = (year?.months ?? []).map((m) => [MESES[m.month - 1], m.high?.value ?? '', m.low?.value ?? '', m.mean_temp ?? '', m.rain_total ?? '', m.rain_days ?? '', m.gust_max?.value ?? ''].join(','))
+      header = `mes,temp_max_${sT},temp_min_${sT},temp_prom_${sT},lluvia_total_${sR},dias_lluvia,viento_max_${sW}`
+      body = (year?.months ?? []).map((m) => [
+        MESES[m.month - 1], c(tN(m.high?.value)), c(tN(m.low?.value)), c(tN(m.mean_temp)),
+        c(rN(m.rain_total)), c(m.rain_days), c(wN(m.gust_max?.value)),
+      ].join(','))
     }
     const url = URL.createObjectURL(new Blob([[header, ...body].join('\n')], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')

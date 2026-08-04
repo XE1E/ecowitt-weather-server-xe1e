@@ -36,7 +36,10 @@ function solarColor(w: number): string {
 }
 
 export function UvSolarCard({ data }: { data: WeatherData }) {
-  const uv = data.uv_index ?? 0
+  // El valor mostrado distingue la ausencia; el icono y el color caen a 0, que en
+  // ambas escalas es el tono neutro (gris), así que sirve de estado "sin dato".
+  const uv = data.uv_index ?? null
+  const uvN = uv ?? 0
   return (
     <div className="card">
       <p className="card-title">UV y radiación solar</p>
@@ -44,10 +47,10 @@ export function UvSolarCard({ data }: { data: WeatherData }) {
         <div className="rounded-lg bg-white/5 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">UV</p>
           <div className="flex items-center gap-3">
-            <WeatherIcon name={uvIconName(uv)} size={40} className="shrink-0" />
+            <WeatherIcon name={uvIconName(uvN)} size={40} className="shrink-0" />
             <div>
-              <p className={`text-2xl font-bold ${uvColor(uv)}`}>{uv}</p>
-              <p className={`text-xs ${uvColor(uv)}`}>{uvLabel(uv)}</p>
+              <p className={`text-2xl font-bold ${uvColor(uvN)}`}>{uv ?? '--'}</p>
+              <p className={`text-xs ${uvColor(uvN)}`}>{uv != null ? uvLabel(uv) : 'Sin dato'}</p>
             </div>
           </div>
         </div>
@@ -56,7 +59,9 @@ export function UvSolarCard({ data }: { data: WeatherData }) {
           <div className="flex items-center gap-3">
             <WeatherIcon name="clear-day" size={40} className="shrink-0" />
             <div>
-              <p className={`text-2xl font-bold ${solarColor(data.solar_radiation ?? 0)}`}>{(data.solar_radiation ?? 0).toFixed(0)}</p>
+              <p className={`text-2xl font-bold ${solarColor(data.solar_radiation ?? 0)}`}>
+                {data.solar_radiation != null ? data.solar_radiation.toFixed(0) : '--'}
+              </p>
               <p className="text-xs text-slate-400">W/m²</p>
             </div>
           </div>

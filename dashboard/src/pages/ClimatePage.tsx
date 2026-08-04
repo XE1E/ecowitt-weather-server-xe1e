@@ -47,7 +47,9 @@ interface Noaa {
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const MES_LARGO = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-const YEAR_NOW = 2026
+// Año en curso, NO un literal: con 2026 fijo, en 2027 la página seguiría abriendo
+// en 2026 y el selector no ofrecería el año actual.
+const YEAR_NOW = new Date().getFullYear()
 
 function fmtDay(d?: string) {
   if (!d) return '--'
@@ -132,8 +134,11 @@ export function ClimatePage() {
           <div className="col-span-2 border-t border-white/5 my-1" />
           {row('Lluvia', p.rain_total != null ? `${u.rain(p.rain_total)} ${u.rainU}` : '--', 'text-right text-blue-300')}
           {row('Días con lluvia', p.rain_days != null ? String(p.rain_days) : '--')}
-          {(p.hdd != null || p.cdd != null) && row('Grados-día (cal/ref)', `${p.hdd ?? '--'} / ${p.cdd ?? '--'}`, 'text-right text-slate-400')}
-          {p.et_total != null && row('Evapotranspiración', `${p.et_total} mm`, 'text-right text-emerald-300')}
+          {/* Grados-día = delta acumulado -> dTempN. ET₀ en mm -> unidad de lluvia. */}
+          {(p.hdd != null || p.cdd != null) && row('Grados-día (cal/ref)',
+            `${p.hdd != null ? u.dTempN(p.hdd).toFixed(0) : '--'} / ${p.cdd != null ? u.dTempN(p.cdd).toFixed(0) : '--'} ${u.tempU}·día`,
+            'text-right text-slate-400')}
+          {p.et_total != null && row('Evapotranspiración', `${u.rain(p.et_total, 0)} ${u.rainU}`, 'text-right text-emerald-300')}
         </div>
       </div>
     )
@@ -375,10 +380,10 @@ export function ClimatePage() {
                 <th className="text-left py-1">Día</th><th className="text-right">Media</th>
                 <th className="text-right">Máx</th><th className="text-right">hora</th>
                 <th className="text-right">Mín</th><th className="text-right">hora</th>
-                <th className="text-right" title="Grados-día de calefacción">GD cal</th>
-                <th className="text-right" title="Grados-día de refrigeración">GD ref</th>
+                <th className="text-right" title={`Grados-día de calefacción (${u.tempU}·día)`}>GD cal</th>
+                <th className="text-right" title={`Grados-día de refrigeración (${u.tempU}·día)`}>GD ref</th>
                 <th className="text-right">Lluvia</th><th className="text-right">Ráfaga</th>
-                <th className="text-right" title="Evapotranspiración (mm)">ET</th>
+                <th className="text-right" title={`Evapotranspiración (${u.rainU})`}>ET</th>
               </tr>
             </thead>
             <tbody>
@@ -390,11 +395,11 @@ export function ClimatePage() {
                   <td className="text-right text-[11px] text-slate-500">{hhmm(d.high_time)}</td>
                   <td className="text-right text-sky-300">{d.low != null ? u.temp(d.low) : '--'}</td>
                   <td className="text-right text-[11px] text-slate-500">{hhmm(d.low_time)}</td>
-                  <td className="text-right text-slate-400">{d.hdd ?? '--'}</td>
-                  <td className="text-right text-slate-400">{d.cdd ?? '--'}</td>
+                  <td className="text-right text-slate-400">{d.hdd != null ? u.dTempN(d.hdd).toFixed(1) : '--'}</td>
+                  <td className="text-right text-slate-400">{d.cdd != null ? u.dTempN(d.cdd).toFixed(1) : '--'}</td>
                   <td className="text-right text-blue-300">{d.rain != null ? u.rain(d.rain) : '--'}</td>
                   <td className="text-right text-emerald-300">{d.gust_max != null ? u.wind(d.gust_max) : '--'}</td>
-                  <td className="text-right text-slate-400">{d.et != null ? d.et : '--'}</td>
+                  <td className="text-right text-slate-400">{d.et != null ? u.rain(d.et, 2) : '--'}</td>
                 </tr>
               ))}
             </tbody>
@@ -419,8 +424,8 @@ export function ClimatePage() {
                   <td className="text-right text-sky-300">{m.low ? u.temp(m.low.value) : '--'}</td>
                   <td className="text-right text-blue-300">{m.rain_total != null ? u.rain(m.rain_total) : '--'}</td>
                   <td className="text-right">{m.rain_days ?? '--'}</td>
-                  <td className="text-right text-slate-400">{m.hdd ?? '--'}</td>
-                  <td className="text-right text-slate-400">{m.cdd ?? '--'}</td>
+                  <td className="text-right text-slate-400">{m.hdd != null ? u.dTempN(m.hdd).toFixed(0) : '--'}</td>
+                  <td className="text-right text-slate-400">{m.cdd != null ? u.dTempN(m.cdd).toFixed(0) : '--'}</td>
                 </tr>
               ))}
             </tbody>
@@ -432,12 +437,14 @@ export function ClimatePage() {
             máx {noaa.summary.high ? `${u.temp(noaa.summary.high.value)}${u.tempU} (${fmtDay(noaa.summary.high.date)})` : '--'} ·
             mín {noaa.summary.low ? `${u.temp(noaa.summary.low.value)}${u.tempU} (${fmtDay(noaa.summary.low.date)})` : '--'} ·
             lluvia {noaa.summary.rain_total != null ? `${u.rain(noaa.summary.rain_total)} ${u.rainU}` : '--'} en {noaa.summary.rain_days ?? 0} día(s)
-            {noaa.summary.et_total != null ? ` · ET ${noaa.summary.et_total} mm` : ''}
-            {(noaa.summary.hdd != null || noaa.summary.cdd != null) ? ` · grados-día ${noaa.summary.hdd ?? 0}/${noaa.summary.cdd ?? 0}` : ''}
+            {noaa.summary.et_total != null ? ` · ET ${u.rain(noaa.summary.et_total, 0)} ${u.rainU}` : ''}
+            {(noaa.summary.hdd != null || noaa.summary.cdd != null)
+              ? ` · grados-día ${u.dTempN(noaa.summary.hdd ?? 0).toFixed(0)}/${u.dTempN(noaa.summary.cdd ?? 0).toFixed(0)} ${u.tempU}·día`
+              : ''}
           </p>
         ) : null}
       </div>
-      <p className="text-[11px] text-slate-600 mt-2">Temperaturas en {u.tempU}. Grados-día con base 18.3 °C (estándar NOAA). Un "día con lluvia" es ≥ 0.2 mm.</p>
+      <p className="text-[11px] text-slate-600 mt-2">Temperaturas en {u.tempU}. Grados-día en {u.tempU}·día con base {u.temp(18.3)} {u.tempU} (la de NOAA, 65 °F). Un "día con lluvia" es ≥ {u.rain(0.2)} {u.rainU}.</p>
 
       <PageInfo>
         <p>

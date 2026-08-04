@@ -25,6 +25,12 @@ export interface Units {
   pressN: (hpa: number) => number
   rainN: (mm: number) => number
   rateN: (mmh: number) => number
+  /**
+   * Convierte una DIFERENCIA de temperatura: grados-día, deltas, amplitudes.
+   * Multiplica por 9/5 SIN sumar 32. Usar `temp()`/`tempN()` para esto es el error
+   * clásico: un delta de 5 °C son 9 °F, no 41.
+   */
+  dTempN: (dc: number) => number
 }
 
 const UnitsContext = createContext<Units | null>(null)
@@ -50,6 +56,7 @@ function build(system: UnitSystem, toggle: () => void): Units {
     pressN: (hpa) => (imp ? hpa * 0.0295299830714 : hpa),
     rainN: (mm) => (imp ? mm / 25.4 : mm),
     rateN: (mmh) => (imp ? mmh / 25.4 : mmh),
+    dTempN: (dc) => (imp ? dc * 9 / 5 : dc),
   }
 }
 

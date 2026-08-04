@@ -371,7 +371,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <TrendGlyph trend={humTrend} />
           </div>
           <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32, marginTop: -10 }}>
-            {decNum((data?.humidity_outdoor ?? 0).toFixed(0))}<span className="u" style={{ fontSize: 34, color: 'var(--h)' }}>%</span>
+            {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
+                (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
+            {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 34, color: 'var(--h)' }}>%</span>
           </div>
         </div>
 
