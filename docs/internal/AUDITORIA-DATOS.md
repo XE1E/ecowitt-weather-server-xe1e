@@ -26,9 +26,28 @@ Severidades:
 | 1 | IMECA: volumen molar a la presión real de la estación | `imeca.py`, `main.py` |
 | 21b | `/api/svitrix` responde 503 si no hay ninguna lectura, en vez de nulos | `main.py` |
 | 22 | Kiosco pág. 3: exterior (WN32) e interior (GW1100) separados | `KioskPage.tsx` |
+| 7 + 31 | `uv` → `uv_index`: el QC de UV ya se aplica y el UV ya se publica a las 4 redes | `quality.py`, `publishers.py` |
+| 23 | `local_day_bounds_utc()` resuelve el día local por sí misma; fuera los 3 `datetime.now()` naive | `aggregator.py`, `main.py` |
+| 33 | Selector de día de Historia con fecha local | `HistoryPage.tsx` |
+| 35 | Antigüedad del METAR con `parseServerDate` (que ahora normaliza el separador) | `AtmosphericProfile.tsx`, `weather.ts` |
+| 32 | Docstring de AWEKAS corregido: son mm directos, con advertencia de no "arreglarlo" | `publishers.py` |
 
-Verificación: `npx tsc --noEmit` limpio, `pytest receiver/tests` 97 pasan, y el IMECA
-recalculado a mano (partículas idénticas, gases al alza, sin presión = comportamiento previo).
+Verificación: `npx tsc --noEmit` limpio, `pytest receiver/tests` 97 pasan, y cada arreglo
+probado contra su síntoma:
+
+| Arreglo | Antes | Ahora |
+|---|---|---|
+| IMECA (ozono 150 µg/m³) | 62 "Regular" | 104 "Mala" |
+| QC de UV (`uv_index=99`) | pasaba sin filtrar | rechazado |
+| UV a WU / Windy / AWEKAS | campo ausente | `UV=7`, `uv=7`, campo 18 = `7` |
+| Día local a las 20:00 de CDMX | rango desde `2026-08-05T06:00Z` (futuro) | `2026-08-04T06:00Z` |
+| Antigüedad de un METAR de 90 min | "hace 0 min" | "hace 90 min" |
+
+`parseServerDate` se comprobó retrocompatible con los tres formatos que ya recibía
+(naive con `T`, con offset `+00:00`, y con `Z`).
+
+El IMECA además se validó en sus tres propiedades: las partículas no cambian (ya vienen en
+µg/m³), solo suben los gases, y sin presión el resultado es idéntico al anterior.
 
 Detalle del #21b — por qué 503 solo en ese caso: el firmware de Svitrix reinicia el ESP32
 tras `max(5 × intervalo, 15 min)` sin un fetch con HTTP 200
@@ -612,6 +631,139 @@ como campos de InfluxDB y en `/api/current`. Ruido en la base y en la API públi
   lo que impide tipar series como radiación, UV o ráfaga.
 - `types.ts`: `temperature_outdoor` es requerido, pero el QC puede anularlo → en runtime
   llega `undefined` donde el tipo promete `number`.
+
+---
+
+## Segunda pasada (publicación a redes, Historia, Aeronáutica)
+
+### 31. El índice UV nunca se publica a ninguna red (**A**) — `publishers.py:120, 139, 209`
+
+Es **el mismo error del hallazgo #7**, repetido en otro módulo: el código pide `data.get("uv")`
+cuando el campo se llama `uv_index`.
+
+| Línea | Red | Campo |
+|---|---|---|
+| 120 | Weather Underground y PWSWeather | `UV` |
+| 139 | Windy | `uv` |
+| 209 | AWEKAS | campo 18 |
+
+Las tres devuelven `None` siempre, y `_q()` / `_fmt()` descartan los nulos. Confirmado contra
+el dato real: `/api/current` trae `uv_index: 1` y **no existe ninguna clave `uv`**. El sensor
+mide UV, el panel de administración dice que publica, y nunca ha salido.
+
+Un solo arreglo (renombrar la clave en los 4 sitios) cierra #7 y #31 a la vez.
+
+### 32. AWEKAS: el docstring miente, el código está bien (**D**) — `publishers.py:182` · CORREGIDO
+
+El docstring decía *"lluvia en décimas de mm"* mientras el código manda mm directos. Resuelto
+por el operador: **la documentación de AWEKAS es la que está mal**; se corrigió en su momento a
+mm directos y así funciona.
+
+El riesgo era el docstring, no el código: invita a "arreglar" la línea multiplicando por 10 y
+publicar 10× la lluvia real. Se reescribió el comentario con la advertencia explícita.
+
+Lección para el resto de esta auditoría: donde el comentario y el código discrepan, el código
+puede ser el correcto. Verificar antes de alinear uno con otro.
+
+### 33. El selector de día de Historia arranca en el futuro (**A**) — `HistoryPage.tsx:42`
+
+```ts
+const todayIso = now.toISOString().slice(0, 10)
+```
+
+`toISOString()` da **UTC**. Entre las 18:00 y medianoche hora local, la fecha UTC ya avanzó,
+así que la vista de Día abre **mañana** y el detalle diario pide un día que no ha ocurrido.
+Seis horas cada día. Es el mismo error de zona del hallazgo #23, ahora en el frontend.
+
+Contraste: `weekdayName()` (líneas 14-17) sí construye la fecha como local, correctamente.
+
+### 34. El CSV se descarga en métrico aunque la pantalla esté en imperial (**A**) — `HistoryPage.tsx:118-133`
+
+```ts
+header = 'fecha,temp_max,temp_min,temp_prom,...'
+body = (month?.days ?? []).map((d) => [d.date, d.high ?? '', ...].join(','))
+```
+
+Los valores salen **crudos**, sin pasar por `u.temp()`, y los encabezados no declaran unidad.
+Un usuario en imperial ve la tabla en °F y descarga un archivo en °C sin saberlo. Conviene
+exportar en la unidad activa con la unidad en el encabezado (`temp_max_C` / `temp_max_F`).
+
+### 35. La antigüedad del METAR siempre dice "hace 0 min" (**B**) — `AtmosphericProfile.tsx:83`
+
+```ts
+const ageMin = m.observed ? Math.max(0, Math.round((now.getTime() - new Date(m.observed).getTime()) / 60000)) : null
+```
+
+`metar.py:42` pasa `reportTime` tal cual, que llega como `"2026-08-04 21:00:00"` — UTC **sin
+zona y con espacio** en vez de `T`. `new Date()` lo interpreta como hora **local**, así que en
+CDMX el instante calculado queda 6 h en el futuro, la diferencia sale negativa y
+`Math.max(0, …)` la aplana a **0**. Resultado: un METAR de hace tres horas se anuncia como
+recién emitido.
+
+Aquí también existe el helper adecuado sin usar (`parseServerDate`, `weather.ts:104`).
+
+### 36. La gráfica multivariable ignora el periodo elegido (**B**) — `HistoryPage.tsx:189`
+
+Dentro de la vista de un mes o año concreto, `<MultiVariableChart mode={multiMode} />` consulta
+`/api/history?start=-24h` (o `-7d`) **relativo a ahora**. Así que bajo el encabezado
+"Marzo 2026" y el título "Resumen multivariable" se dibujan los últimos días de hoy. Hay que
+pasarle el rango del periodo o dejar claro en el título que son las últimas 24 h / 7 días.
+
+### 37. "Viento máximo" mezcla dos magnitudes (**B**) — `HistoryPage.tsx:164`
+
+```tsx
+{stat('Viento máximo', (s!.gust_max ?? s!.wind_max) ? ... )}
+```
+
+Usa la **ráfaga** si existe y si no la **velocidad sostenida máxima**, bajo la misma etiqueta,
+sin que el lector sepa cuál está viendo. `StatisticsPage` sí las distingue ("Viento" y
+"Ráfaga"). La tabla de la misma página (línea 220) muestra solo `gust_max` pero la rotula
+"Viento máx".
+
+### 38. Lluvia ausente como 0 en las gráficas de Historia (**C**) — `HistoryPage.tsx:75`
+
+```ts
+const rN = (v?: number | null) => (v == null ? 0 : +u.rain(v))
+```
+
+Las otras cuatro conversiones (`tN`, `wN`, `pN`, `rrN`) devuelven `null` correctamente; solo la
+lluvia convierte ausencia en cero, así que un día sin datos se grafica como día seco.
+
+### Otros de esta pasada
+
+- **`_owm` omite `dt`** (`publishers.py:152`): el comentario asume que el servidor usa "now",
+  pero la Stations API de OpenWeatherMap documenta `dt` como obligatorio. Si lo es, **todas
+  las publicaciones a OWM fallan** silenciosamente (solo queda un warning en el log).
+- **AWEKAS va por HTTP plano** (`_AWEKAS_URL`, línea 32) con el MD5 de la contraseña en la
+  query string: credenciales en claro por la red y en logs de proxies. Es limitación de
+  AWEKAS, pero conviene anotarlo en `docs/SEGURIDAD.md`.
+- **Caché de METAR de un solo slot** (`metar.py:15`): alternar entre dos aeropuertos invalida
+  el caché en cada cambio. El de TAF sí es un dict por estación.
+- **`metar.py:35`**: cuando no hay METAR devuelve `{}` sin cachear, así que un aeropuerto sin
+  datos se consulta en cada petición.
+- **`AtmosphericProfile.tsx:78`**: `night = hour < 7 || hour >= 19` con umbrales fijos y hora
+  del navegador, cuando el almanaque ya calcula amanecer y atardecer reales. La ilustración
+  puede mostrar noche estrellada con sol aún fuera.
+- **`AtmosphericProfile.tsx:64`**: un `setInterval` de 1 s re-renderiza el SVG completo (~30
+  edificios con ventanas, nubes, 60 estrellas) solo para mover el reloj.
+- **`AtmosphericProfile.tsx:8`**: `temp_c` se declara en la interfaz y no se usa.
+- **`HistoryPage.tsx:305`** admite años desde 2020 y `StatisticsPage.tsx:68` desde 2026.
+
+### Verificado como correcto en esta pasada
+
+- **`HistoryPage` sí convierte las unidades de sus gráficas** (`tN`/`wN`/`pN`/`rrN` con
+  `u.tempN`, líneas 72-76). Es la prueba de que el patrón correcto existe en el repo y que el
+  hallazgo #2 de `MultiVariableChart` es un descuido aislado.
+- **Visibilidad del METAR** (`MetarCard.tsx:122-126`): convierte SM → km o millas según el
+  sistema y maneja el caso en que la API devuelve un string (`"10+"`).
+- **Bases de nubes en pies AGL** sin convertir a métrico: correcto, es el estándar aeronáutico
+  universal. Igual los nudos de viento y el QNH en hPa.
+- **CWOP**: humedad de 100 % codificada como `h00`, presión en décimas de hPa, `...` para los
+  campos sin dato, timestamp Zulu. Todo conforme a la especificación APRS.
+- **Windy** en SI (m/s, Pa) y **WU/PWSWeather** en imperial: las conversiones de cada
+  protocolo son correctas, salvo el UV que nunca llega.
+- **`_due()`** marca el intento antes de enviar, de modo que un fallo no adelanta el siguiente
+  envío. Es intencional y está documentado.
 
 ---
 
