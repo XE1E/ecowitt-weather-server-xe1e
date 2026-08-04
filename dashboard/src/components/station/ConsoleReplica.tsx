@@ -3,6 +3,7 @@ import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
 import { deriveCondition, historicValue } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
+import { MeteoGlyph } from '../MeteoGlyph'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -254,17 +255,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</span>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="5" fill="#fbbf24" />
-              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <MeteoGlyph name="clear-day" size={47} color="#fbbf24" title="sol" />
           </div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <svg width="24" height="48" viewBox="0 0 24 48" fill="none">
-              <rect x="8" y="8" width="8" height="32" rx="4" stroke="#f97316" strokeWidth="2" fill="none" />
-              <circle cx="12" cy="36" r="6" fill="#f97316" />
-              <line x1="12" y1="14" x2="12" y2="28" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+            <MeteoGlyph name="thermometer" size={83} color="#f97316" title="temperatura" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
@@ -279,9 +273,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
             <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12.55a11 11 0 0114 0M8.5 16.05a6 6 0 017 0M12 20h.01" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <MeteoGlyph name="windsock" size={61} color="#22c55e" title="viento" />
           </div>
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
           <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
@@ -352,9 +344,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ color: 'var(--h)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-              <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#3b82f6" strokeWidth="2" fill="none" />
-            </svg>
+            <MeteoGlyph name="humidity" size={65} color="#3b82f6" title="humedad" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
@@ -368,13 +358,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell main">
           <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <path d="M8 8 L8 18" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-              <path d="M14 4 L14 14" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-              <path d="M20 10 L20 20" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-              <path d="M11 16 L11 24" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-              <path d="M17 18 L17 26" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <MeteoGlyph name="raindrops" size={58} color="#38bdf8" title="lluvia" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 7 }}>
             <span className="gr seg" style={{ fontSize: 46, fontWeight: 800 }}>
@@ -390,11 +374,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</div>
           <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <circle cx="14" cy="14" r="12" stroke="#a78bfa" strokeWidth="2" fill="none" />
-              <line x1="14" y1="14" x2="20" y2="8" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="14" cy="14" r="2" fill="#a78bfa" />
-            </svg>
+            <MeteoGlyph name="barometer" size={58} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
@@ -470,10 +450,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col remota">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="5" fill="#fbbf24" />
-              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <MeteoGlyph name="clear-day" size={47} color="#fbbf24" title="sol" />
           </div>
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>

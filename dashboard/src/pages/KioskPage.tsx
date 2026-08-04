@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Thermometer, Home, Antenna, CalendarDays, TrendingUp, Monitor } from 'lucide-react'
 import { MultiVariableChart } from '../components/station/MultiVariableChart'
 import { ConsoleReplica } from '../components/station/ConsoleReplica'
 import { useStationData } from '../station-data'
@@ -15,13 +16,19 @@ const pad = (n: number) => String(n).padStart(2, '0')
 // Pestañas de la barra inferior. El ORDEN y el número deben coincidir con
 // NUM_PAGES del firmware (que mapea el toque en la franja inferior a la pagina
 // segun la X). Pagina N -> TABS[N-1].
+//
+// Iconos de LUCIDE y no de Meteocons, aunque el resto del sitio use Meteocons
+// para lo meteorológico: esta barra es NAVEGACIÓN, y 4 de las 6 pestañas son
+// conceptos que Meteocons no cubre (interior, calendario, gráfica, pantalla).
+// Mezclar 2 de una galería con 4 de otra en la misma fila se vería peor que
+// resolverla entera con una sola. Ver docs/CONVENCIONES.md.
 const TABS = [
-  { icon: '☀️', label: 'Estación' },
-  { icon: '📍', label: 'Local' },
-  { icon: '🏠', label: 'Sensores' },
-  { icon: '📅', label: '7 días' },
-  { icon: '📈', label: '48 h' },
-  { icon: '🖥️', label: 'Consola' },
+  { Icon: Thermometer, label: 'Estación' },
+  { Icon: Home, label: 'Local' },
+  { Icon: Antenna, label: 'Sensores' },
+  { Icon: CalendarDays, label: '7 días' },
+  { Icon: TrendingUp, label: '48 h' },
+  { Icon: Monitor, label: 'Consola' },
 ]
 
 interface Imeca { available: boolean; imeca?: number; category?: string; color?: string }
@@ -122,7 +129,10 @@ export function KioskPage() {
               background: active ? 'rgba(56,189,248,0.15)' : 'transparent',
               borderTop: active ? '3px solid #38bdf8' : '3px solid transparent',
             }}>
-            <span style={{ fontSize: 24, opacity: active ? 1 : 0.55, lineHeight: 1 }}>{t.icon}</span>
+            {/* 30 px: la barra mide 64 y hay que dejar sitio a la etiqueta. El
+                trazo va a 2.2 para que aguante el reescalado del JPEG del display. */}
+            <t.Icon size={30} strokeWidth={2.2}
+              color={active ? '#38bdf8' : '#7c8b9c'} style={{ opacity: active ? 1 : 0.8 }} />
             <span className="text-[12px] mt-1" style={{ color: active ? '#e2e8f0' : '#64748b' }}>{t.label}</span>
           </div>
         )
