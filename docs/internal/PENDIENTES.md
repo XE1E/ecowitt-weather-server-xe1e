@@ -130,12 +130,11 @@ usa 4. Verificado en producción el 2026-08-04:
 | `rain_monthly` | 7.3 | mes |
 | `rain_yearly` / `rain_total` | 75.4 | año |
 
-- [ ] Decidir **cuáles 3** van (probable: tasa + evento + hoy, o tasa + hoy + mes) y
-      rediseñar la celda: hoy son 2 números grandes centrados y con 3 hay que
-      repartir el espacio sin que se encimen, cuidando que el ancho de celda es
-      ~339 px y la fuente DSEG7 es ancha.
-- [ ] Aplicar el mismo criterio al tab **Consola** del dashboard: es el MISMO
-      componente (`ConsoleReplica`), así que se arregla en un solo lugar.
+- [x] **Hecho el 2026-08-04.** Van `rain_event` (AHORA), `rain_rate` (TASA) y
+      `rain_daily` (DÍA), en tres columnas de 30 px con etiqueta cada una: sin
+      etiqueta, tres cifras de lluvia son indistinguibles entre sí.
+- [x] El tab **Consola** del dashboard quedó igual sin trabajo extra: es el MISMO
+      componente (`ConsoleReplica`), así que se arregló en un solo lugar.
 
 ## 8. Revisiones detectadas el 2026-08-03
 - [ ] **SMN sin datos — es caída de CONAGUA, no nuestra.** `/api/smn` y
