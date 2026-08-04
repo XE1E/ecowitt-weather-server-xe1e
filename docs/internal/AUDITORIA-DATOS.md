@@ -36,6 +36,22 @@ Severidades:
 | 16 | Fuera `connectNulls`: los huecos de datos se ven como huecos | `MultiVariableChart.tsx` |
 | 19 | Ausencia → `--` en lugar de `0` (kiosco, Inicio, MiniStats, Precipitación) | 4 componentes |
 | 13 | "Sin lluvia en N h" derivado de la ventana real, no un "24h" fijo | `PrecipitationCard.tsx` |
+| 5 + 56 | Grados-día y ET₀ convertidos y con unidad variable (13 sitios en 2 páginas) | `units.tsx`, `StatisticsPage.tsx`, `ClimatePage.tsx` |
+| 34 | El CSV de Historia sale en la unidad de la pantalla, con la unidad en el encabezado | `HistoryPage.tsx` |
+| 38 | Lluvia ausente ya no se grafica como 0 en Historia | `HistoryPage.tsx`, `HistoryCharts.tsx` |
+| 47a | `WindCard`: sin dirección no se dibuja la aguja, y Beaufort muestra `--` | `WindCard.tsx` |
+| 47b | `UvSolarCard` y `ConsoleReplica`: UV, radiación y humedad muestran `--` | 2 componentes |
+| 47c | `ClimatePage`: el año en curso se calcula, ya no es el literal 2026 | `ClimatePage.tsx` |
+
+Detalle de #5: se añadió `dTempN` a `units.tsx`, que convierte una **diferencia** de temperatura
+(×9/5 **sin** el +32). Era la pieza que faltaba: los grados-día son un delta acumulado, y usar
+`temp()` para ellos habría dado 41 °F donde corresponden 9 °F. Verificado que la proporción
+`hdd/cdd` se conserva exacta al convertir, que es la prueba de que se comporta como delta.
+La base también se muestra ahora en la unidad activa (18.3 °C → 64.9 °F, la de NOAA).
+
+Detalle de #47a: la aguja de la brújula **no se dibuja** cuando falta la dirección, en vez de
+apuntar a 0°. Es el caso donde el `?? 0` era más engañoso: 0° es Norte, un rumbo perfectamente
+válido, así que la ausencia era indistinguible de un dato real.
 
 Detalle de #2: `data` se mantiene en métrico y un `useMemo` lo convierte según el sistema, así
 que cambiar de unidades no vuelve a pedir datos. Se añadieron `rainN` y `rateN` a `units.tsx`,
