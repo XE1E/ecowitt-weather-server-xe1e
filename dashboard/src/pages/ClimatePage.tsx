@@ -237,7 +237,10 @@ export function ClimatePage() {
                         {/* La lluvia va como fondo (relleno lavado, no bloque saturado) para que
                             las líneas de temperatura se lean encima. Los meses incompletos van
                             con trama. */}
-                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" radius={[3, 3, 0, 0]}>
+                        {/* maxBarSize: con pocos meses cargados Recharts reparte todo el ancho
+                            entre las categorías que haya, y con 2 meses la barra salía de ~700 px.
+                            Con el tope se ve como una barra de mes aunque falte casi todo el año. */}
+                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" radius={[3, 3, 0, 0]} maxBarSize={56}>
                           {climo.map((c) => (
                             <Cell key={c.mes} fill={c.parcial ? 'url(#climoParcial)' : '#38bdf8'}
                               fillOpacity={c.parcial ? 1 : 0.3} />
