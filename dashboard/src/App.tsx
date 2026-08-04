@@ -13,6 +13,7 @@ import { StatsSummary } from './components/StatsSummary'
 import { WeatherData, DailyStats, HistoryRow } from './types'
 import { deriveCondition, relativeTime, isStale } from './weather'
 import { fetchForecast, ForecastResult } from './forecast'
+import { useUnits } from './units'
 
 const API_URL = '/api/current'
 const STATS_URL = '/api/stats/daily'
@@ -21,6 +22,7 @@ const REFRESH_INTERVAL = 60000 // 60 seconds
 const FORECAST_INTERVAL = 30 * 60000 // 30 minutes
 
 function App() {
+  const units = useUnits()
   const [data, setData] = useState<WeatherData | null>(null)
   const [stats, setStats] = useState<DailyStats | null>(null)
   const [history, setHistory] = useState<HistoryRow[]>([])
@@ -118,6 +120,16 @@ function App() {
               <span>Actualizado {relativeTime(data.received_at)}</span>
               <button onClick={fetchData} className="text-blue-400 hover:text-blue-300">
                 <RefreshCw className="w-4 h-4" />
+              </button>
+              {/* La vista clásica comparte el `units` de /pro (mismo localStorage),
+                  así que sin este botón quedaba atada a lo elegido allá sin poder
+                  cambiarlo, y sus tarjetas y gráfica ni siquiera lo respetaban. */}
+              <button
+                onClick={units.toggle}
+                title="Cambiar unidades"
+                className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1 tabular-nums"
+              >
+                {units.system === 'metric' ? '°C · km/h' : '°F · mph'}
               </button>
               <a href="/pro" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 App completa →

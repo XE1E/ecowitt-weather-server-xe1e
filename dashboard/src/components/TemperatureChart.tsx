@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'recharts'
 import { HistoryData } from '../types'
+import { useUnits, type Units } from '../units'
 
 const REFRESH_INTERVAL = 60000 // 60 seconds, matches the rest of the dashboard
 
@@ -22,10 +23,18 @@ const PERIODS: { key: Period; label: string; start: string }[] = [
   { key: '30d', label: '30 d', start: '-30d' },
 ]
 
-const METRICS: Record<MetricKey, { label: string; unit: string; color: string; field: keyof HistoryData }> = {
-  temp: { label: 'Temperatura', unit: '°C', color: '#f97316', field: 'temperature_outdoor' },
-  pressure: { label: 'Presión', unit: 'hPa', color: '#a78bfa', field: 'pressure_relative' },
-  wind: { label: 'Viento', unit: 'km/h', color: '#22c55e', field: 'wind_speed' },
+// Unidad y conversión salen del sistema activo, no de un literal: esta gráfica
+// vive en la vista clásica, que también tiene selector métrico/imperial.
+const METRICS: Record<MetricKey, {
+  label: string; color: string; field: keyof HistoryData
+  unit: (u: Units) => string; conv: (u: Units, v: number) => number
+}> = {
+  temp: { label: 'Temperatura', color: '#f97316', field: 'temperature_outdoor',
+    unit: (u) => u.tempU, conv: (u, v) => u.tempN(v) },
+  pressure: { label: 'Presión', color: '#a78bfa', field: 'pressure_relative',
+    unit: (u) => u.pressU, conv: (u, v) => u.pressN(v) },
+  wind: { label: 'Viento', color: '#22c55e', field: 'wind_speed',
+    unit: (u) => u.windU, conv: (u, v) => u.windN(v) },
 }
 
 interface ChartPoint {
@@ -35,6 +44,7 @@ interface ChartPoint {
 }
 
 export function TemperatureChart() {
+  const u = useUnits()
   const [data, setData] = useState<ChartPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('24h')
@@ -77,6 +87,15 @@ export function TemperatureChart() {
   }, [period, metric])
 
   const m = METRICS[metric]
+  const unit = m.unit(u)
+
+  // `data` guarda los valores MÉTRICOS que llegan del API; la conversión ocurre
+  // aquí, así que cambiar de unidades no vuelve a pedir el histórico.
+  const shown = useMemo(
+    () => data.map((p) => ({ ...p, value: p.value == null ? null : m.conv(u, p.value) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, u.system, metric]
+  )
 
   const btn = (active: boolean) =>
     `px-3 py-1 rounded-lg text-sm transition ${
@@ -113,10 +132,10 @@ export function TemperatureChart() {
         <div className="h-80 md:h-64 overflow-x-auto chart-scroll">
           <div style={{ minWidth: data.length > 30 ? `${Math.max(500, data.length * 10)}px` : '500px', height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+              <LineChart data={shown} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="time" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} interval="preserveStartEnd" />
-              <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={m.unit} />
+              <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={unit} />
               <YAxis yAxisId="humidity" orientation="right" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} unit="%" />
               <Tooltip
                 contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
@@ -124,7 +143,7 @@ export function TemperatureChart() {
                 cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }}
               />
               <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${m.unit})`} />
+                <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${unit})`} />
                 <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#3b82f6" strokeWidth={2} dot={false} name="Humedad (%)" />
               </LineChart>
             </ResponsiveContainer>
