@@ -320,12 +320,22 @@ curl -s https://clima.xe1e.net/api/svitrix | jq '.current | {temp_c, uv, solar_r
 | Field | Unit | Description |
 |-------|------|-------------|
 | `rain_rate` | mm/h | Tasa de lluvia actual |
-| `rain_event` | mm | Lluvia del evento actual |
+| `rain_event` | mm | Lluvia del evento actual — **no se reinicia a medianoche**, ver nota abajo |
 | `rain_hourly` | mm | Lluvia última hora |
 | `rain_daily` | mm | Lluvia del día |
 | `rain_weekly` | mm | Lluvia de la semana |
 | `rain_monthly` | mm | Lluvia del mes |
 | `rain_yearly` | mm | Lluvia del año |
+
+> **`rain_event` lo reinicia la estación, no el servidor.** El receptor sólo traduce
+> `eventrainin` de pulgadas a mm (`parser.py` → `converter.py`); no hay lógica de
+> reinicio en el servidor. Consecuencia práctica: el evento **sobrevive al cambio de
+> día**, así que es normal ver `rain_event` en 6.8 con `rain_daily` en 0.0 y
+> `rain_rate` en 0.0 — el chubasco fue anoche. Medido sobre 14 días del histórico de
+> producción (2026-08-04): 6 reinicios, tres de ellos a 22.9–24.3 h de haber dejado de
+> llover, lo que apunta a una regla de ~24 h sin lluvia, y todos en hora en punto, así
+> que el gateway lo evalúa por tic horario. Por eso la consola rotula esa cifra
+> **EVENTO** y no «AHORA».
 | `rain_total` | mm | Lluvia total acumulada |
 
 ### Solar Fields

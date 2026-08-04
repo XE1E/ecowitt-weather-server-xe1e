@@ -432,6 +432,7 @@
 
       <h3>Consola</h3>
       <p>Una <strong>réplica de la consola física Ecowitt</strong>, con su tipografía de siete segmentos y su rejilla de celdas. Es exactamente la vista que se despliega en la pantalla del kiosco, así que sirve para verla desde el navegador. Todo lo que muestra son los mismos datos que el resto del sitio, sólo presentados como una consola de estación.</p>
+      <p>Dos celdas merecen una lectura con calma. La de <strong>viento</strong> trae el rumbo en grados al centro de un óvalo y una flecha que recorre su borde apuntando de dónde viene el aire, con el promedio a la izquierda y la ráfaga a la derecha. La de <strong>lluvia</strong> trae los tres números que se explican más arriba, cada uno rotulado: <strong>EVENTO</strong> (el chubasco, que no se reinicia a medianoche), <strong>TASA</strong> (la intensidad de ahora, en mm/h) y <strong>DÍA</strong> (lo caído desde las 00:00).</p>
 
       <h3>Vista clásica</h3>
       <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas. Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>
@@ -496,6 +497,7 @@
         <li><strong>Intensidad</strong> (mm/h): qué tan fuerte llueve <em>ahora mismo</em>. Es una tasa, como los km/h del coche: 20 mm/h no significa que caerán 20 mm, significa que <em>a ese ritmo</em> caerían en una hora.</li>
         <li><strong>Acumulado</strong> (mm): cuánta agua cayó de verdad en el evento, el día, el mes o el año.</li>
       </ul>
+      <p><strong>Cuidado con el «evento», que es el dato que más confunde.</strong> El evento es el chubasco, y <em>no</em> se reinicia a medianoche: puede verse el evento en 6.8 mm junto al día en 0.0 mm, y las dos cifras son correctas — esos 6.8 mm cayeron anoche, el contador del día arrancó de cero a las 00:00 y el del evento sigue abierto. Quien lo cierra es la estación, no este servidor, y por lo medido tarda alrededor de <strong>24 horas sin llover</strong> en hacerlo. Así que si el evento trae un número y la intensidad está en 0.0 mm/h, no está lloviendo: es la memoria del último chubasco.</p>
       <p>Un milímetro de lluvia es un litro por metro cuadrado. Y para hacerse una idea: hasta ~2.5 mm/h es lluvia ligera, 2.5-10 moderada, 10-50 fuerte, y por encima de 50 mm/h es un aguacero de los que inundan.</p>
 
       <h3>UV y radiación solar</h3>
@@ -626,12 +628,12 @@
         <table>
           <thead><tr><th>#</th><th>Página</th><th>Qué muestra</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>☀️ Estación</td><td>Temperatura grande, tarjetas de resumen y el pronóstico de las próximas horas</td></tr>
-            <tr><td>2</td><td>📍 Local</td><td>El sensor propio de la pantalla (temperatura, humedad y presión) con sus mínimas y máximas del día</td></tr>
-            <tr><td>3</td><td>🏠 Sensores</td><td>Interior, jardín y estación remota, uno al lado del otro</td></tr>
-            <tr><td>4</td><td>📅 7 días</td><td>Pronóstico de la semana</td></tr>
-            <tr><td>5</td><td>📈 48 h</td><td>Gráfica multivariable de las últimas 48 horas: temperatura, presión, lluvia, viento y humedad juntas</td></tr>
-            <tr><td>6</td><td>🖥️ Consola</td><td>La réplica de la consola física, a pantalla completa y sin barra. Tócala en cualquier parte para volver a la página 1</td></tr>
+            <tr><td>1</td><td>Estación</td><td>Temperatura grande, tarjetas de resumen y el pronóstico de las próximas horas</td></tr>
+            <tr><td>2</td><td>Local</td><td>El sensor propio de la pantalla (temperatura, humedad y presión) con sus mínimas y máximas del día</td></tr>
+            <tr><td>3</td><td>Sensores</td><td>Interior, jardín y estación remota, uno al lado del otro</td></tr>
+            <tr><td>4</td><td>7 días</td><td>Pronóstico de la semana</td></tr>
+            <tr><td>5</td><td>48 h</td><td>Gráfica multivariable de las últimas 48 horas: temperatura, presión, lluvia, viento y humedad juntas</td></tr>
+            <tr><td>6</td><td>Consola</td><td>La réplica de la consola física, a pantalla completa y sin barra. Tócala en cualquier parte para volver a la página 1</td></tr>
           </tbody>
         </table>
       </div>
