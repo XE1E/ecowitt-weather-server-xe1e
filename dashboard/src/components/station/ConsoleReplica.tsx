@@ -372,19 +372,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
                         gap: 2, marginTop: -6, paddingLeft: 46 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>AHORA</div>
-              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
-                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>MOMENTO</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
                 {decNum(u.rain(data?.rain_event))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>HOY</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>RATE</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>DÍA</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
                 {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
