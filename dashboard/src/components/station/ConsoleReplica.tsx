@@ -273,9 +273,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
         <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}>Estación Clima XE1E</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-            <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VIENTO</span>
-            <MeteoGlyph name="windsock" size={61} color="#22c55e" title="viento" />
+          <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1, marginTop: 2 }}>VIENTO</div>
+          {/* La manga va ABSOLUTA: dentro del flex hacía crecer esta fila al alto del
+              icono, y como el compás de abajo es flex:1, le robaba ese alto y el
+              óvalo salía más chico. Mismo caso que el sol de EXT y REMOTA. */}
+          <div style={{ position: 'absolute', top: 30, right: 10 }}>
+            <MeteoGlyph name="windsock" size={52} color="#22c55e" title="viento" />
           </div>
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
           <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
