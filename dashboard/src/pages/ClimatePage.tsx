@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { CalendarDays } from 'lucide-react'
 import { useUnits } from '../units'
@@ -140,13 +140,28 @@ export function ClimatePage() {
   }
 
   // ── Climograma: barras de lluvia + líneas de temperatura por mes ──
-  const climo = (yearData?.months ?? []).map((m) => ({
-    mes: MES[m.month - 1],
-    lluvia: m.rain_total != null ? Number(u.rain(m.rain_total)) : null,
-    tmed: m.mean_temp != null ? Number(u.temp(m.mean_temp)) : null,
-    tmax: m.high ? Number(u.temp(m.high.value)) : null,
-    tmin: m.low ? Number(u.temp(m.low.value)) : null,
-  }))
+  //
+  // Un mes con menos días medidos que días de calendario NO es comparable con el
+  // resto: la estación arrancó el 2026-07-19, así que ese julio trae 13 de 31 días
+  // y su total de lluvia se lee como si fuera el mes completo. Se marcan con una
+  // trama diagonal en vez de ocultarlos, para que se vea que existen pero que aún
+  // no cuentan como mes.
+  const diasDelMes = (y: number, mes1a12: number) => new Date(y, mes1a12, 0).getDate()
+  const climo = (yearData?.months ?? []).map((m) => {
+    const total = diasDelMes(year, m.month)
+    const dias = m.days ?? 0
+    return {
+      mes: MES[m.month - 1],
+      dias,
+      totalDias: total,
+      parcial: dias > 0 && dias < total,
+      lluvia: m.rain_total != null ? Number(u.rain(m.rain_total)) : null,
+      tmed: m.mean_temp != null ? Number(u.temp(m.mean_temp)) : null,
+      tmax: m.high ? Number(u.temp(m.high.value)) : null,
+      tmin: m.low ? Number(u.temp(m.low.value)) : null,
+    }
+  })
+  const hayParciales = climo.some((c) => c.parcial)
   const tip = {
     contentStyle: { backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 },
     labelStyle: { color: 'var(--ink, #e2e8f0)', fontWeight: 600 },
@@ -186,25 +201,81 @@ export function ClimatePage() {
                 <div className="h-80 md:h-72 overflow-x-auto chart-scroll">
                   <div style={{ minWidth: '400px', height: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={climo} margin={{ top: 5, right: 6, left: -6, bottom: 0 }}>
+                      {/* top: 22 deja sitio para las etiquetas de unidad de los dos ejes,
+                          que antes se encimaban con el tick más alto. */}
+                      <ComposedChart data={climo} margin={{ top: 22, right: 6, left: -6, bottom: 0 }}>
+                        <defs>
+                          {/* Trama para los meses incompletos */}
+                          <pattern id="climoParcial" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                            <rect width="6" height="6" fill="#38bdf8" fillOpacity="0.12" />
+                            <line x1="0" y1="0" x2="0" y2="6" stroke="#38bdf8" strokeOpacity="0.75" strokeWidth="2.5" />
+                          </pattern>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                         <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                        {/* Etiquetas de eje HORIZONTALES arriba: la versión rotada
+                            (angle -90 / insideLeft) se encimaba con los números y salía cortada. */}
                         <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44}
-                          label={{ value: `Lluvia (${u.rainU})`, angle: -90, position: 'insideLeft', fill: '#38bdf8', fontSize: 11 }} />
-                        <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
+                          label={{ value: u.rainU, position: 'top', offset: 10, fill: '#38bdf8', fontSize: 11 }} />
+                        <YAxis yAxisId="t" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40}
+                          label={{ value: u.tempU, position: 'top', offset: 10, fill: '#f97316', fontSize: 11 }} />
                         <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip}
-                          formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]} />
-                        <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" fill="#38bdf8" radius={[3, 3, 0, 0]} />
-                        <Line yAxisId="t" type="monotone" dataKey="tmax" name="T. máxima" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
-                        <Line yAxisId="t" type="monotone" dataKey="tmed" name="T. media" stroke="#94a3b8" strokeWidth={2} dot={false} connectNulls />
-                        <Line yAxisId="t" type="monotone" dataKey="tmin" name="T. mínima" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                          formatter={(v: number, n: string) => [n === 'Lluvia' ? `${v} ${u.rainU}` : `${v} ${u.tempU}`, n]}
+                          labelFormatter={(mes: string) => {
+                            const c = climo.find((x) => x.mes === mes)
+                            return c?.parcial ? `${mes} — incompleto: ${c.dias} de ${c.totalDias} días` : mes
+                          }} />
+                        {/* Leyenda declarada a mano: las líneas del halo comparten dataKey con
+                            las reales y, aunque llevan legendType="none", esta versión de
+                            Recharts las seguía listando como "tmax"/"tmed"/"tmin". */}
+                        <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" payload={[
+                          { value: 'Lluvia', type: 'circle', id: 'lluvia', color: '#38bdf8' },
+                          { value: 'T. máxima', type: 'circle', id: 'tmax', color: '#f97316' },
+                          { value: 'T. media', type: 'circle', id: 'tmed', color: '#94a3b8' },
+                          { value: 'T. mínima', type: 'circle', id: 'tmin', color: '#3b82f6' },
+                        ]} />
+                        {/* La lluvia va como fondo (relleno lavado, no bloque saturado) para que
+                            las líneas de temperatura se lean encima. Los meses incompletos van
+                            con trama. */}
+                        <Bar yAxisId="r" dataKey="lluvia" name="Lluvia" radius={[3, 3, 0, 0]}>
+                          {climo.map((c) => (
+                            <Cell key={c.mes} fill={c.parcial ? 'url(#climoParcial)' : '#38bdf8'}
+                              fillOpacity={c.parcial ? 1 : 0.3} />
+                          ))}
+                        </Bar>
+                        {/* Cada línea se dibuja dos veces: primero un trazo grueso del color de la
+                            tarjeta (halo) y encima la línea real, para que no se pierda al cruzar
+                            una barra u otra línea. El halo se excluye de la leyenda. */}
+                        {([
+                          { key: 'tmax', name: 'T. máxima', color: '#f97316' },
+                          { key: 'tmed', name: 'T. media', color: '#94a3b8' },
+                          // blue-500 y NO sky-400: sky-400 es el color de la lluvia, así que la
+                          // mínima quedaba del mismo color exacto que las barras.
+                          { key: 'tmin', name: 'T. mínima', color: '#3b82f6' },
+                        ] as const).flatMap((s) => [
+                          // legendType + tooltipType en 'none': el halo no es una serie,
+                          // así que no debe aparecer ni en la leyenda ni en el tooltip
+                          // (sin tooltipType cada temperatura salía duplicada).
+                          <Line key={`${s.key}-halo`} yAxisId="t" type="monotone" dataKey={s.key}
+                            stroke="var(--surface, #0f1a2a)" strokeWidth={5} dot={false} connectNulls
+                            legendType="none" tooltipType="none" isAnimationActive={false} />,
+                          <Line key={s.key} yAxisId="t" type="monotone" dataKey={s.key} name={s.name}
+                            stroke={s.color} strokeWidth={2} dot={false} connectNulls />,
+                        ])}
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
                   Barras: precipitación mensual. Líneas: temperatura media, máxima y mínima del mes.
+                  {hayParciales && (
+                    <>
+                      {' '}Las barras con <span className="text-sky-300">trama diagonal</span> son
+                      meses <strong className="text-slate-400">incompletos</strong> —la estación no
+                      midió todos sus días—, así que su total de lluvia no es comparable con un mes
+                      entero. Pasa el cursor para ver cuántos días trae cada uno.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
