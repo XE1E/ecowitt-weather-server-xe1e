@@ -1673,7 +1673,18 @@ async def get_smn_forecast(ides: str = "9", idmun: str = "14", hourly: int = 1):
 async def get_svitrix():
     """Dato real de la estación con forma WeatherAPI `current.json` (+ solar_radiation)
     para el firmware SVITRIX del reloj Ulanzi. Apunta la URL del reloj aquí."""
-    data = latest_by_station.get(None) or {}
+    data = latest_by_station.get(None)
+    # Sin NINGUNA lectura (arranque en frío sin histórico que repoblar) no se puede
+    # servir un `current`: con temp_c/humidity/pressure_mb en null, el firmware los
+    # lee como 0.0 y pinta "0 °C / 0 % / 0 mb" como si fueran medidas reales.
+    #
+    # Se responde 503 SOLO en ese caso, que es transitorio. Si hay una lectura
+    # aunque sea vieja se manda tal cual: el reloj reinicia el ESP32 tras
+    # ~15 min sin un fetch con HTTP 200 (DataFetcher.cpp, staleLimit), así que
+    # devolver error mientras la estación está caída lo dejaría en ciclo de
+    # reinicios — peor que mostrar el último valor conocido.
+    if not data or data.get("temperature_outdoor") is None:
+        raise HTTPException(status_code=503, detail="Sin lectura de la estación todavía")
     lat = getattr(settings, "cwop_latitude", 19.380359)
     lon = getattr(settings, "cwop_longitude", -99.174564)
     aq = im = None
@@ -1682,7 +1693,7 @@ async def get_svitrix():
     except Exception as e:
         logger.error(f"svitrix aq: {e}")
     try:
-        im = await imeca.get_imeca(lat, lon)
+        im = await imeca.get_imeca(lat, lon, pressure_hpa=data.get("pressure_absolute"))
     except Exception as e:
         logger.error(f"svitrix imeca: {e}")
     return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon)
@@ -1929,11 +1940,20 @@ async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _station_pressure_hpa() -> Optional[float]:
+    """
+    Presión ABSOLUTA de la principal (hPa), para convertir µg/m³ → ppm en el IMECA
+    con el volumen molar del sitio. A 2240 m la diferencia contra 1 atm cambia el
+    índice de categoría (ver imeca.molar_volume). None => se supone nivel del mar.
+    """
+    return (latest_by_station.get(None) or {}).get("pressure_absolute")
+
+
 @app.get("/api/airquality/imeca")
 async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
     """IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo."""
     try:
-        return await imeca.get_imeca(lat, lon)
+        return await imeca.get_imeca(lat, lon, pressure_hpa=_station_pressure_hpa())
     except Exception as e:
         logger.error(f"Error getting IMECA: {e}")
         raise HTTPException(status_code=500, detail=str(e))

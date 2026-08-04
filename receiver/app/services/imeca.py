@@ -69,9 +69,32 @@ RECS = {
 }
 
 
-def _ugm3_to_ppm(v: float, mw: float) -> float:
-    """µg/m³ → ppm a 25 °C y 1 atm (volumen molar 24.45 L/mol)."""
-    return v * 24.45 / (mw * 1000.0)
+# Constante de los gases en L·hPa/(mol·K), para calcular el volumen molar a la
+# presión REAL de la estación.
+R_L_HPA = 83.14472
+T_REF_C = 25.0        # temperatura de referencia de la norma
+P_STD_HPA = 1013.25   # 1 atm, la presión a la que 24.45 L/mol sería correcto
+
+
+def molar_volume(pressure_hpa: Optional[float] = None, temp_c: float = T_REF_C) -> float:
+    """
+    Volumen molar del gas ideal (L/mol) a la presión dada (hPa) y `temp_c`.
+
+    Importa mucho en la CDMX: la norma expresa O3/NO2/SO2/CO en **ppm**, y las ppm
+    son una fracción de VOLUMEN, así que convertir µg/m³ → ppm depende de la
+    presión del sitio. A 1 atm el volumen molar es 24.45 L/mol, pero a los ~780 hPa
+    de la CDMX es ~31.8 L/mol. Usar 24.45 aquí subestima las ppm ~28 %, y con ellas
+    el índice: 150 µg/m³ de ozono daban IMECA 62 ("Regular") en vez de 103 ("Mala").
+
+    Si no se conoce la presión se cae a 1 atm, que es lo correcto a nivel del mar.
+    """
+    p = pressure_hpa if (pressure_hpa and pressure_hpa > 0) else P_STD_HPA
+    return R_L_HPA * (273.15 + temp_c) / p
+
+
+def _ugm3_to_ppm(v: float, mw: float, vm: float) -> float:
+    """µg/m³ → ppm con el volumen molar `vm` (L/mol) del sitio."""
+    return v * vm / (mw * 1000.0)
 
 
 def _sub_index(conc: Optional[float], table: List[BP]) -> Optional[int]:
@@ -98,14 +121,21 @@ def category(idx: int) -> Tuple[str, str]:
     return "Extremadamente mala", "#a21caf"
 
 
-def compute_imeca(conc_ugm3: Dict[str, Optional[float]]) -> Dict[str, Any]:
-    """Recibe concentraciones en µg/m³ (claves Open-Meteo) y devuelve el IMECA."""
+def compute_imeca(conc_ugm3: Dict[str, Optional[float]],
+                  pressure_hpa: Optional[float] = None) -> Dict[str, Any]:
+    """
+    Recibe concentraciones en µg/m³ (claves Open-Meteo) y devuelve el IMECA.
+
+    `pressure_hpa`: presión ABSOLUTA del sitio, para convertir a ppm con el volumen
+    molar real (ver `molar_volume`). Omitirla equivale a suponer nivel del mar.
+    """
+    vm = molar_volume(pressure_hpa)
     subs = []
     for label, key, mw, table in POLLUTANTS:
         c = conc_ugm3.get(key)
         if c is None:
             continue
-        native = c if mw is None else _ugm3_to_ppm(c, mw)
+        native = c if mw is None else _ugm3_to_ppm(c, mw, vm)
         idx = _sub_index(native, table)
         if idx is not None:
             subs.append({"pollutant": label, "conc": round(c, 1), "index": idx})
@@ -125,8 +155,16 @@ def compute_imeca(conc_ugm3: Dict[str, Optional[float]]) -> Dict[str, Any]:
     }
 
 
-async def get_imeca(lat: float, lon: float) -> Dict[str, Any]:
-    key = f"{lat:.3f},{lon:.3f}"
+async def get_imeca(lat: float, lon: float,
+                    pressure_hpa: Optional[float] = None) -> Dict[str, Any]:
+    """
+    IMECA estimado para la ubicación. `pressure_hpa` es la presión ABSOLUTA de la
+    estación; se usa para el volumen molar (ver `molar_volume`) y se redondea a la
+    decena en la clave de caché, porque una variación de pocos hPa no mueve el
+    índice y no vale la pena invalidar la entrada por ella.
+    """
+    p_key = round(pressure_hpa / 10.0) * 10 if pressure_hpa else 0
+    key = f"{lat:.3f},{lon:.3f},{p_key}"
     now = time.time()
     cached = _CACHE.get(key)
     if cached and (now - cached["ts"]) < _TTL:
@@ -148,10 +186,12 @@ async def get_imeca(lat: float, lon: float) -> Dict[str, Any]:
         return cached["data"] if cached else {"available": False, "error": "fetch_failed"}
 
     cur = j.get("current", {})
-    data = compute_imeca(cur)
+    data = compute_imeca(cur, pressure_hpa)
     if data.get("available"):
         data["time"] = cur.get("time")
         data["source"] = "Open-Meteo (modelo CAMS)"
+        # Presión usada para el volumen molar: hace auditable el cálculo de ppm.
+        data["pressure_hpa"] = round(pressure_hpa, 1) if pressure_hpa else None
 
     # Pronóstico por horas (IMECA calculado hora por hora, próximas ~24 h)
     hourly = j.get("hourly", {})
@@ -165,7 +205,7 @@ async def get_imeca(lat: float, lon: float) -> Dict[str, Any]:
                 continue
             started = True
         row = {k: (hourly.get(k, [None] * len(times))[i]) for _, k, _, _ in POLLUTANTS}
-        r = compute_imeca(row)
+        r = compute_imeca(row, pressure_hpa)
         if r.get("available"):
             forecast.append({"t": t, "imeca": r["imeca"], "category": r["category"]})
         if len(forecast) >= 24:

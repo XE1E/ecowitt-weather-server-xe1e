@@ -219,14 +219,6 @@ export function KioskPage() {
         <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#3b82f6" strokeWidth="2" fill="#3b82f6" fillOpacity="0.3" />
       </svg>
     )
-    const PressIcon = () => (
-      <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="14" r="12" stroke="#a78bfa" strokeWidth="2" fill="none" />
-        <line x1="14" y1="14" x2="20" y2="8" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx="14" cy="14" r="3" fill="#a78bfa" />
-      </svg>
-    )
-
     const BigSensorCard = ({ title, icon, values }: {
       title: string
       icon: string
@@ -244,6 +236,58 @@ export function KioskPage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    )
+
+    // Estación remota: DOS sensores distintos, y hay que rotularlos como tales.
+    // El WN32 conectado al GW1100 es el EXTERIOR (llega como temperature_outdoor);
+    // el sensor integrado del GW1100 es el INTERIOR (temperature_indoor). Antes se
+    // usaba el integrado como exterior mediante la trampa `treat_indoor_as_outdoor`
+    // del servidor; al retirarla, leer solo `_indoor` dejaría el exterior invisible.
+    // Mismo criterio que <RemoteStationCard> en el dashboard.
+    const RemoteCard = () => (
+      <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col p-5">
+        <p className="text-[28px] text-slate-200 font-semibold text-center mb-3">📡 Remota</p>
+
+        <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Exterior · WN32</p>
+        <div className="flex items-center justify-around mb-4">
+          <div className="text-center">
+            <p className="text-[46px] leading-none font-bold" style={{ color: '#fbbf24' }}>
+              {remote?.temperature_outdoor != null ? `${u.temp(remote.temperature_outdoor)}°` : '--'}
+            </p>
+            <p className="text-[15px] text-slate-400 mt-1">Temp</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[46px] leading-none font-bold" style={{ color: '#22d3ee' }}>
+              {remote?.humidity_outdoor != null ? `${remote.humidity_outdoor.toFixed(0)}%` : '--'}
+            </p>
+            <p className="text-[15px] text-slate-400 mt-1">Humedad</p>
+          </div>
+        </div>
+
+        <div className="border-t border-white/10 pt-3">
+          <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Interior · GW1100</p>
+          <div className="flex items-center justify-around">
+            <div className="text-center">
+              <p className="text-[34px] leading-none font-bold" style={{ color: '#f97316' }}>
+                {remote?.temperature_indoor != null ? `${u.temp(remote.temperature_indoor)}°` : '--'}
+              </p>
+              <p className="text-[13px] text-slate-400 mt-1">Temp</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[34px] leading-none font-bold" style={{ color: '#3b82f6' }}>
+                {remote?.humidity_indoor != null ? `${remote.humidity_indoor.toFixed(0)}%` : '--'}
+              </p>
+              <p className="text-[13px] text-slate-400 mt-1">Humedad</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[34px] leading-none font-bold" style={{ color: '#a78bfa' }}>
+                {remote?.pressure_relative != null ? u.press(remote.pressure_relative, 0) : '--'}
+              </p>
+              <p className="text-[13px] text-slate-400 mt-1">{u.pressU}</p>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -270,16 +314,8 @@ export function KioskPage() {
               { label: 'Humedad', value: chHum != null ? `${chHum.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
             ]}
           />
-          {/* Remota */}
-          <BigSensorCard
-            title="Remota GW1100"
-            icon="📡"
-            values={[
-              { label: 'Temperatura', value: remote?.temperature_indoor != null ? `${u.temp(remote.temperature_indoor)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
-              { label: 'Humedad', value: remote?.humidity_indoor != null ? `${remote.humidity_indoor.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
-              { label: 'Presión', value: remote?.pressure_relative != null ? `${u.press(remote.pressure_relative)}` : '--', color: '#a78bfa', iconEl: <PressIcon /> },
-            ]}
-          />
+          {/* Remota: exterior (WN32) + interior (GW1100) */}
+          <RemoteCard />
         </div>
       </div>
     )

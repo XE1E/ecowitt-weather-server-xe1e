@@ -26,6 +26,13 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       - `ConsoleReplica`: la celda REMOTA y PRESIÓN GW1100 leen `temperature_indoor` /
         `humidity_indoor` del GW1100; con WN32 hay que decidir si esa celda pasa a
         exterior o se separa en dos.
+      - [x] **Kiosco, página 3 «Sensores» — HECHO 2026-08-04.** La tarjeta remota leía
+        solo `temperature_indoor`/`humidity_indoor`, así que al retirar la trampa el
+        **exterior quedaba invisible** y el interior salía rotulado como "Remota" sin
+        más. Ahora separa **«Exterior · WN32»** (`temperature_outdoor`/
+        `humidity_outdoor`) e **«Interior · GW1100»** (`_indoor` + presión), mismo
+        criterio que `RemoteStationCard`. Hoy el exterior muestra `--`; se poblará
+        solo cuando llegue el WN32, sin más cambios de código.
       - Datos derivados de la remota: punto de rocío (`dewPointC` en `remote.ts`) y
         cualquier sensación térmica — con la trampa se calculaban sobre lecturas
         rotuladas exterior.
