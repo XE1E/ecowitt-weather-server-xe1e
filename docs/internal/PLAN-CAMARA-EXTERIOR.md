@@ -1,0 +1,147 @@
+# Plan — Cámara del exterior de la estación
+
+> Escrito el 2026-08-05. Vive en git. Cámara **comprada**, aún **no recibida**:
+> todo lo de "Puesta en marcha" en adelante está sin ejecutar.
+
+## Objetivo
+
+Dar vista del exterior de la estación de clima junto al resto de los datos: en el
+dashboard web y como una página más del kiosco. No es videovigilancia — es el
+complemento visual a la lectura de los sensores.
+
+## Hardware elegido: TP-Link Tapo C325WB
+
+### Por qué esa
+
+Se compararon tres, con el **campo de visión** como criterio decisivo: es lo que
+hace que una cámara sirva como cámara de clima y no como cámara de vigilancia.
+
+| | Tapo C500 | **Tapo C325WB** | Reolink ColorX P320X |
+|---|---|---|---|
+| Montaje | pan/tilt | fijo | fijo |
+| **FOV horizontal** | 73.5° | **127°** | 89° |
+| Apertura | F2.0 | **F1.0** | F1.0 |
+| Sensor | no publicado | no publicado | 1/1.8" |
+| Noche | IR 850 nm | **ColorPro, color sin IR** | ColorX, color sin IR |
+| Resolución | 1080p | 2K | 2K 4MP |
+| Alimentación | sólo DC | **PoE u 9V DC** | PoE o 12V DC |
+| Precio aprox. | ~40-50 USD | **~60-70 USD** | ~80-90 USD |
+
+- El **C500** se descartó por tres motivos: el pan/tilt se desencuadra y parte la
+  serie del timelapse, 73.5° es poco campo, y su visión nocturna IR ilumina lo
+  cercano — con lluvia, los reflejos de las gotas arruinan la toma.
+- La **Reolink** daría mejor imagen nocturna (sensor de 1/1.8", bastante mayor), pero
+  a 89° se pierde demasiada escena.
+- Se descartaron también **Annke NightChroma** (~89 USD, Hikvision de marca blanca:
+  mismo perfil que la Reolink sin ventaja clara), **Dahua Full-Color / Hikvision
+  ColorVu** (excelentes pero por distribuidor de seguridad) y **SV3C** (barata, marca
+  genérica, firmware impredecible para algo que debe durar años).
+
+También se valoró y se descartó por presupuesto el camino **Raspberry Pi + AllSky**
+(`github.com/AllskyTeam/allsky`): es la única opción que da cámara de cielo de verdad
+—exposiciones largas, estrellas, timelapse/keogram/startrails automáticos y subida
+remota incluida, que resolvería el NAT por sí sola—, pero sale por **150-250 USD**, no
+por los ~60 de la Tapo. La Pi Zero 2 está desaconsejada por el propio proyecto (poca
+RAM y CPU), así que hace falta una Pi 4 o 5, más domo, carcasa estanca y resistencia
+antirrocío. Queda anotado por si algún día el objetivo cambia de "ver el exterior" a
+"fotografiar el cielo".
+
+### Especificaciones confirmadas
+
+| | |
+|---|---|
+| FOV | 127° |
+| Apertura / noche | F1.0, ColorPro (color sin IR ni foco) |
+| Vídeo | H.264, 2K, 20 fps |
+| Wi-Fi | 802.11b/g/n **2.4 GHz solamente** (sin 5 GHz) |
+| Alimentación | 9V DC o **PoE 802.3af/at** |
+| Intemperie | IP66 |
+| Temperatura | −20 °C a 45 °C |
+| Protocolos | RTSP y ONVIF Profile S |
+
+Hay **discrepancia en la resolución** entre fuentes: la ficha de TP-Link para la V2
+dice 2560×1440 y el datasheet/Amazon anuncian 2688×1520 (4 MP). Parece diferencia
+entre revisiones de hardware; irrelevante para este uso.
+
+### Límites conocidos
+
+1. **Máxima de 45 °C.** El ambiente en CDMX no llega, pero una carcasa a pleno sol de
+   mediodía puede acercarse. Tenerlo en cuenta al elegir orientación.
+2. **IP66, no IP67.** Para lluvia sobra; sólo importaría si quedara donde se encharca.
+3. **2.4 GHz.** Irrelevante si se cablea por PoE, que es la intención.
+
+## Restricciones de integración
+
+- **El RTSP exige crear antes una "cuenta de cámara"** en la app Tapo, con usuario y
+  contraseña **distintos** de los de la cuenta Tapo. Sin ese paso el RTSP no responde
+  y parece que la cámara no lo soporta.
+- URLs: `rtsp://usuario:clave@IP:554/stream1` (alta) y `/stream2` (baja).
+- **RTSP es sólo de red local.** La cámara queda en casa detrás del NAT y el dashboard
+  corre en el VPS de Oracle, así que el VPS **no puede ir a buscarla**: hace falta algo
+  en casa que empuje hacia fuera.
+- **Nunca abrir puertos hacia la cámara.** Es una cámara de consumo con las
+  credenciales en la propia URL; exponerla a internet es justo lo que no se quiere.
+
+## Decisión de arquitectura: fotos, no directo 24/7
+
+Se acordó **una captura cada 5-10 minutos más un timelapse diario**, en vez de
+streaming continuo. Razones:
+
+- Encaja en el kiosco como una página más, sin reproductor ni códecs.
+- Un directo 1080p continuo son ~2-4 Mbps de subida sostenida desde casa, del orden de
+  **1 TB/mes**, y deja un proceso de vídeo corriendo para siempre.
+- Para un sitio de clima, la foto periódica y el timelapse son más útiles que el
+  directo.
+
+El **directo queda como añadido posterior**, no descartado. Si se hace: `ffmpeg` en
+casa tirando del RTSP con **`-c copy`** (sin recodificar) empujando a **MediaMTX** en
+el VPS, que reexpone en HLS para un `<video>` en el React. Sin transcodificar: el ARM
+del free tier de Oracle no aguanta 1080p continuo.
+
+## Puesta en marcha (cuando llegue) — pendiente
+
+Antes de escribir una línea de código:
+
+- [ ] Crear la **cuenta de cámara** en la app Tapo (Configuración → Avanzado).
+- [ ] **Reservar su IP** por DHCP en el router. La URL RTSP lleva la IP dentro; si el
+      router se la cambia, el pipeline se cae sin avisar.
+- [ ] **Cablear PoE** si es posible: quita el adaptador de corriente de la intemperie y
+      saca a la cámara del 2.4 GHz.
+- [ ] Probar el RTSP desde la LAN con VLC o
+      `ffprobe rtsp://usuario:clave@IP:554/stream1`. Si eso responde, el resto es
+      trabajo del servidor.
+- [ ] Decidir el encuadre **como fijo y definitivo**: con timelapse, cualquier
+      reajuste posterior parte la serie en dos.
+
+## Implementación — pendiente
+
+- [ ] **Captura en casa.** `ffmpeg` sacando un JPEG del RTSP cada N minutos.
+      Decidir dónde corre (¿PC de siempre, una Pi, el propio router?) y cómo se
+      programa.
+- [ ] **Transporte al VPS.** Subida de la foto. Decidir mecanismo (SCP con clave
+      dedicada, o un POST autenticado contra el FastAPI) y **con qué credencial**, que
+      no sea la de administración.
+- [ ] **Endpoint en el receiver.** Servir la última foto y su marca de tiempo; decidir
+      retención (¿se guardan todas para el timelapse, cuántos días?).
+- [ ] **Timelapse diario.** Generarlo en el VPS o en casa, y dónde se publica.
+- [ ] **Dashboard y kiosco.** Tarjeta en el dashboard y página nueva en el kiosco.
+      Ojo: añadir página al kiosco **toca también el firmware**
+      (`ecowitt-display-kiosk-xe1e`), que tiene el número de pestañas cableado — ver
+      el contrato de la tab-bar en `docs/PLAN-CONSOLA-XE1E.md` de ese repo.
+- [ ] **Degradar con gracia** si la foto está vieja o no llega, como se acordó para el
+      SMN: decirlo, no dejar el hueco en blanco.
+
+## Decisiones abiertas
+
+- ¿La cámara mira al cielo, al horizonte, o a la estación misma? Cambia la orientación
+  y el valor de la visión nocturna.
+- ¿Se muestra la foto en el kiosco como página propia, o dentro de una existente?
+- Retención de las fotos: cuántos días, y si se archiva a R2 como los backups.
+
+## Fuentes
+
+- [Tapo C325WB — TP-Link](https://www.tp-link.com/us/home-networking/cloud-camera/tapo-c325wb/)
+- [Ver cámara Tapo por RTSP/ONVIF (cuenta de cámara y URLs)](https://www.tp-link.com/us/support/faq/2680/)
+- [Cámaras Tapo compatibles con RTSP](https://us.store.tapo.com/collections/rtsp-cameras)
+- [Reolink ColorX P320X](https://reolink.com/product/colorx-series-p320x/)
+- [AllskyTeam/allsky — requisitos de hardware](https://github.com/AllskyTeam/allsky)

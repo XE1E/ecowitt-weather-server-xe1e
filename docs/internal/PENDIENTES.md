@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-03.
+> Última actualización: 2026-08-05.
 
 ## 1. Cuando llegue el WN32 (~2026-08-08) — depende de hardware
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -125,6 +125,17 @@ Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola f
       página 1**. Flasheado (COM5) y funcionando.
 - En curso: **ajustes visuales** de la consola.
 - Futuro: consola como home + zonas de toque por bloque (pendiente de definir).
+
+## 2.b Cámara del exterior — plan escrito, esperando hardware
+**Tapo C325WB comprada el 2026-08-05, aún sin recibir.** Plan completo, comparativa
+de modelos y decisiones: **`docs/internal/PLAN-CAMARA-EXTERIOR.md`**.
+
+Lo esencial: se integra por **RTSP** (exige crear una "cuenta de cámara" en la app
+Tapo), que es **sólo de red local**, así que la cámara queda tras el NAT de casa y el
+VPS no puede ir a buscarla — algo en casa tiene que empujar hacia fuera, y **no se
+abren puertos hacia la cámara**. Se acordó **foto cada 5-10 min + timelapse diario**
+en vez de directo 24/7, que serían ~1 TB/mes de subida. Añadirla como página del
+kiosco **toca también el firmware**, que tiene cableado el número de pestañas.
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
