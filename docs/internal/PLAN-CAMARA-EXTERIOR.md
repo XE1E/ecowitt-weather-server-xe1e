@@ -149,9 +149,46 @@ La cámara **mira al horizonte**, no al cielo ni a la estación. Consecuencias:
   orientación que no encare al sol; si no hay opción, contar con un par de tomas
   quemadas al día.
 
-## Decisiones abiertas
+## Dónde se muestra: página propia en los dos — DECIDIDO (2026-08-05)
 
-- ¿Se muestra la foto en el kiosco como página propia, o dentro de una existente?
+Página propia **en el kiosco y en la web**, no incrustada en una existente.
+
+### Web
+
+Ruta nueva bajo `/pro` en `dashboard/src/main.tsx` (junto a `radar`, `astronomia`,
+`calidad-aire`…) más su entrada en la navegación de `StationLayout`. Es la parte
+barata: no toca nada de lo que ya existe.
+
+### Kiosco — esto sí arrastra firmware
+
+Sería la **7ª pestaña**, y el número de pestañas está cableado en dos repos que
+**deben cambiarse a la vez**. El contrato está en `docs/PLAN-CONSOLA-XE1E.md` del repo
+del firmware: *el nº de pestañas de la barra (servidor) DEBE coincidir con el mapeo del
+touch (firmware)*. Si se desincronizan, los toques caen en la pestaña equivocada.
+
+Lo que hay que tocar, verificado en el código:
+
+| Dónde | Qué |
+|---|---|
+| `dashboard/src/pages/KioskPage.tsx` | añadir entrada a `TABS` (página N → `TABS[N-1]`) |
+| `renderer/app.py` | añadir el id a `VALID_PAGES` (hoy `{"1".."5", "consola"}`) |
+| `ecowitt-display-kiosk-xe1e/src/main.cpp` | subir `NUM_PAGES` a 7 y su mapeo del toque |
+| `docs/GUIA.md` | la tabla de páginas del kiosco (§ pestañas) |
+
+Dos detalles:
+
+- **La 6ª pestaña ya es especial** (va a `?page=consola`, no a `page=6`). Si la cámara
+  lleva id con nombre —`?page=camara`— será la segunda excepción; conviene decidir si
+  se generaliza el mapeo en el firmware en vez de acumular casos particulares.
+- **`VALID_PAGES` también alimenta el bucle de precalentado** del renderer, que rota
+  por todas las páginas. Una más son más segundos de ciclo y más trabajo de Chromium en
+  el ARM del free tier. Vigilar que no degrade el refresco de las demás.
+
+Como la página del kiosco obliga a reflashear, tiene sentido **hacer primero la web**,
+validar la foto ahí, y llevar al kiosco sólo cuando el encuadre y la cadencia estén
+asentados.
+
+## Decisiones abiertas
 - Retención de las fotos: cuántos días, y si se archiva a R2 como los backups.
 
 ## Fuentes
