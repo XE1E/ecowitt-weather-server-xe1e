@@ -454,8 +454,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               `textAlign: right` + `right` fijo y no centrado: así "NNE" (3 letras) y
               "N" (1) comparten el borde derecho y la palabra no se mueve al cambiar
               el viento, el mismo anclaje que PROMEDIO/RÁFAGA. */}
+          {/* SIN la clase `gv`: además del glow verde arrastra la fuente DSEG7, que es
+              de 7 segmentos y sólo sabe dibujar cifras --"NO" salía como "no"--. El
+              color va inline y la letra se queda en la Roboto Condensed de la consola,
+              igual que lo hacía la celda VEL con este mismo rumbo. */}
           <div style={{ position: 'absolute', top: 4, right: 10, textAlign: 'right' }}>
-            <span className="gv" style={{ fontSize: 34, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
+            <span style={{ color: 'var(--v)', fontSize: 34, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
               {cardinal(dir)}
             </span>
           </div>
