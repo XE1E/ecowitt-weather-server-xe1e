@@ -56,6 +56,12 @@ def _category_for(rule_key: str) -> str:
     return "other"
 
 
+# Reglas de TENDENCIA: son las únicas cuyo mensaje ya describe el caso normal
+# ("Presión sin caída relevante"), así que al normalizar se puede usar tal cual.
+# El resto son de umbral y su texto solo tiene sentido cuando están disparadas.
+_TREND_RULES = {"pressure_drop", "pressure_rise", "temp_drop", "temp_rise"}
+
+
 # Reglas que NO usan histéresis (avisan de inmediato):
 #  - gust_high: pico peligroso, no debe esperar.
 #  - sensor_* y battery_*: tienen su propia lógica de presencia/estado.
@@ -474,10 +480,18 @@ class AlertService:
                 first = self._pending_off.setdefault(nkey, now)
                 if now - first >= need:
                     self._pending_off.pop(nkey, None)
-                    self._add_to_history(nkey, self.active[nkey], resolved=True, station=station)
+                    prev_msg = self.active[nkey]
+                    self._add_to_history(nkey, prev_msg, resolved=True, station=station)
                     self.active.pop(nkey, None)
                     self._active_since.pop(nkey, None)
-                    await self._safe_notify(f"✅ Normalizado — {tag}{message}", category=cat)
+                    # El aviso de normalización NO puede reusar el texto de alerta:
+                    # daba "✅ Normalizado — 🌡️ Temperatura alta: 22 °C (≥ 35 °C)",
+                    # que se lee contradictorio. Las de tendencia sí traen un texto
+                    # propio para el caso normal; para las de umbral se usa solo la
+                    # CONDICIÓN que estaba activa (lo anterior a los dos puntos),
+                    # sin el valor que ya no la cumple.
+                    normal = (tag + message) if key in _TREND_RULES else prev_msg.split(":", 1)[0].strip()
+                    await self._safe_notify(f"✅ Normalizado — {normal}", category=cat)
             else:
                 # Estado estable: cancela cualquier cuenta regresiva pendiente
                 # (esto mata el parpadeo alrededor del umbral).

@@ -561,3 +561,39 @@ def test_indoor_sensor_loss_is_watched():
     svc.evaluate({"temperature_indoor": 22.0})
     rules = svc.evaluate({"temperature_outdoor": 25.0})
     assert rules["sensor_temperature_indoor"][0] is True
+
+
+def test_normalized_message_is_not_contradictory():
+    """El aviso de normalización no debe repetir el texto de alerta.
+
+    Reusarlo daba "✅ Normalizado — 🌡️ Temperatura alta: 22 °C (≥ 35 °C)": dice
+    "alta" con un valor que ya no lo es.
+    """
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    asyncio.run(svc.process({"temperature_outdoor": 40}))     # dispara
+    asyncio.run(svc.process({"temperature_outdoor": 22}))     # normaliza
+
+    normal = [m for m in c.msgs if "Normalizado" in m]
+    assert len(normal) == 1
+    # Queda la condición, sin el valor ni el umbral que ya no aplican.
+    assert "Temperatura alta" in normal[0]
+    assert "22" not in normal[0]
+    assert "≥" not in normal[0]
+
+
+def test_trend_rules_keep_their_own_normal_text():
+    """Las de tendencia sí describen el caso normal, así que se usa su texto."""
+    from datetime import datetime, timedelta
+
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    t0 = datetime(2026, 8, 4, 12, 0)
+    # Caída sostenida y luego recuperación, con una hora de separación para que
+    # la ventana de tendencia tenga línea base.
+    asyncio.run(svc.process({"pressure_relative": 1020}, now=t0))
+    asyncio.run(svc.process({"pressure_relative": 1014}, now=t0 + timedelta(minutes=61)))
+    if "pressure_drop" in svc.active:
+        asyncio.run(svc.process({"pressure_relative": 1020}, now=t0 + timedelta(minutes=122)))
+        normal = [m for m in c.msgs if "Normalizado" in m]
+        assert normal and "sin caída relevante" in normal[0]
