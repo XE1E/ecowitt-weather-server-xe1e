@@ -199,6 +199,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const cond = data ? deriveCondition(data) : { icon: '', label: '' }
   const dir = data?.wind_direction
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
+  const hDay = stats?.humidity_outdoor      // …y para HUMEDAD, que los muestra igual
 
   const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): Trend => {
     if (current == null || previous == null) return 'stable'
@@ -274,12 +275,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .cns .gw{color:var(--w);text-shadow:0 0 10px rgba(234,234,234,.35)}
     .cns .u{font-weight:700;vertical-align:top;font-family:'Roboto Condensed','Arial Narrow',system-ui,sans-serif} .cns .ured{color:var(--red)}
     .cns .dec{font-size:0.6em}          /* decimales en tamaño más chico */
-    /* EXT lleva el decimal aún más chico que el resto: es la cifra más grande de
-       la consola y a 0.6em el ".5" pesaba tanto como un entero. Va como variante
-       propia y no tocando .dec, que lo comparten todas las demás celdas.
-       0.33em sobre 76 px deja el decimal en ~25 px, o sea del tamaño de los
-       dígitos de MÍN/MÁX: es el suelo: más chico y deja de leerse a distancia. */
-    .cns .decxs .dec{font-size:0.33em}
+    /* Las cifras grandes (EXT y VEL) llevan el decimal a la MITAD del entero, no al
+       0.6em del resto: a ese tamaño y sobre 76 px el decimal competía con los
+       enteros. La proporción es la de una consola física, donde el decimal se lee
+       como accesorio del número. Los mín/máx conservan el .dec de 0.6em. */
+    .cns .decxs .dec{font-size:0.5em}
     .cns .rt{text-align:right}          /* valor pegado al borde derecho */
     .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
     .cns .cell.main{border-color:var(--brd-main)}
@@ -335,26 +335,27 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               con marginTop y no con centrado automático.
               76 px y marginTop NEGATIVO van juntos: agrandar la cifra sola la hace
               crecer hacia abajo y se come el aire que la separa de mín/máx, así que
-              sube lo mismo que engordó. Con el decimal a 0.33em (`decxs`) el bloque
-              mide ~150 px de ancho aun a 76, y su borde izquierdo cae en x≈92, libre
-              del termómetro (acaba en x≈84).
+              sube lo mismo que engordó.
               A -13 el dibujo de los dígitos empieza en y≈14 y se cruza con la banda
               de la etiqueta EXT, pero no con la etiqueta: ella vive en x 12-50 y el
-              número arranca en x≈92. */}
+              número arranca en x≈88. */}
           <div className="big gt decxs" style={{ fontSize: 76, textAlign: 'center', marginTop: -13 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
               columnas con rótulo propio no cabían sin rozar el valor. Los dígitos
-              a 24 px, que es el suelo práctico del 7-segmentos a distancia. */}
+              a 24 px, que es el suelo práctico del 7-segmentos a distancia, y su
+              decimal por `decNum` con el .dec normal de 0.6em (~14 px): sin él las
+              cuatro cifras pesaban igual que el valor grande de arriba, y es el
+              mismo recurso de escalonado que usa toda la consola. */}
           <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
-              {u.temp(tDay?.min ?? undefined)}
+              {decNum(u.temp(tDay?.min ?? undefined))}
             </span>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
-              {u.temp(tDay?.max ?? undefined)}
+              {decNum(u.temp(tDay?.max ?? undefined))}
             </span>
           </div>
         </div>
@@ -445,8 +446,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', bottom: 8, left: 12 }}>
             <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
           </div>
-          <div className="big gv ctr rt" style={{ fontSize: 104, marginTop: -10 }}>
-            {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 26, color: 'var(--v)' }}> {u.windU}</span>
+          {/* 76 y no 104: a 104 esta celda pesaba más que la temperatura, que es el
+              dato principal, y desnivelaba toda la fila de arriba. Ahora EXT, HUMEDAD
+              y VEL comparten cuerpo (76) y unidad (24), y la jerarquía la marca el
+              contenido, no el tamaño. `decxs` para que su decimal sea la mitad del
+              entero, como en EXT. */}
+          <div className="big gv decxs ctr rt" style={{ fontSize: 76, marginTop: -10 }}>
+            {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--v)' }}> {u.windU}</span>
           </div>
         </div>
 
@@ -459,10 +465,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
-          <div className="big gh ctr rt" style={{ fontSize: 80, lineHeight: 0.8, paddingRight: 32, marginTop: -10 }}>
+          {/* Misma receta que EXT --centrado, 76 px, unidad a 24, mín/máx abajo-- para
+              que las dos celdas de la columna izquierda se lean como pareja. La fila
+              2 es más baja que la 1 (1.14fr contra 1.32fr), así que el aire entre el
+              valor y mín/máx sale menor aquí; el resto de las medidas sí son iguales. */}
+          <div className="big gh" style={{ fontSize: 76, textAlign: 'center', marginTop: -14 }}>
             {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
-            {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 34, color: 'var(--h)' }}>%</span>
+            {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
+          </div>
+          <div style={{ position: 'absolute', bottom: 5, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
+            <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+              {hDay?.min != null ? hDay.min.toFixed(0) : '--'}
+            </span>
+            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+              {hDay?.max != null ? hDay.max.toFixed(0) : '--'}
+            </span>
           </div>
         </div>
 
