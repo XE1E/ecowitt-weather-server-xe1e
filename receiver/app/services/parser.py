@@ -133,13 +133,16 @@ FIELD_MAPPING = {
     "lightning": "lightning_distance",
 }
 
-# Fields that are metadata (not measurements).
-# runtime/heap/interval son diagnóstico del gateway (segundos encendido, memoria
-# libre, periodo de envío), no medidas meteorológicas: se escribían como campos de
-# InfluxDB y se publicaban por MQTT junto a la temperatura. Aquí quedan fuera de
-# ambos; para diagnosticar el datalogger están los logs de ingesta.
-METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequency",
-                   "runtime", "heap", "interval"}
+# Fields that are metadata (not measurements)
+METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequency"}
+
+# Diagnóstico del datalogger: segundos encendido, memoria libre y periodo de envío.
+# No son medidas meteorológicas ni metadatos útiles aguas abajo, así que se
+# DESCARTAN al parsear. Ponerlos en METADATA_FIELDS no bastaba: eso solo excluye de
+# lo que se escribe en InfluxDB, y el dict en memoria —el que alimenta /api/current
+# y el payload de MQTT— los seguía llevando. Para diagnosticar el datalogger están
+# los logs de ingesta, que registran el dato crudo completo.
+DROP_FIELDS = {"runtime", "heap", "interval"}
 
 # Fields that are tags in InfluxDB.
 # 'station' identifica una estación SECUNDARIA (p. ej. un GW1100). La estación
@@ -180,6 +183,10 @@ def parse_ecowitt_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Convert value to appropriate type
         parsed[std_key] = _convert_value(std_key, value)
+
+    # Fuera el diagnóstico del datalogger, antes de que llegue a ningún consumidor.
+    for k in DROP_FIELDS:
+        parsed.pop(k, None)
 
     # Parse timestamp if present
     if "timestamp_utc" in parsed:

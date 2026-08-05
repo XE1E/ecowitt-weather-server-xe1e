@@ -87,4 +87,7 @@ def test_gateway_diagnostics_are_not_measurements():
     fields = get_fields(parsed)
     assert "temperature_outdoor_f" in fields
     for k in ("runtime", "heap", "interval"):
+        # Ni en InfluxDB, ni en el dict en memoria: ese alimenta /api/current y el
+        # payload de MQTT, así que excluirlos solo de get_fields no bastaba.
         assert k not in fields, f"{k} no debería escribirse como medición"
+        assert k not in parsed, f"{k} no debería llegar a /api/current ni a MQTT"
