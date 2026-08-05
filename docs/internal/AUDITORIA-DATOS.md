@@ -19,6 +19,24 @@ Severidades:
 
 ---
 
+## Estado final
+
+**48 de 49 hallazgos corregidos.** El único abierto es el de Svitrix, que necesita
+tocar el firmware: está documentado en `PENDIENTES.md` sección 1b, con el porqué del
+diferimiento y el cuidado a tener (equivocarse ahí deja el reloj reiniciándose cada
+15 minutos).
+
+Cada arreglo se verificó contra su síntoma, no solo compilando. Los que cambiaron
+números visibles —IMECA, grados-día, condición del tiempo, fase lunar— llevan la
+comparación antes/después en su detalle.
+
+Correcciones a este mismo informe, por si alguien lo lee de arriba abajo: el
+hallazgo **#11** (dos tarjetas "Días de lluvia" discrepantes) resultó **falso**, y
+los **#20 y #21** de Svitrix bajaron de severidad al leer el firmware. Están
+marcados en su sitio.
+
+---
+
 ## Corregidos el 2026-08-04
 
 | # | Arreglo | Archivos |

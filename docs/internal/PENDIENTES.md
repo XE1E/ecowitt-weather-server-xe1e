@@ -60,6 +60,45 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
 
+## 1b. Svitrix (firmware) — distinguir "sin dato" de "sin conexión" — diferido
+
+Único pendiente de la auditoría de datos que necesita tocar **otro repo**
+(`svitrix-firmware-XE1E`), compilar y flashear el reloj. No urge: el lado del
+servidor ya cubre el caso peligroso.
+
+**Situación.** `/api/svitrix` devolvía un `current` con `temp_c`/`humidity`/
+`pressure_mb` en `null` cuando no había ninguna lectura. ArduinoJson los convierte
+a `0.0f` y `weatherData.valid` se marca `true` igual, así que el reloj mostraba
+**0 °C / 0 % / 0 mb como si fueran medidas reales** — y en invierno un 0 °C en la
+CDMX es lo bastante verosímil como para no notarlo.
+
+**Ya hecho (servidor).** Ahora responde **503** en ese caso. Pero solo en ese: el
+firmware reinicia el ESP32 tras `max(5 × intervalo, 15 min)` sin un HTTP 200
+(`DataFetcher.cpp:150-156`, `ESP.restart()`), así que devolver error mientras la
+estación está caída lo dejaría en **ciclo de reinicios cada 15 minutos**, que es
+peor que mostrar un dato viejo. Con lectura disponible —aunque sea vieja— se sigue
+sirviendo.
+
+**Lo que falta (firmware).** Que distinga *"el servidor respondió pero no tiene
+dato"* de *"no pude hablar con el servidor"*:
+
+- Hoy ya trata aparte el caso de `current` ausente (*"data error — keep last
+  value, leave health/retry untouched"*), pero **tampoco** actualiza
+  `lastWeatherSuccessMs_`, así que por esa vía acabaría reiniciando igual.
+- La idea: ante un 503 (o un `current` ausente) conservar el último valor, **no**
+  contarlo como fallo de red y **sí** refrescar el reloj de auto-recuperación —
+  el servidor está vivo, el problema es la estación. Y marcar el dato como no
+  fresco en pantalla en vez de mostrarlo como actual.
+
+**Cuidado al probarlo:** equivocarse aquí se manifiesta como un reloj que se
+reinicia solo cada cuarto de hora. Conviene validar con el servidor devolviendo
+503 a propósito antes de dar por bueno el cambio.
+
+Relacionado y también del firmware: `/api/svitrix` ya emite `is_day`, pero el
+firmware elige el icono solo por `code` (`Apps_NativeApps.cpp:433`,
+`getWeatherConditionIcon`). Usarlo permitiría distinguir el sol de la luna de
+madrugada. Ese sí es un cambio pequeño y sin riesgo.
+
 ## 2. Display de consola — fase 2 (firmware) — diferido
 Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola física,
 1024×600). **Plan detallado + decisiones:** `ecowitt-display-kiosk-xe1e/docs/PLAN-CONSOLA-XE1E.md`.
