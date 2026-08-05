@@ -309,7 +309,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         display: 'grid', gap: 3,
         ...(kiosk ? { width: 1024, height: 600 } : { width: '100%', aspectRatio: '1024 / 600' }),
         gridTemplateColumns: '1fr 1fr 1fr',
-        gridTemplateRows: '1.32fr 1.14fr 1.18fr 1.0fr 0.92fr',
+        /* Filas 1 y 2 IGUALES (1.23fr cada una, mismo total que el 1.32/1.14 de
+           antes): EXT y HUMEDAD muestran ahora lo mismo --valor grande arriba y una
+           línea de mín/máx abajo-- y con la fila 2 más baja el mín/máx de HUMEDAD
+           quedaba a 3 px del valor mientras el de EXT tenía 26. Se puede repartir a
+           la mitad sin efectos: la celda del VIENTO abarca las dos filas, así que
+           sólo le importa la suma, y las filas 3-5 no se tocan. */
+        gridTemplateRows: '1.23fr 1.23fr 1.18fr 1.0fr 0.92fr',
         background: '#000',
       }}>
         {/* Fila 1 */}
@@ -465,16 +471,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
-          {/* Misma receta que EXT --centrado, 76 px, unidad a 24, mín/máx abajo-- para
-              que las dos celdas de la columna izquierda se lean como pareja. La fila
-              2 es más baja que la 1 (1.14fr contra 1.32fr), así que el aire entre el
-              valor y mín/máx sale menor aquí; el resto de las medidas sí son iguales. */}
-          <div className="big gh" style={{ fontSize: 76, textAlign: 'center', marginTop: -14 }}>
+          {/* Misma receta que EXT --centrado, 76 px, unidad a 24, mín/máx abajo y los
+              mismos márgenes-- para que las dos celdas de la columna izquierda se
+              lean como pareja. Con las filas 1 y 2 ya igualadas a 1.23fr, las medidas
+              coinciden de verdad y no sólo en los tamaños de fuente. */}
+          <div className="big gh" style={{ fontSize: 76, textAlign: 'center', marginTop: -13 }}>
             {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
             {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
           </div>
-          <div style={{ position: 'absolute', bottom: 5, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.min != null ? hDay.min.toFixed(0) : '--'}
