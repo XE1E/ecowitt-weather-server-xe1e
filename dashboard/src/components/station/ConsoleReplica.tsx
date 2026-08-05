@@ -292,19 +292,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Centrado, no pegado a la derecha: la temperatura es el dato principal
               de la consola y con los mín/máx debajo forman un bloque. A 78 sigue
               mandando sobre la humedad y la presión de las celdas de abajo. */}
-          <div className="big gt ctr" style={{ fontSize: 78, textAlign: 'center', marginTop: -6 }}>
+          {/* SIN la clase `ctr`: centra en vertical con margin:auto y empujaba el
+              valor sobre el bloque de mín/máx, que va absoluto abajo. */}
+          <div className="big gt" style={{ fontSize: 72, textAlign: 'center', marginTop: 2 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx del día, centrados bajo el valor. */}
           <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, display: 'flex', gap: 22, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÍN</div>
+              <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>MÍN</div>
               <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
                 {u.temp(tDay?.min ?? undefined)}
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÁX</div>
+              <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>MÁX</div>
               <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
                 {u.temp(tDay?.max ?? undefined)}
               </div>
