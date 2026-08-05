@@ -294,7 +294,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mandando sobre la humedad y la presión de las celdas de abajo. */}
           {/* SIN la clase `ctr`: centra en vertical con margin:auto y empujaba el
               valor sobre el bloque de mín/máx, que va absoluto abajo. */}
-          <div className="big gt ctr" style={{ fontSize: 56, textAlign: 'center', marginTop: -2 }}>
+          {/* Sin `ctr`: su margin:auto centra en el espacio libre y baja el valor
+              hasta el bloque de mín/máx, que va absoluto abajo. Se posiciona con
+              marginTop y no con centrado automático. */}
+          <div className="big gt" style={{ fontSize: 56, textAlign: 'center', marginTop: 10 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
