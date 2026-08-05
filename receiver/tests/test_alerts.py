@@ -597,3 +597,36 @@ def test_trend_rules_keep_their_own_normal_text():
         asyncio.run(svc.process({"pressure_relative": 1020}, now=t0 + timedelta(minutes=122)))
         normal = [m for m in c.msgs if "Normalizado" in m]
         assert normal and "sin caída relevante" in normal[0]
+
+
+def test_retired_sensor_is_eventually_forgotten():
+    """Un sensor que lleva días sin reportar deja de vigilarse.
+
+    Sin esto, retirar un WN31 a propósito dejaba su alerta "sin contacto" activa
+    indefinidamente: la avería temporal y la retirada deliberada se veían igual.
+    """
+    from datetime import datetime, timedelta
+    from app.services.alerts import SENSOR_FORGET_DAYS
+
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+    t0 = datetime(2026, 8, 4, 12, 0)
+
+    asyncio.run(svc.process({"temperature_ch1": 21.0}, now=t0))          # se registra
+    asyncio.run(svc.process({"temperature_outdoor": 25.0}, now=t0 + timedelta(hours=1)))
+    assert "sensor_temperature_ch1" in svc.active, "debe avisar de la caída"
+
+    # Pasan los días: se olvida y se avisa una sola vez.
+    later = t0 + timedelta(days=SENSOR_FORGET_DAYS + 1)
+    asyncio.run(svc.process({"temperature_outdoor": 25.0}, now=later))
+    assert "sensor_temperature_ch1" not in svc.active
+    assert sum(1 for m in c.msgs if "Se deja de vigilar" in m) == 1
+
+    # Y ya no vuelve a alertar por él...
+    asyncio.run(svc.process({"temperature_outdoor": 25.0}, now=later + timedelta(hours=1)))
+    assert "sensor_temperature_ch1" not in svc.active
+
+    # ...salvo que el sensor vuelva: entonces se re-registra solo.
+    asyncio.run(svc.process({"temperature_ch1": 20.0}, now=later + timedelta(hours=2)))
+    asyncio.run(svc.process({"temperature_outdoor": 25.0}, now=later + timedelta(hours=3)))
+    assert "sensor_temperature_ch1" in svc.active

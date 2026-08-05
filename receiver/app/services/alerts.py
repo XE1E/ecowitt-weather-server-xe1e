@@ -61,6 +61,11 @@ def _category_for(rule_key: str) -> str:
 # El resto son de umbral y su texto solo tiene sentido cuando están disparadas.
 _TREND_RULES = {"pressure_drop", "pressure_rise", "temp_drop", "temp_rise"}
 
+# Días sin dar señal tras los que se asume que un sensor se retiró a propósito y
+# se deja de vigilar. Sin esto, quitar un WN31 dejaba su alerta activa para
+# siempre: la avería temporal y la retirada deliberada se veían igual.
+SENSOR_FORGET_DAYS = 7
+
 
 # Reglas que NO usan histéresis (avisan de inmediato):
 #  - gust_high: pico peligroso, no debe esperar.
@@ -108,7 +113,11 @@ class AlertService:
         self.stations_offline: Dict[Optional[str], bool] = {}
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
-        self.known_sensors: Dict[Optional[str], set] = {}
+        # sensor -> última vez que reportó, por estación. Con la fecha se puede
+        # distinguir el sensor caído hace un rato del retirado hace semanas.
+        self.known_sensors: Dict[Optional[str], Dict[str, datetime]] = {}
+        # Sensores olvidados en la última evaluación, para que `process` avise.
+        self._just_forgotten: List[str] = []
         self.known_batteries: Dict[Optional[str], set] = {}
         # Historial POR ESTACIÓN para las tendencias: deque de (datetime, valor).
         # None = principal. Se aísla entre estaciones.
@@ -321,14 +330,22 @@ class AlertService:
                 )
 
         # Sensor perdido: un sensor visto antes que deja de reportar (por estación).
+        self._just_forgotten = []
         if getattr(self._settings, "alert_sensor_lost_enabled", True):
-            known = self.known_sensors.setdefault(station, set())
+            known = self.known_sensors.setdefault(station, {})
             rejected = qc_rejected or set()
             for skey in list(_SENSOR_PRESENCE):
                 present = data.get(skey) is not None
                 if present:
-                    known.add(skey)
+                    known[skey] = now
                 if skey not in known:
+                    continue
+                # Retirado: tras SENSOR_FORGET_DAYS sin señal se asume que se quitó
+                # a propósito y se deja de vigilar. Si vuelve, se re-registra solo
+                # en el `if present` de arriba.
+                if not present and (now - known[skey]) > timedelta(days=SENSOR_FORGET_DAYS):
+                    known.pop(skey, None)
+                    self._just_forgotten.append(skey)
                     continue
                 # Un valor que el QC acaba de anular NO es un sensor perdido: el
                 # sensor SÍ reportó, solo que la lectura era imposible (pico o
@@ -497,6 +514,23 @@ class AlertService:
                 # (esto mata el parpadeo alrededor del umbral).
                 self._pending_on.pop(nkey, None)
                 self._pending_off.pop(nkey, None)
+
+        # Sensores que se dejan de vigilar por llevar demasiado sin reportar. Se
+        # avisa UNA vez y se limpia su estado: si el sensor vuelve, se re-registra
+        # solo y su alerta puede dispararse de nuevo con normalidad.
+        for skey in self._just_forgotten:
+            nk = f"{prefix}sensor_{skey}"
+            self.active.pop(nk, None)
+            self._active_since.pop(nk, None)
+            self._pending_on.pop(nk, None)
+            self._pending_off.pop(nk, None)
+            lbl = self._sensor_label(_SENSOR_PRESENCE[skey])
+            await self._safe_notify(
+                f"🔕 {tag}Se deja de vigilar {lbl}: {SENSOR_FORGET_DAYS} días sin reportar. "
+                f"Si vuelve a dar señal se re-registra solo.",
+                category="sensor",
+            )
+        self._just_forgotten = []
 
     async def check_air(self, aqi: Optional[float], imeca: Optional[float]) -> None:
         """
