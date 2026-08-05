@@ -30,6 +30,13 @@ export interface WeatherData {
   humidity_ch6?: number
   humidity_ch7?: number
   humidity_ch8?: number
+  /**
+   * Batería del conjunto exterior WS69 (el mástil: viento, lluvia, solar/UV).
+   * Binaria, igual que las de los WN31: true = OK, false = baja. El receiver la
+   * invierte al parsear, porque Ecowitt manda 0 = normal y 1 = baja.
+   */
+  battery_wh65?: boolean
+
   // WN31 battery status per channel (true = OK, false = Low)
   battery_ch1?: boolean
   battery_ch2?: boolean
@@ -73,6 +80,12 @@ export interface WeatherData {
   station_type?: string
   model?: string
   received_at?: string
+  /**
+   * Momento de la lectura según la estación (de su campo `dateutc`). Viene en UTC
+   * pero SIN sufijo de zona, así que `new Date(timestamp)` lo tomaría por hora
+   * local: hay que añadirle la 'Z' antes de medir su antigüedad.
+   */
+  timestamp?: string
 }
 
 /**

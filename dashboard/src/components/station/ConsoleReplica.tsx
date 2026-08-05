@@ -8,6 +8,9 @@ import { MeteoGlyph } from '../MeteoGlyph'
 // integrado del GW1100 (*_indoor) como el WN32 exterior (*_outdoor). Antes había
 // aquí una copia local que solo tenía los _indoor.
 import type { RemoteHistRow } from '../../remote'
+// Amanecer/atardecer: no se calculan en local como la fase lunar, vienen del
+// pronóstico (Open-Meteo a través de nuestro backend, que además lo cachea).
+import { fetchForecast, type AstroData } from '../../forecast'
 import { LOCATION } from '../../config'
 
 /**
@@ -22,6 +25,30 @@ import { LOCATION } from '../../config'
 const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
 const pad = (n: number) => String(n).padStart(2, '0')
+
+// Hora local "HH:MM" de un ISO. Los `min_time`/`max_time` de /api/stats/daily SÍ
+// traen offset (+00:00), así que Date los sitúa bien y getHours() devuelve la hora
+// local del contenedor, que es la misma que ya muestra el reloj de la consola.
+const hhmm = (iso?: string | null) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// El `timestamp` de /api/current viene en UTC pero SIN sufijo de zona, y un ISO sin
+// zona lo interpreta Date como hora LOCAL. Sin añadirle la 'Z' la antigüedad saldría
+// desfasada las 6 h del huso: siempre negativa, y la consola nunca se daría por
+// caída. Los que ya traen zona (+00:00 o Z) se dejan como están.
+const parseUtc = (s?: string) => {
+  if (!s) return null
+  const d = new Date(/(Z|[+]\d\d:?\d\d|-\d\d:\d\d)$/.test(s) ? s : `${s}Z`)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+// Minutos sin lectura nueva tras los que la consola avisa. La estación empuja cada
+// ~16 s, así que 5 min son ~19 envíos perdidos: margen de sobra para no dar falsas
+// alarmas por un push tardío y aun así enterarse pronto.
+const STALE_MIN = 5
 const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const cardinal = (deg?: number) => (deg == null ? '--' : DIR16[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16])
 
@@ -118,6 +145,52 @@ function HouseGlyph({ size = LOC_SIZE, filled = false }: { size?: number; filled
       <path d="M3 12l9-9 9 9" fill={fill} />
       <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" fill={fill} />
     </svg>
+  )
+}
+
+// Estado de batería de un sensor: la pila se dibuja llena y verde, o casi vacía y
+// roja. Sólo distingue OK / baja porque es lo único que mandan el WS69 y los WN31
+// --Ecowitt los reporta como bandera 0/1, no como voltaje-- y por eso el relleno
+// tiene dos posiciones y no un nivel continuo. El WN32 exterior SÍ reportará nivel
+// cuando se instale, y entonces este mismo dibujo puede llevar relleno proporcional.
+//
+// `name` identifica el sensor y va SIEMPRE en el `title`; `showLabel` decide si además
+// se dibuja al lado. Se oculta en EXT, donde la línea de mín/máx va centrada y ocupa
+// casi toda la franja de abajo: ahí sólo cabe la pila. No se pierde información,
+// porque cada celda tiene una sola batería, la del sensor que le da sus datos.
+function BatteryGlyph({ ok, name, showLabel = true }: { ok: boolean; name: string; showLabel?: boolean }) {
+  const c = ok ? '#22c55e' : '#ef4444'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+      title={`batería ${name}: ${ok ? 'OK' : 'baja'}`}>
+      {showLabel && <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{name}</span>}
+      <svg width="18" height="10" viewBox="0 0 18 10">
+        <rect x="0.6" y="0.6" width="13" height="8.8" rx="1.6" fill="none" stroke={c} strokeWidth="1.2" />
+        <rect x="2.2" y="2.2" width={ok ? 9.8 : 2.6} height="5.6" fill={c} />
+        <rect x="14.2" y="3" width="3" height="4" rx="1" fill={c} />
+      </svg>
+    </span>
+  )
+}
+
+// Salida y puesta del sol, para la celda de la luna. Las flechas dicen cuál es
+// cuál sin gastar una palabra: sube = amanece, baja = atardece.
+function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
+  const row = (up: boolean, iso?: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <svg width="11" height="11" viewBox="0 0 12 12">
+        <path d={up ? 'M6 2 L10 7 L2 7 Z' : 'M6 10 L10 5 L2 5 Z'} fill="#ffcf19" />
+      </svg>
+      <span className="seg" style={{ color: '#ffcf19', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
+        {hhmm(iso) || '--:--'}
+      </span>
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {row(true, sunrise)}
+      {row(false, sunset)}
+    </div>
   )
 }
 
@@ -219,6 +292,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [imeca, setImeca] = useState<ImecaData | null>(null)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
+  const [astro, setAstro] = useState<AstroData | null>(null)
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -242,6 +316,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     return () => clearInterval(i)
   }, [])
 
+  // Astronomía del pronóstico, sólo para el amanecer/atardecer de la celda de la
+  // luna. Cada 30 min: son dos horas fijas del día, no hace falta más.
+  useEffect(() => {
+    const load = () => fetchForecast().then((r) => setAstro(r.astro)).catch(() => {})
+    load()
+    const i = setInterval(load, 30 * 60000)
+    return () => clearInterval(i)
+  }, [])
+
   // ICA (IMECA estimado). Se pide aparte porque no va en el contexto de la
   // estación: es un dato externo. Cada 30 min, como su caché en el servidor.
   useEffect(() => {
@@ -254,6 +337,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
   const cond = data ? deriveCondition(data) : { icon: '', label: '' }
   const dir = data?.wind_direction
+
+  // ¿Sigue llegando el dato, o la consola está enseñando números congelados? Hasta
+  // ahora no lo miraba nunca: si la estación deja de empujar, /api/current sigue
+  // sirviendo la última lectura y la consola la muestra indefinidamente, con el
+  // reloj corriendo al lado, que es justo lo que la hace parecer fresca.
+  // `now` se refresca cada segundo, así que esto se reevalúa solo.
+  const lastSeen = parseUtc(data?.timestamp) ?? parseUtc(data?.received_at)
+  const staleMin = lastSeen ? Math.floor((now.getTime() - lastSeen.getTime()) / 60000) : null
+  const stale = staleMin == null || staleMin >= STALE_MIN
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
   const hDay = stats?.humidity_outdoor      // …y para HUMEDAD, que los muestra igual
 
@@ -420,12 +512,25 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
             <HouseGlyph />
           </div>
-          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
+          {/* El termómetro SUBE al borde de arriba. Abajo estaba en la única franja
+              que queda libre a lo ancho, y ahí es donde hacen falta los píxeles para
+              poner la HORA junto al mín/máx. Arriba no estorba: el rótulo se fue y el
+              número, aunque centrado en la celda, empieza en x≈100 mientras el icono
+              acaba en x≈84. Mismo movimiento en HUMEDAD. */}
+          <div style={{ position: 'absolute', top: 2, left: 12 }}>
             <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
           </div>
+          {/* Batería del WS69, el mástil exterior: es de donde sale la temperatura de
+              esta celda, y también el viento, la lluvia y el solar/UV. Va abajo a la
+              derecha, donde el mín/máx --que va centrado-- deja hueco. */}
+          {data?.battery_wh65 != null && (
+            <div style={{ position: 'absolute', bottom: 7, right: 8 }}>
+              <BatteryGlyph ok={data.battery_wh65} name="WS69" showLabel={false} />
+            </div>
+          )}
           {/* Centrado, no pegado a la derecha: la temperatura es el dato principal
               de la consola y con los mín/máx debajo forman un bloque.
               SIN la clase `ctr`: su margin:auto centra en el espacio libre y baja el
@@ -449,15 +554,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               decimal por `decNum` con el .dec normal de 0.6em (~14 px): sin él las
               cuatro cifras pesaban igual que el valor grande de arriba, y es el
               mismo recurso de escalonado que usa toda la consola. */}
-          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+          {/* La HORA de cada extremo, en esta misma línea: es el sitio donde caben sin
+              robarle nada al valor grande. Subir la lectura no era opción --los rótulos
+              que se quitaron eran laterales, así que su hueco no da alto-- y de ahí que
+              el termómetro se fuera arriba para dejar libre esta franja.
+              La hora va en gris (--lbl) y a 11 px, por debajo del blanco de MÍN/MÁX:
+              es la coordenada del dato, no el dato. */}
+          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.min ?? undefined))}
             </span>
-            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.min_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 8 }}>MÁX</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.max ?? undefined))}
             </span>
+            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.max_time)}</span>
           </div>
         </div>
 
@@ -484,12 +597,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               `textAlign: right` + `right` fijo y no centrado: así "NNE" (3 letras) y
               "N" (1) comparten el borde derecho y la palabra no se mueve al cambiar
               el viento, el mismo anclaje que PROMEDIO/RÁFAGA. */}
-          {/* SIN la clase `gv`: además del glow verde arrastra la fuente DSEG7, que es
-              de 7 segmentos y sólo sabe dibujar cifras --"NO" salía como "no"--. El
-              color va inline y la letra se queda en la Roboto Condensed de la consola,
-              igual que lo hacía la celda VEL con este mismo rumbo. */}
+          {/* El rumbo VUELVE a la fuente de 7 segmentos, ahora a propósito. Antes se
+              quitó porque a 34 px "NO" se leía como "no" y parecía un error; a 24 px y
+              junto a los grados --que están al otro extremo en la misma fuente y el
+              mismo cuerpo-- ese trazo de segmentos deja de parecer un fallo y pasa a
+              ser lo que es en una consola física, donde las letras se dibujan con los
+              mismos siete palitos que las cifras.
+              El color va inline y no por la clase `gv`, que traería además el glow. */}
           <div style={{ position: 'absolute', top: 4, right: 10, textAlign: 'right' }}>
-            <span style={{ color: 'var(--v)', fontSize: 28, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
+            <span className="seg" style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
               {cardinal(dir)}
             </span>
           </div>
@@ -575,10 +691,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 {decNum(u.wind(data?.wind_speed_avg10m, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
               </div>
             </div>
+            {/* RÁFAGA muestra el MÁXIMO DEL DÍA (`wind_gust_max_daily`), no la ráfaga
+                del instante. Un día de viento se recuerda por su pico, y la ráfaga
+                instantánea casi siempre marcaba lo mismo que la velocidad --o 0.0--, con
+                lo que la celda gastaba una de sus tres cifras en repetir otra.
+                El rótulo dice "DÍA" para no repetir el pecado de PROMEDIO, que estuvo
+                mintiendo por llamar promedio a una lectura instantánea. Es la misma
+                palabra que ya usa LLUVIA para su acumulado del día. */}
             <div style={{ flex: 1, textAlign: 'right' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA</div>
+              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA DÍA</div>
               <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                {decNum(u.wind(data?.wind_gust, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
+                {decNum(u.wind(data?.wind_gust_max_daily, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
               </div>
             </div>
           </div>
@@ -591,9 +714,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             así que todas las medidas de esta celda --cuerpo 66, unidad 24, el mín/máx
             anclado abajo-- siguen valiendo tal cual; sólo cambia de vecinos. */}
         <div className="cell col main">
-          {/* Sin rótulo "HUMEDAD": la gota de abajo lo dice. Mismo apaño que en EXT
-              para que el número no se mueva --marginTop de -13 a +5--. */}
-          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
+          {/* Sin rótulo "HUMEDAD": la gota lo dice. Mismo apaño que en EXT para que el
+              número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
+              borde de arriba, para dejarle la franja de abajo a las horas. */}
+          <div style={{ position: 'absolute', top: 6, left: 12 }}>
             <MeteoGlyph name="humidity" size={65} color="#3b82f6" title="humedad" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -609,15 +733,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
             {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
           </div>
-          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+          {/* Horas igual que en EXT. Aquí sobra más sitio, porque la humedad son dos
+              cifras sin decimal y no lleva pila de batería: la del sensor que la mide
+              es la del WS69, que ya se ve en EXT, y repetirla sería ruido. */}
+          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.min != null ? hDay.min.toFixed(0) : '--'}
             </span>
-            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.min_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 8 }}>MÁX</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.max != null ? hDay.max.toFixed(0) : '--'}
             </span>
+            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.max_time)}</span>
           </div>
         </div>
 
@@ -687,10 +816,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
               </div>
             </div>
+            {/* La tercera cifra pasa del acumulado del DÍA al del MES. Las tres
+                responden ahora a tres preguntas distintas: TASA dice si está lloviendo
+                ahora, EVENTO cuánto ha caído en este chubasco, y MES cuánto llevamos.
+                Con DÍA, en seca las tres marcaban 0.0 casi siempre y la celda no decía
+                nada; el mensual está vivo todo el año. Lo calcula el receiver
+                (`get_rain_accumulations`) si el aparato no lo manda. */}
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>DÍA</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>MES</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
-                {decNum(u.rain(data?.rain_daily))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
+                {decNum(u.rain(data?.rain_monthly))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
           </div>
@@ -724,20 +859,26 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         {/* Condición (2/3) y luna (1/3) como DOS celdas con contorno blanco. La
             condición sola dejaba media celda vacía, y la luna estaba apretada
             entre SOLAR y UV, cuyo sitio ocupa ahora el ICA. */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+        {/* La condición cede ancho (de 2fr a 1.3fr) para que en la celda de al lado
+            entren, al lado de la luna, el amanecer y el atardecer. Puede permitírselo:
+            su icono trae mucho aire por dentro --el dibujo ocupa ~50 px de una caja de
+            108, medido-- así que estrechar la celda no lo achica. El rótulo baja a 13 px
+            por lo mismo, para que una condición larga ("NOCHE PARCIALMENTE NUBLADA") no
+            se parta en dos renglones en el ancho nuevo. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
-            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.05, textAlign: 'center' }}>{cond.label || 'CLIMA'}</div>
             <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
           </div>
-          <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
-            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>LUNA</div>
-            {/* La luna se centra en el hueco que deja la etiqueta, no debajo de ella:
-                colgada del `flex-start` quedaba pegada al rótulo con todo el aire
-                junto abajo. El `flex:1` toma el alto sobrante y el `center` la
-                reparte, así el disco queda a media celda. */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', minHeight: 0 }}>
-              <MoonGlyph size={62} />
-            </div>
+          {/* SOL Y LUNA. Sin rótulo, por lo mismo que EXT o PRES: el disco lunar y las
+              flechas de salida y puesta se explican solos, y la palabra "LUNA" ya se
+              habría quedado corta al entrar el sol. Ese renglón que se ahorra es justo
+              el que necesitan las dos horas.
+              Padding lateral de 6 y no los 12 de `.cell`: en 146 px de celda, la luna y
+              las dos horas piden ~122 y con 12 por lado no caben. */}
+          <div className="cell derivada" style={{ padding: '6px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <MoonGlyph size={50} />
+            <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
         </div>
 
@@ -876,6 +1017,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
           </div>
+          {/* Batería del WN31 de este canal. Aquí SÍ lleva el nombre al lado: la franja
+              de abajo está libre --los dos valores van centrados con `ctr`-- así que
+              cabe sin apretar nada. */}
+          {data?.battery_ch1 != null && (
+            <div style={{ position: 'absolute', bottom: 7, right: 10 }}>
+              <BatteryGlyph ok={data.battery_ch1} name="WN31" />
+            </div>
+          )}
           {/* marginTop -10 = misma altura que INTERIOR */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
@@ -892,9 +1041,22 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               etiquetas sobraban --un reloj y una fecha se reconocen solos-- y esta
               es la única celda que no muestra una magnitud, así que el nombre de la
               estación no compite con ningún dato. */}
-          <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', marginTop: -2 }}>
-            Estación Clima XE1E
-          </div>
+          {/* Este renglón es el nombre de la estación… hasta que deja de llegar dato.
+              Entonces se convierte en el AVISO, en rojo y diciendo cuánto lleva callada.
+              Aprovecha el sitio del nombre en vez de pedir uno nuevo, que en esta celda
+              no hay; y es el lugar correcto porque la avería no es de una magnitud
+              concreta sino de todas a la vez, y porque el reloj de al lado es
+              precisamente lo que hace que la pantalla parezca fresca cuando no lo está.
+              El nombre no se pierde: sigue en el título de la página del kiosco. */}
+          {stale ? (
+            <div style={{ color: 'var(--red)', fontSize: 16, fontWeight: 800, letterSpacing: 1, textAlign: 'center', marginTop: -2 }}>
+              ⚠ SIN DATOS {staleMin != null ? `· ${staleMin} MIN` : ''}
+            </div>
+          ) : (
+            <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', marginTop: -2 }}>
+              Estación Clima XE1E
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 26, marginTop: 4 }}>
             <div className="gw seg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
             <div style={{ textAlign: 'center', lineHeight: 1.02 }}>
