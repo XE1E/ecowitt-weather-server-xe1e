@@ -236,13 +236,17 @@ class InfluxDBStorage:
             # consultas secuenciales por llamada, y este método lo usan
             # /api/stats/daily, /api/stats/records, el rollup diario y el kiosco
             # (con el periodo "Histórico" son 42 barridos de años de datos crudos).
-            field_set = ", ".join(f'"{f}"' for f in stats_fields)
+            # El filtro va como cadena de `or`, NO con contains(): Flux empuja las
+            # comparaciones al índice, pero contains() no, así que obliga a leer
+            # toda la serie y filtrar en memoria. Con contains() esta misma
+            # consulta pasaba de ~1 s a 15 s en el día y a 49 s en 30 días.
+            field_filter = " or ".join(f'r["_field"] == "{f}"' for f in stats_fields)
             base = f'''
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
                 {_station_filter(station)}
-                |> filter(fn: (r) => contains(value: r["_field"], set: [{field_set}]))
+                |> filter(fn: (r) => {field_filter})
                 |> group(columns: ["_field"])
             '''
 
