@@ -103,6 +103,56 @@ export function deriveCondition(d: WeatherData): Condition {
   return { icon: 'partly-cloudy-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.4 }
 }
 
+/**
+ * Nombre e icono de la fase lunar a partir del % iluminado y de si crece.
+ *
+ * Réplica EXACTA del criterio de `_moon_phase_name` (almanac.py), que es la
+ * fuente de verdad: el backend calcula la fase con pyephem y la página de
+ * Astronomía muestra eso. Aquí sólo se replica la CLASIFICACIÓN, para que el
+ * pronóstico y la consola —que estiman la iluminación con una aproximación
+ * lineal del mes sinódico— no acaben dando otro nombre.
+ *
+ * Antes clasificaban por fracción de ciclo y el desacuerdo era visible: con la
+ * luna al 59-62 % Astronomía decía "Gibosa menguante" y las otras dos "Cuarto
+ * menguante", el mismo día.
+ */
+export function moonPhaseName(illum: number, waxing: boolean): { icon: string; label: string } {
+  if (illum < 1) return { icon: 'moon-new', label: 'Luna nueva' }
+  if (illum > 99) return { icon: 'moon-full', label: 'Luna llena' }
+  if (illum >= 45 && illum <= 55) {
+    return waxing
+      ? { icon: 'moon-first-quarter', label: 'Cuarto creciente' }
+      : { icon: 'moon-last-quarter', label: 'Cuarto menguante' }
+  }
+  if (illum < 45) {
+    return waxing
+      ? { icon: 'moon-waxing-crescent', label: 'Luna creciente' }
+      : { icon: 'moon-waning-crescent', label: 'Luna menguante' }
+  }
+  return waxing
+    ? { icon: 'moon-waxing-gibbous', label: 'Gibosa creciente' }
+    : { icon: 'moon-waning-gibbous', label: 'Gibosa menguante' }
+}
+
+/**
+ * Estado de la luna para una fecha, por aproximación lineal del mes sinódico.
+ * Es una estimación: la fuente exacta es `/api/almanac` (pyephem). Se usa donde
+ * no se quiere depender de una llamada al servidor.
+ *
+ *  - `phase`: fracción del ciclo 0..1 (0 = luna nueva). La necesita quien DIBUJA
+ *    la luna, para el ancho del terminador.
+ *  - `illum`: porcentaje iluminado, que es lo que clasifica `moonPhaseName`.
+ *  - `waxing`: si crece.
+ */
+export function moonIllumination(d: Date): { phase: number; illum: number; waxing: boolean } {
+  const syn = 29.530588853
+  const ref = Date.UTC(2000, 0, 6, 18, 14)
+  let age = ((d.getTime() - ref) / 86400000) % syn
+  if (age < 0) age += syn
+  const phase = age / syn
+  return { phase, illum: ((1 - Math.cos(2 * Math.PI * phase)) / 2) * 100, waxing: phase <= 0.5 }
+}
+
 /** Wet-bulb temperature (°C) from temp (°C) and RH (%), Stull's approximation. */
 export function wetBulb(tempC: number, rh: number): number {
   const t = tempC

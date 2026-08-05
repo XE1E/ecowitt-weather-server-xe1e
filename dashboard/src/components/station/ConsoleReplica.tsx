@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { deriveCondition, historicValue } from '../../weather'
+import { deriveCondition, historicValue, moonIllumination } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -37,13 +37,9 @@ const RY_IN = 31
 const ARX = RX - 1.5
 const ARY = RY - 1.5
 
-// Fase lunar sencilla (mes sinódico) → fracción iluminada + creciente/menguante.
-function moonPhase(d: Date) {
-  const syn = 29.530588853
-  const ref = Date.UTC(2000, 0, 6, 18, 14) / 86400000 // luna nueva de referencia
-  const phase = (((d.getTime() / 86400000 - ref) / syn) % 1 + 1) % 1
-  return { phase, illum: (1 - Math.cos(2 * Math.PI * phase)) / 2, waxing: phase <= 0.5 }
-}
+// La fase lunar sale de `moonIllumination` (weather.ts), la misma que usa el
+// pronóstico: antes había aquí una copia de la fórmula, y tener dos podía
+// hacerlas divergir con cualquier retoque. `illum` viene en % (0-100).
 
 // Misma lógica de umbrales que UvSolarCard (tab Inicio), en hex para los estilos
 // inline de la consola. UV: verde→fucsia. Solar: gris (noche)→rojo (pico).
@@ -79,9 +75,9 @@ function decNum(s: string): ReactNode {
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
 function MoonGlyph({ size = 42 }: { size?: number }) {
   const R = size / 2
-  const { phase, illum, waxing } = moonPhase(new Date())
+  const { phase, illum, waxing } = moonIllumination(new Date())
   const rx = Math.max(0.4, Math.abs(R * Math.cos(2 * Math.PI * phase)))
-  const gibbous = illum > 0.5
+  const gibbous = illum > 50
   const s1 = waxing ? 1 : 0
   const s2 = gibbous ? s1 : 1 - s1
   const litPath = `M0,${-R} A ${R} ${R} 0 0 ${s1} 0 ${R} A ${rx} ${R} 0 0 ${s2} 0 ${-R} Z`

@@ -1,4 +1,5 @@
 import { LOCATION } from './config'
+import { moonIllumination, moonPhaseName } from './weather'
 
 export interface ForecastDay {
   date: string      // ISO date
@@ -59,27 +60,20 @@ function wmoToIcon(code: number, isDay = true): { icon: string; label: string } 
   return { icon: `clear-${s}`, label: '—' }
 }
 
-// Moon phase from date (synodic month approximation)
+/**
+ * Fase lunar para una fecha.
+ *
+ * Clasifica por ILUMINACIÓN con el mismo criterio que el backend (pyephem), no
+ * por fracción de ciclo como antes. Ese era el desacuerdo: con la luna al 59-62 %
+ * la página de Astronomía decía "Gibosa menguante" y el pronóstico "Cuarto
+ * menguante" el mismo día, porque cada uno cortaba el ciclo por su lado.
+ *
+ * La iluminación sigue siendo una estimación local (mes sinódico lineal); la
+ * fuente exacta es `/api/almanac`.
+ */
 export function moonPhase(date: Date): { icon: string; label: string } {
-  const synodic = 29.530588853
-  const knownNew = Date.UTC(2000, 0, 6, 18, 14, 0)
-  let age = ((date.getTime() - knownNew) / 86400000) % synodic
-  if (age < 0) age += synodic
-  const f = age / synodic
-  const phases: [number, string, string][] = [
-    [0.0625, 'moon-new', 'Luna nueva'],
-    [0.1875, 'moon-waxing-crescent', 'Creciente iluminante'],
-    [0.3125, 'moon-first-quarter', 'Cuarto creciente'],
-    [0.4375, 'moon-waxing-gibbous', 'Gibosa creciente'],
-    [0.5625, 'moon-full', 'Luna llena'],
-    [0.6875, 'moon-waning-gibbous', 'Gibosa menguante'],
-    [0.8125, 'moon-last-quarter', 'Cuarto menguante'],
-    [0.9375, 'moon-waning-crescent', 'Creciente menguante'],
-  ]
-  for (const [limit, icon, label] of phases) {
-    if (f < limit) return { icon, label }
-  }
-  return { icon: 'moon-new', label: 'Luna nueva' }
+  const { illum, waxing } = moonIllumination(date)
+  return moonPhaseName(illum, waxing)
 }
 
 export interface SkyEvent {
@@ -96,13 +90,12 @@ export function upcomingMoonEvents(count = 4): SkyEvent[] {
     [0.5, 'moon-full', 'Luna llena'],
     [0.75, 'moon-last-quarter', 'Cuarto menguante'],
   ]
-  const synodic = 29.530588853
-  const knownNew = Date.UTC(2000, 0, 6, 18, 14, 0)
-  const frac = (d: Date) => {
-    let age = ((d.getTime() - knownNew) / 86400000) % synodic
-    if (age < 0) age += synodic
-    return age / synodic
-  }
+  // Misma fórmula que el resto del sitio, no una copia local.
+  const frac = (d: Date) => moonIllumination(d).phase
+  // Fecha LOCAL: con toISOString() (UTC) una fase de la tarde en México se
+  // anunciaba un día después.
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  const localDay = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
   const events: SkyEvent[] = []
   const start = new Date()
   let prev = frac(start)
@@ -111,7 +104,7 @@ export function upcomingMoonEvents(count = 4): SkyEvent[] {
     const f = frac(d)
     for (const [t, icon, label] of targets) {
       const crossed = prev <= f ? t > prev && t <= f : t > prev || t <= f
-      if (crossed) events.push({ date: d.toISOString().slice(0, 10), icon, label })
+      if (crossed) events.push({ date: localDay(d), icon, label })
     }
     prev = f
   }
