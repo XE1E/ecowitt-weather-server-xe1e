@@ -34,6 +34,11 @@ def sea_level_pressure(abs_hpa: float, altitude_m: float) -> float:
     return round(abs_hpa, 1)
 
 
+def inhg_to_kpa(inhg: float) -> float:
+    """Pulgadas de mercurio a kilopascales (para el VPD)."""
+    return inhg * 3.38639
+
+
 def inches_to_mm(inches: float) -> float:
     """Convert inches to millimeters."""
     return inches * 25.4
@@ -100,6 +105,14 @@ def convert_to_metric(data: Dict[str, Any], compute_derived: bool = True) -> Dic
         if imperial_key in result and result[imperial_key] is not None:
             result[metric_key] = round(inhg_to_hpa(result[imperial_key]), 1)
             del result[imperial_key]
+
+    # VPD: el gateway lo manda en inHg, pero el déficit de presión de vapor se
+    # expresa en kPa (0-6 kPa el rango habitual). Iba sin convertir, así que un
+    # 2.73 kPa real se publicaba como "0.81" y quien lo leyera como kPa veía un
+    # aire mucho menos demandante del que había.
+    if result.get("vpd_inhg") is not None:
+        result["vpd"] = round(inhg_to_kpa(result["vpd_inhg"]), 3)
+        del result["vpd_inhg"]
 
     # Rain conversions (inches → mm)
     rain_fields = [

@@ -51,6 +51,12 @@ FIELD_MAPPING = {
     "solarradiation": "solar_radiation",
     "uv": "uv_index",
 
+    # Déficit de presión de vapor. Ecowitt lo manda en inHg como el resto de
+    # presiones; se renombra con sufijo para que convert_to_metric lo pase a kPa,
+    # que es la unidad en que se expresa el VPD. Sin este mapeo pasaba crudo y se
+    # guardaba en InfluxDB en imperial, con todo lo demás en métrico.
+    "vpd": "vpd_inhg",
+
     # Battery status
     "wh65batt": "battery_wh65",
     "wh26batt": "battery_wh26",
@@ -127,8 +133,13 @@ FIELD_MAPPING = {
     "lightning": "lightning_distance",
 }
 
-# Fields that are metadata (not measurements)
-METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequency"}
+# Fields that are metadata (not measurements).
+# runtime/heap/interval son diagnóstico del gateway (segundos encendido, memoria
+# libre, periodo de envío), no medidas meteorológicas: se escribían como campos de
+# InfluxDB y se publicaban por MQTT junto a la temperatura. Aquí quedan fuera de
+# ambos; para diagnosticar el datalogger están los logs de ingesta.
+METADATA_FIELDS = {"passkey", "station_type", "timestamp_utc", "model", "frequency",
+                   "runtime", "heap", "interval"}
 
 # Fields that are tags in InfluxDB.
 # 'station' identifica una estación SECUNDARIA (p. ej. un GW1100). La estación

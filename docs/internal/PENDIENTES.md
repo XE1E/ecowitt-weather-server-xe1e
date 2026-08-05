@@ -99,6 +99,19 @@ firmware elige el icono solo por `code` (`Apps_NativeApps.cpp:433`,
 `getWeatherConditionIcon`). Usarlo permitiría distinguir el sol de la luna de
 madrugada. Ese sí es un cambio pequeño y sin riesgo.
 
+## 1c. Histórico de `vpd` en dos unidades — decidir
+
+El VPD se guardaba en InfluxDB en **inHg** (llegaba así del gateway y no se
+convertía). Desde el 2026-08-04 se guarda en **kPa**, que es su unidad, así que la
+serie tiene una discontinuidad: lo anterior a esa fecha está en inHg y hay que
+multiplicarlo por **3.38639** para compararlo con lo nuevo.
+
+Nadie grafica ese campo hoy, así que no corre prisa. Dos salidas:
+
+- **Dejarlo** y que conste aquí (lo que está hecho ahora).
+- **Recalcular** con un `to()` de Flux sobre el campo `vpd` anterior a esa fecha,
+  igual que se hizo con la presión histórica (ver sección 6). Backup antes.
+
 ## 2. Display de consola — fase 2 (firmware) — diferido
 Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola física,
 1024×600). **Plan detallado + decisiones:** `ecowitt-display-kiosk-xe1e/docs/PLAN-CONSOLA-XE1E.md`.
