@@ -47,6 +47,11 @@ interface Season {
   dry_days: number
   warm_threshold: number
   cool_threshold: number
+  // Denominadores: cada contador va sobre los días que tienen ESE dato, así que
+  // pueden no sumar al total del periodo si la estación tuvo huecos.
+  days?: number
+  temp_measured_days?: number
+  rain_measured_days?: number
 }
 interface NoaaYear {
   year: number
@@ -201,12 +206,23 @@ export function StatisticsPage() {
       {hasYear && noaa!.season && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-slate-300 mb-3">Contadores de días · {year}</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <SummaryCard label={`Días cálidos (máx ≥ ${u.temp(noaa!.season.warm_threshold)}${u.tempU})`} color="text-orange-300" value={`${noaa!.season.warm_days}`} unit="días" />
-            <SummaryCard label={`Noches frescas (mín ≤ ${u.temp(noaa!.season.cool_threshold)}${u.tempU})`} color="text-sky-300" value={`${noaa!.season.cool_nights}`} unit="días" />
-            <SummaryCard label="Días de lluvia" color="text-blue-300" value={`${noaa!.season.rain_days}`} unit="días" />
-            <SummaryCard label="Días secos" color="text-amber-300" value={`${noaa!.season.dry_days}`} unit="días" />
-          </div>
+          {(() => {
+            const se = noaa!.season
+            // "de N medidos" solo cuando faltan días: si la estación midió todo el
+            // periodo, el denominador sobra y añade ruido.
+            const tNote = se.temp_measured_days != null && se.days != null && se.temp_measured_days < se.days
+              ? `de ${se.temp_measured_days} días medidos` : undefined
+            const rNote = se.rain_measured_days != null && se.days != null && se.rain_measured_days < se.days
+              ? `de ${se.rain_measured_days} días medidos` : undefined
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <SummaryCard label={`Días cálidos (máx ≥ ${u.temp(se.warm_threshold)}${u.tempU})`} color="text-orange-300" value={`${se.warm_days}`} unit="días" note={tNote} />
+                <SummaryCard label={`Noches frescas (mín ≤ ${u.temp(se.cool_threshold)}${u.tempU})`} color="text-sky-300" value={`${se.cool_nights}`} unit="días" note={tNote} />
+                <SummaryCard label="Días de lluvia" color="text-blue-300" value={`${se.rain_days}`} unit="días" note={rNote} />
+                <SummaryCard label="Días secos" color="text-amber-300" value={`${se.dry_days}`} unit="días" note={rNote} />
+              </div>
+            )
+          })()}
         </div>
       )}
 

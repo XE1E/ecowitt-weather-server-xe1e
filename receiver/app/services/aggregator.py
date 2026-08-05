@@ -377,15 +377,29 @@ def records_top(rows: List[Dict[str, Any]], n: int = 5) -> Dict[str, Any]:
 
 
 def season_tracker(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Contadores de días característicos del periodo (adaptado a CDMX)."""
-    warm = sum(1 for r in rows if r.get("temp_max") is not None and r["temp_max"] >= WARM_DAY_C)
-    cool = sum(1 for r in rows if r.get("temp_min") is not None and r["temp_min"] <= COOL_NIGHT_C)
+    """
+    Contadores de días característicos del periodo (adaptado a CDMX).
+
+    Cada contador va sobre los días que tienen ESE dato, no sobre todos: un día
+    sin medición no es un día seco ni una noche templada. La consecuencia es que
+    `rain_days + dry_days` puede ser menor que el total del periodo, así que se
+    devuelve también cuántos días se midieron de cada cosa — sin eso, las cuatro
+    tarjetas no cuadran con los días del periodo y nada lo explica.
+    """
+    with_max = [r for r in rows if r.get("temp_max") is not None]
+    with_min = [r for r in rows if r.get("temp_min") is not None]
     with_rain = [r for r in rows if r.get("rain_total") is not None]
-    rain = sum(1 for r in with_rain if (r.get("rain_total") or 0.0) >= RAIN_DAY_MM)
-    dry = sum(1 for r in with_rain if (r.get("rain_total") or 0.0) < RAIN_DAY_MM)
+    warm = sum(1 for r in with_max if r["temp_max"] >= WARM_DAY_C)
+    cool = sum(1 for r in with_min if r["temp_min"] <= COOL_NIGHT_C)
+    rain = sum(1 for r in with_rain if r["rain_total"] >= RAIN_DAY_MM)
+    dry = sum(1 for r in with_rain if r["rain_total"] < RAIN_DAY_MM)
     return {
         "warm_days": warm, "cool_nights": cool, "rain_days": rain, "dry_days": dry,
         "warm_threshold": WARM_DAY_C, "cool_threshold": COOL_NIGHT_C,
+        # Denominador de cada par de contadores, para poder rotularlo.
+        "days": len(rows),
+        "temp_measured_days": len(with_max),
+        "rain_measured_days": len(with_rain),
     }
 
 
