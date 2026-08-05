@@ -51,7 +51,11 @@ class InfluxDBStorage:
         self.org = org
         self.bucket = bucket
 
-        self.client = InfluxDBClient(url=url, token=token, org=org)
+        # timeout en ms. El de por defecto (10 s) se queda corto en las consultas
+        # amplias: get_daily_stats barre los 14 campos de una vez --menos consultas
+        # pero cada una más pesada-- y el periodo "Histórico" de Estadísticas pide
+        # años de datos crudos.
+        self.client = InfluxDBClient(url=url, token=token, org=org, timeout=30_000)
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
         self.query_api = self.client.query_api()
 
@@ -243,13 +247,19 @@ class InfluxDBStorage:
             '''
 
             def collect(agg: str):
-                """{campo: (valor, _time)} para la agregación pedida."""
+                """
+                {campo: (valor, _time)} para la agregación pedida.
+
+                `_time` se lee de `values`, NO con `record.get_time()`: mean() no
+                conserva esa columna (min/max sí, porque seleccionan una fila real)
+                y get_time() lanzaría KeyError al no encontrarla.
+                """
                 out: Dict[str, Any] = {}
                 for table in self.query_api.query(base + f"|> {agg}()"):
                     for record in table.records:
                         f = record.values.get("_field")
                         if f is not None:
-                            out[f] = (record.get_value(), record.get_time())
+                            out[f] = (record.get_value(), record.values.get("_time"))
                 return out
 
             # min()/max() conservan el _time del registro extremo; mean() no.
