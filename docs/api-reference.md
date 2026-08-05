@@ -218,6 +218,7 @@ Todos bajo la misma base. Devuelven JSON.
 |----------|-------------|
 | `GET /api/stats/records?start=-30d` | Estadísticas (mín/máx/prom con fecha del extremo) sobre un rango |
 | `GET /api/compare` | Últimas 24 h vs 24 h previas ("vs ayer") |
+| `GET /api/forecast?lat=&lon=` | Pronóstico Open-Meteo con caché en el servidor. Si el origen falla sirve la última copia buena, marcada con `stale` y `age_minutes` |
 | `GET /api/forecast/local` | Pronóstico local por tendencia barométrica (dato propio) |
 | `GET /api/climate/records` | Récords: de siempre, por mes calendario, este mes/año, ayer |
 | `GET /api/climate/onthisday` | Efeméride: mismo día en años previos |
