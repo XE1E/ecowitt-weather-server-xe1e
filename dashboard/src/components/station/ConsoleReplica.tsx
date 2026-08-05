@@ -339,13 +339,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               SIN la clase `ctr`: su margin:auto centra en el espacio libre y baja el
               valor hasta el bloque de mín/máx, que va absoluto abajo; se posiciona
               con marginTop y no con centrado automático.
-              76 px y marginTop NEGATIVO van juntos: agrandar la cifra sola la hace
-              crecer hacia abajo y se come el aire que la separa de mín/máx, así que
-              sube lo mismo que engordó.
+              66 px es el TECHO de esta celda, medido sobre la captura y no calculado:
+              la tinta del DSEG mide ~1.03× el cuerpo, y entre la etiqueta (acaba en
+              y≈27) y el mín/máx (empieza en y≈98) hay 69 px. A 76 la tinta medía 78 y
+              el decimal aterrizaba encima del MÁX; a 66 mide 68 y quedan ~16 px de
+              aire. Para subirlo más habría que agrandar la fila, y las de abajo no
+              tienen holgura que ceder.
               A -13 el dibujo de los dígitos empieza en y≈14 y se cruza con la banda
               de la etiqueta EXT, pero no con la etiqueta: ella vive en x 12-50 y el
-              número arranca en x≈88. */}
-          <div className="big gt decxs" style={{ fontSize: 76, textAlign: 'center', marginTop: -13 }}>
+              número arranca en x≈100. */}
+          <div className="big gt decxs" style={{ fontSize: 66, textAlign: 'center', marginTop: -13 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
@@ -452,12 +455,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', bottom: 8, left: 12 }}>
             <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
           </div>
-          {/* 76 y no 104: a 104 esta celda pesaba más que la temperatura, que es el
+          {/* 66 y no 104: a 104 esta celda pesaba más que la temperatura, que es el
               dato principal, y desnivelaba toda la fila de arriba. Ahora EXT, HUMEDAD
-              y VEL comparten cuerpo (76) y unidad (24), y la jerarquía la marca el
-              contenido, no el tamaño. `decxs` para que su decimal sea la mitad del
-              entero, como en EXT. */}
-          <div className="big gv decxs ctr rt" style={{ fontSize: 76, marginTop: -10 }}>
+              y VEL comparten cuerpo (66) y unidad (24), y la jerarquía la marca el
+              contenido, no el tamaño. Aquí cabría más --no hay mín/máx debajo-- pero
+              se queda en 66 para no volver a descompensar la fila. `decxs` para que
+              su decimal sea la mitad del entero, como en EXT. */}
+          <div className="big gv decxs ctr rt" style={{ fontSize: 66, marginTop: -10 }}>
             {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--v)' }}> {u.windU}</span>
           </div>
         </div>
@@ -475,7 +479,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mismos márgenes-- para que las dos celdas de la columna izquierda se
               lean como pareja. Con las filas 1 y 2 ya igualadas a 1.23fr, las medidas
               coinciden de verdad y no sólo en los tamaños de fuente. */}
-          <div className="big gh" style={{ fontSize: 76, textAlign: 'center', marginTop: -13 }}>
+          <div className="big gh" style={{ fontSize: 66, textAlign: 'center', marginTop: -13 }}>
             {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
             {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
