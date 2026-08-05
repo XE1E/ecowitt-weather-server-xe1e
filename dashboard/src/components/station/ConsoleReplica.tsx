@@ -289,21 +289,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
           {/* marginTop -10 = misma altura que VEL, que es de la misma fuente y con
               etiqueta del mismo tamaño, así que el mismo valor las iguala. */}
-          <div className="big gt ctr rt" style={{ fontSize: 56, paddingRight: 32, marginTop: -4 }}>
-            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
+          {/* Centrado, no pegado a la derecha: la temperatura es el dato principal
+              de la consola y con los mín/máx debajo forman un bloque. A 78 sigue
+              mandando sobre la humedad y la presión de las celdas de abajo. */}
+          <div className="big gt ctr" style={{ fontSize: 78, textAlign: 'center', marginTop: -6 }}>
+            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
-          {/* Mín/máx del día en el hueco que deja el valor al bajar de 104 a 56.
-              Van a la DERECHA: la izquierda la ocupa el termómetro. */}
-          <div style={{ position: 'absolute', bottom: 8, right: 14, display: 'flex', gap: 18 }}>
+          {/* Mín/máx del día, centrados bajo el valor. */}
+          <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, display: 'flex', gap: 22, justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÍN</div>
-              <div className="gt seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
+              <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
                 {u.temp(tDay?.min ?? undefined)}
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÁX</div>
-              <div className="gt seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
+              <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
                 {u.temp(tDay?.max ?? undefined)}
               </div>
             </div>
@@ -316,7 +318,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* La manga va ABSOLUTA: dentro del flex hacía crecer esta fila al alto del
               icono, y como el compás de abajo es flex:1, le robaba ese alto y el
               óvalo salía más chico. Mismo caso que el sol de EXT y REMOTA. */}
-          <div style={{ position: 'absolute', top: 30, right: 10 }}>
+          {/* Sube a la altura de la etiqueta: al quitar el título de esta celda,
+              VIENTO subió y la manga se quedó descolgada. */}
+          <div style={{ position: 'absolute', top: 6, right: 10 }}>
             <MeteoGlyph name="windsock" size={52} color="#22c55e" title="viento" />
           </div>
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
