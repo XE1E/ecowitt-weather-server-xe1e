@@ -131,10 +131,26 @@ Antes de escribir una línea de código:
 - [ ] **Degradar con gracia** si la foto está vieja o no llega, como se acordó para el
       SMN: decirlo, no dejar el hueco en blanco.
 
+## Orientación: al horizonte — DECIDIDO (2026-08-05)
+
+La cámara **mira al horizonte**, no al cielo ni a la estación. Consecuencias:
+
+- **Confirma la elección de la C325WB.** Los 127° de FOV son exactamente lo que un
+  plano de horizonte aprovecha; era el punto donde la Reolink (89°) se quedaba corta.
+- **La visión nocturna ColorPro sí aporta.** Con un plano de horizonte hay estructuras,
+  vegetación y luces lejanas que el F1.0 puede levantar en color. Habría sido casi
+  inútil apuntando al cielo, donde lo que hace falta son exposiciones largas.
+- **Encuadre**: dejar la línea de horizonte por debajo del centro, para que entre cielo
+  suficiente — es donde se ve llegar el tiempo, y lo que da valor a la foto junto a los
+  datos. Fijarlo de una vez: con timelapse, reajustar después parte la serie en dos.
+- **Cuidado con el sol.** Un plano de horizonte se come el amanecer o el atardecer de
+  frente según hacia dónde apunte. Eso satura la imagen a esas horas y, si además le da
+  el sol directo a la carcasa, acerca la temperatura a los 45 °C de máxima. Preferir una
+  orientación que no encare al sol; si no hay opción, contar con un par de tomas
+  quemadas al día.
+
 ## Decisiones abiertas
 
-- ¿La cámara mira al cielo, al horizonte, o a la estación misma? Cambia la orientación
-  y el valor de la visión nocturna.
 - ¿Se muestra la foto en el kiosco como página propia, o dentro de una existente?
 - Retención de las fotos: cuántos días, y si se archiva a R2 como los backups.
 
