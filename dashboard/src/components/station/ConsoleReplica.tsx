@@ -123,6 +123,52 @@ function OutdoorGlyph({ height = 30 }: { height?: number }) {
   )
 }
 
+// Escala horizontal de tendencia de presión, la del WS2910: dónde cae la variación
+// de las últimas 3 h en un riel de ±5 mb. La flecha de la celda dice el SENTIDO;
+// esto dice CUÁNTO, que es lo que enseña el barómetro de una consola física.
+//
+// El rango se fija en hPa y sólo se convierten los rótulos: 5 hPa son 0.15 inHg, y
+// un riel rotulado ±5 en modo imperial estaría mintiendo. El valor fuera de rango
+// se pinza contra el extremo en vez de salirse del riel: ±5 hPa en 3 h ya es un
+// cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
+const PS_R = 5          // rango del riel, en hPa
+const PS_W = 261        // ancho útil: 335 de caja menos 62 de sangría y 12 de margen
+const PS_H = 30
+
+function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: string }) {
+  const x0 = 12
+  const x1 = PS_W - 12
+  const mid = (x0 + x1) / 2
+  const half = (x1 - x0) / 2
+  const xOf = (v: number) => mid + (Math.max(-PS_R, Math.min(PS_R, v)) / PS_R) * half
+  const x = xOf(delta ?? 0)
+  // Mismos umbrales y colores que TrendGlyph (±1 hPa), para que la barra y la
+  // flecha de la celda nunca se contradigan.
+  const color = delta == null || Math.abs(delta) <= 1 ? '#94a3b8' : delta > 0 ? '#22c55e' : '#ef4444'
+  return (
+    <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
+      <rect x={x0} y={8} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#3f3f46" strokeWidth="1" />
+      {/* Marca cada 1 hPa; más alta y clara en -5, 0 y +5 */}
+      {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
+        const tx = xOf(v)
+        const major = v % PS_R === 0
+        return (
+          <line key={v} x1={tx} y1={major ? 4 : 6.5} x2={tx} y2={major ? 21 : 18.5}
+            stroke={major ? '#71717a' : '#3f3f46'} strokeWidth={major ? 1.4 : 1} />
+        )
+      })}
+      {/* Relleno del centro al valor: da la magnitud sin tener que leer la escala */}
+      {delta != null && Math.abs(x - mid) > 0.5 && (
+        <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
+      )}
+      {delta != null && <polygon points={`${x - 5},0 ${x + 5},0 ${x},7`} fill={color} />}
+      <text x={x0} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="start">-{endLabel}</text>
+      <text x={mid} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="middle">0</text>
+      <text x={x1} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="end">+{endLabel}</text>
+    </svg>
+  )
+}
+
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
@@ -212,7 +258,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // Temp/humedad: comparar con hace 1 hora, presión: con hace 3 horas
   const tempTrend = getTrend(data?.temperature_outdoor, historicValue(history, (r) => r.temperature_outdoor, 1), 0.5)  // ±0.5°C
   const humTrend = getTrend(data?.humidity_outdoor, historicValue(history, (r) => r.humidity_outdoor, 1), 3)           // ±3%
-  const pressTrend = getTrend(data?.pressure_relative, historicValue(history, (r) => r.pressure_relative, 3), 1)       // ±1 hPa
+  const press3h = historicValue(history, (r) => r.pressure_relative, 3)
+  const pressTrend = getTrend(data?.pressure_relative, press3h, 1)                                                     // ±1 hPa
+  // Variación de 3 h en hPa para el riel de PRES. En crudo, sin convertir: la
+  // escala razona en hPa y sólo traduce los rótulos.
+  const pressDelta = data?.pressure_relative != null && press3h != null
+    ? data.pressure_relative - press3h
+    : null
+  // 5 hPa son "5" en mb y "0.15" en inHg. u.press ya redondea con los decimales
+  // que toca en cada sistema, pero en métrico devolvería "5.0" y sobra el decimal.
+  const pressEndLabel = u.pressU === 'inHg' ? u.press(PS_R) : String(PS_R)
 
   // Celda REMOTA: la estación remota tiene DOS sensores. Con el WN32 conectado
   // interesa el exterior del sitio remoto, que es el dato meteorológico; si aún
@@ -541,17 +596,27 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
         {/* Fila 3 */}
         <div className="cell col main">
-          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN</div>
+          {/* PRES y no PRESIÓN: al subir la lectura a la altura de EXT/HUMEDAD, el
+              número llega hasta x≈82 y la palabra entera se le echaba encima. */}
+          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRES</div>
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
-                el barómetro le quedaba encima. */}
+                el barómetro le quedaba encima. Se queda abajo a la izquierda pese al
+                riel: el riel arranca en x=62 y el glifo acaba en x≈58, así que
+                conviven como la gota y las tres cifras de LLUVIA. */}
             <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
           </div>
-          <div className="big gp ctr rt" style={{ marginTop: 16, fontSize: 56, paddingRight: 32 }}>
+          {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
+              y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
+              marginTop, no con centrado automático, igual que las otras dos. */}
+          <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
+          </div>
+          <div style={{ position: 'absolute', bottom: 6, left: 62, right: 12 }}>
+            <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
 
