@@ -355,10 +355,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .cns .cell.main{border-color:var(--brd-main)}
     .cns .cell.jardin{border-color:var(--brd-jardin)}
     .cns .cell.remota{border-color:var(--brd-remota)}
-    /* derivada = valores calculados o secundarios (condición, rocío/sensación,
-       solar+UV+luna), a diferencia de las lecturas crudas de cada sensor */
+    /* derivada = lo que no es una lectura cruda de un sensor de la estación: la
+       condición del cielo, la luna, y solar/UV/ICA (el ICA ni siquiera es nuestro,
+       lo estima el backend). Rocío y sensación SALIERON de este grupo: se derivan de
+       la temperatura y la humedad de la principal, así que llevan su amarillo. */
     .cns .cell.derivada{border-color:var(--brd-derivada)}
-    .cns .cell.reloj{border-color:var(--brd-reloj)}
+    /* El reloj lleva el contorno MÁS GRUESO de la consola (4 px contra 2): es puro
+       adorno, y se lo puede permitir porque es la única celda que no muestra una
+       magnitud, así que engrosarla no le quita sitio a ningún número. */
+    .cns .cell.reloj{border-color:var(--brd-reloj);border-width:4px}
     .cns .col{display:flex;flex-direction:column}
     .cns .ctr{margin-top:auto;margin-bottom:auto}
     .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
@@ -720,11 +725,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             condición sola dejaba media celda vacía, y la luna estaba apretada
             entre SOLAR y UV, cuyo sitio ocupa ahora el ICA. */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+          <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
             <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
           </div>
-          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+          <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>LUNA</div>
             {/* La luna se centra en el hueco que deja la etiqueta, no debajo de ella:
                 colgada del `flex-start` quedaba pegada al rótulo con todo el aire
@@ -807,7 +812,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Padding lateral de 4 y no los 12 de `.cell`: la celda de UV mide ~74 px y con
             12 por lado no le caben dos dígitos a cuerpo 40. */}
         <div style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 3fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
             <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
               {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
@@ -816,7 +821,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 necesitan las cuatro cifras del caso peor. */}
             <div className="u" style={{ fontSize: 14, color: 'var(--w)', lineHeight: 1, marginTop: 4 }}>W/m²</div>
           </div>
-          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
             <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
@@ -825,7 +830,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
               según la categoría de la norma, así que el número se lee de un
               vistazo sin tener que recordar los cortes. */}
-          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
             <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
