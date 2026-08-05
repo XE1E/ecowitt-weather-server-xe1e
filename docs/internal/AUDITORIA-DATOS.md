@@ -46,6 +46,23 @@ Severidades:
 | 40 | Un pico anulado por el QC ya no se confunde con un sensor perdido | `alerts.py`, `main.py` |
 | 41 | Regla de humedad **interior**: la vigilancia de moho vuelve a existir | `alerts.py`, `config.py`, `settings_store.py`, `AdminAlertas.tsx` |
 | 41b | El sensor interior entra en la vigilancia de "sensor perdido" | `alerts.py` |
+| 24 + 25 | Borrados `/api/display` (las dos definiciones) y `/api/climate/daily`: **248 líneas** | `main.py` |
+| 26 | `/api/rain/last` lo resuelve Flux con `filter(_value > 0) \|> last()` | `storage.py`, `main.py` |
+| 27 | `get_daily_stats`: de **42 consultas a 3** agrupando por `_field` | `storage.py` |
+| 28 | Cota de 32 entradas con evicción en las cachés de `air_quality` e `imeca` | 2 servicios |
+
+Detalle de #27: en vez de tres consultas por cada uno de los 14 campos, una por agregación
+filtrando el conjunto de campos y agrupando por `_field`. Verificado que el contrato queda
+idéntico: los 14 campos presentes, los que no tienen datos con las cinco claves en `None`, el
+redondeo a un decimal, el formato ISO de `min_time`/`max_time`, y el filtro de estación tanto
+para la principal como para una secundaria.
+
+Detalle de #26: antes se traían ~130 000 registros a memoria de Python para quedarse con uno, en
+cada carga de la página de inicio. Ahora el filtro y el `last()` los hace InfluxDB.
+
+Detalle de #24: `timezone_offset` **no** se borró — lo sigue usando el panel (Sistema y Wizard);
+solo se corrigió su comentario en `.env.example`, que lo ataba al endpoint difunto. Se quitaron
+también las filas de `/api/climate/daily` de `api-reference.md` y `GUIA.md`.
 
 Detalle de #40: el QC pone el valor a `None` al filtrarlo, y la regla de presencia leía ese
 `None` como sensor ausente. Ahora `main.py` recoge los campos que `quality_check` y `spike_check`
