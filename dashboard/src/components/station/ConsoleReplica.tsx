@@ -158,18 +158,62 @@ function HouseGlyph({ size = LOC_SIZE, filled = false }: { size?: number; filled
 // se dibuja al lado. Se oculta en EXT, donde la línea de mín/máx va centrada y ocupa
 // casi toda la franja de abajo: ahí sólo cabe la pila. No se pierde información,
 // porque cada celda tiene una sola batería, la del sensor que le da sus datos.
-function BatteryGlyph({ ok, name, showLabel = true }: { ok: boolean; name: string; showLabel?: boolean }) {
+//
+// `level` va de 0 a 1 y el relleno es PROPORCIONAL, no de dos posiciones. Con los
+// sensores de hoy sólo tomará los extremos --Ecowitt manda una bandera OK/baja para el
+// WS69 y los WN31-- pero el WN32 exterior puede reportar nivel, y así el dibujo ya
+// está listo sin tocarlo. Ver `battLevel`.
+function BatteryGlyph({ level, name, showLabel = true }: { level: number; name: string; showLabel?: boolean }) {
+  const f = Math.max(0.08, Math.min(1, level))
+  const ok = f > 0.25
   const c = ok ? '#22c55e' : '#ef4444'
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-      title={`batería ${name}: ${ok ? 'OK' : 'baja'}`}>
+      title={`batería ${name}: ${ok ? 'OK' : 'baja'} (${Math.round(f * 100)}%)`}>
       {showLabel && <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{name}</span>}
       <svg width="18" height="10" viewBox="0 0 18 10">
         <rect x="0.6" y="0.6" width="13" height="8.8" rx="1.6" fill="none" stroke={c} strokeWidth="1.2" />
-        <rect x="2.2" y="2.2" width={ok ? 9.8 : 2.6} height="5.6" fill={c} />
+        <rect x="2.2" y="2.2" width={9.8 * f} height="5.6" fill={c} />
         <rect x="14.2" y="3" width="3" height="4" rx="1" fill={c} />
       </svg>
     </span>
+  )
+}
+
+// Traduce lo que llegue de un campo `battery_*` a un relleno de 0 a 1.
+//
+// Hoy el receiver convierte a BOOLEANO todas las baterías salvo las de su lista de
+// voltaje (wh40/wh57/wh68/wh80/wh90), y `wh32batt` NO está en esa lista: la del WN32
+// llegará como OK/baja, no como nivel. Si al instalarlo resulta que reporta voltaje,
+// basta añadirlo allí y aquí ya se interpreta el número.
+//
+// Se aceptan las tres formas por si acaso: booleano, la bandera cruda 0/1 de Ecowitt
+// (donde 0 = normal, al revés de lo que sugiere) y un voltaje. El voltaje se mapea
+// sobre 0.9-1.6 V, el rango útil de una pila alcalina AA; queda por calibrar cuando el
+// sensor esté puesto y se vea qué manda de verdad.
+const battLevel = (v: unknown): number | null => {
+  if (typeof v === 'boolean') return v ? 1 : 0.08
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    if (v <= 1) return v === 0 ? 1 : 0.08
+    return Math.max(0.08, Math.min(1, (v - 0.9) / 0.7))
+  }
+  return null
+}
+
+// Barra de nivel: dónde cae un valor dentro de su escala. Es la misma idea que el riel
+// del barómetro de PRES, que ya demostró que funciona: SOLAR, UV e ICA ya se pintan con
+// el color de su categoría, pero ese color sólo se entiende si uno recuerda los cortes,
+// y la barra lo vuelve legible sin recordar nada.
+//
+// Con divs y no en SVG: un SVG estirado con preserveAspectRatio="none" deformaría las
+// esquinas redondeadas, y aquí el ancho lo pone la celda.
+function LevelBar({ value, max, color }: { value?: number | null; max: number; color: string }) {
+  const f = value == null ? 0 : Math.max(0, Math.min(1, value / max))
+  return (
+    <div style={{ width: '100%', height: 7, borderRadius: 4, background: '#141414',
+                  border: '1px solid #5a5a5a', overflow: 'hidden' }}>
+      <div style={{ width: `${f * 100}%`, height: '100%', background: color, opacity: 0.85 }} />
+    </div>
   )
 }
 
@@ -177,17 +221,21 @@ function BatteryGlyph({ ok, name, showLabel = true }: { ok: boolean; name: strin
 // cuál sin gastar una palabra: sube = amanece, baja = atardece.
 function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
   const row = (up: boolean, iso?: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-      <svg width="11" height="11" viewBox="0 0 12 12">
-        <path d={up ? 'M6 2 L10 7 L2 7 Z' : 'M6 10 L10 5 L2 5 Z'} fill="#ffcf19" />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* Triángulo a 14 y no a 11: a 11 competía en peso con los dos puntos del reloj
+          de al lado y costaba ver hacia dónde apuntaba, que es TODO lo que dice. */}
+      <svg width="14" height="14" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+        <path d={up ? 'M6 1.5 L10.5 7.5 L1.5 7.5 Z' : 'M6 10.5 L10.5 4.5 L1.5 4.5 Z'} fill="#ffcf19" />
       </svg>
       <span className="seg" style={{ color: '#ffcf19', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
         {hhmm(iso) || '--:--'}
       </span>
     </div>
   )
+  // gap 10 y no 5: las dos horas se leían como un bloque de cuatro cifras pegadas.
+  // Hay alto de sobra en la celda para separarlas.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {row(true, sunrise)}
       {row(false, sunset)}
     </div>
@@ -245,9 +293,14 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
         <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
       )}
       {delta != null && <polygon points={`${x - 5},0 ${x + 5},0 ${x},7`} fill={color} />}
-      <text x={x0} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="start">-{endLabel}</text>
+      {/* Los extremos se rotulan "≤-5" y "≥+5", no "-5" y "+5": el valor se PINZA
+          contra el tope --±5 hPa en 3 h ya es un cambio brusco y lo que importa
+          entonces es "está al tope"-- así que la marca del extremo representa ese
+          valor Y TODO LO QUE HAYA MÁS ALLÁ. Sin los símbolos, un riel al máximo se
+          leía como "exactamente 5". */}
+      <text x={x0} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="start">{'≤'}-{endLabel}</text>
       <text x={mid} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="middle">0</text>
-      <text x={x1} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="end">+{endLabel}</text>
+      <text x={x1} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="end">{'≥'}+{endLabel}</text>
     </svg>
   )
 }
@@ -388,6 +441,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // REMOTA WN32 = sensor exterior conectado al gateway, el dato meteorológico.
   const remoteOutT = remote?.temperature_outdoor
   const remoteOutH = remote?.humidity_outdoor
+  // Batería del WN32. Según el firmware la reporta como `wh32batt` o como `wh26batt`
+  // (el sensor es un WH26), y el receiver mapea las dos, así que se prueban ambas.
+  // Hoy la remota no manda ninguna de las dos --el GW1100 va a corriente y todavía no
+  // tiene el sensor colgado-- así que la pila aparecerá al emparejarlo.
+  const remoteOutBatt = battLevel(
+    (remote as Record<string, unknown> | null)?.battery_wh32
+    ?? (remote as Record<string, unknown> | null)?.battery_wh26
+  )
 
   // Tendencias estación remota (mismos umbrales que las locales: ±0.5 °C, ±3 %,
   // ±1 hPa; temp/humedad contra hace 1 h y presión contra hace 3 h).
@@ -532,7 +593,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               derecha, donde el mín/máx --que va centrado-- deja hueco. */}
           {data?.battery_wh65 != null && (
             <div style={{ position: 'absolute', bottom: 7, right: 8 }}>
-              <BatteryGlyph ok={data.battery_wh65} name="WS69" showLabel={false} />
+              <BatteryGlyph level={data.battery_wh65 ? 1 : 0.08} name="WS69" showLabel={false} />
             </div>
           )}
           {/* Centrado, no pegado a la derecha: la temperatura es el dato principal
@@ -588,9 +649,25 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               grados son el dato de apoyo del rumbo, que ya se lee en letras arriba a
               la derecha y en la flecha del compás, así que van en el mismo peso que la
               consola usa para lo accesorio. */}
-          <div style={{ color: 'var(--v)', fontWeight: 800, marginTop: -4, lineHeight: 1 }}>
-            <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
-            <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
+          {/* Grados y rumbo comparten UNA fila en flujo, uno a cada extremo. Antes el
+              rumbo iba absoluto en `top: 4` y salía más alto que los grados y con la
+              coronilla de las letras cortada por el `overflow: hidden` de la celda:
+              DSEG7 dibuja por encima de su caja de línea cuando el line-height es 1, y
+              ahí arriba ya no quedaba celda. En la misma fila comparten línea base por
+              construcción y no hay nada que cuadrar a mano. */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                        color: 'var(--v)', fontWeight: 800, marginTop: -4, lineHeight: 1.15 }}>
+            <span>
+              <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
+              <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
+            </span>
+            {/* La O del rumbo se dibuja con un CERO. En DSEG7 la "O" mayúscula sale como
+                una o baja, de media altura, y "OSO" quedaba como "oSo" con los caracteres
+                a distinta altura; el 0 usa los siete segmentos completos y la palabra
+                queda toda a un mismo alto, que es como lo resuelve un display real. */}
+            <span className="seg" style={{ fontSize: 24, letterSpacing: 1 }}>
+              {cardinal(dir).replace(/O/g, '0')}
+            </span>
           </div>
           {/* El RUMBO en el sitio que ocupaba la manga de viento. La manga era
               decorativa --repetía lo que ya dice el nombre de la celda-- y este
@@ -601,18 +678,6 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               `textAlign: right` + `right` fijo y no centrado: así "NNE" (3 letras) y
               "N" (1) comparten el borde derecho y la palabra no se mueve al cambiar
               el viento, el mismo anclaje que PROMEDIO/RÁFAGA. */}
-          {/* El rumbo VUELVE a la fuente de 7 segmentos, ahora a propósito. Antes se
-              quitó porque a 34 px "NO" se leía como "no" y parecía un error; a 24 px y
-              junto a los grados --que están al otro extremo en la misma fuente y el
-              mismo cuerpo-- ese trazo de segmentos deja de parecer un fallo y pasa a
-              ser lo que es en una consola física, donde las letras se dibujan con los
-              mismos siete palitos que las cifras.
-              El color va inline y no por la clase `gv`, que traería además el glow. */}
-          <div style={{ position: 'absolute', top: 4, right: 10, textAlign: 'right' }}>
-            <span className="seg" style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
-              {cardinal(dir)}
-            </span>
-          </div>
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
           <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
             <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0, transform: 'scale(1.2) translateY(2%)', transformOrigin: 'center center' }}>
@@ -765,11 +830,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
               llega hasta x≈82 y la palabra entera se le echaba encima--.
               El número no se mueve: marginTop de -12 a +6, los 18 px del rótulo. */}
-          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
-                el barómetro le quedaba encima. Se queda abajo a la izquierda pese al
-                riel: el riel arranca en x=62 y el glifo acaba en x≈58, así que
-                conviven como la gota y las tres cifras de LLUVIA. */}
+          {/* El barómetro SUBE al borde de arriba, como el termómetro de EXT y la gota
+              de HUMEDAD: las tres celdas de lectura grande llevan ahora su icono en la
+              misma esquina. Abajo ya no hace falta que le deje sitio al riel. */}
+          <div style={{ position: 'absolute', top: 6, left: 12 }}>
             <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -781,7 +845,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 52 }}>
+          {/* Riel CENTRADO ahora que el barómetro se fue de la esquina de abajo. El
+              62/52 de antes era la sangría que le dejaba a ese glifo; 57 y 57 dan
+              exactamente el mismo ancho de riel (335 - 114 = 221 px, el que se eligió a
+              propósito) y de paso queda simétrico bajo la lectura. */}
+          <div style={{ position: 'absolute', bottom: 4, left: 57, right: 57 }}>
             <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
@@ -904,6 +972,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
             <HouseGlyph />
           </div>
+          {/* Pila del WN32, abajo a la derecha como en EXT y JARDÍN. Aquí es la única que
+              puede llevar NIVEL y no sólo OK/baja --de ahí el relleno proporcional de
+              `BatteryGlyph`-- aunque con el receiver de hoy llegará como bandera: ver la
+              nota de `battLevel`. Sólo se dibuja cuando el sensor reporta; mientras no
+              esté instalado, una pila pintada sería un dato inventado. */}
+          {remoteOutBatt != null && (
+            <div style={{ position: 'absolute', bottom: 7, right: 10 }}>
+              <BatteryGlyph level={remoteOutBatt} name="WN32" />
+            </div>
+          )}
           {/* Tendencias en temperatura y humedad, colgadas a la derecha de cada valor,
               igual que las de EXT y HUMEDAD. Se dibujan siempre, también sin lectura:
               mientras el WN32 no esté instalado se verá la barra gris de "sin cambios"
@@ -954,22 +1032,46 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Los tres cuelgan del borde de ARRIBA (`flex-start`) y no van centrados: así
             los rótulos quedan a la misma altura entre sí y los números también, y el
             renglón de la unidad de SOLAR cuelga por debajo sin descolocar a nadie.
-            Padding lateral de 4 y no los 12 de `.cell`: la celda de UV mide ~74 px y con
-            12 por lado no le caben dos dígitos a cuerpo 40. */}
-        <div style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 3fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+            Padding lateral de 4 y no los 12 de `.cell`: con 12 por lado no caben las
+            cifras del caso peor a cuerpo 40.
+            ANCHOS 4.2 / 2.5 / 3.3 y no 4 / 2 / 3: con 2fr la celda de UV se quedaba en
+            74 px, o sea 62 de contenido, y a un valor de dos dígitos (58 px de avance
+            más los flancos) le faltaba un pelo y SE PARTÍA EN DOS RENGLONES. Ahora son
+            84 px --72 de contenido-- y además los tres números llevan `nowrap`, que es
+            el cinturón por si alguna cifra vuelve a quedar al límite: preferimos que
+            asome a que se rompa el renglón, porque un número partido no se lee y uno
+            recortado sí se nota y se arregla. Cuentas rehechas: SOLAR 141 px de celda
+            (129 de contenido) para los ~117 de "1234", e ICA 111 (99) para los ~87
+            de "167". */}
+        <div style={{ display: 'grid', gridTemplateColumns: '4.2fr 2.5fr 3.3fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
               {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
             </div>
             {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
                 necesitan las cuatro cifras del caso peor. */}
-            <div className="u" style={{ fontSize: 14, color: 'var(--w)', lineHeight: 1, marginTop: 4 }}>W/m²</div>
+            <div className="u" style={{ fontSize: 14, color: 'var(--w)', lineHeight: 1, marginTop: 2 }}>W/m²</div>
+            {/* Barra al pie con `marginTop: auto`, que se come el aire sobrante y la pega
+                abajo sin fijarla en absoluto. Escala a 1000 W/m²: el pico despejado a
+                esta latitud y altitud ronda esa cifra, así que un mediodía limpio llena
+                la barra y el ojo aprende el tope en un día. */}
+            <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
+              <LevelBar value={data?.solar_radiation} max={1000}
+                color={data?.solar_radiation != null ? solarColor(data.solar_radiation) : '#5a5a5a'} />
+            </div>
           </div>
           <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
+            </div>
+            {/* Escala a 12: es donde acaba la escala UV de la OMS (11+ ya es "extremo",
+                el tramo fucsia de `uvColor`), así que la barra llena coincide con el
+                color más alto y las dos señales dicen lo mismo. */}
+            <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
+              <LevelBar value={data?.uv_index} max={12}
+                color={data?.uv_index != null ? uvColor(data.uv_index) : '#5a5a5a'} />
             </div>
           </div>
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
@@ -977,8 +1079,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               vistazo sin tener que recordar los cortes. */}
           <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: imeca?.color || undefined }}>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
+            </div>
+            {/* Escala a 200 IMECA: es el tope que la norma mexicana considera "muy mala"
+                y el techo que esperamos no ver nunca, el mismo con el que se
+                dimensionaron las tres cifras de esta celda. */}
+            <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
+              <LevelBar value={imeca?.available ? imeca.imeca : null} max={200}
+                color={imeca?.color || '#5a5a5a'} />
             </div>
           </div>
         </div>
@@ -1026,7 +1135,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               cabe sin apretar nada. */}
           {data?.battery_ch1 != null && (
             <div style={{ position: 'absolute', bottom: 7, right: 10 }}>
-              <BatteryGlyph ok={data.battery_ch1} name="WN31" />
+              <BatteryGlyph level={data.battery_ch1 ? 1 : 0.08} name="WN31" />
             </div>
           )}
           {/* marginTop -10 = misma altura que INTERIOR */}
