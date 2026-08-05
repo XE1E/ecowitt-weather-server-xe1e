@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 _CACHE: Dict[str, Any] = {}
 _TTL = 1800  # 30 min
+# Cota del caché: la clave lleva lat/lon (y la presión redondeada), y el endpoint
+# es público y sin rate-limit, así que sin límite el dict crece sin fin.
+_MAX_ENTRIES = 32
 
 BP = Tuple[float, float, float, float]  # (Cinf, Csup, Iinf, Isup)
 
@@ -212,5 +215,7 @@ async def get_imeca(lat: float, lon: float,
             break
     data["forecast"] = forecast
 
+    if len(_CACHE) >= _MAX_ENTRIES and key not in _CACHE:
+        _CACHE.pop(min(_CACHE, key=lambda k: _CACHE[k]["ts"]), None)
     _CACHE[key] = {"ts": now, "data": data}
     return data

@@ -481,7 +481,6 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/compare` | 24 h vs 24 h previas ("vs ayer") |
 | `GET /api/forecast/local` | pronóstico por tendencia barométrica |
 | `GET /api/smn` · `GET /api/smn/municipios` | pronóstico oficial SMN por municipio (4 días + 48 h) y lista de municipios |
-| `GET /api/climate/daily` | resúmenes diarios |
 | `GET /api/climate/records` | récords (siempre, por mes, este mes/año, ayer) |
 | `GET /api/climate/onthisday` | efeméride: mismo día en años previos |
 | `GET /api/climate/noaa?year=&month=` | reporte NOAA mensual/anual |

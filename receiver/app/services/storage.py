@@ -227,50 +227,50 @@ class InfluxDBStorage:
                 "humidity_ch1",
             ]
 
+            # UNA consulta por agregación en vez de una por campo: se agrupa por
+            # _field y Flux devuelve una fila por campo. Antes eran 3 x 14 = 42
+            # consultas secuenciales por llamada, y este método lo usan
+            # /api/stats/daily, /api/stats/records, el rollup diario y el kiosco
+            # (con el periodo "Histórico" son 42 barridos de años de datos crudos).
+            field_set = ", ".join(f'"{f}"' for f in stats_fields)
+            base = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start}, stop: {stop})
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
+                |> filter(fn: (r) => contains(value: r["_field"], set: [{field_set}]))
+                |> group(columns: ["_field"])
+            '''
+
+            def collect(agg: str):
+                """{campo: (valor, _time)} para la agregación pedida."""
+                out: Dict[str, Any] = {}
+                for table in self.query_api.query(base + f"|> {agg}()"):
+                    for record in table.records:
+                        f = record.values.get("_field")
+                        if f is not None:
+                            out[f] = (record.get_value(), record.get_time())
+                return out
+
+            # min()/max() conservan el _time del registro extremo; mean() no.
+            mins, maxs, means = collect("min"), collect("max"), collect("mean")
+
+            def num(v):
+                return round(v, 1) if isinstance(v, (int, float)) else None
+
             stats = {}
-
             for field in stats_fields:
-                query = f'''
-                    from(bucket: "{self.bucket}")
-                    |> range(start: {start}, stop: {stop})
-                    |> filter(fn: (r) => r["_measurement"] == "{measurement}")
-                    {_station_filter(station)}
-                    |> filter(fn: (r) => r["_field"] == "{field}")
-                    |> group()
-                '''
-
-                # Min (min()/max() conservan el _time del registro extremo)
-                min_query = query + '|> min()'
-                min_result = self.query_api.query(min_query)
-                min_val = min_time = None
-                for table in min_result:
-                    for record in table.records:
-                        min_val = record.get_value()
-                        min_time = record.get_time()
-
-                # Max
-                max_query = query + '|> max()'
-                max_result = self.query_api.query(max_query)
-                max_val = max_time = None
-                for table in max_result:
-                    for record in table.records:
-                        max_val = record.get_value()
-                        max_time = record.get_time()
-
-                # Mean
-                mean_query = query + '|> mean()'
-                mean_result = self.query_api.query(mean_query)
-                mean_val = None
-                for table in mean_result:
-                    for record in table.records:
-                        mean_val = record.get_value()
-
+                mn, mn_t = mins.get(field, (None, None))
+                mx, mx_t = maxs.get(field, (None, None))
+                av, _ = means.get(field, (None, None))
+                # Todos los campos van en la respuesta aunque no tengan datos: el
+                # frontend indexa por clave y espera encontrarlas.
                 stats[field] = {
-                    "min": round(min_val, 1) if min_val is not None else None,
-                    "min_time": min_time.isoformat() if min_time is not None else None,
-                    "max": round(max_val, 1) if max_val is not None else None,
-                    "max_time": max_time.isoformat() if max_time is not None else None,
-                    "avg": round(mean_val, 1) if mean_val is not None else None,
+                    "min": num(mn),
+                    "min_time": mn_t.isoformat() if mn_t is not None else None,
+                    "max": num(mx),
+                    "max_time": mx_t.isoformat() if mx_t is not None else None,
+                    "avg": num(av),
                 }
 
             return {
@@ -363,6 +363,38 @@ class InfluxDBStorage:
             return None
         except Exception as e:
             logger.error(f"Error fetching {field} ago: {e}")
+            return None
+
+    async def get_last_rain(
+        self, start: str = "-90d", measurement: str = "weather",
+        station: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Instante (ISO) de la última lectura con lluvia, o None si no llovió.
+
+        Lo resuelve Flux con un filtro + last(). El endpoint antes se traía los 90
+        días de rain_rate a memoria (~130 000 registros con lecturas por minuto)
+        para quedarse con uno, y lo hacía en cada carga de la página de inicio.
+        """
+        validate_measurement(measurement)
+        validate_flux_time(start, "start")
+        try:
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start})
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
+                |> filter(fn: (r) => r["_field"] == "rain_rate")
+                |> filter(fn: (r) => r["_value"] > 0)
+                |> last()
+            '''
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    t = record.get_time()
+                    return t.isoformat() if t is not None else None
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching last rain: {e}")
             return None
 
     async def get_comparison(

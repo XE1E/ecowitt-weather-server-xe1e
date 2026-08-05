@@ -1617,17 +1617,6 @@ async def get_compare():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/climate/daily")
-async def get_climate_daily(start: str = "-365d", stop: str = "now()"):
-    """Resúmenes diarios (weather_daily): un registro por día con extremos."""
-    try:
-        rows = await storage.query_daily_summaries(start=start, stop=stop)
-        return {"days": rows, "count": len(rows)}
-    except Exception as e:
-        logger.error(f"Error getting daily summaries: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/api/climate/records")
 async def get_climate_records(start: str = "-3650d"):
     """Récords ampliados: de siempre, por mes calendario, este mes/año y ayer."""
@@ -1727,18 +1716,13 @@ async def get_wind_rose(start: str = "-7d"):
 
 
 @app.get("/api/rain/last")
-async def get_last_rain():
+async def get_last_rain(station: Optional[str] = None):
     """Fecha/hora de la última lluvia registrada (rain_rate > 0)."""
     try:
-        records = await storage.query(start="-90d", fields=["rain_rate"])
-        rain_records = [r for r in records if (r.get("rain_rate") or 0) > 0]
-        if rain_records:
-            last = max(rain_records, key=lambda r: r.get("_time", ""))
-            return {"date": last.get("_time")}
-        return {"date": None}
-    except Exception as e:
-        logger.error(f"Error getting last rain: {e}")
-        return {"date": None}
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"date": await storage.get_last_rain(station=station)}
 
 
 @app.get("/api/almanac")
@@ -1763,137 +1747,6 @@ async def get_local_forecast():
     except Exception as e:
         logger.error(f"Error building local forecast: {e}")
         return {"available": False, "reason": "error"}
-
-
-@app.get("/api/display")
-async def get_display_data():
-    """
-    Endpoint optimizado para pantallas ESP32: combina todos los datos en una sola llamada.
-
-    Retorna:
-    - timezone_offset: Offset de timezone en horas (ej: -6 para México)
-    - current: Lecturas actuales de la estación principal
-    - stats: Min/max del día con timestamps
-    - compare: Comparación vs ayer
-    - almanac: Datos astronómicos (sol, luna)
-    - forecast: Pronóstico barométrico local
-    - airquality: Calidad del aire (si está configurado)
-    - stations: Estaciones secundarias (ch1/WN31, gw1100)
-    """
-    result = {}
-
-    # === TIMEZONE ===
-    # México Central = UTC-6 (sin horario de verano desde 2023)
-    result["timezone_offset"] = getattr(settings, "timezone_offset", -6)
-
-    # === CURRENT (estación principal) ===
-    current_data = latest_by_station.get(None, {})
-    if current_data:
-        result["current"] = current_data.copy()
-    else:
-        result["current"] = {}
-
-    # === STATS (min/max del día calendario local) ===
-    try:
-        today_start, _, _ = aggregator.local_day_bounds_utc()
-        stats_response = await storage.get_daily_stats(start=today_start, station=None)
-        result["stats"] = stats_response.get("stats", {})
-    except Exception as e:
-        logger.warning(f"Error getting stats for display: {e}")
-        result["stats"] = {}
-
-    # === COMPARE (vs ayer) ===
-    try:
-        compare = await storage.get_comparison()
-        result["compare"] = compare
-    except Exception as e:
-        logger.warning(f"Error getting comparison for display: {e}")
-        result["compare"] = {}
-
-    # === ALMANAC ===
-    try:
-        lat = getattr(settings, "cwop_latitude", 19.380359)
-        lon = getattr(settings, "cwop_longitude", -99.174564)
-        almanac = get_almanac(lat, lon)
-        if almanac.get("available", False):
-            result["almanac"] = {
-                "sunrise": almanac.get("sun", {}).get("rise", ""),
-                "sunset": almanac.get("sun", {}).get("set", ""),
-                "moon_phase": almanac.get("moon", {}).get("phase", ""),
-                "moon_illumination": almanac.get("moon", {}).get("illumination", 0),
-                "moonrise": almanac.get("moon", {}).get("rise", ""),
-                "moonset": almanac.get("moon", {}).get("set", ""),
-            }
-        else:
-            result["almanac"] = {}
-    except Exception as e:
-        logger.warning(f"Error getting almanac for display: {e}")
-        result["almanac"] = {}
-
-    # === FORECAST (pronóstico barométrico local) ===
-    try:
-        p_now = current_data.get("pressure_relative")
-        p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
-        forecast = forecaster.local_forecast(p_now, p_3h)
-        result["forecast"] = forecast
-    except Exception as e:
-        logger.warning(f"Error getting forecast for display: {e}")
-        result["forecast"] = {"available": False}
-
-    # === AIRQUALITY (si hay token configurado) ===
-    if settings.waqi_token:
-        try:
-            lat = getattr(settings, "cwop_latitude", 19.380359)
-            lon = getattr(settings, "cwop_longitude", -99.174564)
-            aq = await get_air_quality(lat, lon, settings.waqi_token)
-            if aq and aq.get("available", False):
-                result["airquality"] = aq
-            else:
-                result["airquality"] = None
-        except Exception as e:
-            logger.warning(f"Error getting air quality for display: {e}")
-            result["airquality"] = None
-    else:
-        result["airquality"] = None
-
-    # === STATIONS (secundarias: ch1 para WN31/Jardín, gw1100 para gateway remoto) ===
-    stations = {}
-
-    # Buscar ch1 (WN31 en canal 1 - Jardín)
-    # Puede estar en la estación principal como temperature_ch1 o como estación secundaria
-    main_data = latest_by_station.get(None, {})
-    if main_data.get("temperature_ch1") is not None:
-        stations["ch1"] = {
-            "temperature": main_data.get("temperature_ch1"),
-            "humidity": main_data.get("humidity_ch1"),
-            "battery": main_data.get("battery_ch1", True),
-            "signal": main_data.get("signal_ch1"),
-        }
-
-    # Buscar gw1100 (gateway remoto)
-    gw1100_data = latest_by_station.get("gw1100")
-    if gw1100_data:
-        stations["gw1100"] = {
-            "temperature": gw1100_data.get("temperature_indoor"),
-            "humidity": gw1100_data.get("humidity_indoor"),
-            "pressure": gw1100_data.get("pressure_relative"),
-        }
-
-    # También buscar otras estaciones secundarias configuradas
-    for name in set(settings.secondary_station_map.values()):
-        if name not in stations:
-            station_data = latest_by_station.get(name)
-            if station_data:
-                stations[name] = {
-                    "temperature": station_data.get("temperature_outdoor") or station_data.get("temperature_indoor"),
-                    "humidity": station_data.get("humidity_outdoor") or station_data.get("humidity_indoor"),
-                    "pressure": station_data.get("pressure_relative"),
-                    "battery": station_data.get("battery_wh65", True),
-                }
-
-    result["stations"] = stations
-
-    return result
 
 
 @app.get("/api/alerts")
@@ -1963,112 +1816,6 @@ async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
     except Exception as e:
         logger.error(f"Error getting IMECA: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/display")
-async def get_display_data():
-    """
-    Endpoint optimizado para ESP32 display.
-    Combina current, stats, almanac, forecast, compare y airquality en una sola llamada.
-    """
-    from datetime import datetime
-
-    result = {}
-    lat = getattr(settings, "cwop_latitude", 19.380359)
-    lon = getattr(settings, "cwop_longitude", -99.174564)
-
-    # Timezone offset in hours (configurable, default UTC-6 for Mexico City)
-    tz_offset = getattr(settings, "timezone_offset", -6)
-    result["timezone_offset"] = tz_offset
-
-    # 1. Current weather data
-    current = latest_by_station.get(None, {}).copy()
-
-    # 1.5 Rain accumulations (calculated from weather_daily if device doesn't send them)
-    try:
-        rain_accum = await storage.get_rain_accumulations()
-        if current.get("rain_weekly") is None and rain_accum.get("rain_weekly") is not None:
-            current["rain_weekly"] = rain_accum["rain_weekly"]
-        if current.get("rain_monthly") is None and rain_accum.get("rain_monthly") is not None:
-            current["rain_monthly"] = rain_accum["rain_monthly"]
-        if current.get("rain_yearly") is None and rain_accum.get("rain_yearly") is not None:
-            current["rain_yearly"] = rain_accum["rain_yearly"]
-    except Exception as e:
-        logger.error(f"Display endpoint - rain accum error: {e}")
-
-    result["current"] = current
-
-    # 2. Daily stats (min/max/avg) - día calendario local
-    try:
-        today_start, _, _ = aggregator.local_day_bounds_utc()
-        stats = await storage.get_daily_stats(start=today_start)
-        result["stats"] = stats.get("stats", {})
-    except Exception as e:
-        logger.error(f"Display endpoint - stats error: {e}")
-        result["stats"] = {}
-
-    # 3. Comparison vs yesterday
-    try:
-        compare = await storage.get_comparison()
-        result["compare"] = compare
-    except Exception as e:
-        logger.error(f"Display endpoint - compare error: {e}")
-        result["compare"] = {}
-
-    # 4. Almanac (sun/moon)
-    try:
-        almanac = get_almanac(lat, lon)
-        result["almanac"] = {
-            "sunrise": almanac.get("sun", {}).get("rise", ""),
-            "sunset": almanac.get("sun", {}).get("set", ""),
-            "moon_phase": almanac.get("moon", {}).get("phase", ""),
-            "moon_illumination": almanac.get("moon", {}).get("illumination", 0)
-        }
-    except Exception as e:
-        logger.error(f"Display endpoint - almanac error: {e}")
-        result["almanac"] = {}
-
-    # 5. Local forecast (barometric)
-    try:
-        p_now = current.get("pressure_relative")
-        p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
-        forecast = forecaster.local_forecast(p_now, p_3h)
-        result["forecast"] = forecast
-    except Exception as e:
-        logger.error(f"Display endpoint - forecast error: {e}")
-        result["forecast"] = {}
-
-    # 6. Air quality (optional, may fail if no token)
-    try:
-        if settings.waqi_token:
-            aq = await get_air_quality(lat, lon, settings.waqi_token)
-            result["airquality"] = {
-                "aqi": aq.get("aqi", 0),
-                "pm25": aq.get("pm25", 0),
-                "dominant": aq.get("dominant", "")
-            }
-        else:
-            result["airquality"] = None
-    except Exception as e:
-        logger.error(f"Display endpoint - airquality error: {e}")
-        result["airquality"] = None
-
-    # 7. Secondary stations (ch1/WN31 and gw1100)
-    stations = {}
-    for station_id in ["ch1", "gw1100"]:
-        data = latest_by_station.get(station_id)
-        if data:
-            stations[station_id] = {
-                "temperature": data.get("temperature_outdoor") or data.get("temperature_indoor") or data.get("temperature"),
-                "humidity": data.get("humidity_outdoor") or data.get("humidity_indoor") or data.get("humidity"),
-                "battery": data.get("battery_ch1") if station_id == "ch1" else None,
-                "pressure": data.get("pressure_relative")
-            }
-    result["stations"] = stations
-
-    result["generated_at"] = datetime.utcnow().isoformat()
-
-    return result
 
 
 @app.get("/api/earthquakes")

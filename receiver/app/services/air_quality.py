@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 _CACHE: Dict[str, Any] = {}
 _TTL = 600  # 10 minutes
+# Cota del caché: la clave es (lat, lon) y la elige quien llama, en un endpoint
+# público y sin rate-limit. Sin límite, pedir coordenadas variadas hace crecer el
+# dict indefinidamente. Misma idea que _MAX_HOURLY en smn.py.
+_MAX_ENTRIES = 32
 
 
 async def get_air_quality(lat: float, lon: float, token: Optional[str]) -> Dict[str, Any]:
@@ -62,5 +66,7 @@ async def get_air_quality(lat: float, lon: float, token: Optional[str]) -> Dict[
             "co": pol("co"),
         },
     }
+    if len(_CACHE) >= _MAX_ENTRIES and key not in _CACHE:
+        _CACHE.pop(min(_CACHE, key=lambda k: _CACHE[k]["ts"]), None)
     _CACHE[key] = {"ts": now, "data": data}
     return data
