@@ -48,9 +48,15 @@ class Settings(BaseSettings):
     alert_pressure_high: float = 1035.0
     alert_pressure_low: float = 1000.0
     # Humedad exterior (sobre humidity_outdoor). Baja = aire seco; alta = lluvia
-    # inminente / moho (GW1100 con trampa => su humedad llega como exterior).
+    # inminente.
     alert_humidity_low: float = 25.0
     alert_humidity_high: float = 85.0
+    # Humedad INTERIOR (sobre humidity_indoor). Existe porque al retirar la trampa
+    # `treat_indoor_as_outdoor` la lectura del GW1100 volvió a humidity_indoor y la
+    # vigilancia de moho se quedó sin regla que la evaluara. Alta = riesgo de moho
+    # (el rango sano de interior es ~30-60 %); baja = aire demasiado seco.
+    alert_humidity_indoor_low: float = 20.0
+    alert_humidity_indoor_high: float = 65.0
     # Tendencia de presión: cambio (hPa) dentro de la ventana. 2 niveles por
     # dirección (aviso / fuerte). Caída = posible tormenta; subida = frente frío.
     alert_pressure_drop_warn: float = 1.5

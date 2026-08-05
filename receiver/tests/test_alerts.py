@@ -503,3 +503,61 @@ def test_notification_failure_does_not_raise():
     # Should swallow the error, not propagate
     asyncio.run(svc.process({"temperature_outdoor": 40}))
     assert "temp_high" in svc.active
+
+
+def test_qc_rejected_value_is_not_a_lost_sensor():
+    """Un pico que el QC anula NO debe disparar 'sensor sin contacto'.
+
+    El filtro de picos pone el campo a None, y la regla de presencia leía ese None
+    como sensor ausente. Como las reglas sensor_* están exentas de histéresis,
+    avisaban de inmediato: cuanto mejor filtraba el QC, más falsos avisos.
+    """
+    svc = AlertService(make_settings(), notifier=None)
+    # Primero se ve el sensor, para que quede registrado como conocido.
+    svc.evaluate({"temperature_outdoor": 25.0})
+
+    # Ahora llega sin valor PORQUE el QC lo anuló.
+    rules = svc.evaluate({"temperature_outdoor": None},
+                         qc_rejected={"temperature_outdoor"})
+    assert rules.get("sensor_temperature_outdoor") is None
+
+    # Sin esa señal, el mismo dato sí se interpreta como sensor perdido...
+    rules = svc.evaluate({"temperature_outdoor": None})
+    assert rules["sensor_temperature_outdoor"][0] is True
+
+    # ...igual que cuando el campo sencillamente no llega, que es lo correcto.
+    rules = svc.evaluate({"humidity_outdoor": 40.0}, qc_rejected=set())
+    assert rules["sensor_temperature_outdoor"][0] is True
+
+
+def test_indoor_humidity_rules():
+    """La vigilancia de moho va sobre humidity_indoor.
+
+    Mientras el GW1100 usó la trampa `treat_indoor_as_outdoor` su lectura entraba
+    por la regla exterior; al retirarla, sin esta regla el umbral de moho se quedó
+    sin nadie que lo evaluara.
+    """
+    s = make_settings(alert_humidity_indoor_low=20.0, alert_humidity_indoor_high=65.0)
+    svc = AlertService(s, notifier=None)
+
+    assert svc.evaluate({"humidity_indoor": 45.0})["humidity_indoor_high"][0] is False
+    assert svc.evaluate({"humidity_indoor": 70.0})["humidity_indoor_high"][0] is True
+    assert svc.evaluate({"humidity_indoor": 15.0})["humidity_indoor_low"][0] is True
+
+    # Es independiente de la exterior: una no debe disparar la otra.
+    rules = svc.evaluate({"humidity_indoor": 70.0, "humidity_outdoor": 40.0})
+    assert rules["humidity_indoor_high"][0] is True
+    assert rules["humidity_high"][0] is False
+
+    # Y admite umbral propio por estación (el GW1100 puede ser más estricto).
+    rules = svc.evaluate({"humidity_indoor": 62.0}, station="gw1100",
+                         thresholds={"alert_humidity_indoor_high": 60.0})
+    assert rules["humidity_indoor_high"][0] is True
+
+
+def test_indoor_sensor_loss_is_watched():
+    """El sensor interior también se vigila: era el único que no avisaba al caer."""
+    svc = AlertService(make_settings(), notifier=None)
+    svc.evaluate({"temperature_indoor": 22.0})
+    rules = svc.evaluate({"temperature_outdoor": 25.0})
+    assert rules["sensor_temperature_indoor"][0] is True

@@ -53,6 +53,8 @@ EDITABLE_KEYS = {
     "alert_pressure_low",
     "alert_humidity_low",
     "alert_humidity_high",
+    "alert_humidity_indoor_low",
+    "alert_humidity_indoor_high",
     "alert_pressure_drop_warn",
     "alert_pressure_drop_strong",
     "alert_pressure_rise_warn",

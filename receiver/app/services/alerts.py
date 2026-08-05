@@ -7,7 +7,7 @@ a sustained condition notifies once on trigger and once when it clears, instead
 of spamming on every reading.
 """
 
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 from datetime import datetime, timedelta
 from collections import deque
 from email.message import EmailMessage
@@ -69,6 +69,9 @@ def _persist_exempt(rule_key: str) -> bool:
 # Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
 _SENSOR_PRESENCE = {
     "temperature_outdoor": "outdoor",
+    # El interior también se vigila: con el GW1100 reportando como interior, su
+    # caída era el único sensor cuya desaparición no avisaba.
+    "temperature_indoor": "indoor",
     "temperature_ch1": "ch1", "temperature_ch2": "ch2", "temperature_ch3": "ch3",
     "temperature_ch4": "ch4", "temperature_ch5": "ch5", "temperature_ch6": "ch6",
     "temperature_ch7": "ch7", "temperature_ch8": "ch8",
@@ -142,13 +145,18 @@ class AlertService:
 
     def evaluate(self, data: Dict[str, Any], station: Optional[str] = None,
                  thresholds: Optional[Dict[str, Any]] = None,
-                 now: Optional[datetime] = None) -> Dict[str, Tuple[bool, str]]:
+                 now: Optional[datetime] = None,
+                 qc_rejected: Optional[Set[str]] = None) -> Dict[str, Tuple[bool, str]]:
         """Return {rule_key: (triggered, message)} for the rules that apply.
 
         `station` aísla el estado (sensor perdido, buffer de presión) por estación.
         `thresholds` sobreescribe los umbrales globales (por estación); las claves
         sin definir caen al valor global de settings. `now` permite fijar el reloj
         (pruebas de tendencia de presión).
+
+        `qc_rejected` son los campos que el control de calidad acaba de anular en
+        ESTA lectura. Se usa para no confundir "el sensor no reportó" con "reportó
+        una lectura imposible y la filtramos" (ver la regla de sensor perdido).
         """
         rules: Dict[str, Tuple[bool, str]] = {}
         ov = thresholds or {}
@@ -265,15 +273,31 @@ class AlertService:
                 else:
                     rules["pressure_rise"] = (False, f"Presión sin subida relevante ({delta:+.1f} hPa/{window}min)")
 
-        # Humedad exterior (baja = aire seco; alta = lluvia/moho). Para el GW1100
-        # con trampa, su humedad llega en humidity_outdoor; su umbral se ajusta
-        # por estación (p. ej. alto=65 para moho, bajo=0 para desactivar).
+        # Humedad exterior (baja = aire seco; alta = lluvia).
         hum = data.get("humidity_outdoor")
         if hum is not None:
             h_lo = T("alert_humidity_low", 25.0)
             h_hi = T("alert_humidity_high", 85.0)
             rules["humidity_low"] = (hum <= h_lo, f"🏜️ Humedad exterior baja: {hum}% (≤ {h_lo}%)")
             rules["humidity_high"] = (hum >= h_hi, f"💧 Humedad exterior alta: {hum}% (≥ {h_hi}%)")
+
+        # Humedad INTERIOR. Necesita regla propia: mientras el GW1100 usó la trampa
+        # `treat_indoor_as_outdoor`, su lectura entraba por humidity_outdoor y la
+        # vigilancia de moho iba con el umbral exterior. Al retirar la trampa esa
+        # lectura volvió a humidity_indoor, que NADIE evaluaba, así que la alarma de
+        # moho quedó sin vigilar. Los umbrales se pueden sobreescribir por estación.
+        hum_in = data.get("humidity_indoor")
+        if hum_in is not None:
+            hi_lo = T("alert_humidity_indoor_low", 20.0)
+            hi_hi = T("alert_humidity_indoor_high", 65.0)
+            rules["humidity_indoor_low"] = (
+                hum_in <= hi_lo,
+                f"🏜️ Humedad interior baja: {hum_in}% (≤ {hi_lo}%) — aire muy seco",
+            )
+            rules["humidity_indoor_high"] = (
+                hum_in >= hi_hi,
+                f"🦠 Humedad interior alta: {hum_in}% (≥ {hi_hi}%) — riesgo de moho",
+            )
 
         # Batería baja: campos battery_* binarios (True=OK / False=baja).
         # Solo alerta de baterías que se han visto en ESTA estación (evita que
@@ -293,15 +317,25 @@ class AlertService:
         # Sensor perdido: un sensor visto antes que deja de reportar (por estación).
         if getattr(self._settings, "alert_sensor_lost_enabled", True):
             known = self.known_sensors.setdefault(station, set())
+            rejected = qc_rejected or set()
             for skey in list(_SENSOR_PRESENCE):
                 present = data.get(skey) is not None
                 if present:
                     known.add(skey)
-                if skey in known:
-                    rules[f"sensor_{skey}"] = (
-                        not present,
-                        f"📡 Sensor sin contacto: {self._sensor_label(_SENSOR_PRESENCE[skey])}",
-                    )
+                if skey not in known:
+                    continue
+                # Un valor que el QC acaba de anular NO es un sensor perdido: el
+                # sensor SÍ reportó, solo que la lectura era imposible (pico o
+                # fuera de rango) y la filtramos poniéndola a None. Sin esta
+                # excepción, cuanto mejor hace su trabajo el QC más falsos
+                # "sensor sin contacto" genera — y encima las reglas sensor_*
+                # están exentas de histéresis, así que avisarían de inmediato.
+                if not present and skey in rejected:
+                    continue
+                rules[f"sensor_{skey}"] = (
+                    not present,
+                    f"📡 Sensor sin contacto: {self._sensor_label(_SENSOR_PRESENCE[skey])}",
+                )
 
         return rules
 
@@ -381,7 +415,8 @@ class AlertService:
                       label: Optional[str] = None,
                       thresholds: Optional[Dict[str, Any]] = None,
                       now: Optional[datetime] = None,
-                      disabled: Optional[List[str]] = None) -> None:
+                      disabled: Optional[List[str]] = None,
+                      qc_rejected: Optional[Set[str]] = None) -> None:
         """
         Evalúa reglas y notifica en las transiciones, POR ESTACIÓN.
         El estado (active/historial) se namespacea por estación y el mensaje se
@@ -407,7 +442,7 @@ class AlertService:
         disabled_set = set(disabled)
 
         for key, (triggered, message) in self.evaluate(
-            data, station=station, thresholds=thresholds, now=now
+            data, station=station, thresholds=thresholds, now=now, qc_rejected=qc_rejected
         ).items():
             nkey = f"{prefix}{key}"
 

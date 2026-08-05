@@ -13,6 +13,8 @@ interface AlertSettings {
   alert_pressure_low: number
   alert_humidity_low: number
   alert_humidity_high: number
+  alert_humidity_indoor_low: number
+  alert_humidity_indoor_high: number
   alert_pressure_drop_warn: number
   alert_pressure_drop_strong: number
   alert_pressure_rise_warn: number
@@ -49,6 +51,7 @@ const THRESHOLD_KEYS = [
   'alert_temp_high', 'alert_temp_low', 'alert_wind_high', 'alert_gust_high',
   'alert_rain_rate', 'alert_rain_daily', 'alert_pressure_high', 'alert_pressure_low',
   'alert_humidity_high', 'alert_humidity_low',
+  'alert_humidity_indoor_high', 'alert_humidity_indoor_low',
   'alert_pressure_drop_warn', 'alert_pressure_drop_strong',
   'alert_pressure_rise_warn', 'alert_pressure_rise_strong',
   'alert_dew_high', 'alert_dew_low', 'alert_feels_high', 'alert_feels_low',
@@ -342,9 +345,9 @@ export function AdminAlertas() {
             </div>
           </div>
 
-          {/* Humedad (aplica a ambas: exterior WS2910; GW1100 con trampa = exterior) */}
+          {/* Humedad EXTERIOR (humidity_outdoor) */}
           <div>
-            <p className="text-sm font-medium mb-1">💧 Humedad</p>
+            <p className="text-sm font-medium mb-1">💧 Humedad exterior</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
@@ -356,6 +359,27 @@ export function AdminAlertas() {
                 <RuleGate on={!isOff('humidity_low')} onToggle={() => toggleRule('humidity_low')} />
                 <span className="text-slate-400 w-14">Baja</span>
                 <NumField value={settings.alert_humidity_low} onChange={(v) => update('alert_humidity_low', v)} min={0} max={100} step={5} off={isOff('humidity_low')} />
+                <span className="text-xs text-slate-500">%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Humedad INTERIOR (humidity_indoor). Es la que vigila el moho en el
+              GW1100 desde que se retiró la trampa de "tratar interior como
+              exterior": antes su lectura entraba por la regla exterior. */}
+          <div>
+            <p className="text-sm font-medium mb-1">🦠 Humedad interior</p>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('humidity_indoor_high')} onToggle={() => toggleRule('humidity_indoor_high')} />
+                <span className="text-slate-400 w-14">Alta</span>
+                <NumField value={settings.alert_humidity_indoor_high} onChange={(v) => update('alert_humidity_indoor_high', v)} min={0} max={100} step={5} off={isOff('humidity_indoor_high')} />
+                <span className="text-xs text-slate-500">% · moho</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RuleGate on={!isOff('humidity_indoor_low')} onToggle={() => toggleRule('humidity_indoor_low')} />
+                <span className="text-slate-400 w-14">Baja</span>
+                <NumField value={settings.alert_humidity_indoor_low} onChange={(v) => update('alert_humidity_indoor_low', v)} min={0} max={100} step={5} off={isOff('humidity_indoor_low')} />
                 <span className="text-xs text-slate-500">%</span>
               </div>
             </div>

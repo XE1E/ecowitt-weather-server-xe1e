@@ -413,8 +413,13 @@ async def receive_ecowitt_data(request: Request):
             parsed_data["pressure_relative"] = sea_level_pressure(
                 parsed_data["pressure_absolute"], altitude)
 
-        parsed_data, _ = quality_check(parsed_data, settings)
-        parsed_data, _ = spike_check(parsed_data, prev, settings)
+        parsed_data, qc_bad = quality_check(parsed_data, settings)
+        parsed_data, spike_bad = spike_check(parsed_data, prev, settings)
+        # Campos que el QC acabó de anular en ESTA lectura. Se pasan a las alertas
+        # para que no confundan "el sensor no reportó" con "reportó una lectura
+        # imposible y la filtramos": sin esto, cada pico rechazado disparaba un
+        # falso "Sensor sin contacto".
+        qc_rejected = {f for f, *_ in qc_bad} | {f for f, *_ in spike_bad}
         if settings.output_unit_system == "metric":
             parsed_data = calculate_derived_values(parsed_data)
 
@@ -451,7 +456,7 @@ async def receive_ecowitt_data(request: Request):
 
             # Evaluate weather alerts (never let this break ingestion)
             try:
-                await alert_service.process(parsed_data)
+                await alert_service.process(parsed_data, qc_rejected=qc_rejected)
             except Exception as e:
                 logger.error(f"Alert processing failed: {e}")
 
@@ -469,7 +474,8 @@ async def receive_ecowitt_data(request: Request):
                     await alert_service.process(
                         parsed_data, station=station, label=scfg.get("label") or station,
                         thresholds=scfg.get("alert_thresholds") or None,
-                        disabled=scfg.get("disabled_rules") or [])
+                        disabled=scfg.get("disabled_rules") or [],
+                        qc_rejected=qc_rejected)
             except Exception as e:
                 logger.error(f"Alert processing (secundaria {station}) failed: {e}")
 
