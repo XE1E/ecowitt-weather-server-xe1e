@@ -32,9 +32,10 @@ const RY = 38
 const RX_IN = 42    // óvalo interior
 const RY_IN = 31
 // Punta de la flecha de dirección: pegada al aro exterior. Más adentro se vería
-// igual de bien pero taparía el número de grados del centro en los rumbos E/O
-// (el número de 3 dígitos llega casi al óvalo interior), y ese es el dato que
-// no se puede perder; aquí sólo roza la letra cardinal en N/E/S/O exactos.
+// igual de bien pero taparía la lectura del centro en los rumbos E/O (la
+// velocidad con su unidad, "24.3 km/h", llega casi al óvalo interior), y ese es
+// el dato que no se puede perder; aquí sólo roza la letra cardinal en N/E/S/O
+// exactos.
 const ARX = RX - 1.5
 const ARY = RY - 1.5
 
@@ -281,21 +282,26 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // que toca en cada sistema, pero en métrico devolvería "5.0" y sobra el decimal.
   const pressEndLabel = u.pressU === 'inHg' ? u.press(PS_R) : String(PS_R)
 
-  // Celda REMOTA: la estación remota tiene DOS sensores. Con el WN32 conectado
-  // interesa el exterior del sitio remoto, que es el dato meteorológico; si aún
-  // no está, se muestra el integrado del GW1100, que es interior. La etiqueta
-  // dice cuál de los dos se está viendo: sin aclararlo son indistinguibles, y
-  // hasta ahora esta celda mostraba el interior rotulado solo "REMOTA GW1100".
-  const remoteIsOutdoor = remote?.temperature_outdoor != null
-  const remoteT = remoteIsOutdoor ? remote?.temperature_outdoor : remote?.temperature_indoor
-  const remoteH = remoteIsOutdoor ? remote?.humidity_outdoor : remote?.humidity_indoor
-  const remoteTag = remoteIsOutdoor ? 'WN32' : 'GW1100'
-  const remoteField = remoteIsOutdoor ? 'temperature_outdoor' : 'temperature_indoor'
-  const remoteHumField = remoteIsOutdoor ? 'humidity_outdoor' : 'humidity_indoor'
+  // Estación remota: tiene DOS sensores de temperatura/humedad y ahora cada uno
+  // tiene su celda fija, en vez de una sola celda camaleónica que mostraba el
+  // exterior si el WN32 reportaba y si no caía al interior, cambiándose la
+  // etiqueta sola. Con dos celdas se ven los dos a la vez y cada rótulo dice
+  // siempre lo mismo; cuando un sensor no reporta, su celda muestra "--", que es
+  // información (ese sensor está callado) y no una sustitución silenciosa.
+  //
+  // REMOTA GW1100 = sensor integrado del gateway, interior del sitio remoto.
+  const remoteInT = remote?.temperature_indoor
+  const remoteInH = remote?.humidity_indoor
+  // REMOTA WN32 = sensor exterior conectado al gateway, el dato meteorológico.
+  const remoteOutT = remote?.temperature_outdoor
+  const remoteOutH = remote?.humidity_outdoor
 
-  // Tendencias estación remota
-  const remoteTempTrend = getTrend(remoteT, historicValue(remoteHistory, (r) => r[remoteField], 1), 0.5)
-  const remoteHumTrend = getTrend(remoteH, historicValue(remoteHistory, (r) => r[remoteHumField], 3), 3)
+  // Tendencias estación remota (mismos umbrales que las locales: ±0.5 °C, ±3 %,
+  // ±1 hPa; temp/humedad contra hace 1 h y presión contra hace 3 h)
+  const remoteInTempTrend = getTrend(remoteInT, historicValue(remoteHistory, (r) => r.temperature_indoor, 1), 0.5)
+  const remoteInHumTrend = getTrend(remoteInH, historicValue(remoteHistory, (r) => r.humidity_indoor, 3), 3)
+  const remoteOutTempTrend = getTrend(remoteOutT, historicValue(remoteHistory, (r) => r.temperature_outdoor, 1), 0.5)
+  const remoteOutHumTrend = getTrend(remoteOutH, historicValue(remoteHistory, (r) => r.humidity_outdoor, 3), 3)
   const remotePressTrend = getTrend(remote?.pressure_relative, historicValue(remoteHistory, (r) => r.pressure_relative, 3), 1)
 
   const chTemp = data?.temperature_ch1
@@ -439,13 +445,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
           {/* El título se fue a la celda del reloj: aquí parecía parte del viento. */}
           <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1, marginTop: -4 }}>VIENTO</div>
-          {/* La manga va ABSOLUTA: dentro del flex hacía crecer esta fila al alto del
-              icono, y como el compás de abajo es flex:1, le robaba ese alto y el
-              óvalo salía más chico. Mismo caso que el sol de EXT y REMOTA. */}
-          {/* Sube a la altura de la etiqueta: al quitar el título de esta celda,
-              VIENTO subió y la manga se quedó descolgada. */}
-          <div style={{ position: 'absolute', top: 6, right: 10 }}>
-            <MeteoGlyph name="windsock" size={52} color="#22c55e" title="viento" />
+          {/* El RUMBO en el sitio que ocupaba la manga de viento. La manga era
+              decorativa --repetía lo que ya dice el nombre de la celda-- y este
+              rincón es el único hueco grande que no pisa el óvalo, así que la letra
+              cardinal se lee sin tener que interpretar la flecha del compás.
+              Sigue ABSOLUTO por lo de siempre: dentro del flex hacía crecer esta
+              fila y el compás de abajo (flex:1) perdía ese alto.
+              `textAlign: right` + `right` fijo y no centrado: así "NNE" (3 letras) y
+              "N" (1) comparten el borde derecho y la palabra no se mueve al cambiar
+              el viento, el mismo anclaje que PROMEDIO/RÁFAGA. */}
+          <div style={{ position: 'absolute', top: 4, right: 10, textAlign: 'right' }}>
+            <span className="gv" style={{ fontSize: 34, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
+              {cardinal(dir)}
+            </span>
           </div>
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
           <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
@@ -479,8 +491,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 caja (su translateY(2%) amplificado por el scale(1.2)). Con 50% el
                 número flotaba arriba del óvalo. Los 3 px extra son la corrección medida:
                 la caja de línea del DSEG7 no está centrada sobre su dibujo. */}
-            <div className="gv" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800 }}>
-              <span className="seg" style={{ fontSize: 52 }}>{dir != null ? Math.round(dir) : '--'}</span><span style={{ fontSize: 28, verticalAlign: 'super' }}>°</span>
+            {/* En el centro va la VELOCIDAD, no los grados. Los grados eran el único
+                dato que la flecha del compás ya daba --y mejor, porque un rumbo se
+                entiende señalado y no leído como número-- mientras la velocidad, que
+                no se puede dibujar, vivía en una celda aparte. Con el cambio el óvalo
+                dice las dos cosas: la flecha el rumbo, el número cuánto sopla.
+                46 y no los 52 de los grados: "24.3 km/h" es más ancho que "243°" y a
+                52 se salía del óvalo interior (~164 px de ancho útil); a 46 mide ~140.
+                `decxs` para que el decimal sea la mitad del entero, como en EXT. */}
+            <div className="gv decxs" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800, whiteSpace: 'nowrap' }}>
+              <span className="seg" style={{ fontSize: 46 }}>
+                {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 17, color: 'var(--v)' }}> {u.windU}</span>
+              </span>
             </div>
           </div>
           {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
@@ -509,36 +531,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell col main">
-          <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>VEL</div>
-          {/* Este se queda CENTRADO: la bajada al pie era para los glifos grandes de
-              Meteocons, y aqui abajo a la izquierda ya vive el rumbo. */}
-          <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>
-            <svg width="30" height="22" viewBox="0 0 34 24" fill="none">
-              <path d="M2 8 H20 a4 4 0 1 0 -4 -4" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" />
-              <path d="M2 15 H25 a4.5 4.5 0 1 1 -4.5 4.5" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" />
-            </svg>
-          </div>
-          <div style={{ position: 'absolute', bottom: 8, left: 12 }}>
-            <span style={{ color: 'var(--v)', fontSize: 24, fontWeight: 800 }}>{cardinal(dir)}</span>
-          </div>
-          {/* 66 y no 104: a 104 esta celda pesaba más que la temperatura, que es el
-              dato principal, y desnivelaba toda la fila de arriba. Ahora EXT, HUMEDAD
-              y VEL comparten cuerpo (66) y unidad (24), y la jerarquía la marca el
-              contenido, no el tamaño. Aquí cabría más --no hay mín/máx debajo-- pero
-              se queda en 66 para no volver a descompensar la fila. `decxs` para que
-              su decimal sea la mitad del entero, como en EXT.
-              ABSOLUTO y centrado en la CELDA, no con la clase `ctr`: sus márgenes
-              automáticos centran en el espacio que deja la etiqueta, que no es lo
-              mismo --dejaban el número 10 px alto--. Aquí no hay mín/máx abajo que
-              lo estorbe, así que puede ocupar el centro real. `right: 12` lo deja
-              donde lo dejaba `rt`: pegado al borde del contenido. */}
-          <div className="big gv decxs" style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)', fontSize: 66 }}>
-            {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--v)' }}> {u.windU}</span>
-          </div>
-        </div>
-
-        {/* Fila 2 */}
+        {/* HUMEDAD en fila 1 columna 3. Ocupa el sitio de la celda VEL, que
+            desapareció: su velocidad se mudó al centro del óvalo y su rumbo al rincón
+            donde estaba la manga, así que no le quedaba nada propio que mostrar.
+            La celda no cambia por dentro. Las filas 1 y 2 miden lo mismo (1.23fr),
+            así que todas las medidas de esta celda --cuerpo 66, unidad 24, el mín/máx
+            anclado abajo-- siguen valiendo tal cual; sólo cambia de vecinos. */}
         <div className="cell col main">
           <div style={{ color: 'var(--h)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
@@ -547,10 +545,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
-          {/* Misma receta que EXT --centrado, 76 px, unidad a 24, mín/máx abajo y los
-              mismos márgenes-- para que las dos celdas de la columna izquierda se
-              lean como pareja. Con las filas 1 y 2 ya igualadas a 1.23fr, las medidas
-              coinciden de verdad y no sólo en los tamaños de fuente. */}
+          {/* Misma receta que EXT --centrado, mismo cuerpo, unidad a 24, mín/máx abajo
+              y los mismos márgenes-- para que las dos se lean como pareja. Antes eran
+              pareja en vertical (columna izquierda, filas 1 y 2); ahora lo son en
+              horizontal, en los dos extremos de la fila 1, con el compás en medio. Las
+              medidas coinciden igual porque ambas filas medían ya 1.23fr. */}
           <div className="big gh" style={{ fontSize: 66, textAlign: 'center', marginTop: -13 }}>
             {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
@@ -565,6 +564,37 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.max != null ? hDay.max.toFixed(0) : '--'}
             </span>
+          </div>
+        </div>
+
+        {/* Fila 2 */}
+        {/* PRES baja de la fila 3 a la fila 2, al sitio que dejó HUMEDAD. Por dentro
+            no cambia nada. La fila 2 mide 1.23fr contra los 1.18fr de la 3, así que
+            gana ~5 px de alto: el riel del barómetro va anclado al borde de abajo
+            (`bottom: 4`) y la lectura al de arriba, de modo que los píxeles de sobra
+            caen en el aire de en medio, que es justo donde había menos. */}
+        <div className="cell col main">
+          {/* PRES y no PRESIÓN: al subir la lectura a la altura de EXT/HUMEDAD, el
+              número llega hasta x≈82 y la palabra entera se le echaba encima. */}
+          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRES</div>
+          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
+            {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
+                el barómetro le quedaba encima. Se queda abajo a la izquierda pese al
+                riel: el riel arranca en x=62 y el glifo acaba en x≈58, así que
+                conviven como la gota y las tres cifras de LLUVIA. */}
+            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
+          </div>
+          <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+            <TrendGlyph trend={pressTrend} />
+          </div>
+          {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
+              y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
+              marginTop, no con centrado automático, igual que las otras dos. */}
+          <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
+            {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
+          </div>
+          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 52 }}>
+            <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
 
@@ -612,28 +642,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         {/* Fila 3 */}
-        <div className="cell col main">
-          {/* PRES y no PRESIÓN: al subir la lectura a la altura de EXT/HUMEDAD, el
-              número llega hasta x≈82 y la palabra entera se le echaba encima. */}
-          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRES</div>
-          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
-                el barómetro le quedaba encima. Se queda abajo a la izquierda pese al
-                riel: el riel arranca en x=62 y el glifo acaba en x≈58, así que
-                conviven como la gota y las tres cifras de LLUVIA. */}
-            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
-          </div>
-          <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
-            <TrendGlyph trend={pressTrend} />
-          </div>
-          {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
-              y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
-              marginTop, no con centrado automático, igual que las otras dos. */}
-          <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
-            {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
-          </div>
-          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 52 }}>
-            <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
+        {/* ROCÍO/SENSACIÓN sube de la columna 3 a la columna 1, al sitio que dejó PRES,
+            y se queda en la MISMA fila 3, así que no cambia ni de alto ni por dentro:
+            sólo se corre de lado. */}
+        <div className="cell derivada" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
+              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
+                {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
+              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
+                {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -657,21 +682,44 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        {/* ROCÍO/SENSACIÓN en fila 3 columna 3 */}
-        <div className="cell derivada" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
-              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
-              </div>
-            </div>
+        {/* CELDA NUEVA: REMOTA WN32 (exterior del sitio remoto), en fila 3 columna 3,
+            el hueco que dejó ROCÍO/SENSACIÓN al bajar a la columna 1.
+            Contorno GRIS (clase `remota`, --brd-remota) igual que las otras dos celdas
+            de la estación remota: el color del borde es lo que agrupa de un vistazo
+            qué lecturas vienen de allá y cuáles de aquí.
+            Queda habilitada aunque el WN32 todavía no esté instalado: mientras no
+            reporte muestra "--", que dice la verdad --ese sensor está callado-- en vez
+            de rellenar el hueco con el interior, que es lo que hacía la celda de abajo
+            antes de fijarla. Copia la maquetación de esa celda (cuerpo 46, unidad 20,
+            tendencia colgada a la derecha de cada valor) para que las dos se lean como
+            pareja pese a estar en filas distintas. */}
+        <div className="cell col remota">
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>WN32</span></div>
+          {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
+          <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
+            <OutdoorGlyph height={26} />
+          </div>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
+            <span style={{ position: 'relative', paddingRight: 16 }}>
+              <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
+              </span>
+              {/* La flechita SÓLO si hay lectura: sin sensor, `getTrend` devuelve
+                  'stable' --su caso por defecto-- y se dibujaría la barra gris de
+                  "sin cambios" junto a un "--", que es afirmar que algo se mantiene
+                  estable cuando en realidad no se está midiendo. */}
+              {remoteOutT != null && (
+                <TrendGlyph trend={remoteOutTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              )}
+            </span>
+            <span style={{ position: 'relative', paddingRight: 16 }}>
+              <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
+                {remoteOutH != null ? remoteOutH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
+              </span>
+              {remoteOutH != null && (
+                <TrendGlyph trend={remoteOutHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              )}
+            </span>
           </div>
         </div>
 
@@ -721,25 +769,38 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
+        {/* REMOTA GW1100: se queda donde estaba y ahora es FIJA al sensor integrado
+            del gateway, que es interior. Antes esta misma celda se disfrazaba --si el
+            WN32 reportaba mostraba el exterior y cambiaba su propio rótulo-- porque era
+            la única celda para los dos sensores remotos. Con la celda WN32 de la fila 3
+            ya no hace falta: cada sensor tiene la suya y el rótulo no se mueve. */}
         <div className="cell col remota">
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>{remoteTag}</span></div>
-          {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
-          <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
-            <OutdoorGlyph height={26} />
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          {/* La casa SIN flecha: este glifo dice DÓNDE se mide, no qué tiempo hace (ver
+              el par IndoorGlyph/OutdoorGlyph), y ahora que la celda es fija al sensor
+              integrado la lectura es de interior. Con la casa con flecha decía
+              "exterior" mientras mostraba un dato de adentro.
+              Absoluto por lo mismo que en EXT: si no, baja los valores. */}
+          <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor interior">
+            <IndoorGlyph size={26} />
           </div>
           {/* mismo ajuste que INTERIOR: se salia 1 px por abajo */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remoteT != null ? decNum(u.temp(remoteT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
+                {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
-              <TrendGlyph trend={remoteTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              {remoteInT != null && (
+                <TrendGlyph trend={remoteInTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              )}
             </span>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remoteH != null ? remoteH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
+                {remoteInH != null ? remoteInH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
               </span>
-              <TrendGlyph trend={remoteHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              {remoteInH != null && (
+                <TrendGlyph trend={remoteInHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              )}
             </span>
           </div>
         </div>
