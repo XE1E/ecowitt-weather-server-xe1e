@@ -143,9 +143,39 @@ function cloudRank(code: number): number {
   if (code === 1) return 1
   return 0
 }
+/**
+ * Código que MÁS HORAS ocupa en el periodo (moda). Antes esta función devolvía
+ * el de mayor severidad, así que una sola hora con tormenta hacía que el día
+ * entero se describiera como "tormentas". Lo severo no se pierde: se menciona
+ * aparte con `severeCode`.
+ *
+ * Los empates se rompen por severidad, para no describir como despejado un día
+ * que estuvo mitad y mitad.
+ */
 function dominantCode(codes: number[]): number {
   if (!codes.length) return 0
-  return codes.reduce((a, b) => (cloudRank(b) > cloudRank(a) ? b : a))
+  const freq = new Map<number, number>()
+  for (const c of codes) freq.set(c, (freq.get(c) ?? 0) + 1)
+  let best = codes[0]
+  let bestN = 0
+  for (const [c, n] of freq) {
+    if (n > bestN || (n === bestN && cloudRank(c) > cloudRank(best))) {
+      best = c
+      bestN = n
+    }
+  }
+  return best
+}
+
+/**
+ * Código severo (tormenta o lluvia fuerte) presente en el periodo, si lo hay y
+ * no es ya el dominante. Sirve para mencionarlo sin dejar que se coma el resumen.
+ */
+function severeCode(codes: number[], dominant: number): number | null {
+  const severe = codes.filter((c) => cloudRank(c) >= 5)
+  if (!severe.length) return null
+  const worst = severe.reduce((a, b) => (cloudRank(b) > cloudRank(a) ? b : a))
+  return cloudRank(worst) > cloudRank(dominant) ? worst : null
 }
 function cardinalWord(deg: number): string {
   const dirs = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste']
@@ -204,6 +234,20 @@ export async function fetchForecast(): Promise<ForecastResult> {
     else if (rNight < rDay && rDay >= 2) skyText += ', despejando por la noche'
     skyText += '.'
 
+    // Lo severo (tormenta / lluvia fuerte) se menciona aparte cuando no es lo
+    // dominante, con la franja en que aparece: así no se pierde el aviso, pero
+    // tampoco describe el día entero por una hora suelta.
+    const allCodes = idxs.map((k) => H.weather_code[k])
+    const severe = severeCode(allCodes, skyDay)
+    let severeText = ''
+    if (severe != null) {
+      const hrs = idxs.filter((k) => cloudRank(H.weather_code[k]) >= 5).map(hourAt)
+      const franja = hrs.some((x) => x >= 12 && x < 18) ? 'por la tarde'
+        : hrs.some((x) => x >= 18) ? 'por la noche'
+        : 'por la mañana'
+      severeText = `Puede haber ${skyWord(severe)} ${franja}.`
+    }
+
     // Lluvia (¿seco? / probabilidad y periodo)
     const probAt = (k: number) => H.precipitation_probability?.[k] ?? 0
     const periodMax = (a: number, b: number) =>
@@ -248,7 +292,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
       windMax,
       windDir,
       code: d.weather_code[i],
-      summary: [skyText, precipText, windText].filter(Boolean).join(' '),
+      summary: [skyText, severeText, precipText, windText].filter(Boolean).join(' '),
       tempMorning,
       tempAfternoon,
       precipSum: d.precipitation_sum?.[i],
