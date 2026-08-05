@@ -500,13 +500,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 entiende señalado y no leído como número-- mientras la velocidad, que
                 no se puede dibujar, vivía en una celda aparte. Con el cambio el óvalo
                 dice las dos cosas: la flecha el rumbo, el número cuánto sopla.
-                46 y no los 52 de los grados: "24.3 km/h" es más ancho que "243°" y a
-                52 se salía del óvalo interior (~164 px de ancho útil); a 46 mide ~140.
-                `decxs` para que el decimal sea la mitad del entero, como en EXT. */}
-            <div className="gv decxs" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800, whiteSpace: 'nowrap' }}>
-              <span className="seg" style={{ fontSize: 46 }}>
-                {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 17, color: 'var(--v)' }}> {u.windU}</span>
-              </span>
+                La unidad va DEBAJO del número, no en línea: dentro del óvalo el ancho
+                es lo escaso --el hueco útil son ~164 px-- mientras que a lo alto sobra
+                sitio, así que apilarlas deja la cifra sola en su renglón y le quita el
+                riesgo de tocar el aro. `decxs` para que el decimal sea la mitad del
+                entero, como en EXT. */}
+            <div className="gv" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              <div className="seg decxs" style={{ fontSize: 46, lineHeight: 1 }}>
+                {decNum(u.wind(data?.wind_speed, 1))}
+              </div>
+              <div className="u" style={{ fontSize: 17, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
             </div>
           </div>
           {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
