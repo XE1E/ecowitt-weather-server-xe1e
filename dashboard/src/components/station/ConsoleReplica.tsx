@@ -294,23 +294,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mandando sobre la humedad y la presión de las celdas de abajo. */}
           {/* SIN la clase `ctr`: centra en vertical con margin:auto y empujaba el
               valor sobre el bloque de mín/máx, que va absoluto abajo. */}
-          <div className="big gt" style={{ fontSize: 72, textAlign: 'center', marginTop: 2 }}>
-            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
+          <div className="big gt ctr" style={{ fontSize: 56, textAlign: 'center', marginTop: -2 }}>
+            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
-          {/* Mín/máx del día, centrados bajo el valor. */}
-          <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, display: 'flex', gap: 22, justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>MÍN</div>
-              <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
-                {u.temp(tDay?.min ?? undefined)}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>MÁX</div>
-              <div className="gt seg" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
-                {u.temp(tDay?.max ?? undefined)}
-              </div>
-            </div>
+          {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
+              columnas con rótulo propio no cabían sin rozar el valor. Los dígitos
+              a 24 px, que es el suelo práctico del 7-segmentos a distancia. */}
+          <div style={{ position: 'absolute', bottom: 9, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
+            <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+              {u.temp(tDay?.min ?? undefined)}
+            </span>
+            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+              {u.temp(tDay?.max ?? undefined)}
+            </span>
           </div>
         </div>
 
