@@ -147,14 +147,19 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
   const color = delta == null || Math.abs(delta) <= 1 ? '#94a3b8' : delta > 0 ? '#22c55e' : '#ef4444'
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
-      <rect x={x0} y={8} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#3f3f46" strokeWidth="1" />
-      {/* Marca cada 1 hPa; más alta y clara en -5, 0 y +5 */}
+      {/* Riel y marcas en BLANCO, no en grises: sobre el fondo negro de la consola
+          los #3f3f46 / #71717a de la primera versión casi no se veían. El interior
+          sí se queda oscuro, que es lo que hace resaltar el relleno de color. La
+          jerarquía entre marca mayor y menor la dan ahora el alto y el grosor, no
+          el color. */}
+      <rect x={x0} y={8} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
+      {/* Marca cada 1 hPa; más alta y gruesa en -5, 0 y +5 */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const tx = xOf(v)
         const major = v % PS_R === 0
         return (
           <line key={v} x1={tx} y1={major ? 4 : 6.5} x2={tx} y2={major ? 21 : 18.5}
-            stroke={major ? '#71717a' : '#3f3f46'} strokeWidth={major ? 1.4 : 1} />
+            stroke="#eaeaea" strokeWidth={major ? 1.6 : 1} />
         )
       })}
       {/* Relleno del centro al valor: da la magnitud sin tener que leer la escala */}
@@ -162,9 +167,9 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
         <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
       )}
       {delta != null && <polygon points={`${x - 5},0 ${x + 5},0 ${x},7`} fill={color} />}
-      <text x={x0} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="start">-{endLabel}</text>
-      <text x={mid} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="middle">0</text>
-      <text x={x1} y={29} fill="#8a8a8a" fontSize="10" fontWeight="700" textAnchor="end">+{endLabel}</text>
+      <text x={x0} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">-{endLabel}</text>
+      <text x={mid} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="middle">0</text>
+      <text x={x1} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">+{endLabel}</text>
     </svg>
   )
 }
