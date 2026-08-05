@@ -50,6 +50,42 @@ Severidades:
 | 26 | `/api/rain/last` lo resuelve Flux con `filter(_value > 0) \|> last()` | `storage.py`, `main.py` |
 | 27 | `get_daily_stats`: de **42 consultas a 3** agrupando por `_field` | `storage.py` |
 | 28 | Cota de 32 entradas con evicción en las cachés de `air_quality` e `imeca` | 2 servicios |
+| 12 | Grados-día sobre **(Tmax+Tmin)/2**, el criterio de NOAA que el texto afirmaba | `aggregator.py` |
+| 14 | Nubosidad por **índice de claridad** en vez de W/m² absolutos | `weather.ts`, `svitrix.py`, `main.py` |
+| 21c | `is_day` en el contrato de Svitrix | `svitrix.py` |
+| 43 | Iconos nocturnos en el pronóstico horario | `forecast.ts` |
+| 48 | El SSN aplica el mismo radio y magnitud mínima que USGS | `earthquakes.py` |
+| 15 + 6 | Base de nubes: "sobre el suelo", y en pies con el sistema imperial | `CurrentConditions.tsx`, `units.tsx` |
+| 10 | "vs ayer" → "vs 24 h antes", que es lo que mide | `MiniStats.tsx` |
+| 9 | `rain_daily` muestra solo el máximo, no promedio ni mínimo | `StatisticsPage.tsx`, `StatsSummary.tsx` |
+
+Detalle de #12: la diferencia es material — en un día real de la estación (mín 14.2, máx 28.7,
+promedio integrado 19.6) los grados-día de refrigeración pasan de **1.3 a 3.1**. El histórico
+guardado no se toca: `weather_daily` sigue almacenando `temp_avg`, `temp_max` y `temp_min`, y el
+punto medio se calcula al leer. La ET₀ de Hargreaves también pasa a usarlo, que es lo que define
+FAO-56.
+
+Detalle de #14: se compara la radiación medida contra la de cielo despejado a esa altura del sol
+(`1361 · sen h`), con los cortes habituales 0.65 / 0.35. En el cliente la elevación se calcula con
+una fórmula corta; en `/api/svitrix` se toma la de pyephem, que ya está cacheada. Resultados
+verificados en ambos sentidos: un amanecer despejado (100 W/m², sol a 11°) deja de ser "Nublado",
+y un **mediodía cubierto (450 W/m², sol a 81°) deja de ser "Despejado"** — el error también iba en
+esa dirección.
+
+### Corrección al hallazgo #11
+
+**Mi afirmación era incorrecta.** Dije que las dos tarjetas "Días de lluvia" mostraban números
+distintos; no es así: `period_summary` y `season_tracker` aplican el mismo umbral sobre los mismos
+valores no nulos, así que **siempre coinciden**. Verificado con un periodo que incluye días sin
+datos: ambas dan 2.
+
+Lo que sí es real, y queda pendiente, es que `season_tracker` cuenta `dry_days` solo sobre los días
+**con** dato, de modo que `rain_days + dry_days < days` cuando hay huecos: las cuatro tarjetas de
+contadores no suman al total del periodo, sin que nada lo explique.
+
+El cambio aplicado a `period_summary` (contar y sumar solo sobre días con dato) se conserva porque
+hace explícita la intención y evita que un futuro retoque del `or 0.0` altere el conteo, pero no
+corrige ninguna discrepancia visible.
 
 Detalle de #27: en vez de tres consultas por cada uno de los 14 campos, una por agregación
 filtrando el conjunto de campos y agrupando por `_field`. Verificado que el contrato queda
