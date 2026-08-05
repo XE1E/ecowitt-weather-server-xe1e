@@ -52,6 +52,20 @@ const STALE_MIN = 5
 const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const cardinal = (deg?: number) => (deg == null ? '--' : DIR16[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16])
 
+/**
+ * Adapta un rumbo para dibujarlo en DSEG7. Esa fuente forma las letras con los mismos
+ * siete segmentos que las cifras y no todas le salen a la misma altura: medido sobre el
+ * propio archivo a cuerpo 60, los dígitos y la `E` dan 60 px de tinta, pero la `O` y la
+ * `N` sólo 34 --poco más de la mitad-- y la `S` sale como una `b`, sin la barra de
+ * arriba. Puestas al lado de la `E` parecen recortadas.
+ *
+ * Se sustituyen por los dígitos que tienen la MISMA forma a altura completa: `O`→`0` y
+ * `S`→`5`, que es lo que hace un display real. La `N` se queda como está porque no hay
+ * equivalente: una N mayúscula no se puede dibujar con siete segmentos --pediría una
+ * diagonal-- así que en los siete rumbos que la llevan seguirá siendo más baja.
+ */
+const seg7 = (s: string) => s.replace(/O/g, '0').replace(/S/g, '5')
+
 // Geometría del compás ovalado. El aspecto del óvalo es intencional (la consola
 // física es más ancha que alta): RX/RY también orientan el marcador de dirección.
 const RX = 49       // óvalo exterior (aro con las marcas de grados)
@@ -661,12 +675,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
               <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
             </span>
-            {/* La O del rumbo se dibuja con un CERO. En DSEG7 la "O" mayúscula sale como
-                una o baja, de media altura, y "OSO" quedaba como "oSo" con los caracteres
-                a distinta altura; el 0 usa los siete segmentos completos y la palabra
-                queda toda a un mismo alto, que es como lo resuelve un display real. */}
+            {/* `seg7` cambia O→0 y S→5, los dos caracteres que DSEG7 dibuja a media
+                altura o sin la barra de arriba. Ver su comentario para el detalle y para
+                por qué la N no se puede arreglar. */}
             <span className="seg" style={{ fontSize: 24, letterSpacing: 1 }}>
-              {cardinal(dir).replace(/O/g, '0')}
+              {seg7(cardinal(dir))}
             </span>
           </div>
           {/* El RUMBO en el sitio que ocupaba la manga de viento. La manga era
@@ -1032,21 +1045,22 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Los tres cuelgan del borde de ARRIBA (`flex-start`) y no van centrados: así
             los rótulos quedan a la misma altura entre sí y los números también, y el
             renglón de la unidad de SOLAR cuelga por debajo sin descolocar a nadie.
-            Padding lateral de 4 y no los 12 de `.cell`: con 12 por lado no caben las
-            cifras del caso peor a cuerpo 40.
-            ANCHOS 4.2 / 2.5 / 3.3 y no 4 / 2 / 3: con 2fr la celda de UV se quedaba en
-            74 px, o sea 62 de contenido, y a un valor de dos dígitos (58 px de avance
-            más los flancos) le faltaba un pelo y SE PARTÍA EN DOS RENGLONES. Ahora son
-            84 px --72 de contenido-- y además los tres números llevan `nowrap`, que es
-            el cinturón por si alguna cifra vuelve a quedar al límite: preferimos que
-            asome a que se rompa el renglón, porque un número partido no se lee y uno
-            recortado sí se nota y se arregla. Cuentas rehechas: SOLAR 141 px de celda
-            (129 de contenido) para los ~117 de "1234", e ICA 111 (99) para los ~87
-            de "167". */}
-        <div style={{ display: 'grid', gridTemplateColumns: '4.2fr 2.5fr 3.3fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            ANCHOS Y CUERPO, medidos sobre el propio archivo de la fuente y no estimados
+            desde una captura --que es lo que se hizo primero y salió corto--: DSEG7 Bold
+            avanza 33 px por cifra a cuerpo 40, así que los casos peores piden "1234" =
+            132, "12" = 66 y "167" = 99. Sumando márgenes, bordes, sangrías y los dos
+            huecos, eso son 363 px y la celda mide 339: A CUERPO 40 NO CABEN LOS TRES.
+            Con el número a 38 el avance baja a 31.4 y los casos peores quedan en 125 /
+            63 / 94, que con los anchos 4.25 / 2.4 / 3.35 dejan ~7 px de holgura a cada
+            una. La diferencia entre 38 y 40 no se ve; un número desbordado sí.
+            Sangría lateral de 3 y no los 12 de `.cell`, por lo mismo. Y los tres llevan
+            `nowrap` de cinturón: si alguna cifra volviera a quedar al límite, preferimos
+            que asome --se nota y se arregla-- a que parta el renglón, que fue el defecto
+            que tenía UV y que no se lee de ninguna manera. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '4.25fr 2.4fr 3.35fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
               {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
             </div>
             {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
@@ -1061,9 +1075,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 color={data?.solar_radiation != null ? solarColor(data.solar_radiation) : '#5a5a5a'} />
             </div>
           </div>
-          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
             </div>
             {/* Escala a 12: es donde acaba la escala UV de la OMS (11+ ya es "extremo",
@@ -1077,9 +1091,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
               según la categoría de la norma, así que el número se lee de un
               vistazo sin tener que recordar los cortes. */}
-          <div className="cell derivada" style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
-            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
             </div>
             {/* Escala a 200 IMECA: es el tope que la norma mexicana considera "muy mala"
