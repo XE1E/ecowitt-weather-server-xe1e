@@ -276,8 +276,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .cns .dec{font-size:0.6em}          /* decimales en tamaño más chico */
     /* EXT lleva el decimal aún más chico que el resto: es la cifra más grande de
        la consola y a 0.6em el ".5" pesaba tanto como un entero. Va como variante
-       propia y no tocando .dec, que lo comparten todas las demás celdas. */
-    .cns .decxs .dec{font-size:0.42em}
+       propia y no tocando .dec, que lo comparten todas las demás celdas.
+       0.33em sobre 76 px deja el decimal en ~25 px, o sea del tamaño de los
+       dígitos de MÍN/MÁX: es el suelo: más chico y deja de leerse a distancia. */
+    .cns .decxs .dec{font-size:0.33em}
     .cns .rt{text-align:right}          /* valor pegado al borde derecho */
     .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
     .cns .cell.main{border-color:var(--brd-main)}
@@ -333,10 +335,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               con marginTop y no con centrado automático.
               76 px y marginTop NEGATIVO van juntos: agrandar la cifra sola la hace
               crecer hacia abajo y se come el aire que la separa de mín/máx, así que
-              sube lo mismo que engordó. Con el decimal a 0.42em (`decxs`) el bloque
-              mide ~157 px de ancho aun a 76, y su borde izquierdo cae en x≈89, libre
-              del termómetro (acaba en x≈84). */}
-          <div className="big gt decxs" style={{ fontSize: 76, textAlign: 'center', marginTop: -8 }}>
+              sube lo mismo que engordó. Con el decimal a 0.33em (`decxs`) el bloque
+              mide ~150 px de ancho aun a 76, y su borde izquierdo cae en x≈92, libre
+              del termómetro (acaba en x≈84).
+              A -13 el dibujo de los dígitos empieza en y≈14 y se cruza con la banda
+              de la etiqueta EXT, pero no con la etiqueta: ella vive en x 12-50 y el
+              número arranca en x≈92. */}
+          <div className="big gt decxs" style={{ fontSize: 76, textAlign: 'center', marginTop: -13 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
@@ -528,9 +533,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
             <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
           </div>
-          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6, gap: 2 }}>
+          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>LUNA</div>
-            <MoonGlyph size={62} />
+            {/* La luna se centra en el hueco que deja la etiqueta, no debajo de ella:
+                colgada del `flex-start` quedaba pegada al rótulo con todo el aire
+                junto abajo. El `flex:1` toma el alto sobrante y el `center` la
+                reparte, así el disco queda a media celda. */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', minHeight: 0 }}>
+              <MoonGlyph size={62} />
+            </div>
           </div>
         </div>
 
