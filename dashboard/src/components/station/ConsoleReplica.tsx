@@ -387,8 +387,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
            línea de mín/máx abajo-- y con la fila 2 más baja el mín/máx de HUMEDAD
            quedaba a 3 px del valor mientras el de EXT tenía 26. Se puede repartir a
            la mitad sin efectos: la celda del VIENTO abarca las dos filas, así que
-           sólo le importa la suma, y las filas 3-5 no se tocan. */
-        gridTemplateRows: '1.23fr 1.23fr 1.18fr 1.0fr 0.92fr',
+           sólo le importa la suma.
+           Filas 3, 4 y 5 IGUALES por el mismo criterio, y con la misma cuenta: los
+           1.18/1.0/0.92 de antes sumaban 3.10, así que a cada una le toca 3.10/3 =
+           1.0333. Repartir a partes iguales en vez de bajar a 0 la 5 y subir la 3 es
+           lo que deja las filas 1 y 2 EXACTAS: mientras el total de las tres no se
+           mueva de 3.10, la fracción de las dos de arriba no cambia y ni el valor de
+           EXT ni su mín/máx se enteran.
+           A cambio, la fila 3 pierde ~15 px (la 4 gana 3.5 y la 5 gana 12). Las tres
+           celdas de la 3 centran su contenido con flex o con `ctr`, así que se
+           reacomodan solas sin tocar ni un tamaño de fuente; la única que lo notó fue
+           la del icono del clima, que cuelga del borde de arriba --ver el `size` del
+           WeatherIcon, medido sobre la captura--. */
+        gridTemplateRows: '1.23fr 1.23fr 1.0333fr 1.0333fr 1.0333fr',
         background: '#000',
       }}>
         {/* Fila 1 */}
@@ -459,7 +470,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               color va inline y la letra se queda en la Roboto Condensed de la consola,
               igual que lo hacía la celda VEL con este mismo rumbo. */}
           <div style={{ position: 'absolute', top: 4, right: 10, textAlign: 'right' }}>
-            <span style={{ color: 'var(--v)', fontSize: 34, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
+            <span style={{ color: 'var(--v)', fontSize: 28, fontWeight: 800, letterSpacing: 1, lineHeight: 1 }}>
               {cardinal(dir)}
             </span>
           </div>
