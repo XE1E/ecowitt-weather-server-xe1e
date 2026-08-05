@@ -34,6 +34,7 @@ from .services.earthquakes import get_earthquakes
 from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
+from .services import openmeteo
 from .services.almanac import get_almanac
 from .services import satellite
 from .services.windrose import compute_wind_rose
@@ -1751,6 +1752,26 @@ async def get_almanac_data():
     except Exception as e:
         logger.error(f"Error getting almanac: {e}")
         return {"available": False, "reason": "error"}
+
+
+@app.get("/api/forecast")
+async def get_forecast(lat: Optional[float] = None, lon: Optional[float] = None):
+    """
+    Pronóstico de Open-Meteo con caché en el servidor.
+
+    Lo pedía el navegador directamente al origen, así que una caída dejaba la
+    página sin pronóstico y cada visitante gastaba cuota por su cuenta. Aquí se
+    cachea y, si el origen no responde, se sirve la última copia buena marcada
+    como `stale` (mismo criterio que /api/smn).
+    """
+    try:
+        return await openmeteo.get_forecast(
+            lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
+            lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
+        )
+    except Exception as e:
+        logger.error(f"Error obteniendo pronóstico Open-Meteo: {e}")
+        raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico")
 
 
 @app.get("/api/forecast/local")

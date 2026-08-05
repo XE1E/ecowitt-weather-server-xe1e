@@ -194,11 +194,10 @@ export function describeDay(d: ForecastDay, ft: (c: number) => string): string {
 
 export async function fetchForecast(): Promise<ForecastResult> {
   const { latitude, longitude } = LOCATION
-  const url =
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset` +
-    `&hourly=weather_code,temperature_2m,precipitation_probability` +
-    `&timezone=auto&forecast_days=7`
+  // Vía nuestro backend, no directo a api.open-meteo.com: así hay caché
+  // compartida entre visitantes y, si el origen se cae, se sirve la última copia
+  // buena en vez de dejar la página sin pronóstico (ver services/openmeteo.py).
+  const url = `/api/forecast?lat=${latitude}&lon=${longitude}`
 
   const res = await fetch(url)
   if (!res.ok) throw new Error('Error al obtener el pronóstico')
