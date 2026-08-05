@@ -297,9 +297,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const remoteOutH = remote?.humidity_outdoor
 
   // Tendencias estación remota (mismos umbrales que las locales: ±0.5 °C, ±3 %,
-  // ±1 hPa; temp/humedad contra hace 1 h y presión contra hace 3 h)
-  const remoteInTempTrend = getTrend(remoteInT, historicValue(remoteHistory, (r) => r.temperature_indoor, 1), 0.5)
-  const remoteInHumTrend = getTrend(remoteInH, historicValue(remoteHistory, (r) => r.humidity_indoor, 3), 3)
+  // ±1 hPa; temp/humedad contra hace 1 h y presión contra hace 3 h).
+  // Del sensor interior NO se calculan: su celda no muestra flechas, porque lo de
+  // adentro se mueve poco y su subida o bajada no dice nada del tiempo.
   const remoteOutTempTrend = getTrend(remoteOutT, historicValue(remoteHistory, (r) => r.temperature_outdoor, 1), 0.5)
   const remoteOutHumTrend = getTrend(remoteOutH, historicValue(remoteHistory, (r) => r.humidity_outdoor, 3), 3)
   const remotePressTrend = getTrend(remote?.pressure_relative, historicValue(remoteHistory, (r) => r.pressure_relative, 3), 1)
@@ -515,9 +515,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 es lo escaso --el hueco útil son ~164 px-- mientras que a lo alto sobra
                 sitio, así que apilarlas deja la cifra sola en su renglón y le quita el
                 riesgo de tocar el aro. `decxs` para que el decimal sea la mitad del
-                entero, como en EXT. */}
+                entero, como en EXT.
+                52 px: el cuerpo que tenían los grados cuando ocupaban este centro. Se
+                puede volver a él justamente porque la unidad se bajó de renglón --con
+                "km/h" en línea, a 52 el conjunto se salía del óvalo--. */}
             <div className="gv" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div className="seg decxs" style={{ fontSize: 46, lineHeight: 1 }}>
+              <div className="seg decxs" style={{ fontSize: 52, lineHeight: 1 }}>
                 {decNum(u.wind(data?.wind_speed, 1))}
               </div>
               <div className="u" style={{ fontSize: 17, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
@@ -708,35 +711,33 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Queda habilitada aunque el WN32 todavía no esté instalado: mientras no
             reporte muestra "--", que dice la verdad --ese sensor está callado-- en vez
             de rellenar el hueco con el interior, que es lo que hacía la celda de abajo
-            antes de fijarla. Copia la maquetación de esa celda (cuerpo 46, unidad 20,
-            tendencia colgada a la derecha de cada valor) para que las dos se lean como
-            pareja pese a estar en filas distintas. */}
+            antes de fijarla. Copia la maquetación de esa celda (cuerpo 46, unidad 20)
+            para que las dos se lean como pareja pese a estar en filas distintas. */}
         <div className="cell col remota">
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>WN32</span></div>
-          {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
+          {/* Casa-con-flecha a 32 y no a 26: esta celda es la única de la estación
+              remota que mide a la intemperie, y el glifo es lo que lo dice. Cabe de
+              sobra --la fila 3 mide 109 px y el rótulo ocupa 18--.
+              Absoluto por lo mismo que en EXT: si no, baja los valores. */}
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
-            <OutdoorGlyph height={26} />
+            <OutdoorGlyph height={32} />
           </div>
+          {/* Tendencias en temperatura y humedad, colgadas a la derecha de cada valor,
+              igual que las de EXT y HUMEDAD. Se dibujan siempre, también sin lectura:
+              mientras el WN32 no esté instalado se verá la barra gris de "sin cambios"
+              al lado de un "--". */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
-              {/* La flechita SÓLO si hay lectura: sin sensor, `getTrend` devuelve
-                  'stable' --su caso por defecto-- y se dibujaría la barra gris de
-                  "sin cambios" junto a un "--", que es afirmar que algo se mantiene
-                  estable cuando en realidad no se está midiendo. */}
-              {remoteOutT != null && (
-                <TrendGlyph trend={remoteOutTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
-              )}
+              <TrendGlyph trend={remoteOutTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
             </span>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutH != null ? remoteOutH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
               </span>
-              {remoteOutH != null && (
-                <TrendGlyph trend={remoteOutHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
-              )}
+              <TrendGlyph trend={remoteOutHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
             </span>
           </div>
         </div>
@@ -802,23 +803,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor interior">
             <IndoorGlyph size={26} />
           </div>
-          {/* mismo ajuste que INTERIOR: se salia 1 px por abajo */}
+          {/* SIN flechitas de tendencia: una lectura de interior no las necesita --lo
+              de adentro se mueve poco y despacio, y la subida o bajada no dice nada
+              del tiempo--. Es el mismo criterio que ya seguían las celdas INTERIOR y
+              JARDÍN, que tampoco las llevan; quedan para lo que se mide a la
+              intemperie (EXT, HUMEDAD, PRES y la WN32 de arriba).
+              Al no haber flecha, el `paddingRight: 16` que le hacía sitio se va con
+              ella y los dos valores quedan centrados de verdad en la celda.
+              mismo ajuste que INTERIOR: se salia 1 px por abajo */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
-            <span style={{ position: 'relative', paddingRight: 16 }}>
-              <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
-              </span>
-              {remoteInT != null && (
-                <TrendGlyph trend={remoteInTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
-              )}
+            <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
+              {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
-            <span style={{ position: 'relative', paddingRight: 16 }}>
-              <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remoteInH != null ? remoteInH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
-              </span>
-              {remoteInH != null && (
-                <TrendGlyph trend={remoteInHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
-              )}
+            <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
+              {remoteInH != null ? remoteInH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
             </span>
           </div>
         </div>
