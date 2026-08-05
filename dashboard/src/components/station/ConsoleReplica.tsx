@@ -345,7 +345,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // `now` se refresca cada segundo, así que esto se reevalúa solo.
   const lastSeen = parseUtc(data?.timestamp) ?? parseUtc(data?.received_at)
   const staleMin = lastSeen ? Math.floor((now.getTime() - lastSeen.getTime()) / 60000) : null
-  const stale = staleMin == null || staleMin >= STALE_MIN
+  // Exige HABER tenido lectura: con `staleMin == null` contando como caída, la consola
+  // gritaba "SIN DATOS" durante el primer segundo de cada carga, antes de que llegara
+  // el primer /api/current. Cuando de verdad no hay nada, las celdas ya salen todas en
+  // "--", que lo dice sin necesidad de alarma.
+  const stale = staleMin != null && staleMin >= STALE_MIN
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
   const hDay = stats?.humidity_outdoor      // …y para HUMEDAD, que los muestra igual
 
@@ -1049,8 +1053,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               precisamente lo que hace que la pantalla parezca fresca cuando no lo está.
               El nombre no se pierde: sigue en el título de la página del kiosco. */}
           {stale ? (
-            <div style={{ color: 'var(--red)', fontSize: 16, fontWeight: 800, letterSpacing: 1, textAlign: 'center', marginTop: -2 }}>
-              ⚠ SIN DATOS {staleMin != null ? `· ${staleMin} MIN` : ''}
+            /* El triángulo va en SVG y no como emoji ⚠: el Chromium del renderer corre
+               en un contenedor sin fuente de emoji en color, y ahí el carácter saldría
+               como un cuadro vacío. Todos los demás iconos de la consola ya son SVG por
+               la misma razón. */
+            <div style={{ color: 'var(--red)', fontSize: 16, fontWeight: 800, letterSpacing: 1, lineHeight: 1, marginTop: -2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <svg width="15" height="14" viewBox="0 0 16 15" style={{ flexShrink: 0 }}>
+                <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
+                <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
+                <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
+              </svg>
+              SIN DATOS · {staleMin} MIN
             </div>
           ) : (
             <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', marginTop: -2 }}>
