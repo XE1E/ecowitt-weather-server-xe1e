@@ -91,35 +91,32 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
   )
 }
 
-// Par de marcadores de DÓNDE se mide, no de qué tiempo hace: la casa dice que la
-// lectura viene de adentro y la casa con la flecha que viene de afuera. El de
-// exterior era antes un sol amarillo relleno de Meteocons, y un sol conviviendo
-// con la celda de condición ("NOCHE NUBLADA") se puede leer como estado del cielo
-// en vez de como ubicación del sensor. Los dos comparten trazo, grosor y color
-// para que se reconozcan como pareja de un vistazo.
+// Marcador de DÓNDE se mide, no de qué tiempo hace. Es UNA sola casa en dos
+// versiones: hueca = sensor a la intemperie, rellena = sensor bajo techo. Antes
+// eran dos dibujos distintos --una casa sola y una casa con flecha, ésta en una
+// caja más ancha-- y distinguirlos obligaba a leer el detalle de la flecha; el
+// relleno se ve de golpe y a cualquier tamaño.
+//
+// Un ÚNICO tamaño (30) para las cuatro celdas que lo llevan: cuando cada una
+// tenía el suyo (30, 32, 26) el glifo parecía cambiar de importancia según la
+// celda, cuando lo que dice es siempre lo mismo.
+//
+// El de exterior era antes un sol amarillo relleno de Meteocons, y un sol
+// conviviendo con la celda de condición ("NOCHE NUBLADA") se puede leer como
+// estado del cielo en vez de como ubicación del sensor.
 const LOC_STROKE = '#94a3b8'
+const LOC_SIZE = 30
 
-function IndoorGlyph({ size = 30 }: { size?: number }) {
+// Los dos `path` se rellenan o no según `filled`. Ninguno está cerrado
+// explícitamente, pero SVG cierra el contorno al rellenar, así que el del techo da
+// el triángulo y el del cuerpo el rectángulo: juntos, la silueta de la casa.
+function HouseGlyph({ size = LOC_SIZE, filled = false }: { size?: number; filled?: boolean }) {
+  const fill = filled ? LOC_STROKE : 'none'
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke={LOC_STROKE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12l9-9 9 9" />
-      <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" />
-    </svg>
-  )
-}
-
-// Más ancho que alto (30×24 contra los 24×24 de la casa sola): la casa se dibuja
-// algo más chica y corrida a la izquierda para hacerle sitio a la flecha, en vez
-// de encoger el conjunto hasta que ninguna de las dos partes se distinga.
-function OutdoorGlyph({ height = 30 }: { height?: number }) {
-  return (
-    <svg width={(height * 30) / 24} height={height} viewBox="0 0 30 24" fill="none"
-      stroke={LOC_STROKE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 13 L8 6 L15 13" />
-      <path d="M2.5 11v9a1 1 0 001 1h9a1 1 0 001-1v-9" />
-      <path d="M17.5 13 H26" />
-      <path d="M22.5 9.5 L26 13 L22.5 16.5" />
+      <path d="M3 12l9-9 9 9" fill={fill} />
+      <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" fill={fill} />
     </svg>
   )
 }
@@ -403,14 +400,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         background: '#000',
       }}>
         {/* Fila 1 */}
+        {/* SIN rótulo "EXT". El termómetro de abajo a la izquierda ya dice qué mide y
+            la casa hueca de arriba a la derecha dónde lo mide, así que la palabra sólo
+            repetía el dibujo. Lo mismo en HUMEDAD, PRES y VIENTO.
+            El número NO se mueve: el rótulo era un hijo en flujo de 18 px, así que su
+            marginTop pasa de -13 a +5 y la cifra se queda exactamente donde estaba,
+            que es una posición medida contra el mín/máx de abajo. El hueco que deja
+            queda libre por si algún día se quiere subir o agrandar la lectura. */}
         <div className="cell col main">
-          <div style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
           {/* El marcador va ABSOLUTO: dentro del flex hacía crecer la fila del
               encabezado al alto del icono y empujaba el valor hacia abajo.
               `right: 6` y no 0: este glifo es de trazo y llega hasta el borde de su
               caja, a diferencia del sol de Meteocons que traía aire por dentro. */}
           <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
-            <OutdoorGlyph height={30} />
+            <HouseGlyph />
           </div>
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
@@ -432,7 +435,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               A -13 el dibujo de los dígitos empieza en y≈14 y se cruza con la banda
               de la etiqueta EXT, pero no con la etiqueta: ella vive en x 12-50 y el
               número arranca en x≈100. */}
-          <div className="big gt decxs" style={{ fontSize: 66, textAlign: 'center', marginTop: -13 }}>
+          <div className="big gt decxs" style={{ fontSize: 66, textAlign: 'center', marginTop: 5 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
@@ -454,8 +457,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-          {/* El título se fue a la celda del reloj: aquí parecía parte del viento. */}
-          <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1, marginTop: -4 }}>VIENTO</div>
+          {/* Donde estaba el rótulo "VIENTO" van ahora los GRADOS del rumbo, que se
+              habían quedado sin sitio al mudarse la velocidad al centro del óvalo.
+              Aquí recuperan el suyo sin quitárselo a nada: la palabra "VIENTO" era
+              redundante --el compás, la manga que hubo antes y las etiquetas
+              PROMEDIO/RÁFAGA ya dicen de qué va la celda--.
+              Cuerpo 24, el de los decimales de PROMEDIO y RÁFAGA (40 × 0.6em): los
+              grados son el dato de apoyo del rumbo, que ya se lee en letras arriba a
+              la derecha y en la flecha del compás, así que van en el mismo peso que la
+              consola usa para lo accesorio. */}
+          <div style={{ color: 'var(--v)', fontWeight: 800, marginTop: -4, lineHeight: 1 }}>
+            <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
+            <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
+          </div>
           {/* El RUMBO en el sitio que ocupaba la manga de viento. La manga era
               decorativa --repetía lo que ya dice el nombre de la celda-- y este
               rincón es el único hueco grande que no pisa el óvalo, así que la letra
@@ -516,11 +530,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 sitio, así que apilarlas deja la cifra sola en su renglón y le quita el
                 riesgo de tocar el aro. `decxs` para que el decimal sea la mitad del
                 entero, como en EXT.
-                52 px: el cuerpo que tenían los grados cuando ocupaban este centro. Se
-                puede volver a él justamente porque la unidad se bajó de renglón --con
-                "km/h" en línea, a 52 el conjunto se salía del óvalo--. */}
+                66 px: el mismo cuerpo que la temperatura de EXT y la humedad, así las
+                tres cifras grandes de la consola pesan igual y ninguna se impone.
+                Comprobado que cabe, y medido en vez de tanteado: el óvalo interior mide
+                221 px de ancho (buscando su trazo gris sobre la captura) y el caso más
+                largo posible es "99.9", porque el viento no llega a tres cifras. A 52 px
+                "6.5" medía 56 px de tinta, o sea ~1.08× el cuerpo por cada
+                entero-con-decimal, de donde "99.9" a 66 pide unos 110 px: la mitad del
+                óvalo. El techo real no es el ancho sino la cola de la flecha del compás,
+                que en los rumbos N/S entra hasta ~63 px del centro. El tamaño del óvalo
+                NO se toca. */}
             <div className="gv" style={{ position: 'absolute', top: '52.4%', left: '50%', transform: 'translate(-50%,-50%) translateY(3px)', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div className="seg decxs" style={{ fontSize: 52, lineHeight: 1 }}>
+              <div className="seg decxs" style={{ fontSize: 66, lineHeight: 1 }}>
                 {decNum(u.wind(data?.wind_speed, 1))}
               </div>
               <div className="u" style={{ fontSize: 17, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
@@ -565,7 +586,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             así que todas las medidas de esta celda --cuerpo 66, unidad 24, el mín/máx
             anclado abajo-- siguen valiendo tal cual; sólo cambia de vecinos. */}
         <div className="cell col main">
-          <div style={{ color: 'var(--h)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HUMEDAD</div>
+          {/* Sin rótulo "HUMEDAD": la gota de abajo lo dice. Mismo apaño que en EXT
+              para que el número no se mueva --marginTop de -13 a +5--. */}
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             <MeteoGlyph name="humidity" size={65} color="#3b82f6" title="humedad" />
           </div>
@@ -577,7 +599,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               pareja en vertical (columna izquierda, filas 1 y 2); ahora lo son en
               horizontal, en los dos extremos de la fila 1, con el compás en medio. Las
               medidas coinciden igual porque ambas filas medían ya 1.23fr. */}
-          <div className="big gh" style={{ fontSize: 66, textAlign: 'center', marginTop: -13 }}>
+          <div className="big gh" style={{ fontSize: 66, textAlign: 'center', marginTop: 5 }}>
             {/* "--" y no 0: la humedad no pasa por los formateadores de unidades
                 (que ya distinguen la ausencia), así que hay que hacerlo aquí. */}
             {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
@@ -601,9 +623,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             (`bottom: 4`) y la lectura al de arriba, de modo que los píxeles de sobra
             caen en el aire de en medio, que es justo donde había menos. */}
         <div className="cell col main">
-          {/* PRES y no PRESIÓN: al subir la lectura a la altura de EXT/HUMEDAD, el
-              número llega hasta x≈82 y la palabra entera se le echaba encima. */}
-          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRES</div>
+          {/* Sin rótulo "PRES": el barómetro de abajo a la izquierda lo dice. De paso
+              se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
+              llega hasta x≈82 y la palabra entera se le echaba encima--.
+              El número no se mueve: marginTop de -12 a +6, los 18 px del rótulo. */}
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             {/* 46 y no 58: presión es la cifra más larga de la consola (1027.4) y a 58
                 el barómetro le quedaba encima. Se queda abajo a la izquierda pese al
@@ -617,7 +640,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
               y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
               marginTop, no con centrado automático, igual que las otras dos. */}
-          <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
+          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           <div style={{ position: 'absolute', bottom: 4, left: 62, right: 52 }}>
@@ -671,8 +694,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         {/* Fila 3 */}
         {/* ROCÍO/SENSACIÓN sube de la columna 3 a la columna 1, al sitio que dejó PRES,
             y se queda en la MISMA fila 3, así que no cambia ni de alto ni por dentro:
-            sólo se corre de lado. */}
-        <div className="cell derivada" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            sólo se corre de lado.
+            Contorno AMARILLO (clase `main`) y no blanco: los dos valores se derivan de
+            la temperatura y la humedad de la estación principal, así que se agrupan con
+            el resto de lo que mide ella. El blanco queda para SOLAR/UV/ICA y para la
+            condición y la luna. */}
+        <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
@@ -721,12 +748,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             para que las dos se lean como pareja pese a estar en filas distintas. */}
         <div className="cell col remota">
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>WN32</span></div>
-          {/* Casa-con-flecha a 32 y no a 26: esta celda es la única de la estación
-              remota que mide a la intemperie, y el glifo es lo que lo dice. Cabe de
-              sobra --la fila 3 mide 109 px y el rótulo ocupa 18--.
+          {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
+              mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
               Absoluto por lo mismo que en EXT: si no, baja los valores. */}
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
-            <OutdoorGlyph height={32} />
+            <HouseGlyph />
           </div>
           {/* Tendencias en temperatura y humedad, colgadas a la derecha de cada valor,
               igual que las de EXT y HUMEDAD. Se dibujan siempre, también sin lectura:
@@ -752,10 +778,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
-            {/* Misma casa de siempre, ahora desde el componente: es la mitad del par
-                con OutdoorGlyph y tenerla suelta aquí dejaba el color y el grosor
-                del trazo en dos sitios que había que acordarse de mover juntos. */}
-            <IndoorGlyph size={30} />
+            {/* Casa RELLENA = bajo techo. Este es el tamaño (30) que ahora usan las
+                cuatro celdas con glifo de ubicación. */}
+            <HouseGlyph filled />
           </div>
           {/* marginTop: la fila se salia 1 px por abajo y los dígitos rozaban el borde */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
@@ -768,28 +793,42 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell derivada" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>SOLAR</div>
-              <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
-                {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}<span className="u" style={{ fontSize: 14, color: 'var(--w)' }}> W/m²</span>
-              </div>
+        {/* SOLAR / UV / ICA pasan de ser tres bloques flotando en una celda a TRES
+            celdas con contorno blanco propio, como ya hacían la condición y la luna.
+            Los anchos NO son iguales, sino 4fr / 2fr / 3fr, en proporción a las cifras
+            que cada una puede llegar a mostrar: SOLAR cuatro (hasta 1234 W/m²), UV dos
+            y el ICA tres (167; con suerte nunca 200). Repartir a tercios le daba a UV,
+            que casi siempre muestra un solo dígito, el mismo sitio que a SOLAR, y con
+            `space-evenly` los tres números se movían de lado cada vez que uno cambiaba
+            de número de cifras.
+            Los tres cuelgan del borde de ARRIBA (`flex-start`) y no van centrados: así
+            los rótulos quedan a la misma altura entre sí y los números también, y el
+            renglón de la unidad de SOLAR cuelga por debajo sin descolocar a nadie.
+            Padding lateral de 4 y no los 12 de `.cell`: la celda de UV mide ~74 px y con
+            12 por lado no le caben dos dígitos a cuerpo 40. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 3fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
+              {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>UV</div>
-              <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
-                {data?.uv_index ?? '--'}
-              </div>
+            {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
+                necesitan las cuatro cifras del caso peor. */}
+            <div className="u" style={{ fontSize: 14, color: 'var(--w)', lineHeight: 1, marginTop: 4 }}>W/m²</div>
+          </div>
+          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
+              {data?.uv_index ?? '--'}
             </div>
-            {/* ICA en el sitio que dejó la luna. El color lo decide el backend
-                según la categoría de la norma, así que el número se lee de un
-                vistazo sin tener que recordar los cortes. */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>ICA</div>
-              <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: imeca?.color || undefined }}>
-                {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
-              </div>
+          </div>
+          {/* ICA en el sitio que dejó la luna. El color lo decide el backend
+              según la categoría de la norma, así que el número se lee de un
+              vistazo sin tener que recordar los cortes. */}
+          <div className="cell" style={{ borderColor: '#fff', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
+            <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 5, color: imeca?.color || undefined }}>
+              {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
             </div>
           </div>
         </div>
@@ -801,13 +840,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             ya no hace falta: cada sensor tiene la suya y el rótulo no se mueve. */}
         <div className="cell col remota">
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
-          {/* La casa SIN flecha: este glifo dice DÓNDE se mide, no qué tiempo hace (ver
-              el par IndoorGlyph/OutdoorGlyph), y ahora que la celda es fija al sensor
-              integrado la lectura es de interior. Con la casa con flecha decía
-              "exterior" mientras mostraba un dato de adentro.
+          {/* Casa RELLENA = bajo techo, al mismo tamaño que la hueca de la celda de
+              arriba: puestas una encima de la otra, el relleno es lo único que cambia y
+              se lee de un vistazo cuál de los dos sensores remotos es cada una.
               Absoluto por lo mismo que en EXT: si no, baja los valores. */}
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor interior">
-            <IndoorGlyph size={26} />
+            <HouseGlyph filled />
           </div>
           {/* SIN flechitas de tendencia: una lectura de interior no las necesita --lo
               de adentro se mueve poco y despacio, y la subida o bajada no dice nada
@@ -863,6 +901,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
         <div className="cell col remota">
           <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          {/* El mismo barómetro redondo que la celda PRES, en el mismo sitio y tamaño:
+              las dos muestran presión y ahora se reconocen como pareja sin leer el
+              rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
+          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
+            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
+          </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={remotePressTrend} />
           </div>
