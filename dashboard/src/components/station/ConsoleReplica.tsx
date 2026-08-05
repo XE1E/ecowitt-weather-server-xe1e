@@ -8,6 +8,7 @@ import { MeteoGlyph } from '../MeteoGlyph'
 // integrado del GW1100 (*_indoor) como el WN32 exterior (*_outdoor). Antes había
 // aquí una copia local que solo tenía los _indoor.
 import type { RemoteHistRow } from '../../remote'
+import { LOCATION } from '../../config'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -115,10 +116,18 @@ interface Props {
   ready?: boolean
 }
 
+interface ImecaData {
+  available: boolean
+  imeca?: number
+  category?: string
+  color?: string
+}
+
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
-  const { data, history } = useStationData()
+  const { data, history, stats } = useStationData()
   const u = useUnits()
   const [now, setNow] = useState(() => new Date())
+  const [imeca, setImeca] = useState<ImecaData | null>(null)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
 
@@ -144,8 +153,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     return () => clearInterval(i)
   }, [])
 
+  // ICA (IMECA estimado). Se pide aparte porque no va en el contexto de la
+  // estación: es un dato externo. Cada 30 min, como su caché en el servidor.
+  useEffect(() => {
+    const load = () => fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
+      .then((r) => (r.ok ? r.json() : null)).then(setImeca).catch(() => {})
+    load()
+    const i = setInterval(load, 30 * 60000)
+    return () => clearInterval(i)
+  }, [])
+
   const cond = data ? deriveCondition(data) : { icon: '', label: '' }
   const dir = data?.wind_direction
+  const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
 
   const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): Trend => {
     if (current == null || previous == null) return 'stable'
@@ -269,14 +289,30 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
           {/* marginTop -10 = misma altura que VEL, que es de la misma fuente y con
               etiqueta del mismo tamaño, así que el mismo valor las iguala. */}
-          <div className="big gt ctr rt" style={{ fontSize: 104, paddingRight: 32, marginTop: -10 }}>
-            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 26, color: 'var(--t)' }}>{u.tempU}</span>
+          <div className="big gt ctr rt" style={{ fontSize: 56, paddingRight: 32, marginTop: -4 }}>
+            {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
+          </div>
+          {/* Mín/máx del día en el hueco que deja el valor al bajar de 104 a 56.
+              Van a la DERECHA: la izquierda la ocupa el termómetro. */}
+          <div style={{ position: 'absolute', bottom: 8, right: 14, display: 'flex', gap: 18 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÍN</div>
+              <div className="gt seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
+                {u.temp(tDay?.min ?? undefined)}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--lbl)', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>MÁX</div>
+              <div className="gt seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
+                {u.temp(tDay?.max ?? undefined)}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: 2, textAlign: 'center', marginTop: -7 }}>Estación Clima XE1E</div>
-          <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1, marginTop: 2 }}>VIENTO</div>
+          {/* El título se fue a la celda del reloj: aquí parecía parte del viento. */}
+          <div style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1, marginTop: -4 }}>VIENTO</div>
           {/* La manga va ABSOLUTA: dentro del flex hacía crecer esta fila al alto del
               icono, y como el compás de abajo es flex:1, le robaba ese alto y el
               óvalo salía más chico. Mismo caso que el sol de EXT y REMOTA. */}
@@ -438,9 +474,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
-          <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
-          <div style={{ marginTop: -12 }}><WeatherIcon name={cond.icon} size={120} className="weather-main-icon" /></div>
+        {/* Condición (2/3) y luna (1/3) como DOS celdas con contorno blanco. La
+            condición sola dejaba media celda vacía, y la luna estaba apretada
+            entre SOLAR y UV, cuyo sitio ocupa ahora el ICA. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 }}>{cond.label || 'CLIMA'}</div>
+            <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
+          </div>
+          <div className="cell" style={{ borderColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6, gap: 2 }}>
+            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>LUNA</div>
+            <MoonGlyph size={62} />
+          </div>
         </div>
 
         {/* ROCÍO/SENSACIÓN en fila 3 columna 3 */}
@@ -465,7 +510,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
               <path d="M3 12l9-9 9 9" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -495,9 +540,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 {data?.uv_index ?? '--'}
               </div>
             </div>
+            {/* ICA en el sitio que dejó la luna. El color lo decide el backend
+                según la categoría de la norma, así que el número se lee de un
+                vistazo sin tener que recordar los cortes. */}
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>LUNA</div>
-              <MoonGlyph size={50} />
+              <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>ICA</div>
+              <div className="gw seg" style={{ fontSize: 40, fontWeight: 800, marginTop: 2, color: imeca?.color || undefined }}>
+                {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
+              </div>
             </div>
           </div>
         </div>
@@ -543,19 +593,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell reloj" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          {/* marginTop: HORA y FECHA estaban pegadas al borde de arriba */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, marginTop: 8 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>HORA</div>
-              {/* marginTop -3: la hora sube al nivel de LUN, que es 26 px contra 46 */}
-              <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, marginTop: -3 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--lbl)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>FECHA</div>
-              <div style={{ marginTop: 4, lineHeight: 1.02 }}>
-                <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
-                <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
-              </div>
+          {/* El título va aquí, en el hueco que dejan "HORA" y "FECHA": esas dos
+              etiquetas sobraban --un reloj y una fecha se reconocen solos-- y esta
+              es la única celda que no muestra una magnitud, así que el nombre de la
+              estación no compite con ningún dato. */}
+          <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', marginTop: -2 }}>
+            Estación Clima XE1E
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 26, marginTop: 4 }}>
+            <div className="gw seg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
+            <div style={{ textAlign: 'center', lineHeight: 1.02 }}>
+              <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
+              <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
             </div>
           </div>
         </div>
