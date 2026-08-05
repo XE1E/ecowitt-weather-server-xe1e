@@ -90,6 +90,39 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
   )
 }
 
+// Par de marcadores de DÓNDE se mide, no de qué tiempo hace: la casa dice que la
+// lectura viene de adentro y la casa con la flecha que viene de afuera. El de
+// exterior era antes un sol amarillo relleno de Meteocons, y un sol conviviendo
+// con la celda de condición ("NOCHE NUBLADA") se puede leer como estado del cielo
+// en vez de como ubicación del sensor. Los dos comparten trazo, grosor y color
+// para que se reconozcan como pareja de un vistazo.
+const LOC_STROKE = '#94a3b8'
+
+function IndoorGlyph({ size = 30 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={LOC_STROKE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12l9-9 9 9" />
+      <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" />
+    </svg>
+  )
+}
+
+// Más ancho que alto (30×24 contra los 24×24 de la casa sola): la casa se dibuja
+// algo más chica y corrida a la izquierda para hacerle sitio a la flecha, en vez
+// de encoger el conjunto hasta que ninguna de las dos partes se distinga.
+function OutdoorGlyph({ height = 30 }: { height?: number }) {
+  return (
+    <svg width={(height * 30) / 24} height={height} viewBox="0 0 30 24" fill="none"
+      stroke={LOC_STROKE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 13 L8 6 L15 13" />
+      <path d="M2.5 11v9a1 1 0 001 1h9a1 1 0 001-1v-9" />
+      <path d="M17.5 13 H26" />
+      <path d="M22.5 9.5 L26 13 L22.5 16.5" />
+    </svg>
+  )
+}
+
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
@@ -241,6 +274,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .cns .gw{color:var(--w);text-shadow:0 0 10px rgba(234,234,234,.35)}
     .cns .u{font-weight:700;vertical-align:top;font-family:'Roboto Condensed','Arial Narrow',system-ui,sans-serif} .cns .ured{color:var(--red)}
     .cns .dec{font-size:0.6em}          /* decimales en tamaño más chico */
+    /* EXT lleva el decimal aún más chico que el resto: es la cifra más grande de
+       la consola y a 0.6em el ".5" pesaba tanto como un entero. Va como variante
+       propia y no tocando .dec, que lo comparten todas las demás celdas. */
+    .cns .decxs .dec{font-size:0.42em}
     .cns .rt{text-align:right}          /* valor pegado al borde derecho */
     .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
     .cns .cell.main{border-color:var(--brd-main)}
@@ -276,10 +313,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         {/* Fila 1 */}
         <div className="cell col main">
           <div style={{ color: '#f97316', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>EXT</div>
-          {/* El sol va ABSOLUTO: dentro del flex hacía crecer la fila del
-              encabezado al alto del icono y empujaba el valor hacia abajo. */}
-          <div style={{ position: 'absolute', top: 6, right: 0 }}>
-            <MeteoGlyph name="clear-day" size={40} color="#fbbf24" title="sol" />
+          {/* El marcador va ABSOLUTO: dentro del flex hacía crecer la fila del
+              encabezado al alto del icono y empujaba el valor hacia abajo.
+              `right: 6` y no 0: este glifo es de trazo y llega hasta el borde de su
+              caja, a diferencia del sol de Meteocons que traía aire por dentro. */}
+          <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
+            <OutdoorGlyph height={30} />
           </div>
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
@@ -287,23 +326,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
           </div>
-          {/* marginTop -10 = misma altura que VEL, que es de la misma fuente y con
-              etiqueta del mismo tamaño, así que el mismo valor las iguala. */}
           {/* Centrado, no pegado a la derecha: la temperatura es el dato principal
-              de la consola y con los mín/máx debajo forman un bloque. A 78 sigue
-              mandando sobre la humedad y la presión de las celdas de abajo. */}
-          {/* SIN la clase `ctr`: centra en vertical con margin:auto y empujaba el
-              valor sobre el bloque de mín/máx, que va absoluto abajo. */}
-          {/* Sin `ctr`: su margin:auto centra en el espacio libre y baja el valor
-              hasta el bloque de mín/máx, que va absoluto abajo. Se posiciona con
-              marginTop y no con centrado automático. */}
-          <div className="big gt" style={{ fontSize: 56, textAlign: 'center', marginTop: 10 }}>
+              de la consola y con los mín/máx debajo forman un bloque.
+              SIN la clase `ctr`: su margin:auto centra en el espacio libre y baja el
+              valor hasta el bloque de mín/máx, que va absoluto abajo; se posiciona
+              con marginTop y no con centrado automático.
+              76 px y marginTop NEGATIVO van juntos: agrandar la cifra sola la hace
+              crecer hacia abajo y se come el aire que la separa de mín/máx, así que
+              sube lo mismo que engordó. Con el decimal a 0.42em (`decxs`) el bloque
+              mide ~157 px de ancho aun a 76, y su borde izquierdo cae en x≈89, libre
+              del termómetro (acaba en x≈84). */}
+          <div className="big gt decxs" style={{ fontSize: 76, textAlign: 'center', marginTop: -8 }}>
             {decNum(u.temp(data?.temperature_outdoor))}<span className="u" style={{ fontSize: 24, color: 'var(--t)' }}>{u.tempU}</span>
           </div>
           {/* Mín/máx en UNA línea, con la etiqueta al lado y no encima: en dos
               columnas con rótulo propio no cabían sin rozar el valor. Los dígitos
               a 24 px, que es el suelo práctico del 7-segmentos a distancia. */}
-          <div style={{ position: 'absolute', bottom: 9, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
+          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {u.temp(tDay?.min ?? undefined)}
@@ -517,10 +556,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col main">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-              <path d="M3 12l9-9 9 9" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            {/* Misma casa de siempre, ahora desde el componente: es la mitad del par
+                con OutdoorGlyph y tenerla suelta aquí dejaba el color y el grosor
+                del trazo en dos sitios que había que acordarse de mover juntos. */}
+            <IndoorGlyph size={30} />
           </div>
           {/* marginTop: la fila se salia 1 px por abajo y los dígitos rozaban el borde */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
@@ -562,8 +601,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell col remota">
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>{remoteTag}</span></div>
           {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
-          <div style={{ position: 'absolute', top: 6, right: 8 }}>
-            <MeteoGlyph name="clear-day" size={34} color="#fbbf24" title="sol" />
+          <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
+            <OutdoorGlyph height={26} />
           </div>
           {/* mismo ajuste que INTERIOR: se salia 1 px por abajo */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
