@@ -36,20 +36,27 @@ export interface ForecastResult {
   astro: AstroData
 }
 
-// WMO weather code -> meteocons (day variant) + Spanish label
-function wmoToIcon(code: number): { icon: string; label: string } {
-  if (code === 0) return { icon: 'clear-day', label: 'Despejado' }
-  if (code === 1 || code === 2) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado' }
-  if (code === 3) return { icon: 'overcast-day', label: 'Nublado' }
-  if (code === 45 || code === 48) return { icon: 'fog-day', label: 'Niebla' }
-  if (code >= 51 && code <= 57) return { icon: 'partly-cloudy-day-drizzle', label: 'Llovizna' }
-  if (code >= 61 && code <= 65) return { icon: 'overcast-day-rain', label: 'Lluvia' }
-  if (code === 66 || code === 67) return { icon: 'overcast-day-sleet', label: 'Lluvia helada' }
-  if (code >= 71 && code <= 77) return { icon: 'overcast-day-snow', label: 'Nieve' }
-  if (code >= 80 && code <= 82) return { icon: 'partly-cloudy-day-rain', label: 'Chubascos' }
-  if (code === 85 || code === 86) return { icon: 'overcast-day-snow', label: 'Chubascos de nieve' }
-  if (code >= 95) return { icon: 'thunderstorms-day-rain', label: 'Tormenta' }
-  return { icon: 'clear-day', label: '—' }
+/**
+ * Código WMO -> icono meteocons + etiqueta en español.
+ *
+ * `isDay` elige la variante: antes se devolvía SIEMPRE la diurna, y como también
+ * se usa para el pronóstico HORARIO, a las 3 de la madrugada se mostraba un sol.
+ * Todos estos iconos tienen pareja `-night` en la galería.
+ */
+function wmoToIcon(code: number, isDay = true): { icon: string; label: string } {
+  const s = isDay ? 'day' : 'night'
+  if (code === 0) return { icon: `clear-${s}`, label: 'Despejado' }
+  if (code === 1 || code === 2) return { icon: `partly-cloudy-${s}`, label: 'Parcialmente nublado' }
+  if (code === 3) return { icon: `overcast-${s}`, label: 'Nublado' }
+  if (code === 45 || code === 48) return { icon: `fog-${s}`, label: 'Niebla' }
+  if (code >= 51 && code <= 57) return { icon: `partly-cloudy-${s}-drizzle`, label: 'Llovizna' }
+  if (code >= 61 && code <= 65) return { icon: `overcast-${s}-rain`, label: 'Lluvia' }
+  if (code === 66 || code === 67) return { icon: `overcast-${s}-sleet`, label: 'Lluvia helada' }
+  if (code >= 71 && code <= 77) return { icon: `overcast-${s}-snow`, label: 'Nieve' }
+  if (code >= 80 && code <= 82) return { icon: `partly-cloudy-${s}-rain`, label: 'Chubascos' }
+  if (code === 85 || code === 86) return { icon: `overcast-${s}-snow`, label: 'Chubascos de nieve' }
+  if (code >= 95) return { icon: `thunderstorms-${s}-rain`, label: 'Tormenta' }
+  return { icon: `clear-${s}`, label: '—' }
 }
 
 // Moon phase from date (synodic month approximation)
@@ -248,6 +255,20 @@ export async function fetchForecast(): Promise<ForecastResult> {
     }
   })
 
+  // Amanecer/atardecer por día, para saber si cada hora del pronóstico es diurna
+  // y elegir el icono correcto (antes todas usaban la variante de día).
+  const sunByDay: Record<string, [number, number]> = {}
+  d.time.forEach((date: string, i: number) => {
+    const sr = d.sunrise?.[i], ss = d.sunset?.[i]
+    if (sr && ss) sunByDay[date] = [new Date(sr).getTime(), new Date(ss).getTime()]
+  })
+  const isDayAt = (t: string): boolean => {
+    const r = sunByDay[String(t).slice(0, 10)]
+    if (!r) return true
+    const ms = new Date(t).getTime()
+    return ms >= r[0] && ms < r[1]
+  }
+
   // Horario: desde "ahora" hacia adelante (próximas ~24 h)
   const h = j.hourly
   const nowMs = Date.now()
@@ -258,7 +279,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
       time: h.time[i],
       temp: h.temperature_2m[i],
       precipProb: h.precipitation_probability?.[i] ?? 0,
-      icon: wmoToIcon(h.weather_code[i]).icon,
+      icon: wmoToIcon(h.weather_code[i], isDayAt(h.time[i])).icon,
     })
   }
 

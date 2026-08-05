@@ -31,6 +31,9 @@ export interface Units {
    * clásico: un delta de 5 °C son 9 °F, no 41.
    */
   dTempN: (dc: number) => number
+  /** Altura (base de nubes, elevación): m -> ft. */
+  alt: (m?: number) => string
+  altU: string
 }
 
 const UnitsContext = createContext<Units | null>(null)
@@ -57,6 +60,9 @@ function build(system: UnitSystem, toggle: () => void): Units {
     rainN: (mm) => (imp ? mm / 25.4 : mm),
     rateN: (mmh) => (imp ? mmh / 25.4 : mmh),
     dTempN: (dc) => (imp ? dc * 9 / 5 : dc),
+    alt: (m) =>
+      na(m) ? '--' : Math.round(imp ? (m as number) / 0.3048 : (m as number)).toLocaleString('es-MX'),
+    altU: imp ? 'ft' : 'm',
   }
 }
 

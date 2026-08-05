@@ -86,8 +86,10 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         />
       )}
       {dDisp != null && (
+        // "vs 24 h antes", no "vs ayer": /api/compare promedia las últimas 24 h
+        // contra las 24 h previas (ventana rodante), no el día de ayer completo.
         <Tile
-          label="vs ayer"
+          label="vs 24 h antes"
           value={`${dDisp > 0 ? '+' : ''}${dDisp.toFixed(1)}°`}
           sub={dDisp > 0.1 ? 'más cálido' : dDisp < -0.1 ? 'más frío' : 'similar'}
           color={dDisp > 0.1 ? 'text-red-300' : dDisp < -0.1 ? 'text-sky-300' : 'text-slate-300'}

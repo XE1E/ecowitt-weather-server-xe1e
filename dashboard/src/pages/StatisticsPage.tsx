@@ -116,13 +116,18 @@ export function StatisticsPage() {
   const sum = noaa?.summary
   const hasYear = !!sum && sum.days > 0
 
-  const metrics: { key: string; label: string; icon: string; unit: string; color: string; fmt: (v: number) => string }[] = [
+  // `onlyMax`: rain_daily es el CONTADOR acumulado de la consola, que se reinicia
+  // a medianoche. Su máximo en el periodo sí significa algo (el día más lluvioso),
+  // pero su promedio y su mínimo no son ninguna magnitud meteorológica: el mínimo
+  // es siempre 0 (el instante tras medianoche) y el promedio es el valor medio de
+  // un contador, que no es la lluvia media diaria.
+  const metrics: { key: string; label: string; icon: string; unit: string; color: string; fmt: (v: number) => string; onlyMax?: boolean }[] = [
     { key: 'temperature_outdoor', label: 'Temperatura', icon: 'thermometer', unit: u.tempU, color: 'text-orange-300', fmt: (v) => u.temp(v) },
     { key: 'humidity_outdoor', label: 'Humedad', icon: 'humidity', unit: '%', color: 'text-sky-300', fmt: (v) => v.toFixed(0) },
     { key: 'wind_speed', label: 'Viento', icon: 'windsock', unit: u.windU, color: 'text-emerald-300', fmt: (v) => u.wind(v) },
     { key: 'wind_gust', label: 'Ráfaga', icon: 'windsock', unit: u.windU, color: 'text-emerald-300', fmt: (v) => u.wind(v) },
     { key: 'pressure_relative', label: 'Presión', icon: 'pressure-high', unit: u.pressU, color: 'text-violet-300', fmt: (v) => u.press(v) },
-    { key: 'rain_daily', label: 'Lluvia diaria', icon: 'raindrops', unit: u.rainU, color: 'text-blue-300', fmt: (v) => u.rain(v) },
+    { key: 'rain_daily', label: 'Lluvia diaria', icon: 'raindrops', unit: u.rainU, color: 'text-blue-300', fmt: (v) => u.rain(v), onlyMax: true },
   ]
   const available = stats ? metrics.filter((m) => stats[m.key]) : []
 
@@ -249,6 +254,13 @@ export function StatisticsPage() {
             return (
               <div key={m.key} className="card">
                 <p className="card-title"><WeatherIcon name={m.icon} size={20} /> {m.label}</p>
+                {m.onlyMax ? (
+                  <div>
+                    <p className={`text-3xl font-bold ${m.color}`}>{s.max != null ? m.fmt(s.max) : '--'}</p>
+                    <p className="text-xs text-slate-500">día más lluvioso del periodo · {m.unit}</p>
+                    {fmtWhen(s.max_time) && <p className="text-[10px] text-slate-500 mt-0.5">{fmtWhen(s.max_time)}</p>}
+                  </div>
+                ) : (
                 <div className="flex items-end justify-between">
                   <div>
                     <p className={`text-3xl font-bold ${m.color}`}>{s.avg != null ? m.fmt(s.avg) : '--'}</p>
@@ -261,6 +273,7 @@ export function StatisticsPage() {
                     {fmtWhen(s.min_time) && <p className="text-[10px] text-slate-500 -mt-0.5">{fmtWhen(s.min_time)}</p>}
                   </div>
                 </div>
+                )}
               </div>
             )
           })}

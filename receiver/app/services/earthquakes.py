@@ -57,8 +57,46 @@ def _es_place(place: Optional[str]) -> Optional[str]:
     return place.replace("Mexico", "México")
 
 
-async def _from_ssn(limit: int) -> List[Dict[str, Any]]:
-    """Parsea el RSS de últimos sismos del SSN (tolerante a variaciones)."""
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distancia en km entre dos puntos (esfera)."""
+    import math
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _ssn_latlon(desc: str) -> Optional[tuple]:
+    """
+    Lat/lon de la descripción del SSN, si vienen. El formato varía entre
+    "Latitud: 16.31 Longitud: -98.42" y variantes con grados, así que se acepta
+    cualquiera de las dos etiquetas seguidas de un número con signo.
+    """
+    la = re.search(r"[Ll]atitud[:\s]*(-?\d+(?:\.\d+)?)", desc)
+    lo = re.search(r"[Ll]ongitud[:\s]*(-?\d+(?:\.\d+)?)", desc)
+    if la and lo:
+        try:
+            return float(la.group(1)), float(lo.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+async def _from_ssn(limit: int, lat: float, lon: float,
+                    radius_km: float, min_mag: float) -> List[Dict[str, Any]]:
+    """
+    Parsea el RSS de últimos sismos del SSN (tolerante a variaciones).
+
+    Aplica los MISMOS criterios que la rama de USGS (magnitud mínima y radio):
+    antes el SSN devolvía los últimos sismos de todo México sin filtrar, así que
+    la tarjeta rotulada "cerca de la estación" podía mostrar uno de magnitud 3.2 a
+    900 km — y el criterio cambiaba según qué fuente hubiera respondido.
+
+    La distancia solo se aplica si la descripción trae coordenadas; si no vienen,
+    se conserva el sismo (mejor de más que perder uno cercano por un cambio de
+    formato del feed).
+    """
     async with httpx.AsyncClient(timeout=6, follow_redirects=True) as client:
         r = await client.get(_SSN_URL, headers=_UA)
         r.raise_for_status()
@@ -87,11 +125,17 @@ async def _from_ssn(limit: int) -> List[Dict[str, Any]]:
         dm = re.search(r"[Pp]rofundidad[:\s]*([\d.]+)", desc)
         depth = float(dm.group(1)) if dm else None
 
-        if mag is not None:
-            quakes.append({
-                "mag": mag, "place": place, "time": t,
-                "depth_km": depth, "url": link,
-            })
+        if mag is None or mag < min_mag:
+            continue
+        coords = _ssn_latlon(desc)
+        dist = _haversine_km(lat, lon, coords[0], coords[1]) if coords else None
+        if dist is not None and dist > radius_km:
+            continue
+        quakes.append({
+            "mag": mag, "place": place, "time": t,
+            "depth_km": depth, "url": link,
+            "distance_km": round(dist) if dist is not None else None,
+        })
         if len(quakes) >= limit:
             break
     return quakes
@@ -133,9 +177,9 @@ async def get_earthquakes(
     quakes: List[Dict[str, Any]] = []
     source = None
 
-    # 1) SSN (oficial de México)
+    # 1) SSN (oficial de México), con los mismos criterios que USGS
     try:
-        quakes = await _from_ssn(limit)
+        quakes = await _from_ssn(limit, lat, lon, radius_km, min_mag)
         if quakes:
             source = "SSN"
     except Exception as e:
@@ -150,6 +194,9 @@ async def get_earthquakes(
             logger.error(f"Error fetching earthquakes (USGS): {e}")
             return _CACHE["data"] or {"quakes": [], "source": None}
 
-    data = {"quakes": quakes, "source": source}
+    # Se expone el criterio aplicado para que la UI pueda decir de qué habla
+    # cuando rotula "cerca de la estación".
+    data = {"quakes": quakes, "source": source,
+            "radius_km": radius_km, "min_mag": min_mag}
     _CACHE.update(ts=now, data=data)
     return data

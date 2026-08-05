@@ -131,6 +131,24 @@ def _best(rows, field, pick_max=True):
     return {"value": round(val, 1), "date": date}
 
 
+def mid_temp(row: Dict[str, Any]) -> Optional[float]:
+    """
+    Temperatura media del día al estilo NOAA: (Tmax + Tmin) / 2.
+
+    NO es `temp_avg`, que es el promedio de TODAS las lecturas del día. Los
+    grados-día y la ET0 de Hargreaves se definen sobre el punto medio de los
+    extremos, y con muestreo por minuto las dos cifras difieren 0.3-1 °C, lo que
+    bastaba para que nuestros grados-día no fueran comparables con los publicados
+    por NOAA o CONAGUA aunque usáramos su misma base.
+
+    Si falta algún extremo se cae a temp_avg, que es mejor que no dar nada.
+    """
+    hi, lo = row.get("temp_max"), row.get("temp_min")
+    if hi is None or lo is None:
+        return row.get("temp_avg")
+    return (hi + lo) / 2.0
+
+
 def _day_of_year(date_str: str) -> Optional[int]:
     try:
         return datetime.strptime(date_str[:10], "%Y-%m-%d").timetuple().tm_yday
@@ -163,9 +181,10 @@ def et0_hargreaves(tmin: float, tmax: float, tmean: float, lat_deg: float, doy: 
 
 def daily_et0(row: Dict[str, Any], lat: float) -> Optional[float]:
     doy = _day_of_year(str(row.get("date", "")))
-    if doy is None or row.get("temp_avg") is None or row.get("temp_max") is None or row.get("temp_min") is None:
+    if doy is None or row.get("temp_max") is None or row.get("temp_min") is None:
         return None
-    return round(et0_hargreaves(row["temp_min"], row["temp_max"], row["temp_avg"], lat, doy), 2)
+    # Hargreaves (FAO-56) define Tmean como el punto medio de los extremos.
+    return round(et0_hargreaves(row["temp_min"], row["temp_max"], mid_temp(row), lat, doy), 2)
 
 
 def vector_mean_dir(rows: List[Dict[str, Any]], dir_key: str = "wind_direction",
@@ -197,19 +216,24 @@ def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> D
     if not rows:
         return {"days": 0}
     means = [r["temp_avg"] for r in rows if r.get("temp_avg") is not None]
-    rain_vals = [r.get("rain_total") or 0.0 for r in rows]
+    # Para el TOTAL de lluvia un día sin dato aporta 0 mm, pero para CONTAR días
+    # con lluvia no vale tratarlo como día seco: eso hacía que esta cifra y la de
+    # season_tracker discreparan llevando la misma etiqueta en la misma página.
+    rain_known = [r["rain_total"] for r in rows if r.get("rain_total") is not None]
     wind_avgs = [r["wind_avg"] for r in rows if r.get("wind_avg") is not None]
-    hdd = sum(max(0.0, BASE_DD - r["temp_avg"]) for r in rows if r.get("temp_avg") is not None)
-    cdd = sum(max(0.0, r["temp_avg"] - BASE_DD) for r in rows if r.get("temp_avg") is not None)
+    # Grados-día sobre (Tmax+Tmin)/2, que es como los define NOAA (ver mid_temp).
+    mids = [m for m in (mid_temp(r) for r in rows) if m is not None]
+    hdd = sum(max(0.0, BASE_DD - m) for m in mids)
+    cdd = sum(max(0.0, m - BASE_DD) for m in mids)
     out = {
         "days": len(rows),
         "mean_temp": round(sum(means) / len(means), 1) if means else None,
         "high": _best(rows, "temp_max", True),
         "low": _best(rows, "temp_min", False),
-        "rain_total": round(sum(rain_vals), 1),
+        "rain_total": round(sum(rain_known), 1),
         "rain_max_day": _best(rows, "rain_total", True),
         "rain_rate_max": _best(rows, "rain_rate_max", True),
-        "rain_days": sum(1 for v in rain_vals if v >= RAIN_DAY_MM),
+        "rain_days": sum(1 for v in rain_known if v >= RAIN_DAY_MM),
         "wind_avg": round(sum(wind_avgs) / len(wind_avgs), 1) if wind_avgs else None,
         "wind_max": _best(rows, "wind_max", True),
         "gust_max": _best(rows, "gust_max", True),
@@ -255,13 +279,16 @@ def noaa_month(rows: List[Dict[str, Any]], year: int, month: int, lat: Optional[
     per_day = []
     for r in days:
         ta = r.get("temp_avg")
+        # Los grados-día van sobre el punto medio de los extremos (criterio NOAA),
+        # no sobre el promedio integrado que se muestra como "media" del día.
+        mid = mid_temp(r)
         per_day.append({
             "date": r.get("date"),
             "mean_temp": ta,
             "high": r.get("temp_max"), "high_time": r.get("temp_max_time"),
             "low": r.get("temp_min"), "low_time": r.get("temp_min_time"),
-            "hdd": round(max(0.0, BASE_DD - ta), 1) if ta is not None else None,
-            "cdd": round(max(0.0, ta - BASE_DD), 1) if ta is not None else None,
+            "hdd": round(max(0.0, BASE_DD - mid), 1) if mid is not None else None,
+            "cdd": round(max(0.0, mid - BASE_DD), 1) if mid is not None else None,
             "rain": r.get("rain_total"),
             "rain_rate_max": r.get("rain_rate_max"),
             "wind_avg": r.get("wind_avg"),

@@ -14,6 +14,8 @@ interface Metric {
   /** Unidad y formato salen del sistema activo, no de un literal. */
   unit: (u: Units) => string
   fmt: (u: Units, v: number) => string
+  /** Solo el máximo tiene sentido (contadores acumulados como rain_daily). */
+  onlyMax?: boolean
 }
 
 const METRICS: Metric[] = [
@@ -27,8 +29,11 @@ const METRICS: Metric[] = [
     unit: (u) => u.windU, fmt: (u, v) => u.wind(v) },
   { key: 'pressure_relative', label: 'Presión', icon: 'pressure-high', color: 'text-violet-300',
     unit: (u) => u.pressU, fmt: (u, v) => u.press(v) },
+  // rain_daily es un contador acumulado que se reinicia a medianoche: su promedio
+  // y su mínimo no son magnitudes meteorológicas (el mínimo es siempre 0). Solo
+  // se muestra el máximo, que es la lluvia caída.
   { key: 'rain_daily', label: 'Lluvia', icon: 'raindrops', color: 'text-blue-300',
-    unit: (u) => u.rainU, fmt: (u, v) => u.rain(v) },
+    unit: (u) => u.rainU, fmt: (u, v) => u.rain(v), onlyMax: true },
 ]
 
 export function StatsSummary({ stats }: StatsSummaryProps) {
@@ -53,6 +58,12 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
               <p className="card-title flex items-center gap-2">
                 <WeatherIcon name={m.icon} size={28} /> {m.label}
               </p>
+              {m.onlyMax ? (
+                <div>
+                  <p className={`text-3xl font-bold ${m.color}`}>{fmt(s.max, '', m)}</p>
+                  <p className="text-xs text-slate-500">caída en el día · {unit}</p>
+                </div>
+              ) : (
               <div className="flex items-end justify-between">
                 <div>
                   <p className={`text-3xl font-bold ${m.color}`}>{fmt(s.avg, '', m)}</p>
@@ -63,6 +74,7 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
                   <p className="text-sky-300">▼ {fmt(s.min, unit, m)}</p>
                 </div>
               </div>
+              )}
             </div>
           )
         })}

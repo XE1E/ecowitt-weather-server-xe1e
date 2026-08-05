@@ -54,7 +54,13 @@ export function CurrentConditions({ data, history }: { data: WeatherData; histor
           <p>Humidex <span className="text-slate-200">{u.temp(data.humidex)}{u.tempU}</span></p>
         )}
         {data.cloud_base !== undefined && (
-          <p>Base de nubes <span className="text-slate-200">≈ {Math.round(data.cloud_base).toLocaleString('es-MX')} m</span></p>
+          // "sobre el suelo" no sobra: la fórmula de Espy da altura AGL, y en la
+          // CDMX el número (~2400) se parece tanto a la altitud de la ciudad que
+          // sin la aclaración se lee como altura sobre el nivel del mar.
+          <p>Base de nubes{' '}
+            <span className="text-slate-200">≈ {u.alt(data.cloud_base)} {u.altU}</span>
+            <span className="text-slate-500 text-xs"> sobre el suelo</span>
+          </p>
         )}
       </div>
 

@@ -1,4 +1,37 @@
 import { WeatherData } from './types'
+import { LOCATION } from './config'
+
+/**
+ * Elevación del sol en grados, aproximada (declinación + ángulo horario, con la
+ * corrección de longitud pero sin la ecuación del tiempo: el error de ±15 min no
+ * cambia una clasificación de nubosidad).
+ */
+export function solarElevation(d: Date, latDeg: number, lonDeg: number): number {
+  const rad = Math.PI / 180
+  const doy = Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000)
+  const decl = 23.45 * Math.sin(rad * 360 * (284 + doy) / 365)
+  const solarH = d.getUTCHours() + d.getUTCMinutes() / 60 + lonDeg / 15
+  const H = 15 * (solarH - 12)
+  const s =
+    Math.sin(rad * latDeg) * Math.sin(rad * decl) +
+    Math.cos(rad * latDeg) * Math.cos(rad * decl) * Math.cos(rad * H)
+  return Math.asin(Math.max(-1, Math.min(1, s))) / rad
+}
+
+/**
+ * Índice de claridad: radiación medida ÷ la que habría con cielo despejado a esa
+ * altura del sol. Es lo que permite juzgar la nubosidad sin depender de la hora.
+ *
+ * Con umbrales ABSOLUTOS de W/m², un amanecer perfectamente despejado (~100 W/m²)
+ * se clasificaba como "Nublado" y un mediodía cubierto (~450) como "Despejado".
+ *
+ * Devuelve null con el sol bajo (< 5°), donde la medida no es concluyente.
+ */
+export function clearnessIndex(solarWm2: number, elevationDeg: number): number | null {
+  if (elevationDeg < 5) return null
+  const clearSky = 1361 * Math.sin(elevationDeg * Math.PI / 180)
+  return clearSky > 0 ? solarWm2 / clearSky : null
+}
 
 export type FxType = 'rain' | 'snow' | 'storm' | 'fog' | 'clear' | 'cloudy' | 'partly-cloudy' | 'none'
 
@@ -51,10 +84,18 @@ export function deriveCondition(d: WeatherData): Condition {
     return { icon: 'mist', label: 'Neblina', fx: 'fog', intensity: 0.4 }
   }
 
-  // Clear / cloudy inferred from solar radiation during the day
+  // Nubosidad por índice de claridad, no por W/m² absolutos: así el juicio no
+  // depende de la hora (ver clearnessIndex). Los cortes 0.65/0.35 son los que se
+  // usan habitualmente para separar cielo despejado / parcial / cubierto.
   if (isDay) {
-    if (solar > 450) return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
-    if (solar > 120) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+    const elev = solarElevation(new Date(), LOCATION.latitude, LOCATION.longitude)
+    const kt = clearnessIndex(solar, elev)
+    if (kt === null) {
+      // Sol demasiado bajo para juzgar: no se afirma nubosidad.
+      return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+    }
+    if (kt > 0.65) return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
+    if (kt > 0.35) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
     return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
   }
   // Night: stars effect for clear night

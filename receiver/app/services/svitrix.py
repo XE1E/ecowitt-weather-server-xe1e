@@ -9,6 +9,7 @@ evento actual) y `current.rain_rate_mm` (intensidad mm/h). El viento ya forma
 parte del esquema de WeatherAPI (`wind_kph`, `wind_degree`, `wind_dir`,
 `gust_kph`).
 """
+import math
 from typing import Any, Dict, Optional
 
 # WeatherAPI usa abreviaturas de rumbo en inglés.
@@ -38,9 +39,16 @@ def _epa_index(us_aqi: Optional[float]) -> int:
     return 6
 
 
-def _condition(data: Dict[str, Any]) -> Dict[str, Any]:
+def _condition(data: Dict[str, Any], sun_elev: Optional[float] = None) -> Dict[str, Any]:
     """Deriva (text, code) estilo WeatherAPI a partir del dato real de la estación.
-    Códigos válidos de WeatherAPI para que el ícono del reloj sea coherente."""
+    Códigos válidos de WeatherAPI para que el ícono del reloj sea coherente.
+
+    La nubosidad se juzga por ÍNDICE DE CLARIDAD (radiación medida ÷ la de cielo
+    despejado a esa altura del sol) y no por W/m² absolutos: con umbrales fijos,
+    un amanecer despejado (~100 W/m²) salía "Cloudy" y un mediodía cubierto
+    (~450) salía "Sunny". `sun_elev` es la elevación solar en grados; sin ella se
+    cae al criterio anterior.
+    """
     rr = _num(data.get("rain_rate"))
     solar = _num(data.get("solar_radiation"))
     if rr and rr > 0:
@@ -50,6 +58,15 @@ def _condition(data: Dict[str, Any]) -> Dict[str, Any]:
             return {"text": "Moderate rain", "code": 1189}
         return {"text": "Light rain", "code": 1183}
     if solar is not None:
+        if sun_elev is not None and sun_elev >= 5.0:
+            clear_sky = 1361.0 * math.sin(math.radians(sun_elev))
+            kt = solar / clear_sky if clear_sky > 0 else 0.0
+            if kt > 0.65:
+                return {"text": "Sunny", "code": 1000}
+            if kt > 0.35:
+                return {"text": "Partly cloudy", "code": 1003}
+            return {"text": "Cloudy", "code": 1006}
+        # Sin elevación solar conocida: criterio absoluto de respaldo.
         if solar >= 400:
             return {"text": "Sunny", "code": 1000}
         if solar >= 120:
@@ -62,7 +79,8 @@ def _condition(data: Dict[str, Any]) -> Dict[str, Any]:
 def build_weatherapi(data: Optional[Dict[str, Any]],
                      aq: Optional[Dict[str, Any]] = None,
                      im: Optional[Dict[str, Any]] = None,
-                     lat: float = 19.380359, lon: float = -99.174564) -> Dict[str, Any]:
+                     lat: float = 19.380359, lon: float = -99.174564,
+                     sun_elev: Optional[float] = None) -> Dict[str, Any]:
     d = data or {}
     tc = _num(d.get("temperature_outdoor"))
     hum = _num(d.get("humidity_outdoor"))
@@ -103,7 +121,11 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
         "precip_in": round(rain_today / 25.4, 2) if rain_today is not None else None,
         "precip_event_mm": round(rain_event, 1) if rain_event is not None else None,
         "rain_rate_mm": round(rain_rate, 1) if rain_rate is not None else None,
-        "condition": _condition(d),
+        "condition": _condition(d, sun_elev),
+        # WeatherAPI lo incluye y el firmware elige el ícono solo por `code`, sin
+        # lógica día/noche propia: sin este campo no puede distinguir el sol de la
+        # luna y de madrugada mostraba el ícono diurno.
+        "is_day": (1 if sun_elev > 0 else 0) if sun_elev is not None else None,
         "air_quality": {
             "us-epa-index": _epa_index(us_aqi),
             "pm2_5": poll.get("pm2_5", 0),

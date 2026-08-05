@@ -1691,7 +1691,16 @@ async def get_svitrix():
         im = await imeca.get_imeca(lat, lon, pressure_hpa=data.get("pressure_absolute"))
     except Exception as e:
         logger.error(f"svitrix imeca: {e}")
-    return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon)
+    # Elevación del sol (pyephem, ya cacheada): la usa la condición del tiempo
+    # para juzgar nubosidad por índice de claridad, y el is_day del ícono.
+    sun_elev = None
+    try:
+        alm = get_almanac(lat, lon)
+        if alm.get("available"):
+            sun_elev = (alm.get("sun") or {}).get("altitude")
+    except Exception as e:
+        logger.error(f"svitrix almanac: {e}")
+    return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon, sun_elev=sun_elev)
 
 
 @app.get("/api/smn/municipios")
