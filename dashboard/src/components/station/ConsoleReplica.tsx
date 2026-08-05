@@ -537,10 +537,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               el anclaje, etiqueta y valor comparten borde y las cifras crecen hacia
               el centro, donde hay hueco, sin desacomodar nada. */}
           <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 2 }}>
+            {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
+                `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
+                este rótulo mentía, y además repetía clavado el número del centro del
+                óvalo --el mismo dato dos veces en la misma celda--.
+                El promedio lo calcula el servidor sobre las muestras guardadas: la
+                estación no manda ninguno (ver `get_wind_avg10m` en el receiver). */}
             <div style={{ flex: 1, textAlign: 'left' }}>
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROMEDIO</div>
               <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
+                {decNum(u.wind(data?.wind_speed_avg10m, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
               </div>
             </div>
             <div style={{ flex: 1, textAlign: 'right' }}>

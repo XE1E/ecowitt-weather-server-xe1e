@@ -36,6 +36,12 @@ FIELD_MAPPING = {
     "windspeedmph": "wind_speed_mph",
     "windgustmph": "wind_gust_mph",
     "maxdailygust": "wind_gust_max_daily_mph",
+    # Promedio de 10 min. El WS2910 NO lo manda --es del protocolo Wunderground, no
+    # del formato Ecowitt; verificado contra 7 días de campos en InfluxDB-- así que
+    # este mapeo normalmente no se dispara. Se deja porque no cuesta nada y porque
+    # otros dispositivos sí lo emiten: cuando llegue, gana sobre el promedio que
+    # calcula el servidor (ver StorageService.get_wind_avg10m).
+    "windspdmph_avg10m": "wind_speed_avg10m_mph",
 
     # Rain
     "rainratein": "rain_rate_in",

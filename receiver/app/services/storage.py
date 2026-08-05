@@ -488,3 +488,43 @@ class InfluxDBStorage:
         except Exception as e:
             logger.error(f"Error calculating rain accumulations: {e}")
             return {"rain_weekly": None, "rain_monthly": None, "rain_yearly": None}
+
+    async def get_wind_avg10m(
+        self, station: Optional[str] = None, minutes: int = 10
+    ) -> Optional[float]:
+        """
+        Velocidad media del viento de los últimos `minutes` minutos, calculada
+        desde las muestras de `wind_speed` ya almacenadas.
+
+        Existe porque la estación NO manda un promedio propio: el formato Ecowitt
+        sólo trae `windspeedmph` (instantánea), `windgustmph` y `maxdailygust`. El
+        campo `windspdmph_avg10m`, que sí es el promedio de 10 min, pertenece al
+        protocolo Wunderground; se verificó contra InfluxDB (7 días de campos) que
+        nunca llega. Sin esto, la consola rotulaba "PROMEDIO" sobre la lectura
+        instantánea, que es el mismo número que ya muestra el compás.
+
+        La estación reporta cada ~16 s, así que en 10 min hay ~37 muestras: de
+        sobra para una media. Devuelve None si no hay datos en la ventana (p. ej.
+        justo tras arrancar) y el llamador decide qué mostrar.
+        """
+        try:
+            station_filter = _station_filter(station)
+            # `int()` sobre minutes: es lo único que se interpola aquí y así no
+            # puede colarse nada en el Flux.
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: -{int(minutes)}m)
+                |> filter(fn: (r) => r["_measurement"] == "weather")
+                {station_filter}
+                |> filter(fn: (r) => r["_field"] == "wind_speed")
+                |> mean()
+            '''
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    val = record.get_value()
+                    return round(val, 1) if val is not None else None
+            return None
+
+        except Exception as e:
+            logger.error(f"Error calculating {minutes}-min wind average: {e}")
+            return None

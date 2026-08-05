@@ -134,6 +134,7 @@ def convert_to_metric(data: Dict[str, Any], compute_derived: bool = True) -> Dic
     # Wind conversions (mph → km/h)
     wind_fields = [
         ("wind_speed_mph", "wind_speed"),
+        ("wind_speed_avg10m_mph", "wind_speed_avg10m"),
         ("wind_gust_mph", "wind_gust"),
         ("wind_gust_max_daily_mph", "wind_gust_max_daily"),
     ]

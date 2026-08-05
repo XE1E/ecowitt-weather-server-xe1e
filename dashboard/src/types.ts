@@ -49,6 +49,12 @@ export interface WeatherData {
   wind_gust: number
   wind_direction: number
   wind_gust_max_daily?: number
+  /**
+   * Media de 10 min. Opcional porque la calcula el servidor sobre las muestras
+   * guardadas --la estación no manda ningún promedio-- y falta si aún no hay datos
+   * en la ventana. `wind_speed` es la lectura instantánea, no un promedio.
+   */
+  wind_speed_avg10m?: number
 
   // Rain
   rain_rate: number

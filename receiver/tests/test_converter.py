@@ -32,6 +32,18 @@ def test_mph_to_kmh():
     assert abs(result["wind_speed"] - 16.09) < 0.1
 
 
+def test_wind_avg10m_mph_to_kmh():
+    """El promedio de 10 min se convierte como el resto de las velocidades.
+
+    El WS2910 no lo manda (es del protocolo Wunderground), pero si un
+    dispositivo lo reporta debe llegar en km/h como wind_speed, no crudo en mph.
+    """
+    data = {"wind_speed_avg10m_mph": 10.0}
+    result = convert_to_metric(data)
+    assert "wind_speed_avg10m" in result
+    assert abs(result["wind_speed_avg10m"] - 16.09) < 0.1
+
+
 def test_inhg_to_hpa():
     """Test pressure conversion."""
     data = {"pressure_relative_inhg": 29.92}

@@ -514,6 +514,18 @@ async def get_current_data(station: Optional[str] = None):
     except Exception as e:
         logger.error(f"Rain accumulation error: {e}")
 
+    # Promedio de viento de 10 min, calculado desde las muestras guardadas: la
+    # estación no manda ninguno (ver get_wind_avg10m). Si algún día un dispositivo
+    # SÍ reporta `windspdmph_avg10m`, ese valor ya viene en `data` y manda sobre el
+    # calculado, que es lo que comprueba el `is None`.
+    try:
+        if result.get("wind_speed_avg10m") is None:
+            wind_avg = await storage.get_wind_avg10m(station=station)
+            if wind_avg is not None:
+                result["wind_speed_avg10m"] = wind_avg
+    except Exception as e:
+        logger.error(f"Wind 10-min average error: {e}")
+
     return result
 
 
