@@ -4,6 +4,10 @@ import { useUnits } from '../../units'
 import { deriveCondition, historicValue } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
+// Tipo compartido de la fila del histórico remoto: declara tanto el sensor
+// integrado del GW1100 (*_indoor) como el WN32 exterior (*_outdoor). Antes había
+// aquí una copia local que solo tenía los _indoor.
+import type { RemoteHistRow } from '../../remote'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -89,16 +93,6 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
   )
 }
 
-// Fila del histórico de la remota (/api/history?station=gw1100). No se reusa
-// HistoryData porque el GW1100 reporta su temperatura y humedad en los campos
-// *_indoor, que ese tipo no declara.
-interface RemoteHistoryRow {
-  _time: string
-  temperature_indoor?: number
-  humidity_indoor?: number
-  pressure_relative?: number
-}
-
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
@@ -130,7 +124,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const u = useUnits()
   const [now, setNow] = useState(() => new Date())
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
-  const [remoteHistory, setRemoteHistory] = useState<RemoteHistoryRow[]>([])
+  const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -170,9 +164,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const humTrend = getTrend(data?.humidity_outdoor, historicValue(history, (r) => r.humidity_outdoor, 1), 3)           // ±3%
   const pressTrend = getTrend(data?.pressure_relative, historicValue(history, (r) => r.pressure_relative, 3), 1)       // ±1 hPa
 
-  // Tendencias estación remota (GW1100)
-  const remoteTempTrend = getTrend(remote?.temperature_indoor, historicValue(remoteHistory, (r) => r.temperature_indoor, 1), 0.5)
-  const remoteHumTrend = getTrend(remote?.humidity_indoor, historicValue(remoteHistory, (r) => r.humidity_indoor, 1), 3)
+  // Celda REMOTA: la estación remota tiene DOS sensores. Con el WN32 conectado
+  // interesa el exterior del sitio remoto, que es el dato meteorológico; si aún
+  // no está, se muestra el integrado del GW1100, que es interior. La etiqueta
+  // dice cuál de los dos se está viendo: sin aclararlo son indistinguibles, y
+  // hasta ahora esta celda mostraba el interior rotulado solo "REMOTA GW1100".
+  const remoteIsOutdoor = remote?.temperature_outdoor != null
+  const remoteT = remoteIsOutdoor ? remote?.temperature_outdoor : remote?.temperature_indoor
+  const remoteH = remoteIsOutdoor ? remote?.humidity_outdoor : remote?.humidity_indoor
+  const remoteTag = remoteIsOutdoor ? 'WN32' : 'GW1100'
+  const remoteField = remoteIsOutdoor ? 'temperature_outdoor' : 'temperature_indoor'
+  const remoteHumField = remoteIsOutdoor ? 'humidity_outdoor' : 'humidity_indoor'
+
+  // Tendencias estación remota
+  const remoteTempTrend = getTrend(remoteT, historicValue(remoteHistory, (r) => r[remoteField], 1), 0.5)
+  const remoteHumTrend = getTrend(remoteH, historicValue(remoteHistory, (r) => r[remoteHumField], 3), 3)
   const remotePressTrend = getTrend(remote?.pressure_relative, historicValue(remoteHistory, (r) => r.pressure_relative, 3), 1)
 
   const chTemp = data?.temperature_ch1
@@ -501,7 +507,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell col remota">
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>{remoteTag}</span></div>
           {/* Absoluto por lo mismo que en EXT: si no, baja los valores. */}
           <div style={{ position: 'absolute', top: 6, right: 8 }}>
             <MeteoGlyph name="clear-day" size={34} color="#fbbf24" title="sol" />
@@ -510,13 +516,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remote?.temperature_indoor != null ? decNum(u.temp(remote.temperature_indoor)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
+                {remoteT != null ? decNum(u.temp(remoteT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
               <TrendGlyph trend={remoteTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
             </span>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
-                {remote?.humidity_indoor != null ? remote.humidity_indoor.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
+                {remoteH != null ? remoteH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
               </span>
               <TrendGlyph trend={remoteHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
             </span>

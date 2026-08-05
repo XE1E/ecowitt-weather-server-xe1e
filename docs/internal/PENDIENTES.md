@@ -8,11 +8,13 @@ En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integra
 GW1100 = interior** (se **apaga la trampa** `treat_indoor_as_outdoor`).
 Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
 
-- [ ] Apagar la trampa del GW1100 en Admin → Estaciones ("Está a la intemperie").
-- [ ] **Alerta de moho:** hoy usa `humidity_high=65` sobre `humidity_outdoor` (por la
-      trampa). Al quitarla, la humedad del GW1100 vuelve a `humidity_indoor` → hay que
-      **agregar regla de humedad interior** en `alerts.py` (hoy solo evalúa
-      `humidity_outdoor`) y mover ahí el umbral de moho.
+- [x] Apagar la trampa del GW1100 en Admin → Estaciones ("Está a la intemperie"). HECHO.
+- [x] **Alerta de moho — HECHO 2026-08-04.** Se añadieron reglas propias de humedad
+      interior (`humidity_indoor_low/high`, 20 % / 65 %) con umbrales
+      sobreescribibles por estación y su bloque en Admin → Alertas. Ojo al dato: la
+      alarma **llevaba tiempo sin vigilar nada**, no era una tarea futura — al
+      retirar la trampa, `humidity_indoor` no lo evaluaba ninguna regla.
+      De paso, `temperature_indoor` entró en la vigilancia de "sensor perdido".
 - [ ] **Barrido interior/exterior en TODO el servidor.** Al quitar la trampa dejan de
       coincidir "lo que el GW1100 manda" con "lo que el servidor rotula", así que hay
       que revisar a detalle, extremo a extremo, que las lecturas del **WN32 salgan
@@ -20,12 +22,23 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       con el toggle: la trampa se aplica en `main.py` al ingerir (`treat_indoor_as_outdoor`,
       hoy en `main.py:391`, default `False` en `settings_store.py`), pero el rótulo
       interior/exterior se decide por separado en cada consumidor. Repasar al menos:
-      - `_detect_sensors_detail` en `main.py` (qué fila muestra cada sensor).
-      - Tarjetas del dashboard: `RemoteStationCard`, `InteriorCard`, `ExtraSensorsCard`,
-        `AtmosphericProfile`, `StationSummaryTable` y la página `/pro/remota`.
-      - `ConsoleReplica`: la celda REMOTA y PRESIÓN GW1100 leen `temperature_indoor` /
-        `humidity_indoor` del GW1100; con WN32 hay que decidir si esa celda pasa a
-        exterior o se separa en dos.
+      - [x] `_detect_sensors_detail` en `main.py` — **HECHO**. Además se corrigió un
+        fallo: identificaba el WN32 por `battery_wh32`, una clave que el parser
+        **nunca producía** (no estaba en `FIELD_MAPPING`), así que el sensor habría
+        salido como "Exterior" genérico y sin batería ni señal. Ahora se mapean
+        `wh32batt`/`wh32sig` y se acepta también `battery_wh26` (el WN32 *es* un
+        WH26 y, según el firmware, reporta con una clave o la otra).
+      - [x] Tarjetas: `RemoteStationCard` y la página `/pro/remota` ya separaban
+        Exterior (WN32) / Interior (GW1100), y `StationSummaryTable` lo hace con
+        `indoorPrimary`. `InteriorCard` y `ExtraSensorsCard` leen datos de la
+        PRINCIPAL (interior de la consola y canales WN31), así que no les afecta.
+        `AtmosphericProfile` es del METAR, tampoco.
+      - [x] `ConsoleReplica` — **HECHO**. La celda REMOTA prefiere el **exterior**
+        (WN32) cuando existe y cae al integrado del GW1100 si no, y la etiqueta dice
+        cuál de los dos se ve (`REMOTA WN32` / `REMOTA GW1100`): antes mostraba el
+        interior rotulado siempre "GW1100", indistinguible. Su tipo local de fila
+        histórica —que solo declaraba los `*_indoor`— se sustituyó por el
+        `RemoteHistRow` compartido de `remote.ts`.
       - [x] **Kiosco, página 3 «Sensores» — HECHO 2026-08-04.** La tarjeta remota leía
         solo `temperature_indoor`/`humidity_indoor`, así que al retirar la trampa el
         **exterior quedaba invisible** y el interior salía rotulado como "Remota" sin
@@ -33,12 +46,13 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
         `humidity_outdoor`) e **«Interior · GW1100»** (`_indoor` + presión), mismo
         criterio que `RemoteStationCard`. Hoy el exterior muestra `--`; se poblará
         solo cuando llegue el WN32, sin más cambios de código.
-      - Datos derivados de la remota: punto de rocío (`dewPointC` en `remote.ts`) y
-        cualquier sensación térmica — con la trampa se calculaban sobre lecturas
-        rotuladas exterior.
-      - Salidas hacia afuera: `/api/svitrix` (reloj Ulanzi), widget embebible,
-        `/api/display.jpg` y la publicación a redes públicas (WU/AWEKAS), donde mandar
-        una lectura interior como exterior sí tiene consecuencias.
+      - [x] Derivados de la remota: `dewPointC` (`remote.ts`) es genérico —recibe
+        temperatura y humedad, el llamador elige cuáles— y `RemoteStationCard` ya lo
+        aplica sobre el par exterior.
+      - [x] Salidas hacia afuera: **no les afecta**. `/api/svitrix`, el widget y la
+        publicación a redes leen `latest_by_station[None]`, es decir la PRINCIPAL
+        (`publish_all` solo se invoca cuando `station is None`). `/api/display.jpg`
+        renderiza páginas ya revisadas. Verificado, no supuesto.
       - Histórico ya guardado: las filas del 2026-07-24 en adelante quedaron con la
         semántica de la trampa. Decidir si se reetiquetan o se deja la discontinuidad
         documentada.

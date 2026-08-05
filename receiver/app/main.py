@@ -1291,11 +1291,14 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
 
     # Sensor exterior (WS69 para WS2910, WN32 para GW1100)
     if data.get("temperature_outdoor") is not None:
-        # Detectar tipo de sensor exterior por batería/modelo
-        # WS69/WH65: battery_wh65 o battery_ws69
-        # WN32: battery_wh32
+        # Detectar tipo de sensor exterior por batería/modelo.
+        #   WS69/WH65 -> battery_wh65 o battery_ws69
+        #   WN32      -> battery_wh32 o battery_wh26 (el WN32 ES un WH26, y según
+        #                el firmware reporta con una clave o la otra; mirar solo
+        #                wh32 lo dejaba sin identificar, con su batería y señal
+        #                sin leer, porque ese campo no siempre llega).
         has_ws69 = data.get("battery_wh65") is not None or data.get("battery_ws69") is not None
-        has_wn32 = data.get("battery_wh32") is not None
+        has_wn32 = data.get("battery_wh32") is not None or data.get("battery_wh26") is not None
         sensor_type = "WS69" if has_ws69 else ("WN32" if has_wn32 else "Exterior")
         ext = {
             "id": "outdoor",
@@ -1304,8 +1307,12 @@ def _detect_sensors_detail(data: dict, sensor_labels: dict) -> list:
             "label": sensor_labels.get("outdoor", "Exterior"),
             "temperature": data.get("temperature_outdoor"),
             "humidity": data.get("humidity_outdoor"),
-            "battery_ok": data.get("battery_wh65", data.get("battery_ws69", data.get("battery_wh32", True))),
-            "signal": data.get("signal_wh65", data.get("signal_ws69", data.get("signal_wh32"))),
+            "battery_ok": next(
+                (data[k] for k in ("battery_wh65", "battery_ws69", "battery_wh32", "battery_wh26")
+                 if data.get(k) is not None), True),
+            "signal": next(
+                (data[k] for k in ("signal_wh65", "signal_ws69", "signal_wh32", "signal_wh26")
+                 if data.get(k) is not None), None),
             "active": True,
         }
         # Si la estación mide presión pero NO tiene sensor interior separado

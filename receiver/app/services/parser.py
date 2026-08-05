@@ -61,6 +61,9 @@ FIELD_MAPPING = {
     "wh80batt": "battery_wh80",
     "wh90batt": "battery_wh90",
     "ws69batt": "battery_ws69",
+    # WN32 (sensor T/H exterior del GW1100). Según el firmware reporta su batería
+    # como wh26batt (es un WH26) o como wh32batt; se aceptan las dos.
+    "wh32batt": "battery_wh32",
 
     # Soil sensors (up to 8)
     "soilmoisture1": "soil_moisture_1",
@@ -106,6 +109,7 @@ FIELD_MAPPING = {
     "wh80sig": "signal_wh80",
     "wh90sig": "signal_wh90",
     "ws69sig": "signal_ws69",
+    "wh32sig": "signal_wh32",
 
     # WN31 signal strength (up to 8 channels)
     "sig1": "signal_ch1",
