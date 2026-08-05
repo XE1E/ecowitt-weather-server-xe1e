@@ -43,6 +43,21 @@ Severidades:
 | 47b | `UvSolarCard` y `ConsoleReplica`: UV, radiación y humedad muestran `--` | 2 componentes |
 | 47c | `ClimatePage`: el año en curso se calcula, ya no es el literal 2026 | `ClimatePage.tsx` |
 | 42 | **Unidades, cerrado**: vista clásica con selector, y las 4 vistas que lo ignoraban ya convierten | `App.tsx`, `StatsSummary.tsx`, `TemperatureChart.tsx`, `StationSummaryTable.tsx` |
+| 40 | Un pico anulado por el QC ya no se confunde con un sensor perdido | `alerts.py`, `main.py` |
+| 41 | Regla de humedad **interior**: la vigilancia de moho vuelve a existir | `alerts.py`, `config.py`, `settings_store.py`, `AdminAlertas.tsx` |
+| 41b | El sensor interior entra en la vigilancia de "sensor perdido" | `alerts.py` |
+
+Detalle de #40: el QC pone el valor a `None` al filtrarlo, y la regla de presencia leía ese
+`None` como sensor ausente. Ahora `main.py` recoge los campos que `quality_check` y `spike_check`
+acaban de rechazar y se los pasa a `process()`, que los excluye de esa regla. Probado en los tres
+casos: pico filtrado → sin aviso; campo ausente de verdad → avisa; y sin la señal, el mismo dato
+vuelve a dar el falso positivo (para que el test falle si alguien deshace el arreglo).
+
+Detalle de #41: umbrales nuevos `alert_humidity_indoor_low/high` (20 % / 65 %), sobreescribibles
+**por estación** —el GW1100 puede ser más estricto que la casa—, con su bloque propio en el panel.
+La regla exterior se queda solo con `humidity_outdoor`, como debe ser.
+
+Tres tests nuevos cubren los dos hallazgos (100 en la suite).
 
 Detalle de #42: la vista clásica comparte el `localStorage` de `/pro`, así que estaba **atada** a
 lo elegido allá sin poder cambiarlo — y encima sus dos componentes ignoraban el valor. Ahora
