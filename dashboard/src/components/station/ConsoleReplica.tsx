@@ -133,7 +133,10 @@ function OutdoorGlyph({ height = 30 }: { height?: number }) {
 // cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
 const PS_R = 5          // rango del riel, en hPa
 const PS_W = 261        // ancho útil: 335 de caja menos 62 de sangría y 12 de margen
-const PS_H = 30
+// 32 y no 30: con los rótulos a 12 px su borde superior sube hasta y≈22, y las
+// marcas mayores bajan hasta y=21. Los 2 px extra se le quitan al margen inferior
+// del contenedor (bottom 4 en vez de 6), así el riel no se acerca al número.
+const PS_H = 32
 
 function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: string }) {
   const x0 = 12
@@ -167,9 +170,9 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
         <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
       )}
       {delta != null && <polygon points={`${x - 5},0 ${x + 5},0 ${x},7`} fill={color} />}
-      <text x={x0} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">-{endLabel}</text>
-      <text x={mid} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="middle">0</text>
-      <text x={x1} y={29} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">+{endLabel}</text>
+      <text x={x0} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="start">-{endLabel}</text>
+      <text x={mid} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="middle">0</text>
+      <text x={x1} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="end">+{endLabel}</text>
     </svg>
   )
 }
@@ -620,7 +623,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          <div style={{ position: 'absolute', bottom: 6, left: 62, right: 12 }}>
+          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 12 }}>
             <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
