@@ -132,7 +132,11 @@ function OutdoorGlyph({ height = 30 }: { height?: number }) {
 // se pinza contra el extremo en vez de salirse del riel: ±5 hPa en 3 h ya es un
 // cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
 const PS_R = 5          // rango del riel, en hPa
-const PS_W = 261        // ancho útil: 335 de caja menos 62 de sangría y 12 de margen
+// 221 = 335 de caja menos 62 de sangría (el barómetro) y 52 de margen derecho. Se
+// estrechó desde 261: a lo ancho de la celda entera las marcas quedaban muy
+// separadas y el riel parecía una regla, no un indicador. Con 40 px menos el paso
+// entre marcas baja de ~24 a ~20 px y el conjunto se lee de golpe.
+const PS_W = 221
 // 32 y no 30: con los rótulos a 12 px su borde superior sube hasta y≈22, y las
 // marcas mayores bajan hasta y=21. Los 2 px extra se le quitan al margen inferior
 // del contenedor (bottom 4 en vez de 6), así el riel no se acerca al número.
@@ -421,11 +425,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               cuatro cifras pesaban igual que el valor grande de arriba, y es el
               mismo recurso de escalonado que usa toda la consola. */}
           <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
-            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.min ?? undefined))}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.max ?? undefined))}
             </span>
@@ -523,8 +527,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               y VEL comparten cuerpo (66) y unidad (24), y la jerarquía la marca el
               contenido, no el tamaño. Aquí cabría más --no hay mín/máx debajo-- pero
               se queda en 66 para no volver a descompensar la fila. `decxs` para que
-              su decimal sea la mitad del entero, como en EXT. */}
-          <div className="big gv decxs ctr rt" style={{ fontSize: 66, marginTop: -10 }}>
+              su decimal sea la mitad del entero, como en EXT.
+              ABSOLUTO y centrado en la CELDA, no con la clase `ctr`: sus márgenes
+              automáticos centran en el espacio que deja la etiqueta, que no es lo
+              mismo --dejaban el número 10 px alto--. Aquí no hay mín/máx abajo que
+              lo estorbe, así que puede ocupar el centro real. `right: 12` lo deja
+              donde lo dejaba `rt`: pegado al borde del contenido. */}
+          <div className="big gv decxs" style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)', fontSize: 66 }}>
             {decNum(u.wind(data?.wind_speed, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--v)' }}> {u.windU}</span>
           </div>
         </div>
@@ -548,11 +557,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             {decNum(data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--')}<span className="u" style={{ fontSize: 24, color: 'var(--h)' }}>%</span>
           </div>
           <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'baseline' }}>
-            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.min != null ? hDay.min.toFixed(0) : '--'}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
+            <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 10 }}>MÁX</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.max != null ? hDay.max.toFixed(0) : '--'}
             </span>
@@ -623,7 +632,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: -12, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 12 }}>
+          <div style={{ position: 'absolute', bottom: 4, left: 62, right: 52 }}>
             <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
