@@ -227,7 +227,7 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
   // lluvioso-- dibujaría una barra a tope y parecería un diluvio. Con suelo, la altura
   // significa siempre lo mismo mientras no se pase de 10.
   const scale = Math.max(peak, 10)
-  const BAR_H = 34
+  const BAR_H = 28
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%' }}>
       {data.map((d, i) => {
@@ -239,21 +239,28 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
         const alto = v == null ? 3 : v <= 0 ? 2 : Math.max(3, (v / scale) * BAR_H)
         const color = v == null ? '#3a3a3a' : 'var(--r)'
         const opacidad = v == null ? 1 : v <= 0 ? 0.35 : hoy ? 1 : 0.75
+        const esPico = v != null && v > 0 && v === peak
         return (
           <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}
             title={`${d.date}: ${v == null ? 'sin dato' : fmt(v)}`}>
-            {/* El valor SÓLO encima de la barra más alta. Da la escala del gráfico sin
-                gastar un eje ni un rótulo aparte, y se coloca solo en el único sitio
-                donde hace falta mirarlo. */}
-            <div style={{ height: 11, fontSize: 10, fontWeight: 700, color: 'var(--w)', lineHeight: 1 }}>
-              {v != null && v > 0 && v === peak ? fmt(v) : ''}
-            </div>
             <div style={{ height: BAR_H, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
-              <div style={{ width: '100%', height: alto, borderRadius: 2, background: color, opacity: opacidad }} />
+              <div style={{ width: '100%', height: alto, borderRadius: 2, background: color, opacity: opacidad,
+                            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}>
+                {/* El valor del pico va DENTRO de su barra, no encima. Encima costaba un
+                    renglón de 11 px que esta celda no tiene --se metía bajo el "mm" del
+                    acumulado del mes-- y aquí no cuesta nada. Da la escala del gráfico
+                    sin gastar un eje. Sólo si la barra es bastante alta para contenerlo;
+                    si no, el dato sigue en el `title`. */}
+                {esPico && alto >= 15 && (
+                  <span style={{ fontSize: 9, fontWeight: 800, color: '#06283d', lineHeight: 1, marginTop: 2 }}>
+                    {fmt(v as number)}
+                  </span>
+                )}
+              </div>
             </div>
             {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para
                 saber cuál es cuál. */}
-            <div style={{ fontSize: 10, fontWeight: 700, lineHeight: 1, marginTop: 3,
+            <div style={{ fontSize: 9, fontWeight: 700, lineHeight: 1, marginTop: 2,
                           color: hoy ? 'var(--w)' : 'var(--lbl)' }}>
               {dowLetter(d.date)}
             </div>
@@ -985,12 +992,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               semana. Empieza en x=66 y la gota acaba en x≈58, así que conviven igual
               que el barómetro y el riel en PRES. */}
           {rain7.length > 0 && (
-            <div style={{ position: 'absolute', bottom: 4, left: 66, right: 12 }}>
+            <div style={{ position: 'absolute', bottom: 3, left: 66, right: 12 }}>
               <RainHistogram data={rain7} fmt={(mm) => u.rain(mm)} />
             </div>
           )}
+          {/* marginTop -12 y no -6: las tres cifras suben 6 px para despejarle la franja
+              de abajo al histograma. Medido sobre la captura, con -6 el número del mes
+              bajaba hasta y≈90 y el gráfico arrancaba en y≈83, y en la columna del mes la
+              tinta salía como una sola mancha continua. Arriba hay sitio de sobra: entre
+              el rótulo LLUVIA y estas etiquetas quedaban 12 px muertos. */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
-                        gap: 2, marginTop: -6, paddingLeft: 46 }}>
+                        gap: 2, marginTop: -12, paddingLeft: 46 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
