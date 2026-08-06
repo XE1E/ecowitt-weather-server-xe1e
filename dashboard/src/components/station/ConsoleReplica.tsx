@@ -227,7 +227,9 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
   // lluvioso-- dibujaría una barra a tope y parecería un diluvio. Con suelo, la altura
   // significa siempre lo mismo mientras no se pase de 10.
   const scale = Math.max(peak, 10)
-  const BAR_H = 28
+  // 40 px de barra: es lo que dio de sí la celda al quitarle el rótulo "LLUVIA" y subir
+  // la gota y las cifras. Con 28 el gráfico se veía de juguete.
+  const BAR_H = 40
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%' }}>
       {data.map((d, i) => {
@@ -251,8 +253,8 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
                     acumulado del mes-- y aquí no cuesta nada. Da la escala del gráfico
                     sin gastar un eje. Sólo si la barra es bastante alta para contenerlo;
                     si no, el dato sigue en el `title`. */}
-                {esPico && alto >= 15 && (
-                  <span style={{ fontSize: 9, fontWeight: 800, color: '#06283d', lineHeight: 1, marginTop: 2 }}>
+                {esPico && alto >= 17 && (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#06283d', lineHeight: 1, marginTop: 3 }}>
                     {fmt(v as number)}
                   </span>
                 )}
@@ -260,7 +262,7 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
             </div>
             {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para
                 saber cuál es cuál. */}
-            <div style={{ fontSize: 9, fontWeight: 700, lineHeight: 1, marginTop: 2,
+            <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1, marginTop: 3,
                           color: hoy ? 'var(--w)' : 'var(--lbl)' }}>
               {dowLetter(d.date)}
             </div>
@@ -965,11 +967,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        {/* LLUVIA en fila 2 columna 3 */}
+        {/* LLUVIA en fila 2 columna 3.
+            SIN rótulo, como EXT, HUMEDAD y PRES: la gota lo dice. Quitarlo, subir las
+            cifras al borde de arriba y mudar la gota allí libera la franja de abajo
+            ENTERA para el histograma, que a 28 px de barra se veía de juguete. Ahora
+            tiene 40 px de alto y los 311 px de ancho de la celda en vez de 245, así que
+            las barras pasan de ~32 px a ~42 y el gráfico se lee de lejos. */}
         <div className="cell main">
-          <div style={{ color: 'var(--r)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>LLUVIA</div>
-          <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            <MeteoGlyph name="raindrops" size={46} color="#38bdf8" title="lluvia" />
+          {/* La gota SUBE a la esquina de arriba, que es lo que despeja el ancho
+              completo abajo. Se queda (no se quita, aunque el histograma la habría
+              desalojado): sin ella y sin rótulo, nada diría que esta celda es de lluvia,
+              y es el mismo papel que hacen el termómetro en EXT o el barómetro en PRES.
+              44 y no 46: el hueco a la izquierda de las cifras es ese. */}
+          <div style={{ position: 'absolute', top: 10, left: 12 }}>
+            <MeteoGlyph name="raindrops" size={44} color="#38bdf8" title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
               viento: EVENTO es lo caído en el chubasco (`rain_event`), TASA la
@@ -991,18 +1002,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               diferencia entre 16 mm caídos de golpe ayer y 16 mm repartidos toda la
               semana. Empieza en x=66 y la gota acaba en x≈58, así que conviven igual
               que el barómetro y el riel en PRES. */}
+          {/* Histograma a TODO EL ANCHO de la celda, al pie. Ya no tiene que esquivar la
+              gota --que se mudó arriba-- ni al rótulo, que se fue. */}
           {rain7.length > 0 && (
-            <div style={{ position: 'absolute', bottom: 3, left: 66, right: 12 }}>
+            <div style={{ position: 'absolute', bottom: 4, left: 12, right: 12 }}>
               <RainHistogram data={rain7} fmt={(mm) => u.rain(mm)} />
             </div>
           )}
-          {/* marginTop -12 y no -6: las tres cifras suben 6 px para despejarle la franja
-              de abajo al histograma. Medido sobre la captura, con -6 el número del mes
-              bajaba hasta y≈90 y el gráfico arrancaba en y≈83, y en la columna del mes la
-              tinta salía como una sola mancha continua. Arriba hay sitio de sobra: entre
-              el rótulo LLUVIA y estas etiquetas quedaban 12 px muertos. */}
+          {/* Las tres cifras arrancan pegadas al borde de arriba (sin marginTop
+              negativo, que era para compensar el rótulo que ya no está) y sangradas por
+              la izquierda para dejarle su hueco a la gota. */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
-                        gap: 2, marginTop: -12, paddingLeft: 46 }}>
+                        gap: 2, paddingLeft: 52 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
