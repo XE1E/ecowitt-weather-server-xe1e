@@ -25,7 +25,15 @@ export function MenuPage({ slug }: { slug: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   useNavZones(rootRef, slug)
 
-  const botones: Boton[] = [{ label: '‹ CONSOLA', to: 'consola', tipo: 'back' }]
+  // "info" es un slug RESERVADO que no existe en este servidor: lo reconoce el
+  // firmware y pinta su propia pantalla de diagnóstico con lo que sólo él sabe --IP,
+  // SSID, señal, versión--. Está aquí porque el gesto para llegar a ella (mantener
+  // pulsado 2.5 s) no lo adivina nadie, y sin la IP no se puede entrar al portal de
+  // configuración salvo mirando el router.
+  const botones: Boton[] = [
+    { label: '‹ CONSOLA', to: 'consola', tipo: 'back' },
+    { label: 'INFO DEL DISPLAY', to: 'info' },
+  ]
 
   return (
     <div

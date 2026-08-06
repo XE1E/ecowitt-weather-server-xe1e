@@ -204,6 +204,23 @@ class Settings(BaseSettings):
     ecowitt_secure_token: Optional[str] = None  # token esperado (query param)
     ecowitt_ip_allowlist: Optional[str] = None  # IPs permitidas (coma); vacío = todas
 
+    # Cámara del exterior (Tapo C325WB). La cámara vive detrás del NAT de casa y el
+    # servidor está en el VPS, así que NO se va a buscar la foto: algo en casa la
+    # EMPUJA con POST /api/camera/upload. Ver docs/internal/PLAN-CAMARA-EXTERIOR.md.
+    #
+    # Token propio y no el del panel de administración: lo va a llevar un script
+    # desatendido en una máquina de casa, y si se filtra sólo permite subir fotos.
+    # Sin token definido, el endpoint de subida queda DESHABILITADO (503): es una
+    # ruta de escritura pública y abrirla sin credencial sería una invitación.
+    camera_upload_token: Optional[str] = None
+    camera_dir: str = "/data/camera"
+    # Días de fotos que se conservan para el timelapse (0 = sólo la última).
+    camera_retention_days: int = 7
+    # A partir de aquí la última foto se considera vieja y el kiosco lo avisa. El
+    # doble de la cadencia acordada (5-10 min), para no marcar una captura que
+    # simplemente se retrasó un poco.
+    camera_stale_seconds: int = 1200
+
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)
 

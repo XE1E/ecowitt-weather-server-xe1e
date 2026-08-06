@@ -5,7 +5,7 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
+from fastapi import FastAPI, Request, HTTPException, Header, Response, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import platform
+import secrets
 import shutil
 from zoneinfo import ZoneInfo
 
@@ -43,6 +44,7 @@ from .services import svitrix
 from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
+from .services.camera import CameraStore
 
 # Configure logging
 logging.basicConfig(
@@ -1796,6 +1798,82 @@ async def get_daily_rain(days: int = 7, station: Optional[str] = None):
         out.append({"date": d,
                     "rain": round(float(mm), 1) if isinstance(mm, (int, float)) else None})
     return {"days": days, "data": out}
+
+
+# ── Cámara del exterior ──────────────────────────────────────────────────────
+# La cámara está detrás del NAT de casa y el servidor en el VPS, así que la foto se
+# EMPUJA hacia aquí. Ver docs/internal/PLAN-CAMARA-EXTERIOR.md y services/camera.py.
+_camera = CameraStore(
+    base_dir=settings.camera_dir,
+    retention_days=settings.camera_retention_days,
+    stale_seconds=settings.camera_stale_seconds,
+)
+
+
+@app.post("/api/camera/upload")
+async def camera_upload(request: Request, file: UploadFile = File(None)):
+    """
+    Recibe una captura del exterior. Acepta multipart (campo `file`) o el JPEG en
+    crudo como cuerpo, que es lo que sale de un `curl --data-binary` desde un script.
+
+    Autenticación por token propio en `X-Camera-Token` (o `?token=`), NO el del panel
+    de administración: esto lo va a llamar un script desatendido en una máquina de
+    casa y, si ese token se filtra, lo único que permite es subir fotos.
+
+    Sin `CAMERA_UPLOAD_TOKEN` configurado responde 503 y no guarda nada: es una ruta
+    de ESCRITURA, y dejarla abierta "hasta que la configure" es como se acaban
+    teniendo carpetas llenas de lo que suba cualquiera.
+    """
+    esperado = settings.camera_upload_token
+    if not esperado:
+        raise HTTPException(status_code=503, detail="Subida de cámara no configurada")
+
+    recibido = request.headers.get("X-Camera-Token") or request.query_params.get("token") or ""
+    # Comparación en tiempo constante: el token viaja por HTTP en la LAN, pero no
+    # cuesta nada no filtrar su longitud ni su prefijo por el tiempo de respuesta.
+    if not secrets.compare_digest(recibido, esperado):
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    data = await file.read() if file is not None else await request.body()
+    try:
+        meta = _camera.save(data)
+    except ValueError as e:
+        # 400 y no 500: el envío es el que está mal, y así el script de casa puede
+        # distinguir "mi captura salió mal" de "el servidor está caído".
+        raise HTTPException(status_code=400, detail=str(e))
+    except OSError as e:
+        logger.error("Error guardando la captura de cámara: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno")
+    logger.info("Cámara: captura de %d bytes recibida", meta["bytes"])
+    return {"ok": True, **meta}
+
+
+@app.get("/api/camera/status")
+async def camera_status():
+    """¿Hay foto, de cuándo es y está vieja? Lo consulta la página del kiosco."""
+    return _camera.status()
+
+
+@app.get("/api/camera/latest.jpg")
+async def camera_latest():
+    """La última captura. 404 mientras no haya llegado ninguna."""
+    ultima = _camera.latest()
+    if ultima is None:
+        raise HTTPException(status_code=404, detail="Sin capturas")
+    data, cuando = ultima
+    return Response(
+        content=data,
+        media_type="image/jpeg",
+        # Media cadencia: lo bastante para que un refresco no vuelva a descargarla,
+        # lo bastante poco para no servir una foto vieja tras la siguiente captura.
+        headers={"Cache-Control": "max-age=150", "X-Captured-At": cuando},
+    )
+
+
+@app.get("/api/camera/days")
+async def camera_days():
+    """Días con histórico y cuántas capturas tiene cada uno (para el timelapse)."""
+    return {"retention_days": settings.camera_retention_days, "days": _camera.days()}
 
 
 @app.get("/api/summaries/daily")
