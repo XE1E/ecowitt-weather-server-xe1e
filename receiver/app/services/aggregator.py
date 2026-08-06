@@ -44,6 +44,20 @@ def local_day_bounds_utc(day: Optional["datetime"] = None) -> Tuple[str, str, da
     return start_utc.strftime(fmt), end_utc.strftime(fmt), start_utc
 
 
+def local_recent_dates(days: int) -> List[str]:
+    """
+    Las últimas `days` fechas LOCALES en ISO (YYYY-MM-DD), de la más antigua a hoy.
+
+    Vive aquí y no en quien la llama por lo mismo que `local_day_bounds_utc`: el
+    contenedor corre con TZ=UTC, así que `datetime.now()` da un naive en UTC y entre
+    las 18:00 y medianoche locales su fecha ya es la del día siguiente. La lista
+    saldría corrida un día. La zona se resuelve con _TZ, en un solo sitio.
+    """
+    today = datetime.now(_TZ)
+    return [(today - timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range(days - 1, -1, -1)]
+
+
 def flatten_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
     """
     Convierte la estructura de get_daily_stats() en campos planos del resumen.

@@ -204,6 +204,66 @@ const battLevel = (v: unknown): number | null => {
   return null
 }
 
+interface DailyRain { date: string; rain: number | null }
+
+// Inicial del día de la semana de una fecha ISO.
+// `new Date('2026-08-06')` se interpreta como MEDIANOCHE UTC, y en UTC-6 eso cae en el
+// día ANTERIOR: las letras saldrían corridas una posición. Construyendo la fecha por
+// partes es local y no hay desfase.
+const dowLetter = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return '?'
+  return DIAS_CORTO[new Date(y, m - 1, d).getDay()].charAt(0)
+}
+
+// Histograma de la lluvia de los últimos 7 días. Las tres cifras de la celda dicen
+// "llueve ahora", "cuánto en este chubasco" y "cuánto va del mes"; esto añade el reparto,
+// que es lo que una cifra sola no puede dar: si los 16 mm del mes cayeron de golpe ayer
+// o repartidos toda la semana.
+function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => string }) {
+  const known = data.map((d) => d.rain).filter((v): v is number => v != null)
+  const peak = known.length ? Math.max(...known) : 0
+  // SUELO de 10 mm en la escala: sin él, una semana de llovizna --0.2 mm el día más
+  // lluvioso-- dibujaría una barra a tope y parecería un diluvio. Con suelo, la altura
+  // significa siempre lo mismo mientras no se pase de 10.
+  const scale = Math.max(peak, 10)
+  const BAR_H = 34
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%' }}>
+      {data.map((d, i) => {
+        const v = d.rain
+        const hoy = i === data.length - 1
+        // Tres casos que NO son lo mismo y se ven distintos: sin resumen guardado
+        // (gris), cero lluvia (una uña del color de la lluvia, para que el día exista)
+        // y con lluvia (proporcional, con 3 px de mínimo para que nunca desaparezca).
+        const alto = v == null ? 3 : v <= 0 ? 2 : Math.max(3, (v / scale) * BAR_H)
+        const color = v == null ? '#3a3a3a' : 'var(--r)'
+        const opacidad = v == null ? 1 : v <= 0 ? 0.35 : hoy ? 1 : 0.75
+        return (
+          <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}
+            title={`${d.date}: ${v == null ? 'sin dato' : fmt(v)}`}>
+            {/* El valor SÓLO encima de la barra más alta. Da la escala del gráfico sin
+                gastar un eje ni un rótulo aparte, y se coloca solo en el único sitio
+                donde hace falta mirarlo. */}
+            <div style={{ height: 11, fontSize: 10, fontWeight: 700, color: 'var(--w)', lineHeight: 1 }}>
+              {v != null && v > 0 && v === peak ? fmt(v) : ''}
+            </div>
+            <div style={{ height: BAR_H, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ width: '100%', height: alto, borderRadius: 2, background: color, opacity: opacidad }} />
+            </div>
+            {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para
+                saber cuál es cuál. */}
+            <div style={{ fontSize: 10, fontWeight: 700, lineHeight: 1, marginTop: 3,
+                          color: hoy ? 'var(--w)' : 'var(--lbl)' }}>
+              {dowLetter(d.date)}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // Barra de nivel: dónde cae un valor dentro de su escala. Es la misma idea que el riel
 // del barómetro de PRES, que ya demostró que funciona: SOLAR, UV e ICA ya se pintan con
 // el color de su categoría, pero ese color sólo se entiende si uno recuerda los cortes,
@@ -296,7 +356,10 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
       {delta != null && Math.abs(x - mid) > 0.5 && (
         <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
       )}
-      {delta != null && <polygon points={`${x - 5},0 ${x + 5},0 ${x},7`} fill={color} />}
+      {/* Puntero a ±7 y con la punta en y=8, no ±5 y 7: es lo que dice DÓNDE cae la
+          variación, o sea el dato del riel, y a 5 px se perdía entre las marcas. Ahora
+          su punta toca el borde del riel en vez de quedarse a 1 px. */}
+      {delta != null && <polygon points={`${x - 7},0 ${x + 7},0 ${x},8`} fill={color} />}
       {/* Los extremos se rotulan "≤-5" y "≥+5", no "-5" y "+5": el valor se PINZA
           contra el tope --±5 hPa en 3 h ya es un cambio brusco y lo que importa
           entonces es "está al tope"-- así que la marca del extremo representa ese
@@ -350,6 +413,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
   const [astro, setAstro] = useState<AstroData | null>(null)
+  const [rain7, setRain7] = useState<DailyRain[]>([])
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -370,6 +434,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .then((j) => setRemoteHistory(j.data || [])).catch(() => {})
     load()
     const i = setInterval(load, 60000)
+    return () => clearInterval(i)
+  }, [])
+
+  // Lluvia diaria de la semana, para el histograma. Cada 10 min: el único día que
+  // puede cambiar es hoy, y su barra no necesita ir al segundo.
+  useEffect(() => {
+    const load = () => fetch('/api/rain/daily?days=7').then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j?.data) setRain7(j.data) }).catch(() => {})
+    load()
+    const i = setInterval(load, 10 * 60000)
     return () => clearInterval(i)
   }, [])
 
@@ -647,12 +721,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.min ?? undefined))}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.min_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.min_time)}</span>
             <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 8 }}>MÁX</span>
             <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.max ?? undefined))}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.max_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.max_time)}</span>
           </div>
         </div>
 
@@ -757,7 +831,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <div className="seg decxs" style={{ fontSize: 66, lineHeight: 1 }}>
                 {decNum(u.wind(data?.wind_speed, 1))}
               </div>
-              <div className="u" style={{ fontSize: 17, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
+              <div className="u" style={{ fontSize: 20, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
             </div>
           </div>
           {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
@@ -833,12 +907,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.min != null ? hDay.min.toFixed(0) : '--'}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.min_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.min_time)}</span>
             <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1, marginLeft: 8 }}>MÁX</span>
             <span className="gh seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {hDay?.max != null ? hDay.max.toFixed(0) : '--'}
             </span>
-            <span style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.max_time)}</span>
+            <span style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700 }}>{hhmm(hDay?.max_time)}</span>
           </div>
         </div>
 
@@ -859,8 +933,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Convive con la lectura porque están uno al lado del otro, no encima: el
               glifo acaba en x≈58 y la cifra más larga de la consola ("1025.8" con su
               unidad, alineada a la derecha) empieza en x≈56. Por eso sigue a 46 px y no
-              más grande. */}
-          <div style={{ position: 'absolute', top: 0, bottom: 40, left: 12, display: 'flex', alignItems: 'center' }}>
+              más grande.
+              `bottom: 30` y no 40: con 40 la banda acababa donde arranca el riel y el
+              glifo quedaba un poco alto respecto al hueco que ocupa a la vista. Diez
+              píxeles menos de exclusión lo bajan 5, que es lo que le faltaba. */}
+          <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -901,6 +978,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               lloviendo cuando no. Lo reinicia la estación, no el servidor: medido sobre
               14 días, casi siempre ~24 h después de que deja de llover. La tarjeta web
               (`PrecipitationCard`) ya lo llamaba "Evento". */}
+          {/* HISTOGRAMA de los últimos 7 días, a la derecha de la gota y al pie de la
+              celda. Las tres cifras de arriba dicen "llueve ahora", "cuánto en este
+              chubasco" y "cuánto va del mes"; ninguna dice cómo se repartió, que es la
+              diferencia entre 16 mm caídos de golpe ayer y 16 mm repartidos toda la
+              semana. Empieza en x=66 y la gota acaba en x≈58, así que conviven igual
+              que el barómetro y el riel en PRES. */}
+          {rain7.length > 0 && (
+            <div style={{ position: 'absolute', bottom: 4, left: 66, right: 12 }}>
+              <RainHistogram data={rain7} fmt={(mm) => u.rain(mm)} />
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
                         gap: 2, marginTop: -6, paddingLeft: 46 }}>
             <div style={{ textAlign: 'center' }}>

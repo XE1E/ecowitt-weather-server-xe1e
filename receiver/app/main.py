@@ -1754,6 +1754,50 @@ async def get_last_rain(station: Optional[str] = None):
     return {"date": await storage.get_last_rain(station=station)}
 
 
+@app.get("/api/rain/daily")
+async def get_daily_rain(days: int = 7, station: Optional[str] = None):
+    """
+    Lluvia por día LOCAL de los últimos `days` días. Alimenta el histograma de la
+    celda LLUVIA de la consola.
+
+    Existe en vez de reutilizar /api/climate/noaa --el único que ya daba lluvia por
+    día-- porque aquél devuelve un mes entero con veinte campos por jornada, y una
+    ventana de 7 días a caballo entre dos meses obligaría a pedir dos.
+
+    Un día sin resumen devuelve `rain: null`, no 0: "no se guardó el día" y "no
+    llovió" son cosas distintas y el histograma las dibuja distinto.
+    """
+    try:
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    days = max(1, min(days, 31))
+    # Se pide una ventana MAYOR que los días pedidos y luego se recorta por fecha
+    # local: los resúmenes llevan la fecha local como tag, pero el rango de Flux va en
+    # UTC, así que con "-7d" justos el día más antiguo entra a medias o se cae.
+    rows = await storage.query_daily_summaries(start=f"-{days + 2}d", station=station)
+    by_date = {str(r.get("date")): r.get("rain_total") for r in rows if r.get("date")}
+
+    wanted = aggregator.local_recent_dates(days)
+    # El día EN CURSO no tiene resumen cerrado --el rollup lo escribe al terminar el
+    # día-- así que su barra saldría vacía justo cuando más interesa. Para hoy se toma
+    # el acumulado vivo de la última lectura, y se queda el mayor de los dos por si el
+    # rollup ya corrió.
+    live = (latest_by_station.get(station) or {}).get("rain_daily")
+
+    out = []
+    for i, d in enumerate(wanted):
+        mm = by_date.get(d)
+        es_hoy = i == len(wanted) - 1
+        if es_hoy and isinstance(live, (int, float)):
+            if not isinstance(mm, (int, float)) or live > mm:
+                mm = live
+        out.append({"date": d,
+                    "rain": round(float(mm), 1) if isinstance(mm, (int, float)) else None})
+    return {"days": days, "data": out}
+
+
 @app.get("/api/almanac")
 async def get_almanac_data():
     """Almanaque astronómico ampliado (sol, crepúsculos, luna y planetas)."""
