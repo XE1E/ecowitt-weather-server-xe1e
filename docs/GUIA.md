@@ -299,7 +299,7 @@ dato, que es lo que agrupa la pantalla de un vistazo:
 |----------|-------------|--------|
 | Ámbar | Lectura de la estación principal | EXT, HUMEDAD, PRES, VIENTO, LLUVIA, INTERIOR, ROCÍO/SENSACIÓN/HUMIDEX |
 | Verde | Sensor de canal (WN31) | JARDÍN |
-| Gris | Estación remota | REMOTA WN32, REMOTA GW1100, PRESIÓN GW1100 |
+| Gris | Estación remota | REMOTA WN32, REMOTA GW1100 (dos celdas: temp/humedad y presión) |
 | Blanco | Ni lectura cruda ni de la estación | condición, sol/luna, SOLAR, UV, ICA |
 | Rojo (4 px) | Reloj | fecha/hora |
 

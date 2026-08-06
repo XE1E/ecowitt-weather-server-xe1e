@@ -337,12 +337,16 @@ const PS_R = 5          // rango del riel, en hPa
 // regla más que un indicador. El paso entre marcas sube de ~20 a ~31 px, y se acepta a
 // cambio de que los dos gráficos de la consola midan igual.
 const PS_W = 335
-// 32 y no 30: con los rótulos a 12 px su borde superior sube hasta y≈22, y las
-// marcas mayores bajan hasta y=21. Los 2 px extra se le quitan al margen inferior
-// del contenedor (bottom 4 en vez de 6), así el riel no se acerca al número.
-const PS_H = 32
+// 34 y no 32: los rótulos se mudan ARRIBA del riel y el puntero ABAJO, así que el
+// alto ya no lo fija el texto sino la suma riel + puntero. El puntero mide 13 y su
+// punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
+// Los 2 px de más se los come el aire de en medio de la celda, no el margen
+// inferior (que sigue en `bottom: 4`).
+const PS_H = 34
 
-function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: string }) {
+function PressureScale({ delta, endLabel, imperial }: {
+  delta: number | null; endLabel: string; imperial: boolean
+}) {
   const x0 = 12
   const x1 = PS_W - 12
   const mid = (x0 + x1) / 2
@@ -352,6 +356,16 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
   // Mismos umbrales y colores que TrendGlyph (±1 hPa), para que la barra y la
   // flecha de la celda nunca se contradigan.
   const color = delta == null || Math.abs(delta) <= 1 ? '#94a3b8' : delta > 0 ? '#22c55e' : '#ef4444'
+  // Rótulo de cada marca. En métrico van los once (-5 … 5): el paso entre marcas es
+  // de ~31 px y un "-5" a 11 px mide 10, así que caben de sobra y el riel se lee sin
+  // contar marcas. En imperial NO: ahí la escala son 0.15 inHg y numerarlas todas
+  // daría 0.03 / 0.06 / 0.09…, cinco caracteres cada una en 31 px de hueco. Se
+  // quedan sólo los extremos y el cero, como estaban.
+  const tickLabel = (v: number) => {
+    if (v === 0) return '0'
+    if (Math.abs(v) === PS_R) return (v < 0 ? '-' : '') + endLabel
+    return imperial ? null : String(v)
+  }
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
       {/* Riel y marcas en BLANCO, no en grises: sobre el fondo negro de la consola
@@ -359,32 +373,56 @@ function PressureScale({ delta, endLabel }: { delta: number | null; endLabel: st
           sí se queda oscuro, que es lo que hace resaltar el relleno de color. La
           jerarquía entre marca mayor y menor la dan ahora el alto y el grosor, no
           el color. */}
-      <rect x={x0} y={8} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
-      {/* Marca cada 1 hPa; más alta y gruesa en -5, 0 y +5 */}
+      <rect x={x0} y={12} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
+      {/* Marca cada 1 hPa; más alta y gruesa en -5, 0 y +5. Las mayores sobresalen
+          por ARRIBA (hasta y=10.5, a 2 px de la tinta de los números) y ninguna baja
+          del riel: por debajo pasa el puntero y se cruzarían. */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const tx = xOf(v)
         const major = v % PS_R === 0
         return (
-          <line key={v} x1={tx} y1={major ? 4 : 6.5} x2={tx} y2={major ? 21 : 18.5}
+          <line key={v} x1={tx} y1={major ? 10.5 : 13.5} x2={tx} y2={major ? 21 : 19}
             stroke="#eaeaea" strokeWidth={major ? 1.6 : 1} />
         )
       })}
       {/* Relleno del centro al valor: da la magnitud sin tener que leer la escala */}
       {delta != null && Math.abs(x - mid) > 0.5 && (
-        <rect x={Math.min(mid, x)} y={9.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
+        <rect x={Math.min(mid, x)} y={13.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
       )}
-      {/* Puntero a ±7 y con la punta en y=8, no ±5 y 7: es lo que dice DÓNDE cae la
-          variación, o sea el dato del riel, y a 5 px se perdía entre las marcas. Ahora
-          su punta toca el borde del riel en vez de quedarse a 1 px. */}
-      {delta != null && <polygon points={`${x - 7},0 ${x + 7},0 ${x},8`} fill={color} />}
-      {/* Los extremos se rotulan "≤-5" y "≥+5", no "-5" y "+5": el valor se PINZA
+      {/* Números CENTRADOS en su marca, encima del riel. Antes iban debajo y en las
+          esquinas (anclados a start/end), así que el "-5" empezaba en la marca en vez
+          de caer sobre ella y la escala parecía correrse hacia dentro. */}
+      {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
+        const t = tickLabel(v)
+        // 9 px para los rótulos largos: el único que lo necesita es el "-0.15" de
+        // imperial, que a 11 px mide 28 y centrado en la marca del extremo (x=12) se
+        // saldría del viewBox por la izquierda. A 9 px mide 22 y entra justo.
+        return t == null ? null : (
+          <text key={v} x={xOf(v)} y={8.5} fill="#eaeaea" fontSize={t.length > 2 ? 9 : 11}
+            fontWeight="700" textAnchor="middle">{t}</text>
+        )
+      })}
+      {/* "≤" y "≥" a los lados del RIEL, no pegados al -5 y al 5: el valor se PINZA
           contra el tope --±5 hPa en 3 h ya es un cambio brusco y lo que importa
           entonces es "está al tope"-- así que la marca del extremo representa ese
-          valor Y TODO LO QUE HAYA MÁS ALLÁ. Sin los símbolos, un riel al máximo se
-          leía como "exactamente 5". */}
-      <text x={x0} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="start">{'≤'}-{endLabel}</text>
-      <text x={mid} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="middle">0</text>
-      <text x={x1} y={PS_H - 1} fill="#eaeaea" fontSize="12" fontWeight="700" textAnchor="end">{'≥'}+{endLabel}</text>
+          valor Y TODO LO QUE HAYA MÁS ALLÁ; sin los símbolos, un riel al máximo se
+          leía como "exactamente 5". Van aquí y no en la fila de números porque ahí
+          no caben: a la izquierda de la marca del -5 sólo hay 12 px, y la mitad de
+          "-5" ya ocupa 5; el símbolo se saldría del viewBox y quedaría cortado. A la
+          altura del riel, en cambio, esos 12 px están vacíos. */}
+      {/* 13 y no 11 como los números: el glifo "≤" tiene mucho aire dentro de su
+          caja y al mismo cuerpo que las cifras se veía la mitad de grande. A 13
+          mide 10 de ancho y aún deja 2 px hasta el arranque del riel. */}
+      <text x={0} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
+      <text x={PS_W} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
+      {/* Puntero DEBAJO, apuntando al borde de abajo del riel, y con la cola en uve
+          como la flecha del compás: dibujado encima tapaba las marcas y el relleno
+          justo donde hay que leerlos. Mide 16×13 contra los 14×8 de antes --era la
+          pieza que dice DÓNDE cae la variación y se perdía entre las marcas--. Va el
+          último para que ningún trazo del riel se le monte encima. */}
+      {delta != null && (
+        <polygon points={`${x},21 ${x - 8},34 ${x},30.5 ${x + 8},34`} fill={color} />
+      )}
     </svg>
   )
 }
@@ -946,7 +984,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               El número no se mueve: marginTop de -12 a +6, los 18 px del rótulo. */}
           {/* El barómetro, como el termómetro y la gota, CENTRADO a lo alto en la banda
               libre: aquí lo que la limita por abajo es el riel (que va en `bottom: 4` y
-              mide 32), de ahí el `bottom: 40`. Queda en y 22-68.
+              mide 34), de ahí el `bottom: 40`. Queda en y 22-68.
               Convive con la lectura porque están uno al lado del otro, no encima: el
               glifo acaba en x≈58 y la cifra más larga de la consola ("1025.8" con su
               unidad, alineada a la derecha) empieza en x≈56. Por eso sigue a 46 px y no
@@ -974,7 +1012,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               `preserveAspectRatio` por defecto y con un viewBox más estrecho que su caja
               se quedaría centrado sin estirarse. */}
           <div style={{ position: 'absolute', bottom: 4, left: 0, right: 0 }}>
-            <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
+            <PressureScale delta={pressDelta} endLabel={pressEndLabel} imperial={u.pressU === 'inHg'} />
           </div>
         </div>
 
@@ -1355,7 +1393,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell col remota">
-          <div style={{ color: 'var(--p)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>PRESIÓN <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          {/* "REMOTA GW1100" y no "PRESIÓN GW1100", con el mismo reparto de color que
+              la celda de arriba (procedencia en blanco, aparato en morado): las dos
+              celdas son el MISMO sensor y así se leen como bloque. Lo que mide cada
+              una ya lo dicen el glifo y la cifra --barómetro con hPa aquí, termómetro
+              con °C arriba--, que es como funciona el resto de la consola desde que
+              EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo. */}
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
           {/* El mismo barómetro redondo que la celda PRES, en el mismo sitio y tamaño:
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
