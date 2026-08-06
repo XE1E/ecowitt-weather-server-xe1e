@@ -324,15 +324,19 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
 // se pinza contra el extremo en vez de salirse del riel: ±5 hPa en 3 h ya es un
 // cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
 const PS_R = 5          // rango del riel, en hPa
-// 311 = el ancho ÚTIL de la celda (339 menos borde y las dos sangrías de 12), el
-// mismo que usa el histograma de LLUVIA. Se ensancha para que los dos gráficos de la
-// consola midan igual y sus extremos se alineen entre celdas vecinas.
+// 335 = la caja de la celda SIN sus bordes (339 menos 2+2), y el contenedor de este
+// riel ya no lleva sangría propia. La cuenta importa: el dibujo reserva 12 unidades a
+// cada lado dentro del viewBox (x0/x1, para que el puntero y los rótulos de los
+// extremos no se salgan), así que el trazo VISIBLE mide 335-24 = 311 px y arranca a 12
+// del borde. Justo lo mismo que el histograma de LLUVIA, que sí lleva sangría de 12 y
+// dibuja sus barras a ras. Con PS_W = 311 y sangría de 12 en el contenedor, los dos
+// márgenes se sumaban y el riel salía 22 px más corto que el histograma --medido--.
 //
-// Deshace un estrechamiento anterior --de 261 a 221-- que buscaba lo contrario: a lo
-// ancho de la celda las marcas quedaban muy separadas y el riel parecía una regla más
-// que un indicador. Ese efecto vuelve en parte (el paso entre marcas sube de ~20 a
-// ~28.7 px), y se acepta a cambio de la uniformidad.
-const PS_W = 311
+// Ensancharlo deshace un estrechamiento anterior (261 → 221) que buscaba lo contrario:
+// a lo ancho de la celda las marcas quedan muy separadas y el riel tira a parecer una
+// regla más que un indicador. El paso entre marcas sube de ~20 a ~31 px, y se acepta a
+// cambio de que los dos gráficos de la consola midan igual.
+const PS_W = 335
 // 32 y no 30: con los rótulos a 12 px su borde superior sube hasta y≈22, y las
 // marcas mayores bajan hasta y=21. Los 2 px extra se le quitan al margen inferior
 // del contenedor (bottom 4 en vez de 6), así el riel no se acerca al número.
@@ -962,12 +966,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          {/* Riel al ANCHO COMPLETO de la celda, con las mismas sangrías de 12 que el
-              histograma de LLUVIA: son los dos gráficos de la consola y ahora empiezan y
-              acaban en la misma vertical. El ancho real lo fija PS_W, no este contenedor:
-              el SVG lleva `preserveAspectRatio` por defecto y con un viewBox más
-              estrecho que su caja se quedaría centrado sin estirarse. */}
-          <div style={{ position: 'absolute', bottom: 4, left: 12, right: 12 }}>
+          {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
+              12 px ya la pone el dibujo por dentro, con su x0/x1: puestas las dos, se
+              sumaban y el riel salía 22 px más corto que el histograma de LLUVIA. Así los
+              dos gráficos de la consola empiezan y acaban en la misma vertical de su
+              celda. El ancho real lo fija PS_W, no este contenedor: el SVG lleva
+              `preserveAspectRatio` por defecto y con un viewBox más estrecho que su caja
+              se quedaría centrado sin estirarse. */}
+          <div style={{ position: 'absolute', bottom: 4, left: 0, right: 0 }}>
             <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
