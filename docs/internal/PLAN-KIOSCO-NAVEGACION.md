@@ -4,7 +4,8 @@
 > `ecowitt-weather-server-xe1e` (dibuja las páginas) y **firmware**
 > `ecowitt-display-kiosk-xe1e` (las muestra y lee el toque).
 >
-> **Estado: fase 1 empezada.** Ver *Avance* al final.
+> **Estado: FASE 1 (servidor) COMPLETA** y commiteada. Queda la fase 2, el firmware.
+> Ver *Avance* al final.
 
 ## Objetivo
 
@@ -89,29 +90,41 @@ nota hasta que alguien toca y no pasa nada.
 
 ```
 consola  (home, arranque)
-├─ celda EXT ──────────────→ det-temp-24h ─┬─ 7 D ─ 30 D ─ AÑO
+├─ celda EXT ──────────────→ det-temp-24h ─┬─ 7 D ─ 30 D ─ 12 MESES
 ├─ celda HUMEDAD ──────────→ det-hum-24h   │
 ├─ celda PRES + riel ──────→ det-press-24h │  (los periodos son botones
 ├─ celda VIENTO (óvalo) ───→ det-wind-24h  │   de la misma plantilla)
 ├─ celda LLUVIA ───────────→ det-rain-24h  │
 ├─ celda ROCÍO/SENS/HUMIDEX → det-temp-24h │
 ├─ celda SOLAR/UV/ICA ─────→ det-sun-24h   │
-├─ celdas INTERIOR · JARDÍN · REMOTA ×2 ──→ det-sens-24h
-├─ celda PRESIÓN REMOTA ───→ det-press-24h
+├─ celdas INTERIOR · JARDÍN · REMOTA ×2 ──→ 3   (la página de sensores que ya existe)
 ├─ celda condición/luna ───→ 4   (pronóstico 7 días, la que ya existe)
 └─ celda reloj ────────────→ menu ─→ 1 · 2 · 3 · 4 · 5 · cámara
 
 cualquier detalle ──[RÉCORDS]──→ stats-mes ─┬─ HOY · AÑO · SIEMPRE
 ```
 
-Siete variables × cuatro periodos + cuatro de estadísticas + menú + cámara = **35 URLs con
-tres componentes React**. Añadir una variable es una fila en una tabla.
+Seis variables × cuatro periodos + cuatro de estadísticas + menú + cámara = **34 URLs con
+cuatro componentes React**. Añadir una variable es una fila en una tabla.
 
-### Por qué "AÑO" y no "12 meses"
+### Sin detalle de sensores *(corregido al implementar)*
 
-Los resúmenes se agregan por **año calendario** (`/api/climate/noaa?year=`). Una ventana
-móvil de doce meses obligaría a pedir dos años y pegarlos a mano para ganar bien poco. Se
-rotula "AÑO" para que diga la verdad.
+El plan preveía una variable `sens` para las cuatro celdas de sensores. **No la hay**: el
+rollup diario (`flatten_stats`) sólo guarda campos de la estación principal —`temp_*`,
+`hum_*`, `wind_*`, `gust_max`, `rain_*`, `press_*`, `uv_max`, `solar_max`— y ninguno por
+canal, así que sus periodos de 7 y 30 días saldrían vacíos. Esas celdas van a la página
+3, que ya enseña justo eso con el dato de ahora.
+
+### "12 MESES" y no "AÑO" *(corregido al implementar)*
+
+El plan decía año calendario porque `/api/climate/noaa` agrega así. Al final el periodo
+largo sale de agrupar por año-mes los 365 días de `/api/summaries/daily`, lo que da una
+**ventana móvil de doce meses** — mejor que el año en curso, que en enero sería una sola
+columna. La agrupación tiene que ser por `YYYY-MM` y no por número de mes: con 365 días
+dentro, agosto del año pasado y el de éste caerían en la misma columna.
+
+Las estadísticas sí usan el año calendario (`stats-ano`), que es lo que se espera de un
+"resumen del año".
 
 ## Anatomía de una pantalla de detalle
 
@@ -176,19 +189,34 @@ páginas, así que consola → detalle → consola es un intercambio puro, sin r
 
 ### Servidor `ecowitt-weather-server-xe1e`
 
-| Archivo | Qué | Estado |
-|---|---|---|
-| `dashboard/src/kiosk-nav.ts` | Tabla única: slugs, variables, periodos, TTL, padres, colores | ✅ hecho |
-| `dashboard/src/pages/kiosk/nav-zones.tsx` | Medir el DOM, serializar el mapa, overlay `?debug=nav` | ✅ hecho |
-| `dashboard/src/components/station/console-css.ts` | El CSS de la consola, extraído para compartirlo | ✅ hecho |
-| `dashboard/src/components/station/ConsoleReplica.tsx` | `data-nav` en las celdas | ⏳ 4 de 15 |
-| `dashboard/src/pages/kiosk/DetailPage.tsx` | La plantilla (variable × periodo) | ⏳ |
-| `dashboard/src/pages/kiosk/StatsPage.tsx` | Las cuatro vistas de estadísticas | ⏳ |
-| `dashboard/src/pages/kiosk/MenuPage.tsx` | Menú de las clásicas + cámara | ⏳ |
-| `dashboard/src/pages/kiosk/CamaraPage.tsx` | Foto del exterior, degradando con gracia | ⏳ |
-| `dashboard/src/pages/KioskPage.tsx` | Enrutar los slugs nuevos | ⏳ |
-| `receiver/app/main.py` | `/api/summaries/daily?days=N` | ⏳ |
-| `renderer/app.py` | Validar por regex, leer el mapa del DOM y devolverlo en cabecera, TTL por página, precalentado adaptativo | ⏳ |
+Todo **hecho** (commit `5028205`):
+
+| Archivo | Qué |
+|---|---|
+| `dashboard/src/kiosk-nav.ts` | Tabla única: slugs, variables, periodos, TTL, padres, colores |
+| `dashboard/src/pages/kiosk/nav-zones.tsx` | Medir el DOM, serializar el mapa, overlay `?debug=nav` |
+| `dashboard/src/pages/kiosk/chrome.tsx` | Marco común: cabecera, cifras y barra de botones |
+| `dashboard/src/components/station/console-css.ts` | El CSS de la consola, extraído para compartirlo |
+| `dashboard/src/components/station/ConsoleReplica.tsx` | `data-nav` en las 17 celdas y publicación del mapa |
+| `dashboard/src/pages/kiosk/DetailPage.tsx` | La plantilla (variable × periodo) |
+| `dashboard/src/pages/kiosk/StatsPage.tsx` | Las cuatro vistas de estadísticas |
+| `dashboard/src/pages/kiosk/MenuPage.tsx` | Menú de las clásicas + cámara |
+| `dashboard/src/pages/kiosk/CamaraPage.tsx` | Foto del exterior, degradando con gracia |
+| `dashboard/src/pages/KioskPage.tsx` | Enrutar los slugs nuevos; zonas también en las páginas 1-5 |
+| `receiver/app/main.py` | `/api/summaries/daily?days=N` |
+| `renderer/app.py` | Validar por forma, leer el mapa del DOM y devolverlo en cabecera, TTL por página, precalentado adaptativo |
+
+**Las páginas 1-5 también publican zonas**, mapeando su barra de pestañas. No estaba
+previsto, pero dejarlas fuera obligaba al firmware a mantener vivo su reparto por la X
+sólo para ellas: con esto hay UNA forma de navegar en todo el display, y de paso el
+toque fuera de la barra las devuelve al menú en vez de no hacer nada.
+
+**`VALID_PAGES` desaparece del renderer.** Estaba previsto sustituirla por una regex
+copiada de `kiosk-nav.ts`, pero eso son dos listas que sincronizar: el mismo problema
+que este plan quita del firmware. Ahora sólo se valida la FORMA del slug
+(`^[a-z0-9][a-z0-9-]{0,31}$`) y quien decide qué existe es el dashboard, que cae a la
+consola si no lo reconoce. La caché es un LRU de 64 entradas para que pedir slugs
+inventados no la haga crecer sin límite.
 
 ### Firmware `ecowitt-display-kiosk-xe1e`
 
@@ -249,12 +277,31 @@ hecho un reflasheo que ya no hará falta.
 
 ## Avance
 
-Hecho hasta la pausa del 2026-08-06:
+**Fase 1 terminada el 2026-08-06** (commit `5028205`). Todo lo de la tabla de arriba,
+más las cuatro correcciones que salieron al implementar: sin variable `sens`, "12 MESES"
+en vez de "AÑO", validación por forma en vez de lista, y zonas también en las páginas
+1-5.
 
-- `kiosk-nav.ts` con las siete variables, los cuatro periodos, las cuatro vistas de
-  estadísticas, la cámara, los TTL, los padres y la regex de slugs válidos.
-- `nav-zones.tsx` con la medición del DOM, la serialización y el overlay de depuración.
-- `console-css.ts`: el CSS de la consola extraído y ya compartido; `ConsoleReplica` lo
-  importa en vez de llevarlo dentro.
-- `data-nav` puesto en 4 de las 15 celdas de la consola (EXT, VIENTO, HUMEDAD, PRES).
-- `tsc` limpio. Nada desplegado todavía; el display sigue con la versión anterior.
+Comprobado antes de desplegar:
+
+- Las **36 pantallas** capturadas con Playwright y datos simulados, revisadas una a una.
+  Tres fallos que sólo se vieron mirándolas: `4 de 7` y `12 de 28` salían como `4 dE 7`
+  en siete segmentos (ahora hay un `esCifra()` que los saca de DSEG); el eje de 24 h iba
+  del revés porque el histórico no garantiza orden y había que ordenarlo; y faltaba
+  leyenda donde se dibujan dos series.
+- El **overlay de zonas** sobre la consola: sus 17 celdas caen exactamente donde se ven
+  y cada una apunta a su destino.
+- El **renderer real** contra el vite local: cabecera `X-Kiosk-Nav` correcta y
+  `Cache-Control` siguiendo el TTL de cada página (45 / 900 / 1800 s). Un slug inválido
+  cae a la consola sin ensuciar la caché.
+
+### Lo que sigue: fase 2 (firmware)
+
+Nada de la fase 1 la necesita para funcionar —el display de hoy ignora la cabecera y
+sigue con su barra de pestañas—, así que se puede desplegar el servidor y flashear
+cuando convenga.
+
+Al llegar ahí, el orden que menos arriesga: primero parsear la cabecera y navegar con
+las zonas conservando el reparto por la X como respaldo, comprobar que se recorre el
+árbol entero, y sólo entonces quitar `NUM_TABS`/`MAX_PAGE_ID` y pasar la página de `int`
+a slug con hash FNV-1a para la contabilidad de framebuffers.
