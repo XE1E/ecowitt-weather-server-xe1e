@@ -52,19 +52,9 @@ const STALE_MIN = 5
 const DIR16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const cardinal = (deg?: number) => (deg == null ? '--' : DIR16[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16])
 
-/**
- * Adapta un rumbo para dibujarlo en DSEG7. Esa fuente forma las letras con los mismos
- * siete segmentos que las cifras y no todas le salen a la misma altura: medido sobre el
- * propio archivo a cuerpo 60, los dígitos y la `E` dan 60 px de tinta, pero la `O` y la
- * `N` sólo 34 --poco más de la mitad-- y la `S` sale como una `b`, sin la barra de
- * arriba. Puestas al lado de la `E` parecen recortadas.
- *
- * Se sustituyen por los dígitos que tienen la MISMA forma a altura completa: `O`→`0` y
- * `S`→`5`, que es lo que hace un display real. La `N` se queda como está porque no hay
- * equivalente: una N mayúscula no se puede dibujar con siete segmentos --pediría una
- * diagonal-- así que en los siete rumbos que la llevan seguirá siendo más baja.
- */
-const seg7 = (s: string) => s.replace(/O/g, '0').replace(/S/g, '5')
+// El rumbo se dibuja con sus letras tal cual: la fuente DSEG14 (catorce segmentos) las
+// tiene todas a altura completa. Hubo aquí un `seg7()` que cambiaba O→0 y S→5 para
+// esquivar los glifos a media altura de DSEG7; sobra desde que existe la clase `.seg14`.
 
 // Geometría del compás ovalado. El aspecto del óvalo es intencional (la consola
 // física es más ancha que alta): RX/RY también orientan el marcador de dirección.
@@ -499,6 +489,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
   const css = `
     @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
+    /* DSEG14: sólo para el RUMBO del viento. Con siete segmentos no se pueden dibujar
+       la N ni la O a altura completa; con catorce sí, porque añaden diagonales. Ver
+       public/fonts/README.md. */
+    @font-face{font-family:'DSEG14';src:url('/fonts/DSEG14Classic-Bold.woff2') format('woff2');font-display:block}
     .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
       --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#6b7280;--brd-derivada:#ffffff;--brd-reloj:#ff4128;
       font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
@@ -507,6 +501,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px}
     /* Números en fuente 7-segmentos (DSEG). Clases de glow por variable meteorológica */
     .cns .seg,.cns .big,.cns .gt,.cns .gh,.cns .gp,.cns .gr,.cns .gv,.cns .gy{font-family:'DSEG7','Roboto Condensed',monospace}
+    /* Catorce segmentos, para TEXTO con letras. Va aparte de la clase .seg a propósito:
+       esa es para cifras y arrastra DSEG7.
+       (Ojo: nada de comillas invertidas en estos comentarios; todo este CSS es una
+       plantilla de JavaScript delimitada por ellas y una suelta la corta en seco.) */
+    .cns .seg14{font-family:'DSEG14','Roboto Condensed',monospace}
     .cns .gt{color:var(--t);text-shadow:0 0 12px rgba(249,115,22,.55)}
     .cns .gh{color:var(--h);text-shadow:0 0 12px rgba(59,130,246,.55)}
     .cns .gp{color:var(--p);text-shadow:0 0 12px rgba(167,139,250,.55)}
@@ -591,12 +590,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
             <HouseGlyph />
           </div>
-          {/* El termómetro SUBE al borde de arriba. Abajo estaba en la única franja
-              que queda libre a lo ancho, y ahí es donde hacen falta los píxeles para
-              poner la HORA junto al mín/máx. Arriba no estorba: el rótulo se fue y el
-              número, aunque centrado en la celda, empieza en x≈100 mientras el icono
-              acaba en x≈84. Mismo movimiento en HUMEDAD. */}
-          <div style={{ position: 'absolute', top: 2, left: 12 }}>
+          {/* El termómetro se CENTRA a lo alto, en la banda que va del borde de arriba
+              hasta donde empieza el mín/máx (de ahí el `bottom: 30`). Pegado al borde
+              superior se veía apretado, y centrarlo en la celda ENTERA no vale: a 72 px
+              su bulbo bajaría hasta y≈101 y el mín/máx arranca en y≈98, con lo que se
+              tocarían en x 46-84. Centrado en la banda queda en y 14-86, con aire por
+              arriba y por abajo y sin rozar nada.
+              Ya no puede estorbar al valor: el rótulo se fue y el número, aunque
+              centrado en la celda, empieza en x≈100 mientras el icono acaba en x≈84.
+              Mismo criterio en HUMEDAD y en PRES. */}
+          <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -675,11 +678,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
               <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
             </span>
-            {/* `seg7` cambia O→0 y S→5, los dos caracteres que DSEG7 dibuja a media
-                altura o sin la barra de arriba. Ver su comentario para el detalle y para
-                por qué la N no se puede arreglar. */}
-            <span className="seg" style={{ fontSize: 24, letterSpacing: 1 }}>
-              {seg7(cardinal(dir))}
+            {/* El rumbo va en DSEG14 --catorce segmentos-- y con sus LETRAS de verdad.
+                En DSEG7 la N y la O sólo alcanzan 34 px de tinta sobre 60 y la S sale
+                sin la barra de arriba, así que "OSO" se leía "oSo"; sustituirlas por
+                cifras parecidas (O→0, S→5) igualaba la altura pero escribía "0S0". Con
+                catorce segmentos hay diagonales y las cuatro letras salen completas: N
+                58 px, E/S/O 60. Medido sobre los archivos, no supuesto.
+                Sigue siendo la estética de display: los catorce segmentos son lo que
+                usan los rótulos alfanuméricos de los aparatos de verdad, y las cifras de
+                la consola siguen en siete. El más ancho de los 16 rumbos es NNE con 57
+                px a cuerpo 24, así que cabe de sobra. */}
+            <span className="seg14" style={{ fontSize: 24, letterSpacing: 1 }}>
+              {cardinal(dir)}
             </span>
           </div>
           {/* El RUMBO en el sitio que ocupaba la manga de viento. La manga era
@@ -799,7 +809,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Sin rótulo "HUMEDAD": la gota lo dice. Mismo apaño que en EXT para que el
               número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
               borde de arriba, para dejarle la franja de abajo a las horas. */}
-          <div style={{ position: 'absolute', top: 6, left: 12 }}>
+          <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="humidity" size={65} color="#3b82f6" title="humedad" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -843,10 +853,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
               llega hasta x≈82 y la palabra entera se le echaba encima--.
               El número no se mueve: marginTop de -12 a +6, los 18 px del rótulo. */}
-          {/* El barómetro SUBE al borde de arriba, como el termómetro de EXT y la gota
-              de HUMEDAD: las tres celdas de lectura grande llevan ahora su icono en la
-              misma esquina. Abajo ya no hace falta que le deje sitio al riel. */}
-          <div style={{ position: 'absolute', top: 6, left: 12 }}>
+          {/* El barómetro, como el termómetro y la gota, CENTRADO a lo alto en la banda
+              libre: aquí lo que la limita por abajo es el riel (que va en `bottom: 4` y
+              mide 32), de ahí el `bottom: 40`. Queda en y 22-68.
+              Convive con la lectura porque están uno al lado del otro, no encima: el
+              glifo acaba en x≈58 y la cifra más larga de la consola ("1025.8" con su
+              unidad, alineada a la derecha) empieza en x≈56. Por eso sigue a 46 px y no
+              más grande. */}
+          <div style={{ position: 'absolute', top: 0, bottom: 40, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
