@@ -1,7 +1,11 @@
 # Plan — Cámara del exterior de la estación
 
-> Escrito el 2026-08-05. Vive en git. Cámara **comprada**, aún **no recibida**:
-> todo lo de "Puesta en marcha" en adelante está sin ejecutar.
+> Escrito el 2026-08-05, actualizado el 2026-08-06. Vive en git.
+>
+> **Estado:** cámara comprada, aún no recibida. **Todo el lado del servidor está hecho
+> y desplegado** (endpoints, retención, página del kiosco) y probado con una foto real.
+> Lo que falta depende del hardware: la puesta en marcha física y el script de casa
+> que saque el JPEG del RTSP y lo empuje.
 
 ## Objetivo
 
@@ -113,23 +117,41 @@ Antes de escribir una línea de código:
 - [ ] Decidir el encuadre **como fijo y definitivo**: con timelapse, cualquier
       reajuste posterior parte la serie en dos.
 
-## Implementación — pendiente
+## Implementación
+
+**El lado del SERVIDOR está hecho y desplegado (2026-08-06).** Falta sólo lo de casa,
+que depende de tener la cámara físicamente.
 
 - [ ] **Captura en casa.** `ffmpeg` sacando un JPEG del RTSP cada N minutos.
       Decidir dónde corre (¿PC de siempre, una Pi, el propio router?) y cómo se
       programa.
-- [ ] **Transporte al VPS.** Subida de la foto. Decidir mecanismo (SCP con clave
-      dedicada, o un POST autenticado contra el FastAPI) y **con qué credencial**, que
-      no sea la de administración.
-- [ ] **Endpoint en el receiver.** Servir la última foto y su marca de tiempo; decidir
-      retención (¿se guardan todas para el timelapse, cuántos días?).
-- [ ] **Timelapse diario.** Generarlo en el VPS o en casa, y dónde se publica.
-- [ ] **Dashboard y kiosco.** Tarjeta en el dashboard y página nueva en el kiosco.
-      Ojo: añadir página al kiosco **toca también el firmware**
-      (`ecowitt-display-kiosk-xe1e`), que tiene el número de pestañas cableado — ver
-      el contrato de la tab-bar en `docs/PLAN-CONSOLA-XE1E.md` de ese repo.
-- [ ] **Degradar con gracia** si la foto está vieja o no llega, como se acordó para el
-      SMN: decirlo, no dejar el hueco en blanco.
+- [x] **Transporte al VPS.** POST autenticado contra el FastAPI, con **token propio**
+      (`CAMERA_UPLOAD_TOKEN`) y no el de administración: lo lleva un script
+      desatendido y, si se filtra, sólo permite subir fotos. Sin token, la ruta
+      responde 503 y no guarda nada.
+
+      ```bash
+      curl -H "X-Camera-Token: $TOKEN" --data-binary @foto.jpg \
+           https://clima.xe1e.net/api/camera/upload
+      ```
+- [x] **Endpoint en el receiver.** `upload`, `latest.jpg`, `status` y `days`, en
+      `receiver/app/services/camera.py`. Retención por **días completos**
+      (`CAMERA_RETENTION_DAYS`, 7 por defecto): si un día la cadencia falla y sólo
+      llegan diez capturas, borrar "las más viejas" se comería días enteros de
+      historia buena a cambio de nada.
+- [ ] **Timelapse diario.** Generarlo en el VPS o en casa, y dónde se publica. El
+      histórico ya se está guardando en `<camera_dir>/YYYY-MM-DD/HHMMSS.jpg` y
+      `GET /api/camera/days` dice qué hay.
+- [x] **Kiosco.** Página `camara`, en el menú que abre el reloj. **No hizo falta tocar
+      el firmware**: ver la sección de arriba.
+- [ ] **Dashboard web.** Ruta bajo `/pro` con su entrada en `StationLayout`.
+- [x] **Degradar con gracia.** Sin foto dice «SIN IMAGEN · LA CÁMARA AÚN NO ESTÁ
+      CONFIGURADA»; con foto de más de 20 min (el doble de la cadencia acordada) marca
+      **FOTO ANTIGUA** sobre la propia imagen, no en un pie que nadie miraría.
+
+Probado de punta a punta contra producción con una foto real de la estación: subida
+correcta, rechazo de lo que no es JPEG (400), rechazo sin token (401) y la página del
+kiosco renderizando la imagen encuadrada con su hora de captura.
 
 ## Orientación: al horizonte — DECIDIDO (2026-08-05)
 
