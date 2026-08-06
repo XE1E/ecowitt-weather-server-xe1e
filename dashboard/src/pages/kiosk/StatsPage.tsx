@@ -53,18 +53,20 @@ const val = (b?: Best | number) => (typeof b === 'number' ? b : b?.value)
 const fecha = (b?: Best | number) => (typeof b === 'number' ? undefined : b?.date)
 
 export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
-  const { stats } = useStationData()
+  const { stats, loading } = useStationData()
   const u = useUnits()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [rec, setRec] = useState<Records | null>(null)
   const [otd, setOtd] = useState<OnThisDay | null>(null)
   const [pedido, setPedido] = useState(false)
 
-  // HOY no necesita red: el resumen del día ya viaja en el contexto.
+  // HOY no necesita red PROPIA, pero sí esperar al contexto: su resumen del día viaja
+  // ahí y tarda lo que tarde `/api/stats/daily`. Marcarse listo al instante era
+  // capturar la pantalla entera en "--", que es como salió en el primer despliegue.
   const necesitaRed = s !== 'hoy'
 
   useEffect(() => {
-    if (!necesitaRed) { setPedido(true); return }
+    if (!necesitaRed) { setPedido(!loading); return }
     let vivo = true
     Promise.all([
       fetch('/api/climate/records').then((r) => (r.ok ? r.json() : null)),
@@ -76,7 +78,7 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
       setRec(a); setOtd(b); setPedido(true)
     }).catch(() => vivo && setPedido(true))
     return () => { vivo = false }
-  }, [s, necesitaRed])
+  }, [s, necesitaRed, loading])
 
   const { titulo, filas, pie } = useMemo(() => {
     const T = VARIABLES.temp.glow, H = VARIABLES.hum.glow, P = VARIABLES.press.glow
