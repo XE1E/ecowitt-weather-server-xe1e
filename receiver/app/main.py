@@ -5,7 +5,7 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException, Header, Response, Body, UploadFile, File
+from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
@@ -1811,10 +1811,15 @@ _camera = CameraStore(
 
 
 @app.post("/api/camera/upload")
-async def camera_upload(request: Request, file: UploadFile = File(None)):
+async def camera_upload(request: Request):
     """
     Recibe una captura del exterior. Acepta multipart (campo `file`) o el JPEG en
     crudo como cuerpo, que es lo que sale de un `curl --data-binary` desde un script.
+
+    El cuerpo se lee A MANO en vez de declarar `file: UploadFile` en la firma: con el
+    parámetro declarado, FastAPI intenta parsear como formulario CUALQUIER envío, así
+    que un `--data-binary` sin `Content-Type` --lo más natural desde un script-- se
+    caía con un 500 antes de llegar a la validación. Comprobado contra producción.
 
     Autenticación por token propio en `X-Camera-Token` (o `?token=`), NO el del panel
     de administración: esto lo va a llamar un script desatendido en una máquina de
@@ -1834,7 +1839,13 @@ async def camera_upload(request: Request, file: UploadFile = File(None)):
     if not secrets.compare_digest(recibido, esperado):
         raise HTTPException(status_code=401, detail="Token inválido")
 
-    data = await file.read() if file is not None else await request.body()
+    if request.headers.get("content-type", "").startswith("multipart/form-data"):
+        form = await request.form()
+        subida = form.get("file")
+        data = await subida.read() if hasattr(subida, "read") else b""
+    else:
+        data = await request.body()
+
     try:
         meta = _camera.save(data)
     except ValueError as e:
