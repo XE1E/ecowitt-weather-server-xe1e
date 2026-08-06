@@ -141,6 +141,28 @@ docker compose down                    # detener (conserva volúmenes/datos)
 > Verifica que el contenedor trae el código esperado, p. ej.:
 > `docker compose exec receiver grep -c <algo-nuevo> app/main.py` (debe ser > 0).
 
+> ⚠️ **Cambios sólo de `dashboard`: añade `--no-deps`.** Sin él, compose arrastra al
+> `receiver` y lo recrea, y el "último dato" del receiver vive en RAM: la consola y el
+> kiosco se quedan con `--` en todas las celdas de la estación principal hasta el
+> siguiente POST de la WS2910 (1-2 min). Se repuebla solo, pero es un susto evitable:
+>
+> ```bash
+> docker compose up -d --build --force-recreate --no-deps dashboard
+> ```
+
+> ⚠️ **Cambios VISUALES del kiosco: reinicia el `renderer` después.** Cada pantalla
+> declara cuánto vale su imagen (`data-kiosk-ttl`, de 45 s la consola a 1 h un resumen
+> mensual) y el renderer la guarda en memoria. Recrear el dashboard **no** vacía esa
+> caché, así que una pantalla de TTL largo puede seguir sirviendo el dibujo anterior
+> durante una hora y parecer que el deploy no funcionó:
+>
+> ```bash
+> docker compose restart renderer
+> ```
+>
+> Comprobado el 2026-08-06: tras desplegar, `det-wind-24h` (TTL 5 min) ya mostraba lo
+> nuevo mientras `det-wind-7d` (TTL 15 min) seguía con la imagen vieja.
+
 Los datos de InfluxDB persisten en el volumen `influxdb-data`.
 
 ## 8. Backups de InfluxDB
