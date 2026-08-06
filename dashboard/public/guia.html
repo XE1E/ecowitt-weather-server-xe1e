@@ -120,6 +120,10 @@
   }
   h2 { font-size: clamp(21px, 3vw, 27px); margin: 0 0 16px; letter-spacing: -.01em; text-wrap: balance; font-weight: 660; }
   h3 { font-size: 17px; margin: 26px 0 8px; font-weight: 640; }
+  /* Cuarto nivel, para desglosar una pestaña larga (la Consola) sin que sus partes
+     parezcan pestañas nuevas: más chico que h3 y en el gris de los rótulos. */
+  h4 { font-size: 14px; margin: 18px 0 6px; font-weight: 660; color: var(--muted);
+       letter-spacing: .01em; }
   p, li { max-width: 68ch; }
   p { margin: 0 0 14px; color: var(--ink); }
   section p, section li { color: color-mix(in srgb, var(--ink) 90%, var(--muted)); }
@@ -432,7 +436,39 @@
 
       <h3>Consola</h3>
       <p>Una <strong>réplica de la consola física Ecowitt</strong>, con su tipografía de siete segmentos y su rejilla de celdas. Es exactamente la vista que se despliega en la pantalla del kiosco, así que sirve para verla desde el navegador. Todo lo que muestra son los mismos datos que el resto del sitio, sólo presentados como una consola de estación.</p>
-      <p>Dos celdas merecen una lectura con calma. La de <strong>viento</strong> trae el rumbo en grados al centro de un óvalo y una flecha que recorre su borde apuntando de dónde viene el aire, con el promedio a la izquierda y la ráfaga a la derecha. La de <strong>lluvia</strong> trae los tres números que se explican más arriba, cada uno rotulado: <strong>EVENTO</strong> (el chubasco, que no se reinicia a medianoche), <strong>TASA</strong> (la intensidad de ahora, en mm/h) y <strong>DÍA</strong> (lo caído desde las 00:00).</p>
+      <p>Varias celdas <strong>no llevan título</strong>: las identifica su dibujo, igual que en una consola de verdad. El termómetro es la temperatura exterior, la gota es la humedad, el barómetro la presión y el óvalo con la flecha el viento.</p>
+
+      <p><strong>El color del contorno dice de dónde viene el dato</strong>, y es la forma más rápida de orientarse:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Contorno</th><th>Qué agrupa</th></tr></thead>
+          <tbody>
+            <tr><td>Ámbar</td><td>Lo que mide la estación principal, en el patio</td></tr>
+            <tr><td>Verde</td><td>El sensor del jardín</td></tr>
+            <tr><td>Gris</td><td>La estación remota, en el otro domicilio</td></tr>
+            <tr><td>Blanco</td><td>Lo que no es una lectura directa: el estado del cielo, el sol y la luna, y el índice de calidad del aire</td></tr>
+            <tr><td>Rojo</td><td>El reloj</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>La celda del viento</h4>
+      <p>En el <strong>centro del óvalo va la velocidad</strong> de este momento, con su unidad debajo. Arriba a la izquierda, la dirección en grados; arriba a la derecha, la misma dirección en letras (<code>NNE</code>, <code>OSO</code>…). La flecha recorre el borde del óvalo apuntando <strong>de dónde viene</strong> el aire.</p>
+      <p>Al pie, dos cifras que conviene no confundir. <strong>PROMEDIO</strong> es la media de los últimos diez minutos, no la lectura del instante: sirve para saber si de verdad hace viento o si fue un soplo. <strong>RÁFAGA DÍA</strong> es el pico más alto de toda la jornada, no la ráfaga de ahora — un día de viento se recuerda por su máxima, y esa cifra no baja hasta la medianoche.</p>
+
+      <h4>La celda de la lluvia</h4>
+      <p>Tres números rotulados, cada uno responde a una pregunta distinta: <strong>TASA</strong> dice si está lloviendo <em>ahora</em> y con qué fuerza (en mm/h), <strong>EVENTO</strong> cuánto ha caído en este chubasco (y no se reinicia a medianoche, así que por la mañana todavía cuenta lo de anoche) y <strong>MES</strong> cuánto llevamos acumulado en el mes.</p>
+      <p>Abajo, un <strong>histograma de los últimos siete días</strong>: una barra por día con su inicial debajo, la de hoy en blanco y las demás en gris. Es lo que las cifras solas no pueden decir — si los milímetros del mes cayeron de golpe en una tormenta o repartidos toda la semana. Sobre la barra más alta va su valor, para darle escala al resto. Una barra <strong>gris</strong> significa que de ese día no se guardó resumen, que no es lo mismo que no haber llovido.</p>
+
+      <h4>Mínimas, máximas y su hora</h4>
+      <p>Las celdas de temperatura y humedad muestran, en su renglón de abajo, la <strong>mínima y la máxima del día con la hora</strong> a la que ocurrieron. Es un dato que una cifra suelta no da: 27 °C de máxima a las tres de la tarde es un día normal; a las diez de la mañana, no.</p>
+
+      <h4>Las barritas de nivel</h4>
+      <p>Bajo los números de <strong>solar</strong>, <strong>UV</strong> e <strong>ICA</strong> hay una barra que se llena según lo alto que esté el valor en su escala. El número ya viene con color según su categoría, pero el color sólo se entiende recordando los cortes; la barra se entiende sin recordar nada. Lo mismo hace el riel de la celda de presión, que muestra <em>cuánto</em> ha cambiado en tres horas mientras la flecha dice el sentido.</p>
+
+      <h4>Baterías y avisos</h4>
+      <p>En la esquina inferior derecha de algunas celdas hay una <strong>pila</strong>: verde si el sensor tiene batería, roja si está por acabarse. Y si la estación deja de reportar, el nombre en la celda del reloj se convierte en un <strong>aviso rojo «SIN DATOS»</strong> con los minutos que lleva callada. Eso importa: sin él, la consola seguiría mostrando los últimos números con el reloj corriendo al lado, y parecerían frescos.</p>
+      <p>Dos cosas que <strong>no son fallos</strong>. <strong>HUMIDEX</strong> marca <code>--</code> cuando la temperatura no llega a 20 °C, porque es un índice de bochorno y por debajo de eso no significa nada. Y la celda <strong>REMOTA WN32</strong> está en blanco hasta que ese sensor esté instalado; se dejó puesta a propósito, mostrando <code>--</code>, en vez de rellenarla con la lectura de interior.</p>
 
       <h3>Vista clásica</h3>
       <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas. Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>

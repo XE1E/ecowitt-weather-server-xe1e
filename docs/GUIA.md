@@ -270,7 +270,7 @@ pinta. Se navega tocando la **barra inferior de 6 pestañas**.
 | 3 | `3` | Sensores: interior, jardín (CH1) y remota GW1100 | `KioskPage.tsx` |
 | 4 | `4` | Pronóstico de 7 días | `KioskPage.tsx` |
 | 5 | `5` | Resumen multivariable de 48 h (temp, presión, lluvia, viento, humedad) | `MultiVariableChart` en modo `2day` + `kiosk` |
-| 6 | `consola` | Réplica de la consola física Ecowitt, pantalla completa sin barra | `ConsoleReplica` en modo `kiosk` |
+| 6 | `consola` | Réplica de la consola física Ecowitt (rejilla 3×5), pantalla completa sin barra | `ConsoleReplica` en modo `kiosk` |
 
 > El **orden y el número** de pestañas deben coincidir con `NUM_PAGES` del
 > firmware, que mapea el toque en la franja inferior a la página según la X.
@@ -288,6 +288,55 @@ El display tiene un **BME280 integrado** que envía sus lecturas al servidor
 persisten en `/data/kiosk_local.json` para sobrevivir reinicios del contenedor.
 Configuración WiFi por portal cautivo (*WiFiManager*). Firmware y documentación:
 [ecowitt-display-kiosk-xe1e](https://github.com/XE1E/ecowitt-display-kiosk-xe1e).
+
+### La réplica de consola (`ConsoleReplica`)
+
+Rejilla de **3 columnas × 5 filas** en 1024×600, con la celda del viento abarcando
+las dos primeras filas. Cada celda lleva **contorno de color según el origen** del
+dato, que es lo que agrupa la pantalla de un vistazo:
+
+| Contorno | Significado | Celdas |
+|----------|-------------|--------|
+| Ámbar | Lectura de la estación principal | EXT, HUMEDAD, PRES, VIENTO, LLUVIA, INTERIOR, ROCÍO/SENSACIÓN/HUMIDEX |
+| Verde | Sensor de canal (WN31) | JARDÍN |
+| Gris | Estación remota | REMOTA WN32, REMOTA GW1100, PRESIÓN GW1100 |
+| Blanco | Ni lectura cruda ni de la estación | condición, sol/luna, SOLAR, UV, ICA |
+| Rojo (4 px) | Reloj | fecha/hora |
+
+Varias celdas **no llevan rótulo** (EXT, HUMEDAD, PRES, VIENTO, LLUVIA): las
+identifica su icono —termómetro, gota, barómetro— igual que en una consola física.
+Los glifos de ubicación son **una sola casa en dos versiones**: hueca = sensor a la
+intemperie, rellena = bajo techo.
+
+Datos que **sólo existen para esta vista** y conviene no confundir con lecturas del
+aparato:
+
+- **PROMEDIO** del viento usa `wind_speed_avg10m`, que **calcula el servidor** sobre
+  las muestras guardadas: la estación no manda ningún promedio (el campo
+  `windspdmph_avg10m` es del protocolo Wunderground, no del formato Ecowitt, y se
+  verificó contra InfluxDB que nunca llega). `wind_speed` es instantánea y es la que
+  va en el centro del óvalo. **RÁFAGA DÍA** es `wind_gust_max_daily`, no la ráfaga
+  del instante.
+- El **histograma de lluvia** de 7 días viene de `/api/rain/daily` (ver §13).
+- El **aviso «SIN DATOS»** sustituye al nombre de la estación en la celda del reloj
+  cuando la última lectura tiene 5 min o más. Cuidado al tocarlo: el `timestamp` de
+  `/api/current` viene en UTC pero **sin sufijo de zona**, y `new Date()` interpreta
+  un ISO sin zona como hora local; sin añadirle la `Z` la antigüedad sale desfasada
+  las 6 h del huso y el aviso nunca salta.
+- **HUMIDEX** aparece sólo con 20 °C o más, porque el receiver no lo calcula por
+  debajo (§4). Un `--` ahí de madrugada es correcto.
+
+**Dos tipografías**, las dos de la familia DSEG (OFL) en `dashboard/public/fonts/`:
+**DSEG7** de siete segmentos para las cifras y **DSEG14** de catorce para el rumbo
+del viento. Hacen falta las dos porque con siete segmentos la `N` y la `O` salen a
+media altura y la `S` sin la barra de arriba, así que `OSO` se leía «oSo». Las dos van
+**sin modificar**: su licencia reserva el nombre «DSEG» y la OFL 1.1 prohíbe que una
+versión modificada lo conserve, de modo que subconjuntarlas obligaría a renombrarlas.
+Detalle en el `README.md` de esa carpeta.
+
+> **Ojo con las clases de glow** (`.gt .gh .gp .gr .gv .gy`): además del color
+> arrastran `font-family: DSEG7`, así que aplicadas a texto con letras lo deforman.
+> Para texto, `.seg14` o color inline.
 
 ### SVITRIX-XE1E (Ulanzi TC001)
 
@@ -474,7 +523,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 
 | Endpoint | Devuelve |
 |----------|----------|
-| `GET /api/current` | última lectura |
+| `GET /api/current` | última lectura. Además de lo que manda la estación añade, calculados al servir: los acumulados de lluvia semanal/mensual/anual que falten y `wind_speed_avg10m`, el promedio de viento de 10 min (la estación no manda ninguno) |
 | `GET /api/history?start=-24h` | histórico crudo |
 | `GET /api/stats/daily` | mín/máx/prom del día |
 | `GET /api/stats/records?start=-30d` | mín/máx/prom del rango |
@@ -486,6 +535,8 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/climate/onthisday` | efeméride: mismo día en años previos |
 | `GET /api/climate/noaa?year=&month=` | reporte NOAA mensual/anual |
 | `GET /api/wind/rose?start=-7d` | rosa de vientos (16 sectores) |
+| `GET /api/rain/daily?days=7` | lluvia por día **local** de los últimos N días (histograma de la consola). Un día sin resumen devuelve `null`, no `0`; el día en curso se completa con el acumulado vivo, porque su resumen no se cierra hasta la medianoche |
+| `GET /api/rain/last` | fecha/hora de la última lluvia registrada |
 | `GET /api/almanac` | almanaque astronómico |
 | `GET /api/alerts` | alertas activas |
 | `GET /api/metar?station=` · `GET /api/taf?station=` | METAR y TAF de un aeropuerto |
