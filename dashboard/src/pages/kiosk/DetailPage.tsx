@@ -140,6 +140,10 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [dias, setDias] = useState<DailyRow[] | null>(null)
   const [rumbo, setRumbo] = useState<string | null>(null)
+  // Aparte del rumbo: hay que saber si la petición YA VOLVIÓ, aunque sea sin dato.
+  // Si se esperase a `rumbo`, un periodo sin viento dejaría la página sin marcar
+  // "lista" y el renderer se comería los 15 s del tiempo de espera.
+  const [rosaLista, setRosaLista] = useState(false)
 
   const def = VARIABLES[v]
   const serie = SERIES[v]
@@ -164,10 +168,12 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
     if (v !== 'wind') return
     const start = p === '24h' ? '-24h' : p === '7d' ? '-7d' : p === '30d' ? '-30d' : '-365d'
     let vivo = true
+    setRosaLista(false)
     fetch(`/api/wind/rose?start=${start}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => vivo && setRumbo(j?.dominant ?? j?.dominant_direction ?? null))
+      .then((j) => vivo && setRumbo(j?.dominant ?? null))
       .catch(() => {})
+      .finally(() => vivo && setRosaLista(true))
     return () => { vivo = false }
   }, [v, p])
 
@@ -320,7 +326,12 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
   // Listo para capturar: en 24 h basta con el histórico del contexto; en los demás,
   // con que la petición de resúmenes haya vuelto (aunque venga vacía: mejor capturar
   // "sin datos" que dejar al display esperando quince segundos).
-  const ready = readyProp ?? (porDia ? dias != null : (history?.length ?? 0) > 0)
+  //
+  // El viento espera ADEMÁS a la rosa. Sin esto se capturaba con el rumbo en "--":
+  // esa consulta recorre las lecturas crudas del periodo --diez mil en siete días--
+  // y siempre llegaba después de los resúmenes. Visto en producción, no en local.
+  const ready = readyProp
+    ?? ((porDia ? dias != null : (history?.length ?? 0) > 0) && (v !== 'wind' || rosaLista))
   useNavZones(rootRef, slug)
 
   const vacio = puntos.length === 0
