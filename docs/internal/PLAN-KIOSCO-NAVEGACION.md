@@ -4,8 +4,8 @@
 > `ecowitt-weather-server-xe1e` (dibuja las páginas) y **firmware**
 > `ecowitt-display-kiosk-xe1e` (las muestra y lee el toque).
 >
-> **Estado: FASE 1 (servidor) COMPLETA** y commiteada. Queda la fase 2, el firmware.
-> Ver *Avance* al final.
+> **Estado: COMPLETO.** Fase 1 (servidor) y fase 2 (firmware v1.4.0) desplegadas y
+> verificadas en la placa el 2026-08-06. Ver *Avance* al final.
 
 ## Objetivo
 
@@ -295,13 +295,32 @@ Comprobado antes de desplegar:
   `Cache-Control` siguiendo el TTL de cada página (45 / 900 / 1800 s). Un slug inválido
   cae a la consola sin ensuciar la caché.
 
-### Lo que sigue: fase 2 (firmware)
+### Fase 2 (firmware) — hecha el 2026-08-06, v1.4.0
 
-Nada de la fase 1 la necesita para funcionar —el display de hoy ignora la cabecera y
-sigue con su barra de pestañas—, así que se puede desplegar el servidor y flashear
-cuando convenga.
+Commits `8cf4f61` y `72e43fa` en `ecowitt-display-kiosk-xe1e`. Flasheada **por OTA**,
+que escribe en la partición inactiva: si la subida se hubiera cortado, el display
+habría seguido arrancando la 1.3.1.
 
-Al llegar ahí, el orden que menos arriesga: primero parsear la cabecera y navegar con
-las zonas conservando el reparto por la X como respaldo, comprobar que se recorre el
-árbol entero, y sólo entonces quitar `NUM_TABS`/`MAX_PAGE_ID` y pasar la página de `int`
-a slug con hash FNV-1a para la contabilidad de framebuffers.
+- `src/nav.h`: parseo del mapa, búsqueda de zona por punto, pila de 8 niveles y hash
+  FNV-1a de slugs.
+- La página pasa de `int` a slug. Los framebuffers guardan el hash y, **junto a
+  ellos**, el instante de descarga y sus zonas: volver a una página cacheada es un
+  swap puro sin descarga, así que un mapa global suelto resolvería el toque contra
+  los rectángulos de otra pantalla.
+- `g_navmux`: con ids bastaba `volatile`, que es atómico; una cadena no lo es.
+- Se ignora el toque mientras se ve el spinner (los botones no están donde el dedo
+  cree) y la pantalla vuelve sola a la home tras N minutos sin tocar, ajustable en el
+  portal.
+- El respaldo por la X de la barra quedó, pero **no llegó a activarse ni una vez**.
+
+**Verificado en la placa**: 59 toques recorriendo el árbol entero —las seis
+variables, los cuatro periodos del viento, `stats-mes`, el menú, la cámara y las cinco
+clásicas— con las 67 descargas trayendo cabecera de zonas. El retroceso funciona por
+el botón ATRÁS y por toque fuera de zona. Consola en 539 ms (311 red + 223 decode +
+4 pintado).
+
+### Lo que sigue
+
+Nada de este plan. Lo siguiente que toque el kiosco es contenido: afinar qué cifras
+lleva cada variable viendo las pantallas con datos reales, y el backend de la cámara
+(`/api/camera/status` y `/api/camera/latest.jpg`), cuya página ya está esperando.
