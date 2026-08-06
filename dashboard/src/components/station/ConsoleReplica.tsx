@@ -324,11 +324,15 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
 // se pinza contra el extremo en vez de salirse del riel: ±5 hPa en 3 h ya es un
 // cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
 const PS_R = 5          // rango del riel, en hPa
-// 221 = 335 de caja menos 62 de sangría (el barómetro) y 52 de margen derecho. Se
-// estrechó desde 261: a lo ancho de la celda entera las marcas quedaban muy
-// separadas y el riel parecía una regla, no un indicador. Con 40 px menos el paso
-// entre marcas baja de ~24 a ~20 px y el conjunto se lee de golpe.
-const PS_W = 221
+// 311 = el ancho ÚTIL de la celda (339 menos borde y las dos sangrías de 12), el
+// mismo que usa el histograma de LLUVIA. Se ensancha para que los dos gráficos de la
+// consola midan igual y sus extremos se alineen entre celdas vecinas.
+//
+// Deshace un estrechamiento anterior --de 261 a 221-- que buscaba lo contrario: a lo
+// ancho de la celda las marcas quedaban muy separadas y el riel parecía una regla más
+// que un indicador. Ese efecto vuelve en parte (el paso entre marcas sube de ~20 a
+// ~28.7 px), y se acepta a cambio de la uniformidad.
+const PS_W = 311
 // 32 y no 30: con los rótulos a 12 px su borde superior sube hasta y≈22, y las
 // marcas mayores bajan hasta y=21. Los 2 px extra se le quitan al margen inferior
 // del contenedor (bottom 4 en vez de 6), así el riel no se acerca al número.
@@ -958,11 +962,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          {/* Riel CENTRADO ahora que el barómetro se fue de la esquina de abajo. El
-              62/52 de antes era la sangría que le dejaba a ese glifo; 57 y 57 dan
-              exactamente el mismo ancho de riel (335 - 114 = 221 px, el que se eligió a
-              propósito) y de paso queda simétrico bajo la lectura. */}
-          <div style={{ position: 'absolute', bottom: 4, left: 57, right: 57 }}>
+          {/* Riel al ANCHO COMPLETO de la celda, con las mismas sangrías de 12 que el
+              histograma de LLUVIA: son los dos gráficos de la consola y ahora empiezan y
+              acaban en la misma vertical. El ancho real lo fija PS_W, no este contenedor:
+              el SVG lleva `preserveAspectRatio` por defecto y con un viewBox más
+              estrecho que su caja se quedaría centrado sin estirarse. */}
+          <div style={{ position: 'absolute', bottom: 4, left: 12, right: 12 }}>
             <PressureScale delta={pressDelta} endLabel={pressEndLabel} />
           </div>
         </div>
@@ -979,7 +984,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               desalojado): sin ella y sin rótulo, nada diría que esta celda es de lluvia,
               y es el mismo papel que hacen el termómetro en EXT o el barómetro en PRES.
               44 y no 46: el hueco a la izquierda de las cifras es ese. */}
-          <div style={{ position: 'absolute', top: 10, left: 12 }}>
+          <div style={{ position: 'absolute', top: 16, left: 12 }}>
             <MeteoGlyph name="raindrops" size={44} color="#38bdf8" title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
@@ -1049,18 +1054,34 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             la temperatura y la humedad de la estación principal, así que se agrupan con
             el resto de lo que mide ella. El blanco queda para SOLAR/UV/ICA y para la
             condición y la luna. */}
+        {/* Tres derivados de la temperatura, no dos. Al entrar HUMIDEX el cuerpo baja de
+            40 a 34: medido sobre la fuente, el caso peor con unidad ("-5.2 °C" o
+            "45.3 °C") mide ~90 px a 34, así que tres suman 270 en los 311 útiles y
+            quedan ~41 px para las separaciones. A 40 sumaban 357 y no cabían.
+            HUMIDEX aparece SÓLO con 20 °C o más: es un índice de bochorno y el receiver
+            no lo calcula por debajo de eso (ver calculate_derived_values), así que de
+            madrugada marcará "--" y eso es correcto, no una avería. */}
         <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
+                {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
-              <div className="gt seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 16, color: 'var(--t)' }}>{u.tempU}</span>
+              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
+                {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>HUMIDEX</div>
+              {/* Sin unidad: el humidex es un índice, no una temperatura, aunque se
+                  exprese en una escala parecida. Ponerle °C invitaría a compararlo con
+                  las dos cifras de al lado como si midieran lo mismo. */}
+              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
+                {data?.humidex != null ? decNum(data.humidex.toFixed(1)) : '--'}
               </div>
             </div>
           </div>
