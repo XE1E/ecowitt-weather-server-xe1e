@@ -34,6 +34,10 @@ export function CamaraPage({ slug }: { slug: string }) {
   const [st, setSt] = useState<Estado | null>(null)
   const [pedido, setPedido] = useState(false)
   const [falloImagen, setFalloImagen] = useState(false)
+  // Saber que hay foto NO basta para capturar: la etiqueta <img> la descarga
+  // después, y el renderer llegaba a tiempo de fotografiar el hueco todavía en
+  // negro. Hay que esperar a que la imagen esté PINTADA.
+  const [imagenLista, setImagenLista] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -47,8 +51,11 @@ export function CamaraPage({ slug }: { slug: string }) {
 
   const hayFoto = !!st?.available && !falloImagen
   const vieja = (st?.age_seconds ?? 0) > VIEJA_S
+  // 24 h: el resto de la consola va así (su reloj marca 17:36) y un "05:36 p. m."
+  // en la cabecera cantaba al lado.
   const cuando = st?.captured_at
-    ? new Date(st.captured_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(st.captured_at).toLocaleTimeString('es-MX',
+        { hour: '2-digit', minute: '2-digit', hour12: false })
     : null
 
   useNavZones(rootRef, slug)
@@ -59,7 +66,9 @@ export function CamaraPage({ slug }: { slug: string }) {
     <div
       ref={rootRef}
       className="cns"
-      data-kiosk-ready={pedido ? 'true' : 'false'}
+      // Lista cuando se sabe que NO hay foto (se pinta el aviso) o cuando la que hay
+      // ya está descargada y pintada.
+      data-kiosk-ready={pedido && (!hayFoto || imagenLista) ? 'true' : 'false'}
       style={{
         width: 1024, height: 600, background: '#000', overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
@@ -81,6 +90,7 @@ export function CamaraPage({ slug }: { slug: string }) {
             <img
               src="/api/camera/latest.jpg"
               alt="Exterior de la estación"
+              onLoad={() => setImagenLista(true)}
               onError={() => setFalloImagen(true)}
               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
             />
