@@ -415,13 +415,16 @@ function PressureScale({ delta, endLabel, imperial }: {
           mide 10 de ancho y aún deja 2 px hasta el arranque del riel. */}
       <text x={0} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
       <text x={PS_W} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
-      {/* Puntero DEBAJO, apuntando al borde de abajo del riel, y con la cola en uve
-          como la flecha del compás: dibujado encima tapaba las marcas y el relleno
-          justo donde hay que leerlos. Mide 16×13 contra los 14×8 de antes --era la
-          pieza que dice DÓNDE cae la variación y se perdía entre las marcas--. Va el
-          último para que ningún trazo del riel se le monte encima. */}
+      {/* Puntero DEBAJO del riel y con la cola en uve, como la flecha del compás.
+          Cruza el riel entero: la punta llega al borde de ARRIBA (y=12), no al de
+          abajo, así que señala la casilla exacta en vez de quedarse apuntando desde
+          fuera. Mide 18×22 --era 14×8 antes de todo esto y se perdía entre las
+          marcas--; al ser tan afilado, a la altura del riel sólo ocupa 7 px de los
+          31 que hay entre marca y marca, y donde tapa el relleno lo tapa con su
+          mismo color. Va el último para que ningún trazo del riel se le monte
+          encima. */}
       {delta != null && (
-        <polygon points={`${x},21 ${x - 8},34 ${x},30.5 ${x + 8},34`} fill={color} />
+        <polygon points={`${x},12 ${x - 9},34 ${x},29 ${x + 9},34`} fill={color} />
       )}
     </svg>
   )

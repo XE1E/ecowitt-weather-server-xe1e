@@ -308,6 +308,34 @@ identifica su icono —termómetro, gota, barómetro— igual que en una consola
 Los glifos de ubicación son **una sola casa en dos versiones**: hueca = sensor a la
 intemperie, rellena = bajo techo.
 
+Los iconos son de **Meteocons**, teñidos y recortados en `MeteoGlyph.tsx`. Tres
+detalles que ya costaron una vez y conviene no rehacer: (1) las cajas de recorte
+llevan sumada **la mitad del trazo**, porque `getBBox()` mide sólo la geometría y
+sin ese margen el aro del barómetro sale comido por los cuatro costados; (2) al
+termómetro se le **borra la escala** grabada en el cristal (un tramo del propio
+`path`), que a 46 px cae sobre el mercurio y se ve como suciedad; (3) cada
+instancia reescribe los `id` del SVG con un prefijo propio —los del paquete son
+fijos y con dos barómetros en pantalla, al desmontarse el primero el otro se
+quedaba sin su `clip-path`—.
+
+**El riel de tendencia de PRES** dice *cuánto* ha cambiado la presión en 3 h
+mientras la flecha de la celda dice el sentido. Notas de implementación:
+
+- El rango es **±5 hPa y se razona siempre en hPa**; sólo se traducen los rótulos
+  (5 hPa = 0.15 inHg). Un riel rotulado ±5 en imperial estaría mintiendo.
+- El valor **se pinza** contra el extremo, y por eso los topes llevan `≤` y `≥` a
+  los costados del riel: la marca del extremo representa ese valor *y todo lo que
+  haya más allá*. Van al costado y no junto a la cifra porque a la izquierda de la
+  marca del −5 sólo quedan 12 px y el símbolo se saldría del `viewBox`.
+- En métrico se numeran **las once marcas** (−5 … 5), centradas sobre su marca; en
+  imperial sólo los extremos y el cero, porque numerarlas todas daría
+  0.03 / 0.06 / 0.09… en 31 px de hueco.
+- El **puntero cruza el riel** de abajo arriba y su punta acaba en el borde
+  superior. Se dibuja el último, después de las marcas y del relleno.
+- `PS_W = 335` es el ancho de la celda sin bordes, y el dibujo reserva 12 px a cada
+  lado *por dentro* del `viewBox`: el contenedor no lleva sangría propia o los dos
+  márgenes se suman y el riel sale más corto que el histograma de LLUVIA.
+
 Datos que **sólo existen para esta vista** y conviene no confundir con lecturas del
 aparato:
 
