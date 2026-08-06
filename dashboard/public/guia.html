@@ -666,21 +666,30 @@
 
       <h3>Pantalla táctil de 7" (kiosco)</h3>
       <p>Una pantalla de 1024×600 colgada en la pared. Funciona con un reparto de trabajo poco común: <strong>el servidor dibuja la pantalla completa como imagen y la pantalla sólo la muestra</strong>. Eso la vuelve muy simple y permite rediseñar lo que se ve sin volver a programar el aparato.</p>
-      <p>Se navega tocando la <strong>barra inferior</strong>, con seis páginas:</p>
+      <h4>Cómo se navega</h4>
+      <p>La pantalla arranca en la <strong>consola</strong>, y la consola es el índice de todo: <strong>cada celda es un botón</strong>. Tocas la de la lluvia y aparece el histórico de lluvia; tocas la del viento y aparece el del viento. Es la misma idea que abrir un cajón — la celda que tocaste se despliega.</p>
+      <p>Ya dentro, abajo hay una <strong>barra de botones</strong> para cambiar de periodo (24 horas, 7 días, 30 días, 12 meses) o saltar a los récords. Y para volver no hace falta apuntar: <strong>un toque en cualquier sitio que no sea un botón regresa a la pantalla anterior</strong>, y otro más a la de antes, hasta llegar de vuelta a la consola.</p>
+      <p>El <strong>reloj</strong> de la consola abre un menú con las cinco páginas de siempre y con la cámara del exterior.</p>
+
       <div class="tablewrap">
         <table>
-          <thead><tr><th>#</th><th>Página</th><th>Qué muestra</th></tr></thead>
+          <thead><tr><th>Dónde tocas</th><th>A dónde vas</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>Estación</td><td>Temperatura grande, tarjetas de resumen y el pronóstico de las próximas horas</td></tr>
-            <tr><td>2</td><td>Local</td><td>El sensor propio de la pantalla (temperatura, humedad y presión) con sus mínimas y máximas del día</td></tr>
-            <tr><td>3</td><td>Sensores</td><td>Interior, jardín y estación remota, uno al lado del otro</td></tr>
-            <tr><td>4</td><td>7 días</td><td>Pronóstico de la semana</td></tr>
-            <tr><td>5</td><td>48 h</td><td>Gráfica multivariable de las últimas 48 horas: temperatura, presión, lluvia, viento y humedad juntas</td></tr>
-            <tr><td>6</td><td>Consola</td><td>La réplica de la consola física, a pantalla completa y sin barra. Tócala en cualquier parte para volver a la página 1</td></tr>
+            <tr><td>Temperatura, rocío/sensación/humidex</td><td>Histórico de temperatura</td></tr>
+            <tr><td>Humedad</td><td>Histórico de humedad</td></tr>
+            <tr><td>Presión y su riel</td><td>Histórico de presión</td></tr>
+            <tr><td>Compás del viento</td><td>Histórico de viento, con la ráfaga y el rumbo dominante</td></tr>
+            <tr><td>Lluvia</td><td>Histórico de lluvia, con los días que llovió</td></tr>
+            <tr><td>Solar, UV e ICA</td><td>Histórico de radiación y UV</td></tr>
+            <tr><td>Interior, jardín y las dos de la remota</td><td>La página de sensores</td></tr>
+            <tr><td>Estado del cielo y luna</td><td>Pronóstico de 7 días</td></tr>
+            <tr><td>Reloj</td><td>Menú: las cinco páginas clásicas y la cámara</td></tr>
           </tbody>
         </table>
       </div>
-      <p>La página 2 es la curiosa: la pantalla <strong>tiene su propio sensor</strong> y le manda sus lecturas al servidor, así que además de mostrar el clima también lo mide. Es un tercer punto de medición, el de dentro de la casa donde está colgada.</p>
+
+      <p>Las páginas de siempre <strong>siguen ahí</strong>, con su barra de seis pestañas: Estación, Local, Sensores, 7 días, 48 h y Consola. La <strong>Local</strong> es la curiosa: la pantalla <strong>tiene su propio sensor</strong> y le manda sus lecturas al servidor, así que además de mostrar el clima también lo mide. Es un tercer punto de medición, el de dentro de la casa donde está colgada.</p>
+      <p>Como cada pantalla es una imagen que el servidor dibuja, <strong>añadir pantallas nuevas no obliga a tocar el aparato</strong>: la pantalla recibe con cada imagen la lista de zonas que se pueden tocar y a dónde lleva cada una. Lo único que sabe hacer es preguntar «¿dónde tocaron?».</p>
 
       <h3>Reloj de píxeles (Ulanzi TC001)</h3>
       <p>Un reloj de matriz LED con firmware propio que baja el clima de la estación y lo rota en pequeñas apps con iconos animados: temperatura exterior, humedad, presión, calidad del aire, UV, viento, radiación solar y precipitación, además de hora, fecha, fase lunar y temperatura interior. Consulta al servidor cada 1 a 5 minutos.</p>

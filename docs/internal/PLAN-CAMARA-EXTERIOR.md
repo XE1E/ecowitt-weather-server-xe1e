@@ -159,34 +159,39 @@ Ruta nueva bajo `/pro` en `dashboard/src/main.tsx` (junto a `radar`, `astronomia
 `calidad-aire`…) más su entrada en la navegación de `StationLayout`. Es la parte
 barata: no toca nada de lo que ya existe.
 
-### Kiosco — esto sí arrastra firmware
+### Kiosco — YA NO arrastra firmware *(actualizado 2026-08-06)*
 
-Sería la **7ª pestaña**, y el número de pestañas está cableado en dos repos que
-**deben cambiarse a la vez**. El contrato está en `docs/PLAN-CONSOLA-XE1E.md` del repo
-del firmware: *el nº de pestañas de la barra (servidor) DEBE coincidir con el mapeo del
-touch (firmware)*. Si se desincronizan, los toques caen en la pestaña equivocada.
+Esta sección decía que la cámara sería la 7ª pestaña, que el número de pestañas estaba
+cableado en dos repos y que había que reflashear. **Ya no es así**, y por el camino que
+apuntaba el segundo de sus "dos detalles": se generalizó el mapeo del toque. Ahora el
+servidor manda con cada imagen las zonas táctiles de esa pantalla en la cabecera
+`X-Kiosk-Nav`, medidas del DOM, y el firmware no sabe qué páginas existen. Ver
+[PLAN-KIOSCO-NAVEGACION.md](PLAN-KIOSCO-NAVEGACION.md).
 
-Lo que hay que tocar, verificado en el código:
+Lo del kiosco está **hecho**, todo del lado del servidor:
 
 | Dónde | Qué |
 |---|---|
-| `dashboard/src/pages/KioskPage.tsx` | añadir entrada a `TABS` (página N → `TABS[N-1]`) |
-| `renderer/app.py` | añadir el id a `VALID_PAGES` (hoy `{"1".."5", "consola"}`) |
-| `ecowitt-display-kiosk-xe1e/src/main.cpp` | subir `NUM_PAGES` a 7 y su mapeo del toque |
-| `docs/GUIA.md` | la tabla de páginas del kiosco (§ pestañas) |
+| `dashboard/src/kiosk-nav.ts` | slug `camara`, TTL de 5 min (la captura se acordó cada 5-10) |
+| `dashboard/src/pages/kiosk/CamaraPage.tsx` | la página, degradando con gracia mientras no haya foto |
+| `dashboard/src/pages/kiosk/MenuPage.tsx` | entrada CÁMARA en el menú que abre el reloj de la consola |
+| `renderer/app.py` | ya no hay lista de páginas: valida por forma, así que no había nada que añadir |
 
-Dos detalles:
+Falta sólo el **backend de la foto**. La página ya consume este contrato:
 
-- **La 6ª pestaña ya es especial** (va a `?page=consola`, no a `page=6`). Si la cámara
-  lleva id con nombre —`?page=camara`— será la segunda excepción; conviene decidir si
-  se generaliza el mapeo en el firmware en vez de acumular casos particulares.
-- **`VALID_PAGES` también alimenta el bucle de precalentado** del renderer, que rota
-  por todas las páginas. Una más son más segundos de ciclo y más trabajo de Chromium en
-  el ARM del free tier. Vigilar que no degrade el refresco de las demás.
+```
+GET /api/camera/status      -> { available, captured_at, age_seconds }
+GET /api/camera/latest.jpg
+```
 
-Como la página del kiosco obliga a reflashear, tiene sentido **hacer primero la web**,
-validar la foto ahí, y llevar al kiosco sólo cuando el encuadre y la cadencia estén
-asentados.
+Mientras no exista, muestra «SIN IMAGEN · LA CÁMARA AÚN NO ESTÁ CONFIGURADA». Cuando
+exista, marca **FOTO ANTIGUA** encima de la propia imagen si pasa de 20 minutos (el
+doble de la cadencia acordada) — que es la parte de *degradar con gracia* de la lista
+de implementación de más arriba, ya resuelta.
+
+Sigue teniendo sentido **hacer primero la web** y validar el encuadre ahí, pero ya no
+por el coste de reflashear: sólo porque conviene fijar el encuadre antes de que empiece
+la serie del timelapse.
 
 ## Decisiones abiertas
 - Retención de las fotos: cuántos días, y si se archiva a R2 como los backups.

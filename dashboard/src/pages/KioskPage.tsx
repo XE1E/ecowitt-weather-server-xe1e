@@ -1,7 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Thermometer, Home, Antenna, CalendarDays, TrendingUp, Monitor } from 'lucide-react'
 import { MultiVariableChart } from '../components/station/MultiVariableChart'
 import { ConsoleReplica } from '../components/station/ConsoleReplica'
+import { parseSlug } from '../kiosk-nav'
+import { DetailPage } from './kiosk/DetailPage'
+import { StatsPage } from './kiosk/StatsPage'
+import { MenuPage } from './kiosk/MenuPage'
+import { CamaraPage } from './kiosk/CamaraPage'
+import { useNavZones } from './kiosk/nav-zones'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
 import { deriveCondition, relativeTime } from '../weather'
@@ -73,6 +79,8 @@ export function KioskPage() {
   const [multiReady, setMultiReady] = useState(false)
 
   const page = new URLSearchParams(window.location.search).get('page') || '1'
+  /** Contenedor de las páginas 1-5, del que se miden las zonas de su barra. */
+  const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -100,6 +108,12 @@ export function KioskPage() {
     return () => clearInterval(i)
   }, [page])
 
+  // Zonas de las páginas 1-5. Va aquí arriba y no junto a su `return` porque los
+  // hooks no pueden ir después de un return condicional; sólo hace algo cuando
+  // `rootRef` acaba apuntando a algo, o sea cuando se pinta el `shell`. Las demás
+  // pantallas llevan su propio contenedor y llaman al hook por su cuenta.
+  useNavZones(rootRef, page)
+
   const ready =
     page === '2' ? localFetched :
     page === '4' ? !!(forecast?.days?.length) :
@@ -123,8 +137,15 @@ export function KioskPage() {
     <div className="flex border-t border-white/10" style={{ height: 64 }}>
       {TABS.map((t, i) => {
         const active = (parseInt(page) || 1) === i + 1
+        // La última pestaña es la consola, que no es una página numerada.
+        const destino = i === TABS.length - 1 ? 'consola' : String(i + 1)
         return (
           <div key={i} className="flex-1 flex flex-col items-center justify-center"
+            // Estas páginas también publican sus zonas, en vez de dejar que el
+            // firmware caiga a su reparto por la X. Así hay UNA sola forma de
+            // navegar en todo el display, y de paso el toque fuera de la barra
+            // lleva al menú (ver `parentOf`) en vez de no hacer nada.
+            {...(active ? {} : { 'data-nav': destino })}
             style={{
               background: active ? 'rgba(56,189,248,0.15)' : 'transparent',
               borderTop: active ? '3px solid #38bdf8' : '3px solid transparent',
@@ -142,6 +163,7 @@ export function KioskPage() {
 
   const shell = (children: ReactNode) => (
     <div
+      ref={rootRef}
       data-kiosk-ready={ready ? 'true' : 'false'}
       className="text-slate-100 overflow-hidden flex flex-col"
       style={{
@@ -163,6 +185,20 @@ export function KioskPage() {
   if (page === 'consola') {
     return <ConsoleReplica mode="kiosk" ready={ready} />
   }
+
+  // ── Pantallas del ÁRBOL nuevo, las que cuelgan de las celdas de la consola.
+  //    Todas comparten marco (`chrome.tsx`) y estética con ella, y publican su
+  //    propio mapa de zonas táctiles. El slug ya viene validado por el renderer;
+  //    `parseSlug` cae a la consola ante cualquier cosa rara.
+  //
+  //    Van ANTES del enrutado de las páginas 1-5 y no reusan `shell()`: ésas
+  //    llevan cabecera azul y barra de seis pestañas, que es justo lo que las
+  //    nuevas no tienen. ──
+  const nav = parseSlug(page)
+  if (nav.kind === 'det') return <DetailPage v={nav.v} p={nav.p} slug={page} />
+  if (nav.kind === 'stats') return <StatsPage s={nav.s} slug={page} />
+  if (nav.kind === 'menu') return <MenuPage slug={page} />
+  if (nav.kind === 'camara') return <CamaraPage slug={page} />
 
   // ── Página 2: sensor local del display (BME280) ──
   if (page === '2') {

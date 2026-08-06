@@ -260,28 +260,77 @@ muestran el clima en tiempo real sin necesidad de abrir un navegador.
 
 Una **pantalla táctil de 1024×600** basada en **ESP32-S3** que actúa como
 «display tonto»: el servidor renderiza cada pantalla en headless Chromium y la
-sirve como JPEG (`GET /api/display.jpg?page=N`); el ESP32 solo la baja y la
-pinta. Se navega tocando la **barra inferior de 6 pestañas**.
+sirve como JPEG (`GET /api/display.jpg?page=<slug>`); el ESP32 solo la baja y la
+pinta. Arranca en la **consola**, que hace de índice: cada celda lleva al detalle
+histórico de esa variable.
 
-| Página | `?page=` | Contenido | Fuente en el repo |
-|--------|----------|-----------|-------------------|
-| 1 | `1` | Estación: temperatura, tiles de resumen, pronóstico de 6 h | `KioskPage.tsx` |
-| 2 | `2` | Sensor local BME280 del propio display, con mín/máx del día | `KioskPage.tsx` · `/api/kiosk/local` |
-| 3 | `3` | Sensores: interior, jardín (CH1) y remota GW1100 | `KioskPage.tsx` |
-| 4 | `4` | Pronóstico de 7 días | `KioskPage.tsx` |
-| 5 | `5` | Resumen multivariable de 48 h (temp, presión, lluvia, viento, humedad) | `MultiVariableChart` en modo `2day` + `kiosk` |
-| 6 | `consola` | Réplica de la consola física Ecowitt (rejilla 3×5), pantalla completa sin barra | `ConsoleReplica` en modo `kiosk` |
+#### Navegación: el mapa de zonas
 
-> El **orden y el número** de pestañas deben coincidir con `NUM_PAGES` del
-> firmware, que mapea el toque en la franja inferior a la página según la X.
-> Página N → `TABS[N-1]` en `KioskPage.tsx`. La página 6 es full-screen y un
-> toque en cualquier parte regresa a la 1.
+El firmware **no sabe qué páginas existen**. Con cada JPEG recibe la cabecera
+**`X-Kiosk-Nav`** con las zonas táctiles de esa pantalla, y sólo tiene que buscar
+en qué rectángulo cayó el toque:
 
-La página 5 y la 6 **reusan componentes del dashboard** (`MultiVariableChart` y
+```
+X-Kiosk-Nav: v=1;back=det-rain-24h;ttl=1800;z=0,536,171,64,det-rain-24h;z=171,536,171,64,det-rain-7d;…
+```
+
+`back` es a dónde va un toque **fuera** de cualquier zona (el firmware lleva además
+su propia pila, así que normalmente vuelve por donde vino) y `ttl` cuántos segundos
+vale la imagen.
+
+Las zonas **se miden del DOM** en `pages/kiosk/nav-zones.tsx`: cada elemento
+navegable lleva `data-nav="slug"` y su rectángulo sale de `getBoundingClientRect()`.
+Por eso mover una celda no rompe su zona — y por eso **ya no hay contrato que
+mantener entre los dos repos**, que es lo que antes obligaba a reflashear el firmware
+por cada página nueva. Para comprobar que las zonas caen donde se ven:
+`?page=consola&debug=nav` las dibuja encima.
+
+#### Las pantallas
+
+| Slug | Contenido | Fuente en el repo |
+|------|-----------|-------------------|
+| `consola` | Réplica de la consola física (rejilla 3×5). **Home**, y el índice de todo lo demás | `ConsoleReplica` en modo `kiosk` |
+| `det-<var>-<periodo>` | Detalle histórico. `var`: `temp`, `hum`, `press`, `wind`, `rain`, `sun`. `periodo`: `24h`, `7d`, `30d`, `12m` | `pages/kiosk/DetailPage.tsx` |
+| `stats-<vista>` | Extremos y récords. `vista`: `hoy`, `mes`, `ano`, `siempre` | `pages/kiosk/StatsPage.tsx` |
+| `menu` | Puerta a las páginas clásicas y a la cámara. Se abre tocando el reloj | `pages/kiosk/MenuPage.tsx` |
+| `camara` | Vista del exterior (pendiente de instalar la cámara) | `pages/kiosk/CamaraPage.tsx` |
+| `1` | Estación: temperatura, tiles de resumen, pronóstico de 6 h | `KioskPage.tsx` |
+| `2` | Sensor local BME280 del propio display, con mín/máx del día | `KioskPage.tsx` · `/api/kiosk/local` |
+| `3` | Sensores: interior, jardín (CH1) y remota GW1100 | `KioskPage.tsx` |
+| `4` | Pronóstico de 7 días | `KioskPage.tsx` |
+| `5` | Resumen multivariable de 48 h | `MultiVariableChart` en modo `2day` + `kiosk` |
+
+Todo eso sale de **una tabla única**, `dashboard/src/kiosk-nav.ts`: qué pantallas hay,
+de quién cuelga cada una, su color y su TTL. Añadir una variable es una fila ahí.
+
+**No hay detalle de los sensores** (interior, jardín, remota) aunque la consola les
+dedique cuatro celdas: el rollup diario sólo guarda campos de la estación principal,
+así que sus periodos largos saldrían vacíos. Esas celdas llevan a la página 3.
+
+#### TTL: por qué cada pantalla declara el suyo
+
+El VPS tiene 2 vCPU y cada pantalla es un render de Chromium (~1.5 s). Precalentarlas
+todas no cabe, así que cada página publica en `data-kiosk-ttl` cuánto vale su imagen
+—45 s la consola, 30 min un resumen mensual que sólo cambia cuando el rollup cierra el
+día— y el precalentado es **adaptativo**: la home más las tres páginas pedidas más
+recientemente, y sólo si su TTL ya expiró.
+
+La página 5 y la consola **reusan componentes del dashboard** (`MultiVariableChart` y
 `ConsoleReplica`), no copias: cualquier mejora que se les haga en la web llega
 sola al display. `ConsoleReplica` es además la misma vista del tab
 [Consola](#5-la-página-web-pro) (`/pro/consola`), con un prop `mode` como única
 diferencia.
+
+Las pantallas del árbol nuevo heredan la estética de la consola —negro, cifras en
+DSEG, el color de cada variable— porque se llega a ellas tocando una celda: con otro
+aspecto se leerían como salir a otra aplicación en vez de como abrir la celda que
+acabas de tocar. El CSS lo comparten en
+`components/station/console-css.ts`, y el marco común (cabecera, cifras y barra de
+botones de 64 px) en `pages/kiosk/chrome.tsx`.
+
+> **Ojo con las letras en las cifras.** DSEG es de siete segmentos: un "4 de 7" se
+> lee "4 dE 7". Los valores que pueden traer letras —días con lluvia, rumbo
+> dominante— se detectan con `esCifra()` y se pintan en la condensada.
 
 El display tiene un **BME280 integrado** que envía sus lecturas al servidor
 (`POST /api/kiosk/local`), mostrándolas en la página 2; los mín/máx del día se

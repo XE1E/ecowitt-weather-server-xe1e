@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
 import { deriveCondition, historicValue, moonIllumination } from '../../weather'
@@ -12,6 +12,12 @@ import type { RemoteHistRow } from '../../remote'
 // pronóstico (Open-Meteo a través de nuestro backend, que además lo cachea).
 import { fetchForecast, type AstroData } from '../../forecast'
 import { LOCATION } from '../../config'
+// El CSS vive aparte desde que las páginas de detalle del kiosco --a las que se
+// llega tocando una celda de aquí-- comparten su estética.
+import { CONSOLE_CSS } from './console-css'
+// Qué celda lleva a qué pantalla. Sólo las claves: los rectángulos se miden del DOM.
+import { CONSOLA_NAV } from '../../kiosk-nav'
+import { useNavZones, NavDebugOverlay } from '../../pages/kiosk/nav-zones'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -466,6 +472,9 @@ interface ImecaData {
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const { data, history, stats } = useStationData()
   const u = useUnits()
+  // Contenedor raíz: de él cuelgan las celdas con `data-nav` que se miden para el
+  // mapa de zonas del display.
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const [now, setNow] = useState(() => new Date())
   const [imeca, setImeca] = useState<ImecaData | null>(null)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
@@ -619,69 +628,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     )
   })()
 
-  const css = `
-    @font-face{font-family:'DSEG7';src:url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');font-display:block}
-    /* DSEG14: sólo para el RUMBO del viento. Con siete segmentos no se pueden dibujar
-       la N ni la O a altura completa; con catorce sí, porque añaden diagonales. Ver
-       public/fonts/README.md. */
-    @font-face{font-family:'DSEG14';src:url('/fonts/DSEG14Classic-Bold.woff2') format('woff2');font-display:block}
-    .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
-      --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#6b7280;--brd-derivada:#ffffff;--brd-reloj:#ff4128;
-      font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
-    .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
-    .cns .lbl .ac{color:var(--t)} .cns .lbl .acg{color:var(--v)}
-    .cns .big{font-weight:800;line-height:.82;letter-spacing:-1px}
-    /* Números en fuente 7-segmentos (DSEG). Clases de glow por variable meteorológica */
-    .cns .seg,.cns .big,.cns .gt,.cns .gh,.cns .gp,.cns .gr,.cns .gv,.cns .gy{font-family:'DSEG7','Roboto Condensed',monospace}
-    /* Catorce segmentos, para TEXTO con letras. Va aparte de la clase .seg a propósito:
-       esa es para cifras y arrastra DSEG7.
-       (Ojo: nada de comillas invertidas en estos comentarios; todo este CSS es una
-       plantilla de JavaScript delimitada por ellas y una suelta la corta en seco.) */
-    .cns .seg14{font-family:'DSEG14','Roboto Condensed',monospace}
-    .cns .gt{color:var(--t);text-shadow:0 0 12px rgba(249,115,22,.55)}
-    .cns .gh{color:var(--h);text-shadow:0 0 12px rgba(59,130,246,.55)}
-    .cns .gp{color:var(--p);text-shadow:0 0 12px rgba(167,139,250,.55)}
-    .cns .gr{color:var(--r);text-shadow:0 0 12px rgba(56,189,248,.55)}
-    .cns .gv{color:var(--v);text-shadow:0 0 12px rgba(34,197,94,.55)}
-    .cns .gy{color:var(--y);text-shadow:0 0 12px rgba(255,207,25,.5)}
-    .cns .gw{color:var(--w);text-shadow:0 0 10px rgba(234,234,234,.35)}
-    .cns .u{font-weight:700;vertical-align:top;font-family:'Roboto Condensed','Arial Narrow',system-ui,sans-serif} .cns .ured{color:var(--red)}
-    .cns .dec{font-size:0.6em}          /* decimales en tamaño más chico */
-    /* Las cifras grandes (EXT y VEL) llevan el decimal a la MITAD del entero, no al
-       0.6em del resto: a ese tamaño y sobre 76 px el decimal competía con los
-       enteros. La proporción es la de una consola física, donde el decimal se lee
-       como accesorio del número. Los mín/máx conservan el .dec de 0.6em. */
-    .cns .decxs .dec{font-size:0.5em}
-    .cns .rt{text-align:right}          /* valor pegado al borde derecho */
-    .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
-    .cns .cell.main{border-color:var(--brd-main)}
-    .cns .cell.jardin{border-color:var(--brd-jardin)}
-    .cns .cell.remota{border-color:var(--brd-remota)}
-    /* derivada = lo que no es una lectura cruda de un sensor de la estación: la
-       condición del cielo, la luna, y solar/UV/ICA (el ICA ni siquiera es nuestro,
-       lo estima el backend). Rocío y sensación SALIERON de este grupo: se derivan de
-       la temperatura y la humedad de la principal, así que llevan su amarillo. */
-    .cns .cell.derivada{border-color:var(--brd-derivada)}
-    /* El reloj lleva el contorno MÁS GRUESO de la consola (4 px contra 2): es puro
-       adorno, y se lo puede permitir porque es la única celda que no muestra una
-       magnitud, así que engrosarla no le quita sitio a ningún número. */
-    .cns .cell.reloj{border-color:var(--brd-reloj);border-width:4px}
-    .cns .col{display:flex;flex-direction:column}
-    .cns .ctr{margin-top:auto;margin-bottom:auto}
-    .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
-  `
-
   const kiosk = mode === 'kiosk'
+
+  // Mapa de zonas táctiles, sólo en el display: se miden las celdas marcadas con
+  // `data-nav` y se publica el resultado para que el renderer lo devuelva en la
+  // cabecera. En la web no se hace nada --ahí se navega con el ratón--.
+  useNavZones(rootRef, 'consola', kiosk)
 
   return (
     <div
+      ref={rootRef}
       {...(kiosk ? { 'data-kiosk-ready': ready ? 'true' : 'false' } : {})}
       className={kiosk ? 'cns' : 'cns rounded-xl overflow-hidden mx-auto'}
       style={kiosk
         ? { width: 1024, height: 600, background: '#000', overflow: 'hidden' }
         : { maxWidth: 1024, background: '#000' }}
     >
-      <style>{css}</style>
+      <style>{CONSOLE_CSS}</style>
+      {kiosk && <NavDebugOverlay nodo={rootRef} />}
       <div style={{
         display: 'grid', gap: 3,
         ...(kiosk ? { width: 1024, height: 600 } : { width: '100%', aspectRatio: '1024 / 600' }),
@@ -714,7 +678,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             marginTop pasa de -13 a +5 y la cifra se queda exactamente donde estaba,
             que es una posición medida contra el mín/máx de abajo. El hueco que deja
             queda libre por si algún día se quiere subir o agrandar la lectura. */}
-        <div className="cell col main">
+        {/* `data-nav`: a qué pantalla lleva tocar esta celda en el display. Sólo la
+            clave; el rectángulo lo mide `nav-zones.tsx` del DOM ya renderizado, así
+            que mover la celda no rompe su zona. En la web el atributo es inerte. */}
+        <div className="cell col main" data-nav={CONSOLA_NAV.ext}>
           {/* El marcador va ABSOLUTO: dentro del flex hacía crecer la fila del
               encabezado al alto del icono y empujaba el valor hacia abajo.
               `right: 6` y no 0: este glifo es de trazo y llega hasta el borde de su
@@ -788,7 +755,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell main" style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
+        <div className="cell main" data-nav={CONSOLA_NAV.viento}
+          style={{ gridRow: 'span 2', padding: '7px 9px', display: 'flex', flexDirection: 'column' }}>
           {/* Donde estaba el rótulo "VIENTO" van ahora los GRADOS del rumbo, que se
               habían quedado sin sitio al mudarse la velocidad al centro del óvalo.
               Aquí recuperan el suyo sin quitárselo a nada: la palabra "VIENTO" era
@@ -937,7 +905,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             La celda no cambia por dentro. Las filas 1 y 2 miden lo mismo (1.23fr),
             así que todas las medidas de esta celda --cuerpo 66, unidad 24, el mín/máx
             anclado abajo-- siguen valiendo tal cual; sólo cambia de vecinos. */}
-        <div className="cell col main">
+        <div className="cell col main" data-nav={CONSOLA_NAV.humedad}>
           {/* Sin rótulo "HUMEDAD": la gota lo dice. Mismo apaño que en EXT para que el
               número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
               borde de arriba, para dejarle la franja de abajo a las horas. */}
@@ -980,7 +948,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             gana ~5 px de alto: el riel del barómetro va anclado al borde de abajo
             (`bottom: 4`) y la lectura al de arriba, de modo que los píxeles de sobra
             caen en el aire de en medio, que es justo donde había menos. */}
-        <div className="cell col main">
+        <div className="cell col main" data-nav={CONSOLA_NAV.presion}>
           {/* Sin rótulo "PRES": el barómetro de abajo a la izquierda lo dice. De paso
               se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
               llega hasta x≈82 y la palabra entera se le echaba encima--.
@@ -1025,7 +993,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             ENTERA para el histograma, que a 28 px de barra se veía de juguete. Ahora
             tiene 40 px de alto y los 311 px de ancho de la celda en vez de 245, así que
             las barras pasan de ~32 px a ~42 y el gráfico se lee de lejos. */}
-        <div className="cell main">
+        <div className="cell main" data-nav={CONSOLA_NAV.lluvia}>
           {/* La gota SUBE a la esquina de arriba, que es lo que despeja el ancho
               completo abajo. Se queda (no se quita, aunque el histograma la habría
               desalojado): sin ella y sin rótulo, nada diría que esta celda es de lluvia,
@@ -1108,7 +1076,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             HUMIDEX aparece SÓLO con 20 °C o más: es un índice de bochorno y el receiver
             no lo calcula por debajo de eso (ver calculate_derived_values), así que de
             madrugada marcará "--" y eso es correcto, no una avería. */}
-        <div className="cell main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="cell main" data-nav={CONSOLA_NAV.derivadas} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
@@ -1144,7 +1112,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             por lo mismo, para que una condición larga ("NOCHE PARCIALMENTE NUBLADA") no
             se parta en dos renglones en el ancho nuevo. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell derivada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.05, textAlign: 'center' }}>{cond.label || 'CLIMA'}</div>
             <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
           </div>
@@ -1154,7 +1122,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               el que necesitan las dos horas.
               Padding lateral de 6 y no los 12 de `.cell`: en 146 px de celda, la luna y
               las dos horas piden ~122 y con 12 por lado no caben. */}
-          <div className="cell derivada" style={{ padding: '6px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '6px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <MoonGlyph size={50} />
             <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
@@ -1170,7 +1138,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             de rellenar el hueco con el interior, que es lo que hacía la celda de abajo
             antes de fijarla. Copia la maquetación de esa celda (cuerpo 46, unidad 20)
             para que las dos se lean como pareja pese a estar en filas distintas. */}
-        <div className="cell col remota">
+        <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>WN32</span></div>
           {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
               mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
@@ -1209,7 +1177,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         {/* Fila 4 */}
-        <div className="cell col main">
+        <div className="cell col main" data-nav={CONSOLA_NAV.interior}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
             {/* Casa RELLENA = bajo techo. Este es el tamaño (30) que ahora usan las
@@ -1251,7 +1219,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             que asome --se nota y se arregla-- a que parta el renglón, que fue el defecto
             que tenía UV y que no se lee de ninguna manera. */}
         <div style={{ display: 'grid', gridTemplateColumns: '4.25fr 2.4fr 3.35fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
               {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
@@ -1268,7 +1236,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 color={data?.solar_radiation != null ? solarColor(data.solar_radiation) : '#5a5a5a'} />
             </div>
           </div>
-          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
@@ -1284,7 +1252,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
               según la categoría de la norma, así que el número se lee de un
               vistazo sin tener que recordar los cortes. */}
-          <div className="cell derivada" style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
@@ -1304,7 +1272,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             WN32 reportaba mostraba el exterior y cambiaba su propio rótulo-- porque era
             la única celda para los dos sensores remotos. Con la celda WN32 de la fila 3
             ya no hace falta: cada sensor tiene la suya y el rótulo no se mueve. */}
-        <div className="cell col remota">
+        <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
           <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
           {/* Casa RELLENA = bajo techo, al mismo tamaño que la hueca de la celda de
               arriba: puestas una encima de la otra, el relleno es lo único que cambia y
@@ -1332,7 +1300,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         {/* Fila 5 */}
-        <div className="cell col jardin">
+        <div className="cell col jardin" data-nav={CONSOLA_NAV.jardin}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
             <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
@@ -1356,7 +1324,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell reloj" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="cell reloj" data-nav={CONSOLA_NAV.reloj} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {/* El título va aquí, en el hueco que dejan "HORA" y "FECHA": esas dos
               etiquetas sobraban --un reloj y una fecha se reconocen solos-- y esta
               es la única celda que no muestra una magnitud, así que el nombre de la
@@ -1395,7 +1363,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell col remota">
+        <div className="cell col remota" data-nav={CONSOLA_NAV.remotaP}>
           {/* "REMOTA GW1100" y no "PRESIÓN GW1100", con el mismo reparto de color que
               la celda de arriba (procedencia en blanco, aparato en morado): las dos
               celdas son el MISMO sensor y así se leen como bloque. Lo que mide cada

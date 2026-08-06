@@ -1798,6 +1798,43 @@ async def get_daily_rain(days: int = 7, station: Optional[str] = None):
     return {"days": days, "data": out}
 
 
+@app.get("/api/summaries/daily")
+async def get_daily_summaries(days: int = 30, station: Optional[str] = None):
+    """
+    Resúmenes diarios crudos de los últimos `days` días LOCALES, una fila por día.
+
+    Es la fuente de las páginas de detalle del kiosco en 7 y 30 días. Lo que ya había
+    no servía: `/api/climate/noaa` da la serie diaria pero SÓLO por mes calendario, y
+    "los últimos 30 días" casi siempre cae a caballo entre dos meses --habría que
+    pedir dos y pegarlos en el cliente--; `/api/stats/records` sí acepta una ventana
+    libre pero devuelve el agregado del periodo, no la serie. Y `/api/rain/daily`
+    resuelve exactamente esto, pero sólo para la lluvia.
+
+    Devuelve las filas TAL CUAL las guarda el rollup (temp_max/min/avg, rain_total,
+    wind_avg, gust_max, hum_*, press_*, uv_max, solar_max…), sin recortar campos: cada
+    página del kiosco usa los suyos y filtrarlos aquí obligaría a tocar el backend
+    cada vez que una pantalla quiera un dato más.
+
+    Un día sin resumen NO aparece en la lista. El día EN CURSO tampoco: su resumen lo
+    escribe el rollup al cerrarlo, y media jornada mezclada con días completos
+    falsearía cualquier mínima o promedio de la serie.
+    """
+    try:
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    days = max(1, min(days, 400))
+    # Ventana MAYOR que la pedida y recorte por fecha local después, por lo mismo que
+    # en /api/rain/daily: los resúmenes llevan la fecha local como tag pero el rango
+    # de Flux va en UTC, así que con los días justos el más antiguo entra a medias.
+    rows = await storage.query_daily_summaries(start=f"-{days + 2}d", station=station)
+    wanted = set(aggregator.local_recent_dates(days))
+    out = sorted((r for r in rows if str(r.get("date")) in wanted),
+                 key=lambda r: str(r.get("date")))
+    return {"days": days, "data": out}
+
+
 @app.get("/api/almanac")
 async def get_almanac_data():
     """Almanaque astronómico ampliado (sol, crepúsculos, luna y planetas)."""
