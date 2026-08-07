@@ -391,7 +391,10 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={puntos} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="#1e1e1e" vertical={false} />
+              {/* Rejilla completa: las verticales caen en las mismas categorías que
+                  rotula el eje X --una por hora, día o mes-- y sin ellas hay que
+                  perseguir con la vista desde qué etiqueta sube cada pico. */}
+              <CartesianGrid stroke="#1e1e1e" />
               {/* Una etiqueta de cada N para que no se toquen: 24 horas o 30 días no
                   caben rotuladas una a una a 15 px, y apretadas se leen peor que si
                   faltan. Siete días y doce meses sí caben enteros. */}
