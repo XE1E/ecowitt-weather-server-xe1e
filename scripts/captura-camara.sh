@@ -108,6 +108,15 @@ if [ -n "$ARCHIVO" ]; then
     [ -r "$ARCHIVO" ] || { echo "No existe $ARCHIVO" >&2; exit 1; }
     cp "$ARCHIVO" "$TMP"
     log "usando archivo $ARCHIVO (sin capturar de la camara)"
+elif [ "$CAMERA_USER" = "CAMBIAR" ] || [ "$CAMERA_PASS" = "CAMBIAR" ]; then
+    # Todavía no hay cámara: se sale LIMPIAMENTE en vez de intentarlo y fallar.
+    #
+    # Así el timer puede quedar activo desde antes de tener el hardware sin dejar el
+    # servicio en `failed` cada cinco minutos ni llenar el journal de una máquina que
+    # además es un nodo IRLP. El día que se rellenen las credenciales, empieza a
+    # funcionar solo, sin tocar nada.
+    log "camara sin configurar (CAMERA_USER/PASS en CAMBIAR): no se intenta"
+    exit 0
 else
     ok=0
     for i in $(seq 1 "$RETRIES"); do
