@@ -1,0 +1,20 @@
+[Unit]
+Description=Captura la foto del exterior y la sube al servidor de clima
+Documentation=https://github.com/XE1E/ecowitt-weather-server-xe1e
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/camara/captura-camara.sh
+
+# La máquina donde corre esto es un nodo IRLP en producción: la captura NO debe
+# competir con el audio en tiempo real. Prioridad baja de CPU y de disco; total,
+# sacar un fotograma cada diez minutos no tiene ninguna prisa.
+Nice=10
+IOSchedulingClass=idle
+
+# Con la cámara caída, el script hace 3 intentos con esperas de 5 s y 10 s antes de
+# rendirse. 120 s deja margen de sobra y evita que un cuelgue de ffmpeg se quede ahí
+# para siempre.
+TimeoutStartSec=120

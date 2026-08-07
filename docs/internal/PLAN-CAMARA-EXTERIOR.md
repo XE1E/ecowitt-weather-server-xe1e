@@ -193,7 +193,54 @@ Opciones, por coste:
    idea.
 3. Un **móvil Android viejo** enchufado, si aparece alguno.
 
-## Puesta en marcha del script (2026-08-06)
+## Instalado en la Raspberry Pi (2026-08-06)
+
+Apareció el equipo que faltaba: una **Raspberry Pi 3B+** ya encendida en el sitio,
+`stn8952` — que es además un **nodo IRLP en producción**, así que todo se hizo para no
+molestar a lo que ya corre ahí.
+
+| | |
+|---|---|
+| Acceso | `192.168.100.202`, **puerto SSH 22200** (IP estática en `dhcpcd.conf`) |
+| SO | Raspbian 10 (buster), armv7l, 871 MB RAM, 101 GB libres |
+| ffmpeg | **Ya estaba instalado** (4.1.11): no se tocó `apt` ni una sola librería |
+| Instalado | `/opt/camara/{captura-camara.sh,camara.env}` + `camara-clima.{service,timer}` |
+| Estado | Timer **instalado y sin activar** hasta que llegue la cámara |
+| Impacto medido | Carga antes 0.40, después 0.40. `Nice=10` e `IOSchedulingClass=idle` para no competir con el audio del nodo |
+| IP de la cámara | **192.168.100.150**, fuera del pool DHCP del router (que va de .11 a .100) |
+
+### Dos cosas que hubo que resolver ahí
+
+**1. Cloudflare bloquea la salida.** La Pi manda todo por una VPN de AMPRNet
+(`tun0`, IP 44.127.49.48) y Cloudflare responde **403 con `cf-mitigated: challenge`**
+a esa IP, así que la subida no llegaba nunca. La solución es ir **directo al VPS por
+su IP**, saltándose Cloudflare (comprobado: HTTP 200).
+
+Para eso el script trae `VPS_IP` y `TLS_PIN`:
+
+- `--resolve` para que el dominio apunte al VPS.
+- El certificado del VPS es un *Origin Certificate* de Cloudflare (válido hasta 2041),
+  que no verifica contra una CA pública. En vez de desactivar la validación se **fija
+  la clave pública** (`--pinnedpubkey`), que comprueba que se habla exactamente con
+  ese servidor. Es lo que protege el token de subida.
+
+**2. La ruta, sin tocar la configuración de red.** El script detecta al vuelo si el
+tráfico al VPS sale por un túnel y, si es así, añade **en memoria** una ruta por el
+gateway de la LAN. No se escribe nada permanente en el nodo IRLP, se recalcula solo si
+cambia la subred o el gateway, y al desinstalar no queda rastro. Probado borrando la
+ruta a mano: el script la rehízo y subió la foto.
+
+### Qué falta (cuando llegue la cámara)
+
+1. Cuenta de cámara en la app Tapo y **fijarle la IP 192.168.100.150**.
+2. Rellenar `CAMERA_USER` y `CAMERA_PASS` en `/opt/camara/camara.env`.
+3. Probar: `/opt/camara/captura-camara.sh -v`
+4. Activar: `systemctl enable --now camara-clima.timer`
+
+Para desinstalarlo todo: `systemctl disable --now camara-clima.timer`,
+`rm /etc/systemd/system/camara-clima.*`, `rm -rf /opt/camara`.
+
+## Puesta en marcha del script en Windows (2026-08-06)
 
 ### Por qué hace falta un proceso en casa, y por qué NO hace falta hardware nuevo
 
