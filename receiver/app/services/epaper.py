@@ -83,6 +83,19 @@ _TEXTO_ES.setdefault(1006, "Nublado")          # el que usa nuestro caso por omi
 
 _TZ_ID = os.environ.get("TZ", "America/Mexico_City")
 
+# El IMECA nombra los contaminantes con subíndices Unicode (O₃, NO₂, SO₂), que en el
+# dashboard quedan bien. Las fuentes OpenSans del firmware son subconjuntos y NO traen esos
+# glifos, así que en el display se verían como un hueco o basura: se pasan a ASCII aquí, que
+# es el trabajo de este adaptador. `imeca.py` se queda como está, que es lo que ve la web.
+_SUBINDICES = str.maketrans({"₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+                             "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9"})
+
+
+def _ascii_contaminante(nombre: Any) -> Optional[str]:
+    if not isinstance(nombre, str) or not nombre:
+        return None
+    return nombre.translate(_SUBINDICES)
+
 
 def _num(v: Any) -> Optional[float]:
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
@@ -384,7 +397,7 @@ def build_forecast_json(data: Optional[Dict[str, Any]],
         "temp_min_measured": _num((est.get("temperature_outdoor") or {}).get("min")),
         "imeca": (im or {}).get("imeca") if isinstance(im, dict) else None,
         "imeca_categoria": (im or {}).get("category") if isinstance(im, dict) else None,
-        "imeca_dominante": (im or {}).get("dominant") if isinstance(im, dict) else None,
+        "imeca_dominante": _ascii_contaminante((im or {}).get("dominant")) if isinstance(im, dict) else None,
         "forecast_stale": bool(om.get("stale")),
     }
 
