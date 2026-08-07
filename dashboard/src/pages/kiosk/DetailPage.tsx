@@ -405,7 +405,12 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
                 tickLine={false} axisLine={false} width={56}
                 domain={['auto', 'auto']} />
               {serie.forma === 'barra' && (
-                <Bar dataKey="a" fill={def.color} radius={[3, 3, 0, 0]} />
+                // `isAnimationActive={false}`, como en las áreas y las líneas, y aquí no
+                // es cosmético: Recharts crece las barras desde altura 0 durante 1.5 s y
+                // el renderer captura en cuanto la página se declara lista, así que las
+                // cuatro pantallas de LLUVIA salían con la rejilla vacía mientras sus
+                // cifras de cabecera enseñaban el total del periodo.
+                <Bar dataKey="a" fill={def.color} radius={[3, 3, 0, 0]} isAnimationActive={false} />
               )}
               {serie.forma === 'banda' && (
                 <>
