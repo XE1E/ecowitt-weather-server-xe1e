@@ -9,6 +9,7 @@ import { ForecastPage } from './pages/ForecastPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { StatisticsPage } from './pages/StatisticsPage'
 import { RadarPage } from './pages/RadarPage'
+import { CameraPage } from './pages/CameraPage'
 import { AstronomyPage } from './pages/AstronomyPage'
 import { AirQualityPage } from './pages/AirQualityPage'
 import { AeronauticaPage } from './pages/AeronauticaPage'
@@ -101,6 +102,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="estadisticas" element={<StatisticsPage />} />
                 <Route path="climatologia" element={<ClimatePage />} />
                 <Route path="radar" element={<RadarPage />} />
+                <Route path="camara" element={<CameraPage />} />
                 <Route path="astronomia" element={<AstronomyPage />} />
                 <Route path="calidad-aire" element={<AirQualityPage />} />
                 <Route path="aeronautica" element={<AeronauticaPage />} />

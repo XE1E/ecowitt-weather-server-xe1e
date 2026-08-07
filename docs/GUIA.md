@@ -55,8 +55,9 @@ presenta, y hacer crecer la plataforma a voluntad.
 - **Alcance:** meteorología en sentido amplio —condiciones actuales, histórico,
   estadísticas y climatología, pronóstico, radar y satélite— más los campos vecinos
   que enriquecen la lectura del cielo: **astronomía** (sol, luna, almanaque),
-  **calidad del aire** (AQI e IMECA), **meteorología aeronáutica** (METAR/TAF) y
-  **sismos** de la región.
+  **calidad del aire** (AQI e IMECA), **meteorología aeronáutica** (METAR/TAF),
+  **sismos** de la región y la **cámara** del exterior (`/pro/camara`), que pone
+  delante lo que los números describen.
 - **Más de un sitio:** además de la estación principal, el servidor admite una
   **estación remota** (p. ej. un GW1100 en otra ubicación) que envía al mismo VPS;
   sus datos se guardan por separado y tienen su propia página, para comparar el

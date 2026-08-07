@@ -144,7 +144,11 @@ que depende de tener la cámara físicamente.
       `GET /api/camera/days` dice qué hay.
 - [x] **Kiosco.** Página `camara`, en el menú que abre el reloj. **No hizo falta tocar
       el firmware**: ver la sección de arriba.
-- [ ] **Dashboard web.** Ruta bajo `/pro` con su entrada en `StationLayout`.
+- [x] **Dashboard web.** `/pro/camara` con su entrada en la navegación, tarjeta en
+      `components/station/CameraCard.tsx`. La URL de la foto lleva la marca de la
+      captura (`?t=<captured_at>`): con `max-age=150` en la respuesta, sin nada el
+      navegador reusaría la vieja, y con un timestamp cambiante se saltaría la caché
+      en cada render y volvería a bajar los mismos ~120 KB cada minuto.
 - [x] **Degradar con gracia.** Sin foto dice «SIN IMAGEN · LA CÁMARA AÚN NO ESTÁ
       CONFIGURADA»; con foto de más de 20 min (el doble de la cadencia acordada) marca
       **FOTO ANTIGUA** sobre la propia imagen, no en un pie que nadie miraría.

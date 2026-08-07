@@ -16,6 +16,7 @@ const NAV_ACTIVE = [
   { to: '/pro/tablas', label: 'Tablas', end: false },
   { to: '/pro/climatologia', label: 'Climatología', end: false },
   { to: '/pro/radar', label: 'Radar', end: false },
+  { to: '/pro/camara', label: 'Cámara', end: false },
   { to: '/pro/astronomia', label: 'Astronomía', end: false },
   { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
   { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
