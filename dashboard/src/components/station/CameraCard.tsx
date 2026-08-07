@@ -24,7 +24,16 @@ interface Estado {
 /** Cada cuánto se pregunta si hay foto nueva. La cadencia acordada es de 5-10 min. */
 const SONDEO_MS = 60_000
 
-export function CameraCard() {
+export function CameraCard({ ocultarSiVacia = false }: {
+  /**
+   * En INICIO la tarjeta desaparece mientras no haya foto, en vez de dejar un hueco
+   * con "sin imagen" ocupando sitio para siempre --hoy, con la cámara sin instalar,
+   * ése sería el estado permanente--. Cuando empiecen a llegar capturas aparece
+   * sola. En su página propia NO se oculta: allí el hueco explicado es la respuesta
+   * a "¿y la cámara?".
+   */
+  ocultarSiVacia?: boolean
+} = {}) {
   const [st, setSt] = useState<Estado | null>(null)
   const [cargando, setCargando] = useState(true)
   const [falloRed, setFalloRed] = useState(false)
@@ -60,6 +69,10 @@ export function CameraCard() {
     : ''
 
   useEffect(() => { if (src) setImgCargando(true) }, [src])
+
+  // Se espera a la primera respuesta antes de decidir: ocultarla mientras carga y
+  // sacarla después haría saltar el layout en cada visita.
+  if (ocultarSiVacia && !cargando && !hayFoto) return null
 
   return (
     <div className="card">

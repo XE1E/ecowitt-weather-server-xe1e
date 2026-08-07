@@ -17,6 +17,7 @@ import { InteriorCard } from '../components/station/InteriorCard'
 import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
+import { CameraCard } from '../components/station/CameraCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { MetarCard } from '../components/station/MetarCard'
@@ -71,9 +72,16 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Gráficas al final */}
+      {/* Gráficas y visuales anchos al final.
+          La cámara va aquí, con el radar, porque una foto a ancho completo se
+          aprovecha y en una columna de un tercio se quedaría en miniatura. Antes que
+          el radar: lo de la cámara es dato PROPIO, como el resto del sitio, y el
+          radar es una capa externa de referencia.
+          Se oculta sola mientras no lleguen capturas, para no dejar un hueco fijo en
+          la portada; su pestaña (/pro/camara) sí explica el estado. */}
       <div className="mt-4 space-y-4">
         <StationTempChart history={history} forecast={forecast} />
+        <CameraCard ocultarSiVacia />
         <RadarCard />
       </div>
     </>
