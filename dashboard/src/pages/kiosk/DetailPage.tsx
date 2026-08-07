@@ -314,7 +314,10 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
 
   /** Botones del pie: atrás, los cuatro periodos y el salto a récords. */
   const botones: Boton[] = [
-    { label: '‹ ATRÁS', to: p === '24h' ? 'consola' : detSlug(v, '24h'), tipo: 'back' },
+    // ATRÁS es siempre la CONSOLA, no el periodo de 24 h de esta variable: los cuatro
+    // periodos ya están ahí al lado como botones, y desde 30 días hacían falta dos
+    // toques para volver a la pantalla de inicio.
+    { label: '‹ ATRÁS', to: 'consola', tipo: 'back' },
     ...PERIOD_KEYS.map((k) => ({
       label: PERIODOS[k].label,
       to: detSlug(v, k),

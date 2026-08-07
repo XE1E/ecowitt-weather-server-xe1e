@@ -156,7 +156,11 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
   }, [s, rec, otd, stats, u])
 
   const botones: Boton[] = [
-    { label: '‹ ATRÁS', to: s === 'mes' ? 'consola' : statsSlug('mes'), tipo: 'back' },
+    // ATRÁS es siempre la CONSOLA, no la vista anterior de estadísticas. Las cuatro
+    // vistas ya se alcanzan entre sí con sus propios botones, así que un "atrás" que
+    // llevara a `stats-mes` sería un quinto botón para lo mismo; lo que no había era
+    // manera de volver a la pantalla de inicio de un solo toque.
+    { label: '‹ ATRÁS', to: 'consola', tipo: 'back' },
     ...STATS_KEYS.map((k) => ({ label: STATS_VIEWS[k].label, to: statsSlug(k), activo: k === s })),
   ]
 

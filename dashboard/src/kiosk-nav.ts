@@ -179,10 +179,17 @@ export function parseSlug(slug: string): Parsed {
 /**
  * Destino del toque FUERA de cualquier botón, o sea el padre lógico.
  *
- * Es sólo el respaldo: el firmware lleva su propia pila de navegación y al tocar
- * fuera hace `pop`, así que vuelve por donde vino de verdad. Esto es lo que se usa
+ * Detalle y estadísticas devuelven la CONSOLA, no el periodo o la vista anterior:
+ * dentro de esas pantallas los periodos y las vistas ya se alcanzan entre sí con sus
+ * propios botones, así que lo que hace falta del toque fuera es la salida a la pantalla
+ * de inicio, de un solo toque y sin apuntar.
+ *
+ * OJO: hoy esto es sólo el respaldo. El firmware lleva su propia pila de navegación y
+ * al tocar fuera hace `pop`, así que vuelve por donde vino de verdad; este `back` se usa
  * cuando la pila está vacía —por ejemplo si el display arranca directamente en una
- * subpágina tras un reinicio— para que nunca quede atrapado sin salida.
+ * subpágina tras un reinicio— para que nunca quede atrapado sin salida. Para que el
+ * toque fuera lleve SIEMPRE a la consola hay que hacer que el firmware prefiera este
+ * campo a su pila (repo `ecowitt-display-kiosk-xe1e`, `nav_pop` en `src/nav.h`).
  */
 export function parentOf(slug: string): string {
   const p = parseSlug(slug)
@@ -191,8 +198,8 @@ export function parentOf(slug: string): string {
     case 'menu':    return 'consola'
     case 'camara':  return 'menu'
     case 'clasica': return 'menu'
-    case 'stats':   return p.s === 'mes' ? 'consola' : statsSlug('mes')
-    case 'det':     return p.p === '24h' ? 'consola' : detSlug(p.v, '24h')
+    case 'stats':   return 'consola'
+    case 'det':     return 'consola'
   }
 }
 
