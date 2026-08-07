@@ -237,11 +237,15 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
                 )}
                 {/* Fuera de DSEG cuando el valor trae letras ("12 de 28"): con siete
                     segmentos la e sale a media altura y se lee "12 dE 28". */}
+                {/* `lineHeight` FIJO y el mismo en los dos tamaños. Sin él, una celda
+                    con valor fuera de DSEG ("5 de 6", 25 px) tiene una caja más baja
+                    que sus vecinas de 30 px, y al centrarse cada celda por separado su
+                    fila salía 7 px más alta que la de la otra columna. */}
                 <span
                   className={esCifra(fila.v) ? `seg ${fila.glow}` : fila.glow}
                   style={esCifra(fila.v)
-                    ? { fontSize: 30, fontWeight: 800 }
-                    : { fontSize: 25, fontWeight: 800, fontFamily: 'inherit' }}
+                    ? { fontSize: 30, fontWeight: 800, lineHeight: '36px' }
+                    : { fontSize: 25, fontWeight: 800, fontFamily: 'inherit', lineHeight: '36px' }}
                 >
                   {fila.v}
                 </span>
