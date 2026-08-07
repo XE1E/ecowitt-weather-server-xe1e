@@ -123,6 +123,15 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
       }
     }
 
+    // Doce filas, no ocho: sin presión ni humedad, MES y AÑO eran las únicas vistas
+    // que dejaban fuera dos de las cuatro variables que la consola enseña en grande
+    // --HOY y SIEMPRE ya las traían--, y son justo las que no se pueden reconstruir
+    // mirando la consola: el extremo de un mes no está en ninguna otra pantalla.
+    //
+    // El reparto en columnas se hace por GRUPOS de variable, aprovechando que se llena
+    // por columnas: temperatura y lluvia a la izquierda (3 + 3), presión, humedad y
+    // viento a la derecha (2 + 2 + 2). Así ningún par máx/mín queda partido por la
+    // vertical, y "MÁXIMA"/"MÍNIMA" a secas siguen colgando de TEMPERATURA MEDIA.
     const r: Resumen = (s === 'mes' ? rec?.this_month : rec?.this_year) || {}
     return {
       titulo: s === 'mes' ? 'ESTE MES' : 'ESTE AÑO',
@@ -133,6 +142,12 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
         { k: 'LLUVIA ACUMULADA', v: u.rain(r.rain_total), u: u.rainU, glow: R },
         { k: 'DÍA MÁS LLUVIOSO', v: u.rain(val(r.rain_max_day)), u: u.rainU, cuando: dm(fecha(r.rain_max_day)), glow: R },
         { k: 'DÍAS CON LLUVIA', v: `${r.rain_days ?? '--'} de ${r.days ?? '--'}`, glow: R },
+        { k: 'PRESIÓN MÁXIMA', v: u.press(val(r.press_max)), u: u.pressU, cuando: dm(fecha(r.press_max)), glow: P },
+        { k: 'PRESIÓN MÍNIMA', v: u.press(val(r.press_min)), u: u.pressU, cuando: dm(fecha(r.press_min)), glow: P },
+        // La humedad del periodo llega como número pelado, sin fecha: el backend no la
+        // pasa por `_best` porque ClimatePage ya la pinta así en la web.
+        { k: 'HUMEDAD MÁXIMA', v: f(r.hum_max, 0), u: '%', glow: H },
+        { k: 'HUMEDAD MÍNIMA', v: f(r.hum_min, 0), u: '%', glow: H },
         { k: 'VIENTO MEDIO', v: u.wind(r.wind_avg), u: u.windU, glow: V },
         { k: 'RÁFAGA MÁXIMA', v: u.wind(val(r.gust_max)), u: u.windU, cuando: dm(fecha(r.gust_max)), glow: V },
       ] as Fila[],
@@ -184,8 +199,11 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
           márgenes de la cabecera y del pie. */}
       <div style={{
         flex: 1, minHeight: 0, display: 'grid', gap: 0, padding: '10px 18px 4px',
-        gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'repeat(4, 1fr)',
-        gridAutoFlow: 'column',
+        gridTemplateColumns: '1fr 1fr', gridAutoFlow: 'column',
+        // Las filas salen de cuántos datos trae la vista --cuatro en HOY y SIEMPRE, seis
+        // en MES y AÑO-- y se reparten el alto que haya. Fijarlas en cuatro dejaba las
+        // ocho primeras celdas altas y las cuatro últimas fuera de la pantalla.
+        gridTemplateRows: `repeat(${Math.ceil(filas.length / 2)}, 1fr)`,
       }}>
         {filas.map((fila, i) => {
           const izq = i < Math.ceil(filas.length / 2)

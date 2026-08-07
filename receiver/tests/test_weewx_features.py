@@ -239,6 +239,17 @@ def test_build_records_periods():
     assert b["all_time"]["temp_max"]["value"] == 29.0
 
 
+def test_period_summary_pressure_extremes():
+    """La presion del periodo sale con fecha (`_best`), que es lo que pinta el kiosco."""
+    rows = [
+        {"date": "2026-07-01", "press_min": 1010.2, "press_max": 1015.0},
+        {"date": "2026-07-02", "press_min": 1008.5, "press_max": 1019.4},
+    ]
+    p = period_summary(rows)
+    assert p["press_max"] == {"value": 1019.4, "date": "2026-07-02"}
+    assert p["press_min"] == {"value": 1008.5, "date": "2026-07-02"}
+
+
 def test_on_this_day():
     rows = [
         {"date": "2024-07-10", "temp_max": 26.0, "temp_min": 11.0, "rain_total": 3.0},

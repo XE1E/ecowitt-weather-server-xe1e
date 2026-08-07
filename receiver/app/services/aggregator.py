@@ -257,6 +257,12 @@ def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> D
         "hum_min": (lambda v: min(v) if v else None)([r["hum_min"] for r in rows if r.get("hum_min") is not None]),
         "dew_avg": _avg(rows, "dew_avg"),
         "press_avg": _avg(rows, "press_avg"),
+        # Extremos de presión del periodo, con la fecha (`_best`) y no pelados como
+        # los de humedad: en un resumen mensual la presión mínima es el día de la
+        # borrasca, y saber CUÁNDO fue es la mitad del dato. Los de humedad se quedan
+        # como números sueltos porque ClimatePage ya los pinta así.
+        "press_max": _best(rows, "press_max", True),
+        "press_min": _best(rows, "press_min", False),
         "uv_max": (lambda v: max(v) if v else None)([r["uv_max"] for r in rows if r.get("uv_max") is not None]),
         "solar_max": (lambda v: max(v) if v else None)([r["solar_max"] for r in rows if r.get("solar_max") is not None]),
         "hdd": round(hdd, 1),
