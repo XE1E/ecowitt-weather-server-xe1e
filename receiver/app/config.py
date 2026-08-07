@@ -216,10 +216,11 @@ class Settings(BaseSettings):
     camera_dir: str = "/data/camera"
     # Días de fotos que se conservan para el timelapse (0 = sólo la última).
     camera_retention_days: int = 7
-    # A partir de aquí la última foto se considera vieja y el kiosco lo avisa. El
-    # doble de la cadencia acordada (5-10 min), para no marcar una captura que
-    # simplemente se retrasó un poco.
-    camera_stale_seconds: int = 1200
+    # A partir de aquí la última foto se considera vieja y se avisa en la web y en el
+    # kiosco. 15 min = TRES capturas perdidas con la cadencia de 5 min: así un fallo
+    # suelto --un reintento que no llegó, la cámara reiniciándose-- no marca la foto
+    # como antigua, pero una caída de verdad sí se ve enseguida.
+    camera_stale_seconds: int = 900
 
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)

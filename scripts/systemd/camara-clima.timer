@@ -1,10 +1,10 @@
 [Unit]
-Description=Captura del exterior cada 10 minutos
+Description=Captura del exterior cada 5 minutos
 
 [Timer]
 # Al arrancar se espera un poco: la red (y la VPN, donde la haya) tarda en asentarse.
 OnBootSec=3min
-OnUnitActiveSec=10min
+OnUnitActiveSec=5min
 # Holgura de medio minuto para que systemd agrupe el disparo con otros y no despierte
 # la máquina sólo para esto.
 AccuracySec=30s

@@ -294,7 +294,7 @@ por cada página nueva. Para comprobar que las zonas caen donde se ven:
 | `det-<var>-<periodo>` | Detalle histórico. `var`: `temp`, `hum`, `press`, `wind`, `rain`, `sun`. `periodo`: `24h`, `7d`, `30d`, `12m` | `pages/kiosk/DetailPage.tsx` |
 | `stats-<vista>` | Extremos y récords. `vista`: `hoy`, `mes`, `ano`, `siempre` | `pages/kiosk/StatsPage.tsx` |
 | `menu` | Puerta a las páginas clásicas y a la cámara. Se abre tocando el reloj | `pages/kiosk/MenuPage.tsx` |
-| `camara` | Vista del exterior. Degrada con gracia mientras no llegue foto, y marca **FOTO ANTIGUA** si pasa de 20 min | `pages/kiosk/CamaraPage.tsx` |
+| `camara` | Vista del exterior. Degrada con gracia mientras no llegue foto, y marca **FOTO ANTIGUA** si pasa de 15 min (tres capturas perdidas) | `pages/kiosk/CamaraPage.tsx` |
 | `info` | **Slug reservado**: no existe en el servidor. Lo intercepta el firmware y pinta su pantalla de diagnóstico (IP, SSID, señal, versión) | — |
 | `1` | Estación: temperatura, tiles de resumen, pronóstico de 6 h | `KioskPage.tsx` |
 | `2` | Sensor local BME280 del propio display, con mín/máx del día | `KioskPage.tsx` · `/api/kiosk/local` |
@@ -312,7 +312,7 @@ así que sus periodos largos saldrían vacíos. Esas celdas llevan a la página 
 #### La cámara del exterior
 
 La cámara (Tapo C325WB) vive **detrás del NAT de casa** y el servidor en el VPS, así
-que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada 5-10 min y
+que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada 5 min y
 lo **empuja**. Ver `docs/internal/PLAN-CAMARA-EXTERIOR.md`.
 
 | Endpoint | Qué |

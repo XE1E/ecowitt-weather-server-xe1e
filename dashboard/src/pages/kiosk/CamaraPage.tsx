@@ -26,8 +26,13 @@ interface Estado {
   age_seconds?: number
 }
 
-/** A partir de aquí la foto se marca como vieja: el doble de la cadencia acordada. */
-const VIEJA_S = 20 * 60
+/**
+ * A partir de aquí la foto se marca como vieja: 15 min son TRES capturas perdidas con
+ * la cadencia de 5 min. Debe coincidir con `camera_stale_seconds` del servidor, que
+ * es quien calcula `stale` en /api/camera/status; esto es sólo el respaldo por si la
+ * respuesta no lo trae.
+ */
+const VIEJA_S = 15 * 60
 
 export function CamaraPage({ slug }: { slug: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null)

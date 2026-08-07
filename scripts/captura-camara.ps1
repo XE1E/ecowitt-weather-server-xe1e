@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Saca un fotograma del stream RTSP con ffmpeg y lo empuja a
-    POST /api/camera/upload. Pensado para correr cada 5-10 min desde el
+    POST /api/camera/upload. Pensado para correr cada 5 min desde el
     Programador de tareas de Windows.
 
     POR QUÉ HACE FALTA ESTO Y NO SE HACE DESDE EL SERVIDOR:

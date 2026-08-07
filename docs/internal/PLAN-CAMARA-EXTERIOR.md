@@ -92,8 +92,8 @@ entre revisiones de hardware; irrelevante para este uso.
 
 ## Decisión de arquitectura: fotos, no directo 24/7
 
-Se acordó **una captura cada 5-10 minutos más un timelapse diario**, en vez de
-streaming continuo. Razones:
+Se acordó **una captura cada 5 minutos más un timelapse diario**, en vez de streaming
+continuo. Razones:
 
 - Encaja en el kiosco como una página más, sin reproductor ni códecs.
 - Un directo 1080p continuo son ~2-4 Mbps de subida sostenida desde casa, del orden de
@@ -105,6 +105,31 @@ El **directo queda como añadido posterior**, no descartado. Si se hace: `ffmpeg
 casa tirando del RTSP con **`-c copy`** (sin recodificar) empujando a **MediaMTX** en
 el VPS, que reexpone en HLS para un `<video>` en el React. Sin transcodificar: el ARM
 del free tier de Oracle no aguanta 1080p continuo.
+
+### Por qué 5 minutos y no otra cosa — MEDIDO (2026-08-06)
+
+Cada captura cuesta **3.4 s de CPU** en la Pi 3B+ decodificando el 2K (medido con un
+clip sintético equivalente; el stream de baja bajaría a 0.65 s, pero son 640×360 y no
+sirven). Con ~180 KB por foto y 7 días de retención:
+
+| Cada | CPU de la Pi | Disco en el VPS | Subida al mes | Timelapse del día |
+|---|---|---|---|---|
+| 10 min | 0.6 % | ~180 MB | ~0.8 GB | 6 s |
+| **5 min** | **1.1 %** | **~360 MB** | **~1.5 GB** | **12 s** |
+| 2 min | 2.8 % | ~0.9 GB | ~3.9 GB | 30 s |
+| 1 min | 5.7 % | ~1.8 GB | ~7.8 GB | 60 s |
+
+Ninguna es un problema —el VPS tiene 17 GB libres—, así que el criterio no fue
+técnico. Se eligieron **5 minutos** porque es donde el timelapse empieza a merecer la
+pena (a 10 min el vídeo del día dura 6 s y las nubes dan saltos), porque coincide con
+el **TTL de 5 min de la página del kiosco** —foto y pantalla al mismo ritmo, sin
+mostrar nada viejo ni redibujar de más— y porque sigue siendo un 1 % de una máquina
+que además es un nodo IRLP.
+
+Bajar a 1-2 min sólo se justificaría para ver **llegar** una tormenta en detalle. Si
+algún día interesa: cadencia rápida de día y lenta de noche, aprovechando que el
+servidor ya conoce el amanecer y el atardecer; ahorraría casi la mitad del volumen sin
+perder nada útil.
 
 ## Puesta en marcha (cuando llegue) — pendiente
 
@@ -154,7 +179,7 @@ que depende de tener la cámara físicamente.
       navegador reusaría la vieja, y con un timestamp cambiante se saltaría la caché
       en cada render y volvería a bajar los mismos ~120 KB cada minuto.
 - [x] **Degradar con gracia.** Sin foto dice «SIN IMAGEN · LA CÁMARA AÚN NO ESTÁ
-      CONFIGURADA»; con foto de más de 20 min (el doble de la cadencia acordada) marca
+      CONFIGURADA»; con foto de más de 15 min (tres capturas perdidas) marca
       **FOTO ANTIGUA** sobre la propia imagen, no en un pie que nadie miraría.
 
 Probado de punta a punta contra producción con una foto real de la estación: subida
@@ -267,13 +292,13 @@ cambiar la idea.
    contraseña de la cámara, y el `UPLOAD_TOKEN`, que es el mismo `CAMERA_UPLOAD_TOKEN`
    del `.env` del VPS). Ese archivo está en `.gitignore`.
 5. Probar: `.\scripts\captura-camara.ps1 -Once`
-6. Programar cada 10 min:
+6. Programar cada 5 min:
 
 ```powershell
 $acc = New-ScheduledTaskAction -Execute 'powershell.exe' `
   -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\Documents\GitHub\ecowitt-weather-server-xe1e\scripts\captura-camara.ps1"'
 $trg = New-ScheduledTaskTrigger -Once -At (Get-Date) `
-  -RepetitionInterval (New-TimeSpan -Minutes 10)
+  -RepetitionInterval (New-TimeSpan -Minutes 5)
 $set = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew `
   -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
 Register-ScheduledTask -TaskName 'Ecowitt captura camara' -Action $acc -Trigger $trg -Settings $set
@@ -289,7 +314,7 @@ Register-ScheduledTask -TaskName 'Ecowitt captura camara' -Action $acc -Trigger 
   llegar a medio decodificar —aún no hay un keyframe completo— y salía media imagen
   gris.
 - **Si falla, no sube nada.** Vale más dejar en el servidor la foto anterior, que él
-  marcará solo como antigua a los 20 min, que subir un fotograma roto.
+  marcará solo como antigua a los 15 min, que subir un fotograma roto.
 - **`MAX_WIDTH=1600`**: el 2K de la cámara son ~600 KB por captura; la web la muestra
   a ~1200 px y el kiosco a 1024, así que a 1600 no se pierde nada visible y el
   histórico ocupa un tercio.
@@ -339,7 +364,7 @@ Lo del kiosco está **hecho**, todo del lado del servidor:
 
 | Dónde | Qué |
 |---|---|
-| `dashboard/src/kiosk-nav.ts` | slug `camara`, TTL de 5 min (la captura se acordó cada 5-10) |
+| `dashboard/src/kiosk-nav.ts` | slug `camara`, TTL de 5 min, igual que la cadencia de captura |
 | `dashboard/src/pages/kiosk/CamaraPage.tsx` | la página, degradando con gracia mientras no haya foto |
 | `dashboard/src/pages/kiosk/MenuPage.tsx` | entrada CÁMARA en el menú que abre el reloj de la consola |
 | `renderer/app.py` | ya no hay lista de páginas: valida por forma, así que no había nada que añadir |
@@ -352,7 +377,7 @@ GET /api/camera/latest.jpg
 ```
 
 Mientras no exista, muestra «SIN IMAGEN · LA CÁMARA AÚN NO ESTÁ CONFIGURADA». Cuando
-exista, marca **FOTO ANTIGUA** encima de la propia imagen si pasa de 20 minutos (el
+exista, marca **FOTO ANTIGUA** encima de la propia imagen si pasa de 15 minutos (el
 doble de la cadencia acordada) — que es la parte de *degradar con gracia* de la lista
 de implementación de más arriba, ya resuelta.
 

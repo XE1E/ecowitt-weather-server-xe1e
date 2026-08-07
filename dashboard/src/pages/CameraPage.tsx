@@ -35,7 +35,7 @@ export function CameraPage() {
           a internet: es un proceso local el que empuja cada captura al servidor.
         </p>
         <p className="mt-2">
-          Si la última captura tiene más de veinte minutos, se marca como
+          Si la última captura tiene más de quince minutos, se marca como
           {' '}<span className="font-semibold">antigua</span> sobre la propia imagen. Sin ese aviso, una foto
           sin fecha es una mentira en potencia: nada distinguiría el cielo de ahora del de anteayer.
         </p>
