@@ -32,6 +32,19 @@ _DAILY = ("weather_code,temperature_2m_max,temperature_2m_min,"
           "wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset")
 _HOURLY = "weather_code,temperature_2m,precipitation_probability"
 
+# Conjunto ampliado para el display e-paper, que necesita rellenar un `hour[]` con forma
+# WeatherAPI (sensación, humedad, presión, viento, nubosidad, visibilidad, día/noche).
+#
+# Va aparte y NO se añade al conjunto normal a propósito: son ocho campos más por cada
+# una de las 168 horas, y el dashboard del navegador no los usa. Con esto cada consumidor
+# descarga lo suyo y las dos respuestas se cachean por separado (el conjunto forma parte
+# de la clave, ver get_forecast).
+_HOURLY_EPAPER = (
+    "weather_code,temperature_2m,precipitation_probability,apparent_temperature,"
+    "relative_humidity_2m,pressure_msl,wind_speed_10m,wind_direction_10m,"
+    "precipitation,cloud_cover,visibility,is_day"
+)
+
 
 def _age_min(ts: float) -> Optional[float]:
     return None if not ts else (time.time() - ts) / 60.0
@@ -47,8 +60,16 @@ def _with_freshness(payload: Dict[str, Any], ts: float) -> Dict[str, Any]:
     return out
 
 
-async def get_forecast(lat: float, lon: float, days: int = 7) -> Dict[str, Any]:
-    key = f"{lat:.3f},{lon:.3f},{days}"
+async def get_forecast(lat: float, lon: float, days: int = 7,
+                       epaper: bool = False) -> Dict[str, Any]:
+    """
+    `epaper=True` pide el conjunto horario ampliado que necesita el display e-paper.
+    Se cachea como una entrada distinta: la clave incluye el conjunto, porque si no una
+    consulta del navegador serviría su respuesta corta al display (o al revés) y el
+    `hour[]` saldría sin la mitad de los campos.
+    """
+    hourly = _HOURLY_EPAPER if epaper else _HOURLY
+    key = f"{lat:.3f},{lon:.3f},{days},{'e' if epaper else 'n'}"
     now = time.time()
     cached = _CACHE.get(key)
     if cached and (now - cached["ts"]) < _TTL:
@@ -56,7 +77,7 @@ async def get_forecast(lat: float, lon: float, days: int = 7) -> Dict[str, Any]:
 
     params = {
         "latitude": lat, "longitude": lon,
-        "daily": _DAILY, "hourly": _HOURLY,
+        "daily": _DAILY, "hourly": hourly,
         "timezone": "auto", "forecast_days": days,
     }
     try:

@@ -41,6 +41,7 @@ from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import smn
 from .services import svitrix
+from .services import epaper
 from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
@@ -1723,6 +1724,56 @@ async def get_svitrix():
     except Exception as e:
         logger.error(f"svitrix almanac: {e}")
     return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon, sun_elev=sun_elev)
+
+
+@app.get("/api/epaper/forecast.json")
+async def get_epaper_forecast():
+    """
+    Dato de la estación con forma WeatherAPI `forecast.json` para el display LilyGo
+    e-paper 4.7". Apunta ahí la URL del firmware en vez de a api.weatherapi.com.
+
+    A diferencia de `/api/svitrix`, este endpoint **no devuelve 503 nunca**: el e-paper
+    despierta, pide una vez y se vuelve a dormir, así que un error lo deja con la
+    pantalla vieja hasta el siguiente ciclo. Si falta el dato de la estación se cae al
+    pronóstico de la hora en curso y se marca en `xe1e.source`.
+
+    Por lo mismo, cada fuente externa se pide con tolerancia a fallos: que se caiga WAQI
+    o el IMECA no puede costar la pantalla entera.
+    """
+    lat = getattr(settings, "cwop_latitude", 19.380359)
+    lon = getattr(settings, "cwop_longitude", -99.174564)
+    data = latest_by_station.get(None)
+
+    async def _ok(coro, etiqueta):
+        try:
+            return await coro
+        except Exception as e:
+            logger.error(f"epaper {etiqueta}: {e}")
+            return None
+
+    start_iso, _, _ = aggregator.local_day_bounds_utc()
+    aq, im, om, stats, p_3h = await asyncio.gather(
+        _ok(get_air_quality(lat, lon, settings.waqi_token), "calidad del aire"),
+        _ok(imeca.get_imeca(lat, lon, pressure_hpa=_station_pressure_hpa()), "imeca"),
+        _ok(openmeteo.get_forecast(lat, lon, days=3, epaper=True), "pronostico"),
+        _ok(storage.get_daily_stats(start=start_iso), "estadisticas del dia"),
+        _ok(storage.get_field_value_ago("pressure_relative", start="-3h"), "presion de hace 3h"),
+    )
+
+    alm = None
+    try:
+        alm = get_almanac(lat, lon)
+        if not alm.get("available"):
+            alm = None
+    except Exception as e:
+        logger.error(f"epaper almanaque: {e}")
+
+    return epaper.build_forecast_json(
+        data, aq, im, lat=lat, lon=lon,
+        sun_elev=((alm or {}).get("sun") or {}).get("altitude"),
+        almanac=alm, om=om, stats=stats, p_3h=p_3h,
+        ahora=datetime.now(),
+    )
 
 
 @app.get("/api/smn/municipios")
