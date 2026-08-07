@@ -230,6 +230,54 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
+| `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco |
+| `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
+| `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
+| `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
+| `POST /api/camera/upload` | Recibe una captura. **Requiere token** (ver abajo) |
+
+### Cámara del exterior
+
+La cámara vive en la red de casa, detrás del NAT, y el servidor en el VPS: no se va a
+buscar la foto, **la empuja** un proceso local (ver
+`docs/internal/PLAN-CAMARA-EXTERIOR.md`). Cadencia acordada: **cada 5 minutos**.
+
+```
+POST /api/camera/upload
+X-Camera-Token: <CAMERA_UPLOAD_TOKEN>
+Content-Type: image/jpeg          # o multipart con el campo `file`
+
+<bytes del JPEG>
+```
+
+```bash
+curl -H "X-Camera-Token: $TOKEN" --data-binary @foto.jpg \
+     https://clima.xe1e.net/api/camera/upload
+```
+
+| Respuesta | Cuándo |
+|---|---|
+| `200` | Guardada. Devuelve `{ok, captured_at, bytes}` |
+| `400` | El cuerpo no es un JPEG, o es absurdamente grande o pequeño |
+| `401` | Falta el token o no coincide |
+| `503` | `CAMERA_UPLOAD_TOKEN` sin configurar: la subida está deshabilitada |
+
+El token es **propio**, no el del panel de administración: lo lleva un proceso
+desatendido y, si se filtra, sólo permite subir fotos.
+
+```json
+GET /api/camera/status
+{
+  "available": true,
+  "captured_at": "2026-08-07T01:57:04+00:00",
+  "age_seconds": 240,
+  "stale": false,          // true pasados CAMERA_STALE_SECONDS (900 = 15 min)
+  "bytes": 118826
+}
+```
+
+Con `available: false` la web oculta la tarjeta de Inicio y el kiosco muestra «sin
+imagen»; con `stale: true` ambos marcan **FOTO ANTIGUA** sobre la propia imagen.
 
 ### SVITRIX (reloj Ulanzi TC001)
 

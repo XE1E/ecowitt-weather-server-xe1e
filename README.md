@@ -21,6 +21,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, **rosa de vientos apilada por bandas de velocidad** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día" |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
+| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
