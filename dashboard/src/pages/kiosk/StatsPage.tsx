@@ -167,40 +167,68 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
       <KioskHead titulo="ESTADÍSTICAS" sub={titulo} />
 
       {/* Dos columnas de cuatro filas: ocho cifras entran de sobra a un cuerpo que se
-          lee de lejos, y en una sola columna habría que bajar a 20 px. */}
+          lee de lejos, y en una sola columna habría que bajar a 20 px.
+
+          Se llena POR COLUMNAS, no por filas. Con el llenado por filas la cifra de la
+          izquierda caía junto al rótulo de la derecha y en el centro de la pantalla las
+          dos se leían como una sola cosa: en ESTE MES quedaba "TEMPERATURA MEDIA 19.6 °C
+          MÁXIMA 29.8 °C", donde ese "MÁXIMA" parecía calificar al 19.6. Por columnas,
+          MÁXIMA y MÍNIMA van DEBAJO de TEMPERATURA MEDIA, que es de quien hablan, y cada
+          columna se lee de arriba abajo como la lista que es.
+
+          Y la cuadrícula se dibuja de verdad --raya bajo cada fila y una vertical entre
+          columnas--, porque un hueco de 26 px no basta para decir dónde acaba una columna
+          en una pantalla que se mira desde el otro lado de la habitación. El relleno de
+          20 px a cada lado de la vertical da el aire que el hueco daba; es asimétrico a
+          propósito --nada por fuera-- para que rótulos y cifras sigan alineados con los
+          márgenes de la cabecera y del pie. */}
       <div style={{
-        flex: 1, minHeight: 0, display: 'grid', gap: '0 26px', padding: '10px 18px 4px',
+        flex: 1, minHeight: 0, display: 'grid', gap: 0, padding: '10px 18px 4px',
         gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'repeat(4, 1fr)',
+        gridAutoFlow: 'column',
       }}>
-        {filas.map((fila) => (
+        {filas.map((fila, i) => {
+          const izq = i < Math.ceil(filas.length / 2)
+          return (
+          // La caja centra su contenido en vertical. Alineado arriba, la raya de abajo
+          // quedaba a media altura entre su propio dato y el siguiente, y se leía como
+          // separador del de abajo en vez de como el suelo de esta celda.
           <div key={fila.k} style={{
-            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-            gap: 10, borderBottom: '1px solid #1a1a1a', minWidth: 0,
+            display: 'flex', alignItems: 'center', minWidth: 0,
+            padding: izq ? '0 20px 0 0' : '0 0 0 20px',
+            borderBottom: '1px solid #2a2a2a',
+            ...(izq ? { borderRight: '1px solid #383838' } : null),
           }}>
-            <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: 1, color: '#8a8a8a',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {fila.k}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
-              {/* La fecha del récord va ANTES de la cifra y en gris: si fuera detrás,
-                  competiría con la unidad y las dos juntas empujarían el número. */}
-              {fila.cuando && (
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#5a5a5a' }}>{fila.cuando}</span>
-              )}
-              {/* Fuera de DSEG cuando el valor trae letras ("12 de 28"): con siete
-                  segmentos la e sale a media altura y se lee "12 dE 28". */}
-              <span
-                className={esCifra(fila.v) ? `seg ${fila.glow}` : fila.glow}
-                style={esCifra(fila.v)
-                  ? { fontSize: 30, fontWeight: 800 }
-                  : { fontSize: 25, fontWeight: 800, fontFamily: 'inherit' }}
-              >
-                {fila.v}
+            <div style={{
+              flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline',
+              justifyContent: 'space-between', gap: 10,
+            }}>
+              <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: 1, color: '#8a8a8a',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {fila.k}
               </span>
-              {fila.u && <span className="u" style={{ fontSize: 15, color: '#8a8a8a' }}>{fila.u}</span>}
-            </span>
+              <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
+                {/* La fecha del récord va ANTES de la cifra y en gris: si fuera detrás,
+                    competiría con la unidad y las dos juntas empujarían el número. */}
+                {fila.cuando && (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#5a5a5a' }}>{fila.cuando}</span>
+                )}
+                {/* Fuera de DSEG cuando el valor trae letras ("12 de 28"): con siete
+                    segmentos la e sale a media altura y se lee "12 dE 28". */}
+                <span
+                  className={esCifra(fila.v) ? `seg ${fila.glow}` : fila.glow}
+                  style={esCifra(fila.v)
+                    ? { fontSize: 30, fontWeight: 800 }
+                    : { fontSize: 25, fontWeight: 800, fontFamily: 'inherit' }}
+                >
+                  {fila.v}
+                </span>
+                {fila.u && <span className="u" style={{ fontSize: 15, color: '#8a8a8a' }}>{fila.u}</span>}
+              </span>
+            </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       <div style={{ padding: '0 18px 6px', fontSize: 14, fontWeight: 700, letterSpacing: 2, color: '#5a5a5a' }}>
