@@ -221,15 +221,25 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
             borderBottom: '1px solid #2a2a2a',
             ...(izq ? { borderRight: '1px solid #383838' } : null),
           }}>
+            {/* El rótulo NO se alinea con la línea base del valor, sino que rótulo y
+                bloque de cifra se centran cada uno en una caja de la misma altura fija.
+                Alineados por línea base, la base la fija el elemento más alto sobre
+                ella, o sea el valor: una celda con "5 de 6" a 25 px la subía respecto a
+                la vecina de 30 px y su rótulo quedaba 5-7 px más arriba que el de la
+                otra columna. Con las dos cajas a 36 px el rótulo cae exactamente igual
+                en las doce celdas, y la unidad sigue sentada en la base de la cifra
+                porque el bloque de la derecha conserva su alineación por línea base. */}
             <div style={{
-              flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline',
-              justifyContent: 'space-between', gap: 10,
+              flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: 10, height: 36,
             }}>
               <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: 1, color: '#8a8a8a',
+                lineHeight: '36px',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {fila.k}
               </span>
-              <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0,
+                height: 36 }}>
                 {/* La fecha del récord va ANTES de la cifra y en gris: si fuera detrás,
                     competiría con la unidad y las dos juntas empujarían el número. */}
                 {fila.cuando && (
