@@ -16,7 +16,7 @@ Redes soportadas:
 Los datos entran en MÉTRICO (°C, km/h, hPa, mm) y aquí se convierten según
 lo que cada protocolo espera.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import asyncio
 import hashlib
 import logging

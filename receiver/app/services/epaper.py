@@ -19,7 +19,7 @@ reusa su `build_weatherapi()` como base del bloque `current`. Lo que se añade a
 Plan y decisiones: `PLAN-FUENTE-DATOS-XE1E.md` en el repo del firmware.
 """
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from . import svitrix

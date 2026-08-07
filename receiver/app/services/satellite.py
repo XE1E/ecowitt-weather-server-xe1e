@@ -9,7 +9,7 @@ import re
 import time
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import httpx
 

@@ -1,0 +1,28 @@
+# Configuración de Ruff — conjunto de reglas EXPLÍCITO, a propósito.
+#
+# Antes no había ningún archivo de configuración, así que el CI se quedaba con lo que Ruff
+# considerase "por omisión" el día que corriera, y el workflow lo instalaba sin fijar
+# versión. Cuando ese conjunto por omisión creció, el paso «Lint with Ruff» empezó a
+# fallar en TODOS los commits --674 avisos, casi todos de estilo, en archivos que nadie
+# había tocado-- y el CI dejó de comprobar nada durante semanas: fallaba siempre, así que
+# su resultado ya no significaba nada.
+#
+# Se seleccionan las reglas que encuentran ERRORES DE VERDAD y no las de estilo:
+#
+#   E4  imports mal puestos
+#   E7  sentencias sospechosas (comparaciones con None/True, `l` como nombre...)
+#   E9  errores de sintaxis y de E/S
+#   F   pyflakes: nombres no definidos, imports y variables sin usar, f-strings vacíos
+#
+# Lo que se deja FUERA y por qué: el árbol usa `Dict`/`List`/`Optional` del módulo typing
+# y líneas largas con comentarios en prosa. Ambas cosas son deliberadas y coherentes en
+# todo el código, así que "modernizarlas" a golpe de linter sería un churn enorme que no
+# arregla ningún fallo. Si algún día se quiere migrar, que sea una decisión propia y de
+# una vez, no un CI rojo permanente.
+#
+# La versión de Ruff va fijada en .github/workflows/ci.yml por el mismo motivo.
+
+line-length = 100        # informativo: E501 no está seleccionado
+
+[lint]
+select = ["E4", "E7", "E9", "F"]

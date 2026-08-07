@@ -26,7 +26,10 @@ jobs:
         run: |
           cd receiver
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio ruff mypy
+          # Ruff FIJADO a propósito: sin versión, cada release que ampliara su conjunto
+          # de reglas por omisión dejaba el CI rojo sin que nadie tocara el código. Las
+          # reglas están en receiver/ruff.toml. Subir esta versión debe ser deliberado.
+          pip install pytest pytest-asyncio ruff==0.16.2 mypy
 
       - name: Lint with Ruff
         run: |

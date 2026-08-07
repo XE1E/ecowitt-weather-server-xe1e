@@ -12,7 +12,7 @@ Usa pyephem (cálculo local, sin depender de servicios externos). Los horarios s
 devuelven en hora local de la estación (America/Mexico_City).
 """
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 import logging
 import math
 
