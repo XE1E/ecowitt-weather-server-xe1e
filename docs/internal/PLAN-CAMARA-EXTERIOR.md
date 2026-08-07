@@ -122,9 +122,9 @@ Antes de escribir una línea de código:
 **El lado del SERVIDOR está hecho y desplegado (2026-08-06).** Falta sólo lo de casa,
 que depende de tener la cámara físicamente.
 
-- [ ] **Captura en casa.** `ffmpeg` sacando un JPEG del RTSP cada N minutos.
-      Decidir dónde corre (¿PC de siempre, una Pi, el propio router?) y cómo se
-      programa.
+- [x] **Captura en casa.** `scripts/captura-camara.ps1`: `ffmpeg` saca un fotograma
+      del RTSP y lo empuja al servidor. Corre en el **PC de siempre**; no hace falta
+      hardware nuevo. Ver *Puesta en marcha del script* más abajo.
 - [x] **Transporte al VPS.** POST autenticado contra el FastAPI, con **token propio**
       (`CAMERA_UPLOAD_TOKEN`) y no el de administración: lo lleva un script
       desatendido y, si se filtra, sólo permite subir fotos. Sin token, la ruta
@@ -156,6 +156,64 @@ que depende de tener la cámara físicamente.
 Probado de punta a punta contra producción con una foto real de la estación: subida
 correcta, rechazo de lo que no es JPEG (400), rechazo sin token (401) y la página del
 kiosco renderizando la imagen encuadrada con su hora de captura.
+
+## Puesta en marcha del script (2026-08-06)
+
+### Por qué hace falta un proceso en casa, y por qué NO hace falta hardware nuevo
+
+Se planteó si bastaría con la **cuenta TP-Link**, sin nada corriendo en casa. No: el
+RTSP/ONVIF de la Tapo sólo responde **dentro de la red local** —lo dice la propia
+[FAQ de TP-Link](https://www.tp-link.com/us/support/faq/2680/)— y el servidor está en
+el VPS, al otro lado del NAT. La API oficial de Tapo (*Tapo Open API*) es para
+**partners** y sirve para controlar dispositivos, no para descargar fotogramas; todo
+lo demás que circula son librerías **no oficiales** que, además, siguen hablando con
+la cámara **en la LAN**.
+
+Pero eso no implica comprar nada: «algo en casa» es cualquier equipo ya encendido. Se
+usa el **PC de siempre**. Si algún día hay una Pi, el script se traduce a bash sin
+cambiar la idea.
+
+### Pasos
+
+1. **ffmpeg**: `winget install Gyan.FFmpeg` (y reabrir la terminal).
+2. **Cuenta de cámara** en la app Tapo (Configuración del dispositivo → Avanzado).
+   No es la cuenta TP-Link; sin ella el RTSP no responde.
+3. **Reservar la IP** de la cámara en el router. La URL RTSP la lleva dentro: si el
+   router se la cambia, la captura se cae en silencio.
+4. `copy scripts\camara.env.example scripts\camara.env` y rellenarlo (IP, usuario y
+   contraseña de la cámara, y el `UPLOAD_TOKEN`, que es el mismo `CAMERA_UPLOAD_TOKEN`
+   del `.env` del VPS). Ese archivo está en `.gitignore`.
+5. Probar: `.\scripts\captura-camara.ps1 -Once`
+6. Programar cada 10 min:
+
+```powershell
+$acc = New-ScheduledTaskAction -Execute 'powershell.exe' `
+  -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\Documents\GitHub\ecowitt-weather-server-xe1e\scripts\captura-camara.ps1"'
+$trg = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+  -RepetitionInterval (New-TimeSpan -Minutes 10)
+$set = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew `
+  -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+Register-ScheduledTask -TaskName 'Ecowitt captura camara' -Action $acc -Trigger $trg -Settings $set
+```
+
+`-StartWhenAvailable` recupera la ejecución si el equipo estaba apagado a esa hora, y
+`IgnoreNew` evita que se solapen dos capturas si una se atasca.
+
+### Detalles del script que no se ven en la firma
+
+- **`-rtsp_transport tcp`**: por UDP la Tapo pierde paquetes y la foto sale con bandas.
+- **`-ss 1` después de `-i`**: descarta el primer segundo. El primer fotograma suele
+  llegar a medio decodificar —aún no hay un keyframe completo— y salía media imagen
+  gris.
+- **Si falla, no sube nada.** Vale más dejar en el servidor la foto anterior, que él
+  marcará solo como antigua a los 20 min, que subir un fotograma roto.
+- **`MAX_WIDTH=1600`**: el 2K de la cámara son ~600 KB por captura; la web la muestra
+  a ~1200 px y el kiosco a 1024, así que a 1600 no se pierde nada visible y el
+  histórico ocupa un tercio.
+- **UTF-8 con BOM**: Windows PowerShell 5.1 lee los `.ps1` sin BOM como ANSI y los
+  acentos salen rotos. Comprobado.
+- **`-Archivo <ruta>`** sube ese archivo en vez de capturar: sirve para dejar probada
+  la mitad del camino (token, red, servidor) antes de tener la cámara.
 
 ## Orientación: al horizonte — DECIDIDO (2026-08-05)
 

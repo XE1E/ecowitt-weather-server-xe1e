@@ -29,6 +29,9 @@ build/
 .env
 .env.local
 .env.*.local
+# Config de la captura de la camara: lleva la contraseña de la camara y el token de
+# subida (scripts/camara.env.example es la plantilla, esa si se versiona).
+scripts/camara.env
 *.local
 
 # IDE
