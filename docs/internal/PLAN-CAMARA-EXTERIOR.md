@@ -3,9 +3,13 @@
 > Escrito el 2026-08-05, actualizado el 2026-08-06. Vive en git.
 >
 > **Estado:** cámara comprada, aún no recibida. **Todo el lado del servidor está hecho
-> y desplegado** (endpoints, retención, página del kiosco) y probado con una foto real.
-> Lo que falta depende del hardware: la puesta en marcha física y el script de casa
-> que saque el JPEG del RTSP y lo empuje.
+> y desplegado** (endpoints, retención, web y página del kiosco) y probado con una foto
+> real; el script de captura también.
+>
+> **BLOQUEADO por el sitio:** hace falta un equipo encendido en esa red que decodifique
+> el H.264 de la cámara, y hoy no hay ninguno —el router no tiene reenvío de puertos y
+> lo único permanente allí es un ESP32, que no puede decodificar vídeo—. Ver *El cuello
+> de botella*. Mientras tanto funciona con el PC cuando esté encendido.
 
 ## Objetivo
 
@@ -156,6 +160,38 @@ que depende de tener la cámara físicamente.
 Probado de punta a punta contra producción con una foto real de la estación: subida
 correcta, rechazo de lo que no es JPEG (400), rechazo sin token (401) y la página del
 kiosco renderizando la imagen encuadrada con su hora de captura.
+
+## El cuello de botella: hace falta un equipo en el sitio — VERIFICADO (2026-08-06)
+
+Éste es **el punto que bloquea el proyecto**, y conviene tenerlo escrito con sus
+razones para no volver a recorrer el camino.
+
+La Tapo sólo entrega vídeo por **RTSP en H.264**, que hay que **decodificar** para
+sacar un JPEG. Todo lo demás está descartado con fuentes:
+
+| Vía | Por qué no |
+|---|---|
+| Cuenta / nube TP-Link | La *Tapo Open API* es para **partners** y controla dispositivos; no descarga fotogramas. No hay endpoint público de snapshot. |
+| Snapshot HTTP u ONVIF | Tapo **no implementa `GetSnapshotUri`** ni una URL de foto por HTTP. [FAQ TP-Link](https://www.tp-link.com/us/support/faq/2680/) |
+| FTP / SMTP desde la cámara | Las Tapo no suben por FTP. Sólo microSD y Tapo Care. |
+| Que el VPS entre a la cámara | El router de Totalplay del sitio **no tiene reenvío de puertos** (problema histórico de esa conexión). La IP pública sí es real, no CGNAT — pero da igual sin reenvío. |
+| El reloj **Svitrix** (Ulanzi TC001) | Es un ESP32: no existe decodificador de H.264 en ese chip. Podría hacer de *túnel TCP* tonto hacia el VPS, pero eso es reescribir firmware que hoy funciona, con el ancho de banda justo. No compensa. |
+| La pantalla del kiosco (ESP32-S3) | Mismo problema de decodificación, y además es **portátil**: no está siempre en el sitio. |
+
+**Conclusión:** con esta cámara hace falta, sí o sí, un equipo en esa red capaz de
+decodificar H.264. No tiene que ser potente —un fotograma cada diez minutos es trabajo
+ridículo— pero tiene que existir y estar encendido.
+
+Opciones, por coste:
+
+1. **El PC de casa, cuando esté encendido.** Coste cero y ya está hecho: el script y
+   la tarea programada funcionan. Da fotos mientras el PC esté en marcha y huecos
+   cuando no; el sitio lo dice solo marcando la foto como antigua. Es lo razonable
+   mientras no haya otra cosa.
+2. **Raspberry Pi Zero 2 W (~20 USD)** o cualquier equipo pequeño siempre encendido:
+   cobertura 24/7 y timelapse sin huecos. El script se traduce a bash sin cambiar la
+   idea.
+3. Un **móvil Android viejo** enchufado, si aparece alguno.
 
 ## Puesta en marcha del script (2026-08-06)
 
