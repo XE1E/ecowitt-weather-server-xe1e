@@ -426,7 +426,11 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
           comparte el amarillo del resto de la celda.
           Hubo una flecha al lado del sol para decir cuál era cuál; se quitó porque competía
           con el dibujo en un icono de 24 px. La diferencia la lleva ahora el sol mismo. */}
-      <svg width="24" height="17" viewBox="0 0 24 17" style={{ flexShrink: 0 }}>
+      {/* Sube 3 px con `transform` y no con el hueco del flex ni con un margen: el
+          transform no participa en el flujo, así que el sol se separa de su hora sin
+          arrastrarla hacia abajo. Con `gap` o `marginBottom` se habrían movido los dos. */}
+      <svg width="24" height="17" viewBox="0 0 24 17"
+        style={{ flexShrink: 0, transform: 'translateY(-3px)' }}>
         {/* Horizonte, igual en los dos */}
         <line x1="1.5" y1="14" x2="22.5" y2="14" stroke="#ffcf19" strokeWidth="1.5" strokeLinecap="round" />
         {/* El SOL es lo que distingue amanecer de atardecer, sin flecha: asomando ALTO
