@@ -47,6 +47,23 @@ interface AlertSettings {
 // Umbrales que se pueden sobreescribir POR ESTACIÓN (se siembran de los globales
 // al elegir una secundaria y se guardan en su alert_thresholds). La ventana de
 // tendencia y la persistencia anti-spam son globales (no van aquí).
+/**
+ * Campos con lectura en la última medición de una estación. Sirve para no ofrecer umbrales
+ * de sensores que esa estación no tiene: el GW1100 mide INTERIOR --temperatura y humedad de
+ * su sensor integrado-- así que las alarmas de humedad exterior, punto de rocío y sensación
+ * no le aplican, y sus reglas ni se evalúan (todas piden `*_outdoor`, que él no manda).
+ *
+ * Se decide por el DATO y no por "es secundaria", que sería lo fácil: al GW1100 se le va a
+ * entrelazar un WN32, que es un termohigrómetro EXTERIOR y entra como `*_outdoor` de esa
+ * misma estación. Cuando eso pase, la estación empezará a reportar esos campos y los
+ * umbrales aparecerán solos, sin que nadie tenga que acordarse de venir a quitar un `if`.
+ *
+ * `null` cuando no se pudo leer: entonces se muestra todo, que es el fallo seguro --mejor
+ * ofrecer un umbral de más que esconder uno que sí hacía falta--.
+ */
+const camposDe = (d: Record<string, unknown> | null): Set<string> | null =>
+  d ? new Set(Object.keys(d).filter((k) => d[k] != null)) : null
+
 const THRESHOLD_KEYS = [
   'alert_temp_high', 'alert_temp_low', 'alert_wind_high', 'alert_gust_high',
   'alert_rain_rate', 'alert_rain_daily', 'alert_pressure_high', 'alert_pressure_low',
@@ -113,6 +130,9 @@ export function AdminAlertas() {
   const [selected, setSelected] = useState<string | null>(null)  // null = principal
   const [offlineMin, setOfflineMin] = useState(15)  // watchdog de la secundaria
   const [disabled, setDisabled] = useState<string[]>([])  // reglas apagadas
+  // Campos que la estación seleccionada REPORTA de verdad, para no ofrecer umbrales de
+  // sensores que no tiene. `null` = no se pudo averiguar, y entonces se muestra todo.
+  const [campos, setCampos] = useState<Set<string> | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
@@ -121,7 +141,9 @@ export function AdminAlertas() {
     Promise.all([
       fetchWithAuth('/api/admin/settings').then((r) => r.json()),
       fetch('/api/stations').then((r) => r.json()).catch(() => null),
-    ]).then(([s, st]) => {
+      fetch('/api/current').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([s, st, cur]) => {
+      setCampos(camposDe(cur))
       setSettings(s); setGlobalCache(s)
       setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
       const list = st?.stations || []
@@ -136,15 +158,21 @@ export function AdminAlertas() {
     setSelected(sel); setMessage(null); setLoading(true)
     try {
       if (sel === null) {
-        const s = await fetchWithAuth('/api/admin/settings').then((r) => r.json())
+        const [s, cur] = await Promise.all([
+          fetchWithAuth('/api/admin/settings').then((r) => r.json()),
+          fetch('/api/current').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ])
+        setCampos(camposDe(cur))
         setSettings(s); setGlobalCache(s)
         setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
       } else {
-        const [ov, station] = await Promise.all([
+        const [ov, station, cur] = await Promise.all([
           fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
             .then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
           fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch(`/api/current?station=${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ])
+        setCampos(camposDe(cur))
         // Sembrar con los umbrales globales y sobreponer los propios de la estación.
         //
         // Si una clave NO viene en los globales se deja sin sembrar, en vez del `?? 0` que
@@ -221,6 +249,26 @@ export function AdminAlertas() {
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
   const isPrincipal = selected === null
+  // ¿La estación reporta este campo? Si no se pudo averiguar, se dice que sí (ver camposDe).
+  const tiene = (campo: string) => campos === null || campos.has(campo)
+
+  /**
+   * Rótulo que acompaña al título de un grupo de alarmas.
+   *
+   * Dice de QUÉ sensor sale el grupo, y avisa cuando ese sensor aún no manda lecturas. Los
+   * grupos NO se esconden: quedan a la vista, editables y atenuados, para que se puedan
+   * preparar los umbrales antes de instalar el sensor. Esconderlos es lo que hacía que uno
+   * buscara dónde configurar una alarma que estaba viendo dispararse.
+   *
+   * El nombre del sensor solo se pone en las secundarias: en la principal todo sale del
+   * WS2910 y repetirlo en cada grupo sería ruido.
+   */
+  const marca = (campo: string, sensor: string) => (
+    <>
+      {!isPrincipal && <span className="ml-1 text-xs font-normal text-slate-500">· {sensor}</span>}
+      {!tiene(campo) && <span className="ml-1 text-xs font-normal text-amber-500/80">· sin lecturas</span>}
+    </>
+  )
   const selLabel = isPrincipal ? 'Principal (WS2910)' : (secondaries.find((s) => s.name === selected)?.label || selected)
 
   return (
@@ -271,15 +319,24 @@ export function AdminAlertas() {
       ) : (
         <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
           ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido y aire usan la configuración global. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla (independiente de la principal).</span>
+          {/* Aviso de por qué hay grupos atenuados. Explicarlo aquí evita la pregunta de
+              "¿por qué puedo configurar una alarma de rocío en una estación que no mide
+              fuera?" y, sobre todo, la contraria: que alguien busque una alarma que no ve. */}
+          <div className="mt-1">
+            Cada grupo dice de qué sensor sale. Los marcados <span className="text-amber-500/80">sin lecturas</span> están atenuados porque ese sensor aún no reporta —
+            sus umbrales se pueden dejar preparados y empezarán a vigilar en cuanto llegue el primer dato.
+          </div>
         </div>
       )}
 
       {/* Umbrales en grid compacto */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Temperatura — en 2 líneas (alta / baja) para mayor claridad */}
-          <div>
-            <p className="text-sm font-medium mb-1">🌡️ Temperatura</p>
+          {/* Temperatura — en 2 líneas (alta / baja) para mayor claridad.
+              Pide `temperature_outdoor`: la regla evalúa ESE campo y ninguno más, así que en
+              una estación que solo mide interior no se dispararía nunca. */}
+          <div className={tiene('temperature_outdoor') ? undefined : 'opacity-60'}>
+            <p className="text-sm font-medium mb-1">🌡️ Temperatura{marca('temperature_outdoor', 'WN32')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
@@ -357,8 +414,8 @@ export function AdminAlertas() {
           </div>
 
           {/* Humedad EXTERIOR (humidity_outdoor) */}
-          <div>
-            <p className="text-sm font-medium mb-1">💧 Humedad exterior</p>
+          <div className={tiene('humidity_outdoor') ? undefined : 'opacity-60'}>
+            <p className="text-sm font-medium mb-1">💧 Humedad exterior{marca('humidity_outdoor', 'WN32')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
@@ -378,8 +435,8 @@ export function AdminAlertas() {
           {/* Humedad INTERIOR (humidity_indoor). Es la que vigila el moho en el
               GW1100 desde que se retiró la trampa de "tratar interior como
               exterior": antes su lectura entraba por la regla exterior. */}
-          <div>
-            <p className="text-sm font-medium mb-1">🦠 Humedad interior</p>
+          <div className={tiene('humidity_indoor') ? undefined : 'opacity-60'}>
+            <p className="text-sm font-medium mb-1">🦠 Humedad interior{marca('humidity_indoor', 'sensor integrado')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('humidity_indoor_high')} onToggle={() => toggleRule('humidity_indoor_high')} />
@@ -396,9 +453,10 @@ export function AdminAlertas() {
             </div>
           </div>
 
-          {/* Punto de rocío: se deriva de temp+humedad, así que existe en ambas. */}
-          <div>
-            <p className="text-sm font-medium mb-1">🥵 Punto de rocío</p>
+          {/* Punto de rocío: lo DERIVA el servidor de la temperatura y la humedad
+              exteriores, así que solo existe donde hay sensor exterior. */}
+          <div className={tiene('dew_point') ? undefined : 'opacity-60'}>
+            <p className="text-sm font-medium mb-1">🥵 Punto de rocío{marca('dew_point', 'WN32')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('dew_high')} onToggle={() => toggleRule('dew_high')} />
@@ -415,9 +473,10 @@ export function AdminAlertas() {
             </div>
           </div>
 
-          {/* Sensación térmica (heat index con calor, wind chill con frío). */}
-          <div>
-            <p className="text-sm font-medium mb-1">🌡️ Sensación térmica</p>
+          {/* Sensación térmica (heat index con calor, wind chill con frío). La deriva el
+              servidor de la temperatura, la humedad y el viento EXTERIORES. */}
+          <div className={tiene('feels_like') ? undefined : 'opacity-60'}>
+            <p className="text-sm font-medium mb-1">🌡️ Sensación térmica{marca('feels_like', 'WN32')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('feels_high')} onToggle={() => toggleRule('feels_high')} />
@@ -490,10 +549,11 @@ export function AdminAlertas() {
         </div>
       </div>
 
-      {/* Tendencia de temperatura (2 niveles). Misma mecánica que la de presión. */}
-      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+      {/* Tendencia de temperatura (2 niveles). Misma mecánica que la de presión, y como
+          ella se calcula sobre la lectura EXTERIOR, así que va marcada igual. */}
+      <div className={`bg-slate-800/50 rounded-xl border border-white/10 p-4 ${tiene('temperature_outdoor') ? '' : 'opacity-60'}`}>
         <p className="text-sm font-medium mb-2">
-          🌡️ Tendencia de temperatura <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (una caída rápida suele ser la llegada de una tormenta)</span>
+          🌡️ Tendencia de temperatura{marca('temperature_outdoor', 'WN32')} <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (una caída rápida suele ser la llegada de una tormenta)</span>
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
