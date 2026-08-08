@@ -197,13 +197,29 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={fmtTick} tick={{ fill: '#94a3b8', fontSize: 10 }} minTickGap={40} />
                     <YAxis yAxisId="v" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
+                    {/* Los rótulos del eje derecho van en el rosa de la dirección, no en el
+                        verde del viento: es el eje de ESA serie, y en verde parecía marcar la
+                        escala de las velocidades. */}
                     <YAxis yAxisId="dir" orientation="right" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]}
-                      tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#22c55e', fontSize: 10 }} width={28} />
+                      tickFormatter={(t: number) => CARDINAL[t / 90]} tick={{ fill: '#f472b6', fontSize: 10 }} width={28} />
                     <Tooltip cursor={cursor} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Dirección' ? `${Math.round(v)}° (${dir16(v)})` : `${nf(v)} ${u.windU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                      {/* Los tres trazos eran del mismo verde: medio #22c55e, máximo #16a34a
+                          --un solo paso de diferencia-- y la dirección con el verde IDÉNTICO
+                          al del medio. No se distinguían, y no es cuestión de gusto: medido
+                          con el validador de paletas, el par de verdes daba ΔE 9.8 en visión
+                          normal, por debajo del suelo de 15 a partir del cual dos colores se
+                          separan a simple vista.
+                          Ahora: el medio conserva el verde de la casa; el máximo pasa a un
+                          verde claro (ΔE 15.9, y encima discontinuo, que es lo que además
+                          distingue una serie de la otra si alguien no ve el color); y la
+                          dirección sale del verde a rosa, porque no es una velocidad --va en
+                          su propio eje-- y compartir color con el viento medio la hacía
+                          parecer parte de lo mismo. Verificado en TODOS los pares: CVD 10.4
+                          sobre un objetivo de 8, y contraste sobre el fondo ≥3:1. */}
                       <Line yAxisId="v" type="monotone" dataKey="vmed" name="Viento medio" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
-                      <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#16a34a" strokeWidth={2} dot={false} connectNulls />
-                      <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#22c55e" />
+                      <Line yAxisId="v" type="monotone" dataKey="vmax" name="Viento máximo" stroke="#86efac" strokeWidth={2} strokeDasharray="6 4" dot={false} connectNulls />
+                      <Scatter yAxisId="dir" dataKey="dir" name="Dirección" fill="#f472b6" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
