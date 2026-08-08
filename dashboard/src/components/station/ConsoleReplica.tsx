@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { deriveCondition, historicValue, moonIllumination } from '../../weather'
+import { deriveCondition, historicValue, moonIllumination, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -115,6 +115,17 @@ function solarColor(w: number): string {
   for (const s of SOLAR_STEPS) if (w >= s.from) c = s.color
   return c
 }
+
+// Categoría del IMECA tal como la manda el backend, lista para el renglón de la celda.
+//
+// Sólo hay una que no cabe: la celda tiene ~100 px de interior y "EXTREMADAMENTE MALA"
+// mide ~130 a cuerpo 14, así que se abrevia. Las otras cuatro entran tal cual --la más
+// larga es "MUY MALA", ~55 px--. Se abrevia por NOMBRE y no por longitud para que el
+// recorte sea una decisión explícita y no una sorpresa el día que la norma cambie de
+// palabras; si llega una desconocida y larga, el `nowrap` de la celda la deja asomar,
+// que se ve y se corrige, en vez de partirla en dos renglones.
+const IMECA_CORTO: Record<string, string> = { 'Extremadamente mala': 'Extrema' }
+const imecaLabel = (cat: string) => (IMECA_CORTO[cat] ?? cat).toUpperCase()
 
 // Números de la consola: la parte decimal (".4") en fuente más chica, como una
 // consola física. Divide en el punto; si no hay decimal, devuelve el string tal cual.
@@ -1580,6 +1591,31 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
             </div>
+            {/* El NIVEL en el renglón donde SOLAR pone su unidad, y con su mismo formato
+                --blanco, 14 px-- porque hace el mismo papel: decir qué significa la cifra
+                de encima. En SOLAR la respuesta es la unidad; aquí un número desnudo no
+                dice nada a nadie que no se sepa los cortes de la OMS de memoria, y el
+                riel de abajo los enseña pero sin nombrarlos.
+                En BLANCO y no en el color del nivel, que era la otra opción: el color ya
+                lo llevan el dígito y el riel, y una tercera cosa del mismo tono convertía
+                la celda en un bloque naranja. El blanco lo deja como lo que es, una
+                etiqueta.
+                Los cortes salen de `uvLabel` (weather.ts), la misma función que usa la
+                tarjeta de Inicio y con los mismos umbrales que `uvColor` de este archivo:
+                así el dígito naranja nunca puede coincidir con la palabra "Alto".
+                CUERPO 13 y no los 14 del "W/m²" de SOLAR, y es una medida, no un gusto: el
+                interior de esta celda son 68.0 px y "MODERADO" --que es el caso de casi
+                cualquier mañana, no un extremo raro-- mide 68.2 a cuerpo 14. A 13 baja a
+                63.4 y quedan 4.6 px de holgura. La diferencia de un píxel entre celdas
+                vecinas no se ve; una palabra recortada sí, que es el mismo criterio con el
+                que las cifras de esta fila se quedaron en 38 en vez de 40. IMECA lleva el
+                13 también, aunque le sobre sitio, para que las dos CATEGORÍAS pesen igual
+                entre sí --lo de SOLAR es una unidad, otra cosa--. */}
+            {data?.uv_index != null && (
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+                {uvLabel(data.uv_index).toUpperCase()}
+              </div>
+            )}
             {/* Escala a 12: es donde acaba la escala UV de la OMS (11+ ya es "extremo",
                 el tramo fucsia de `uvColor`), así que la barra llena coincide con el
                 color más alto y las dos señales dicen lo mismo. */}
@@ -1599,6 +1635,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
             </div>
+            {/* La CATEGORÍA en el mismo renglón y formato que el nivel de UV y que la
+                unidad de SOLAR. La manda el backend en `category` (`imeca.py`), que es de
+                donde sale también el color del dígito: derivarla aquí de los cortes sería
+                una segunda tabla que puede desincronizarse de la que colorea. */}
+            {imeca?.available && imeca.category && (
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+                {imecaLabel(imeca.category)}
+              </div>
+            )}
             {/* Escala a 200 IMECA: es el tope que la norma mexicana considera "muy mala"
                 y el techo que esperamos no ver nunca, el mismo con el que se
                 dimensionaron las tres cifras de esta celda. */}

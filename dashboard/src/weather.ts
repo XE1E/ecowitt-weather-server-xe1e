@@ -181,6 +181,24 @@ export function beaufort(kmh: number): { scale: number; label: string } {
   return { scale, label: labels[scale] }
 }
 
+/**
+ * Nivel de exposición del índice UV, con los cinco tramos de la OMS.
+ *
+ * Vive aquí, y no en la tarjeta que lo estrenó, porque ahora lo usan DOS pantallas
+ * --la tarjeta de Inicio y la celda UV de la consola-- y los cortes tienen que ser
+ * los mismos que los del color en las dos: si una dice "Alto" mientras la otra ya
+ * pinta el naranja de "Muy alto", una de las dos está mintiendo. Los colores siguen
+ * duplicados a propósito (clases de Tailwind en la web, hex en la consola), pero los
+ * UMBRALES son estos.
+ */
+export function uvLabel(uv: number): string {
+  if (uv >= 11) return 'Extremo'
+  if (uv >= 8) return 'Muy alto'
+  if (uv >= 6) return 'Alto'
+  if (uv >= 3) return 'Moderado'
+  return 'Bajo'
+}
+
 /** Cardinal direction (Spanish) from degrees. */
 export function cardinal(deg: number): string {
   return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]

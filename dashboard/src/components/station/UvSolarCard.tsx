@@ -1,13 +1,8 @@
 import { WeatherData } from '../../types'
 import { WeatherIcon } from '../WeatherIcon'
-
-function uvLabel(uv: number): string {
-  if (uv >= 11) return 'Extremo'
-  if (uv >= 8) return 'Muy alto'
-  if (uv >= 6) return 'Alto'
-  if (uv >= 3) return 'Moderado'
-  return 'Bajo'
-}
+// El rótulo del nivel se mudó a `weather.ts`: la celda UV de la consola muestra el
+// mismo, y con una copia en cada sitio los cortes podían separarse.
+import { uvLabel } from '../../weather'
 
 // Color del número/etiqueta de UV según el nivel (verde→morado). Distingue el
 // dato de UV del de radiación (ámbar fijo).
