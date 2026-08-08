@@ -412,20 +412,29 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
           a que la fuente esté instalada --ya pasó con DSEG-- y además entrarían a todo
           color, fuera de la estética de la consola. Aquí el dibujo es determinista y
           comparte el amarillo del resto de la celda.
-          La flecha se queda: es lo que distingue amanecer de atardecer, y sin ella los dos
-          dibujos serían idénticos. */}
-      <svg width="26" height="16" viewBox="0 0 26 16" style={{ flexShrink: 0 }}>
-        {/* Horizonte */}
-        <line x1="1" y1="13.5" x2="17" y2="13.5" stroke="#ffcf19" strokeWidth="1.4" strokeLinecap="round" />
-        {/* Medio sol asomando. Medio y no entero: entero se leía como una luna llena,
-            que es justo lo que hay dibujado al lado en esta misma celda. */}
-        <path d="M4.5 13.5 A 4.5 4.5 0 0 1 13.5 13.5 Z" fill="#ffcf19" />
-        {/* Tres rayos, a 1.3 de grosor para que aguanten al tamaño real */}
-        <line x1="5" y1="7.6" x2="3.4" y2="6" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
-        <line x1="9" y1="7.4" x2="9" y2="5" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
-        <line x1="13" y1="7.6" x2="14.6" y2="6" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
-        {/* Flecha aparte del sol, a la derecha, para no pisar los rayos */}
-        <path d={up ? 'M22 4.5 L25 9 L19 9 Z' : 'M22 11 L25 6.5 L19 6.5 Z'} fill="#ffcf19" />
+          Hubo una flecha al lado del sol para decir cuál era cuál; se quitó porque competía
+          con el dibujo en un icono de 24 px. La diferencia la lleva ahora el sol mismo. */}
+      <svg width="24" height="17" viewBox="0 0 24 17" style={{ flexShrink: 0 }}>
+        {/* Horizonte, igual en los dos */}
+        <line x1="1.5" y1="14" x2="22.5" y2="14" stroke="#ffcf19" strokeWidth="1.5" strokeLinecap="round" />
+        {/* El SOL es lo que distingue amanecer de atardecer, sin flecha: asomando ALTO
+            --media circunferencia de r 5.5-- o HUNDIDO y achatado --un casquete de un
+            círculo de r 8 cuyo centro está bajo la línea, así que sólo se ve una tajada--.
+            La hora de al lado remata la duda: nadie confunde las 06:15 con las 19:09.
+            Medio sol y no entero: entero se leía como una luna llena, que es justo lo que
+            hay dibujado al lado en esta misma celda. */}
+        <path d={up
+          ? 'M6.5 14 A 5.5 5.5 0 0 1 17.5 14 Z'
+          : 'M5.5 14 A 8 8 0 0 1 18.5 14 Z'} fill="#ffcf19" />
+        {/* Rayos largos al amanecer y cortos al atardecer, que refuerza lo mismo que la
+            altura del sol: al final del día queda menos luz. */}
+        {(up
+          ? [[7.1, 7.7, 5.2, 5.8], [12, 7.4, 12, 4.6], [16.9, 7.7, 18.8, 5.8]]
+          : [[7.4, 10.4, 6, 9], [12, 9.6, 12, 7.6], [16.6, 10.4, 18, 9]]
+        ).map(([x1, y1, x2, y2], i) => (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="#ffcf19" strokeWidth="1.4" strokeLinecap="round" />
+        ))}
       </svg>
       <span className="seg" style={{ color: '#ffcf19', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
         {hhmm(iso) || '--:--'}
@@ -947,21 +956,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                   arrancan a distinta profundidad hacia dentro y acaban en el óvalo
                   exterior, así que la jerarquía la dan el largo, el grosor y el tono a la
                   vez --con sólo el color no se distinguen a esta escala--. */}
-              {Array.from({ length: 36 }, (_, i) => i * 10).map((deg) => {
-                const rad = (deg - 90) * Math.PI / 180
-                const nivel = deg % 90 === 0 ? 0 : deg % 30 === 0 ? 1 : 2
-                const [rx, ry, color, ancho] = [
-                  [41.5, 32, '#b4b4b4', 2],
-                  [44.5, 34.5, '#7c7c7c', 1.2],
-                  [46.5, 36, '#525252', 0.8],
-                ][nivel] as [number, number, string, number]
-                return (
-                  <line key={deg}
-                    x1={50 + rx * Math.cos(rad)} y1={40 + ry * Math.sin(rad)}
-                    x2={50 + RX * Math.cos(rad)} y2={40 + RY * Math.sin(rad)}
-                    stroke={color} strokeWidth={ancho} />
-                )
-              })}
+              {Array.from({ length: 36 }, (_, i) => i * 10)
+                // Los CUATRO cardinales no llevan marca: ahí va su letra, encima del riel,
+                // y la marca quedaba debajo pisándola. La letra ya señala el rumbo mejor
+                // que un palito, así que la marca no aportaba nada y sólo ensuciaba.
+                .filter((deg) => deg % 90 !== 0)
+                .map((deg) => {
+                  const rad = (deg - 90) * Math.PI / 180
+                  const media = deg % 30 === 0
+                  const [rx, ry, color, ancho] = media
+                    ? [44.5, 34.5, '#7c7c7c', 1.2]
+                    : [46.5, 36, '#525252', 0.8]
+                  return (
+                    <line key={deg}
+                      x1={50 + rx * Math.cos(rad)} y1={40 + ry * Math.sin(rad)}
+                      x2={50 + RX * Math.cos(rad)} y2={40 + RY * Math.sin(rad)}
+                      stroke={color} strokeWidth={ancho} />
+                  )
+                })}
               {/* Óvalo interior */}
               <ellipse cx="50" cy="40" rx={RX_IN} ry={RY_IN} stroke="#444" strokeWidth="1" fill="none" />
               {/* La flecha va ANTES de las letras cardinales: cuando el rumbo cae
@@ -970,9 +982,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               {windMarker}
               {/* Letras cardinales más grandes */}
               <text x="50" y="8" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">N</text>
-              <text x="98" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">E</text>
+              {/* E en 95.5 y O en 4.5, no en 98 y 2: el riel del óvalo va de rx 42 a 49
+                  sobre cx 50, así que en el ecuador su banda ocupa x 92-99 a la derecha y
+                  x 1-8 a la izquierda, y esos son sus centros. En 98 y 2 las dos letras
+                  caían sobre el filo exterior y parecían escaparse del aro. */}
+              <text x="95.5" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">E</text>
               <text x="50" y="77" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">S</text>
-              <text x="2" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">O</text>
+              <text x="4.5" y="44" fill="#fff" fontSize="9" fontWeight="800" textAnchor="middle">O</text>
             </svg>
             {/* 52.4% y no 50%: el transform vive en el <svg>, no en este contenedor,
                 así que el centro de la elipse quedó 2.4% más abajo que el centro de la
