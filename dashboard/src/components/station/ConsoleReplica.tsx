@@ -403,8 +403,17 @@ function LevelBar({ value, max, bands, hint = true }:
 // Salida y puesta del sol, para la celda de la luna. Las flechas dicen cuál es
 // cuál sin gastar una palabra: sube = amanece, baja = atardece.
 function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
+  // Glifo ENCIMA de su hora, no al lado. El cambio no es estético: en esta celda la luna
+  // estaba limitada por el ANCHO mientras sobraban ~40 px de ALTO --medido: interior de
+  // 138x91 con un disco de 50--. Apilando, el bloque de las horas pasa de 85 px de ancho
+  // (glifo 24 + hueco 4 + cifras 57) a los 57 de las cifras, y esos 28 px liberados se los
+  // queda el disco lunar, que crece la mitad. El alto que cuesta ya estaba desocupado.
+  //
+  // Cada glifo va sobre SU hora y no los dos por fuera (uno arriba y otro abajo de las dos
+  // cifras): así la pareja es inequívoca sin tener que suponer que el de arriba es el de
+  // arriba.
   const row = (up: boolean, iso?: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
       {/* Sol sobre el horizonte, no un triángulo suelto: el triángulo decía la dirección
           pero no de QUÉ, así que había que deducir del contexto que hablaba del sol.
           Va como SVG y no como glifo de fuente a propósito: los únicos caracteres que
@@ -441,10 +450,11 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
       </span>
     </div>
   )
-  // gap 10 y no 5: las dos horas se leían como un bloque de cuatro cifras pegadas.
-  // Hay alto de sobra en la celda para separarlas.
+  // gap 6 entre las dos parejas: con las cuatro filas apiladas hay que separar pareja de
+  // pareja más de lo que separa el glifo de su hora (1), o las cuatro se leen como una
+  // lista y se pierde a qué hora pertenece cada sol.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       {row(true, sunrise)}
       {row(false, sunset)}
     </div>
@@ -1283,9 +1293,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               habría quedado corta al entrar el sol. Ese renglón que se ahorra es justo
               el que necesitan las dos horas.
               Padding lateral de 6 y no los 12 de `.cell`: en 146 px de celda, la luna y
-              las dos horas piden ~122 y con 12 por lado no caben. */}
+              las dos horas piden casi todo el interior y con 12 por lado no caben.
+              El disco pasa de 50 a 76 px: lo permite haber apilado los glifos del sol
+              sobre sus horas (ver SunTimes), que devolvió 28 px de ancho. El tope no es ese
+              ancho sino el ALTO del interior, 91 px, así que 76 deja 15 de aire. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '6px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <MoonGlyph size={50} />
+            <MoonGlyph size={76} />
             <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
         </div>
