@@ -129,11 +129,29 @@ function decNum(s: string): ReactNode {
   )
 }
 
+// Mapa de manchas, en coordenadas normalizadas (-1..1 sobre el radio) y con su radio
+// en la misma escala. Son las SEIS de siempre, en el mismo sitio: no pretenden ser el
+// mapa de los mares de verdad --a 74 px eso se convierte en papilla-- sino romper la
+// pastilla lisa. Vive fuera del componente porque ahora la dibujan DOS capas, la de la
+// cara iluminada y la de la sombra, y las dos tienen que usar la misma lista o el
+// relieve no coincidiría a los lados del terminador.
+const MARES = [
+  [-0.30, -0.34, 0.22],
+  [0.11, -0.46, 0.15],
+  [0.29, -0.09, 0.19],
+  [-0.16, 0.26, 0.15],
+  [0.06, 0.06, 0.11],
+  [-0.34, 0.02, 0.12],
+] as const
+
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
 function MoonGlyph({ size = 42, illum, waxing }:
   { size?: number; illum?: number; waxing?: boolean }) {
   const R = size / 2
-  const maresId = `mares-${useId().replace(/:/g, '')}`
+  // Un solo identificador para los seis recursos del dibujo (cuatro degradados, dos
+  // recortes y el desenfoque): `useId` de React trae dos puntos, que en `url(#...)` no
+  // valen.
+  const uid = useId().replace(/:/g, '')
   // Iluminación y sentido: si el servidor los manda se usan ESOS, que salen de pyephem para
   // las coordenadas y la elevación del sitio. El cálculo del navegador
   // (`moonIllumination`) queda de respaldo para cuando el almanaque no responde: es un mes
@@ -155,35 +173,101 @@ function MoonGlyph({ size = 42, illum, waxing }:
   // cálculo local devuelve un float que nunca da 0 exacto; el almanaque, en cambio,
   // REDONDEA a entero, así que 0 es alcanzable. Sin luz no se dibuja luz.
   const oscura = ilum < 1
+  // Las manchas, a la opacidad que se le pida. La misma función para las dos caras: lo
+  // ÚNICO que cambia entre ellas es cuánto se marcan.
+  const mares = (op: number) => MARES.map(([cx, cy, r], i) => (
+    <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill={`rgba(0,0,0,${op})`} />
+  ))
   return (
     // flexShrink 0: sin él, en una fila que se pasa de ancho flex encoge el disco en vez
     // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
     // medido--. Mejor que el ajuste se note en el vecino y se corrija a mano.
     <svg width={size} height={size} viewBox={`${-R} ${-R} ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <defs>
+        {/* SOMBRA y LUZ como degradados y no como dos colores planos: con el plano, el
+            disco se veía como dos recortes de cartulina pegados, y lo que se quiere es
+            una ESFERA. Los tonos de antes (#3c3a33 y #e6d18f) siguen siendo el punto
+            medio de cada uno, así que la luna no cambia de color, sólo gana relieve.
+            `userSpaceOnUse`: el centro del degradado se fija en el disco y no en la caja
+            de la figura que lo usa. Con las unidades por defecto, el de la luz se
+            comprimía dentro de la uña de un creciente y la sombreaba al revés --el brillo
+            caía en el filo del terminador en vez de en el limbo--. Medido en la maqueta,
+            no supuesto.
+            El foco va arriba y a la izquierda del centro, no en el centro: una esfera
+            iluminada desde un lado nunca tiene su punto más claro en medio, y ese
+            descentrado es lo que hace que se lea como bola. */}
+        <radialGradient id={`sombra-${uid}`} gradientUnits="userSpaceOnUse"
+          cx={-0.15 * R} cy={-0.2 * R} r={1.15 * R}>
+          <stop offset="0" stopColor="#474439" />
+          <stop offset="0.7" stopColor="#3a382f" />
+          <stop offset="1" stopColor="#2c2b25" />
+        </radialGradient>
+        {/* El amarillo de la luna es más pálido que el del sol (--y, #ffcf19), a propósito
+            y no por descuido: son dos astros distintos en la misma celda y la luna no
+            brilla, refleja. El sol se queda vivo. */}
+        <radialGradient id={`luz-${uid}`} gradientUnits="userSpaceOnUse"
+          cx={-0.1 * R} cy={-0.25 * R} r={1.25 * R}>
+          <stop offset="0" stopColor="#f4e6b6" />
+          <stop offset="0.6" stopColor="#e6d18f" />
+          <stop offset="1" stopColor="#bda468" />
+        </radialGradient>
+        {/* Caída de luz junto al TERMINADOR: ahí el sol pega de refilón y la superficie se
+            apaga, que es el rasgo que hace que un cuarto parezca una bola y no un
+            semicírculo pintado.
+            Va en las unidades POR DEFECTO (la caja de la figura que lo usa) y se pinta
+            sobre una copia del propio trozo iluminado, así que el degradado sigue al
+            terminador en cualquier fase sin tener que calcular dónde cae. Sobre un
+            rectángulo del tamaño del SVG --como se probó primero-- se medía sobre el disco
+            entero, y en cuarto y en creciente la caída se quedaba en la mitad en sombra:
+            no hacía nada.
+            Acaba en 0.32 y no a mitad de camino: al terminador le toca el apagón, pero el
+            resto de la cara tiene que quedarse limpio o el conjunto se ve nublado. */}
+        <linearGradient id={`term-${uid}`} x1={crece ? 0 : 1} y1="0" x2={crece ? 1 : 0} y2="0">
+          <stop offset="0" stopColor="#000" stopOpacity="0.5" />
+          <stop offset="0.32" stopColor="#000" stopOpacity="0" />
+        </linearGradient>
+        {/* Oscurecimiento del LIMBO, sobre las dos caras a la vez: el borde del disco es
+            superficie vista de canto y siempre sale más apagada. Es lo que redondea la
+            silueta; sin él, con los otros dos degradados puestos, el canto seguía siendo
+            un recorte limpio. Sólo el último 14% del radio, para no meter viñeta. */}
+        <radialGradient id={`limbo-${uid}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0.86" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.35" />
+        </radialGradient>
+        <clipPath id={`disco-${uid}`}><circle r={R} /></clipPath>
+        <clipPath id={`luzclip-${uid}`}><path d={oscura ? '' : litPath} /></clipPath>
+        {/* Manchas DESENFOCADAS: a canto vivo eran seis burbujas de compás. Con ~1.3 px de
+            difuminado a tamaño de consola se funden entre ellas y leen como terreno.
+            El desenfoque va antes del recorte --SVG aplica el filtro y LUEGO el
+            clip-path-- así que no se sale del disco ni cruza el terminador. */}
+        <filter id={`difu-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
+          <feGaussianBlur stdDeviation={0.035 * R} />
+        </filter>
+      </defs>
       {/* La parte en sombra, en gris cálido y no en el casi negro de antes (#1b1b1b): sobre
           el negro de la celda ese tono no se distinguía del fondo, así que no se veía el
           DISCO completo y la fase se leía como una mancha suelta en vez de como una esfera
           parcialmente iluminada. Con el disco visible, el terminador se nota. */}
-      <circle r={R} fill="#3c3a33" />
-      {/* El amarillo de la luna es más pálido que el del sol (--y, #ffcf19), a propósito y
-          no por descuido: son dos astros distintos en la misma celda y la luna no brilla,
-          refleja. El sol se queda vivo. */}
-      {!oscura && <path d={litPath} fill="#e6d18f" />}
-      {/* Mares, para que el disco no sea una pastilla lisa. Recortados a la parte ILUMINADA:
-          sin recorte caían sobre la sombra --donde el contraste es mayor-- y se veían como
-          cráteres en la mitad oscura mientras el creciente quedaba liso, exactamente al
-          revés de lo que se ve en el cielo. Así, en creciente fino apenas se adivinan y
-          cerca de la llena se ven todos, que es lo que hace la luna de verdad.
-          El id del recorte sale de `useId` y sin los dos puntos que mete React, para que
-          `url(#...)` sea una referencia limpia y dos lunas en la misma página no se pisen. */}
-      <clipPath id={maresId}><path d={oscura ? '' : litPath} /></clipPath>
-      <g clipPath={`url(#${maresId})`}>
-        {([[-0.30, -0.34, 0.22], [0.11, -0.46, 0.15], [0.29, -0.09, 0.19],
-           [-0.16, 0.26, 0.15], [0.06, 0.06, 0.11], [-0.34, 0.02, 0.12]] as const)
-          .map(([cx, cy, r], i) => (
-            <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill="rgba(0,0,0,0.20)" />
-          ))}
-      </g>
+      <circle r={R} fill={`url(#sombra-${uid})`} />
+      {/* Manchas de la CARA EN SOMBRA. Antes iban recortadas a la parte iluminada y la
+          sombra quedaba lisa; ahora las llevan las dos, que es lo que se ve en el cielo
+          --el disco entero está manchado, no sólo lo que le da el sol--.
+          Se marcan MÁS que las de la luz (0.26 contra 0.20) por dos razones: el gris de la
+          sombra tiene menos recorrido hasta el negro que el amarillo de la luz, y el panel
+          del kiosco aplasta los tonos oscuros (ver la nota del fondo de las celdas en
+          `console-css.ts`), así que una diferencia fina ahí no llega a verse. Van sobre el
+          disco COMPLETO, no sobre la sombra recortada: la cara iluminada las tapa después
+          con su propio relleno, y así no hay que construir un segundo recorte. */}
+      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.26)}</g>
+      {!oscura && <path d={litPath} fill={`url(#luz-${uid})`} />}
+      {/* Manchas de la CARA ILUMINADA, recortadas a ella. Al usar la misma lista que la
+          capa de la sombra, cada mancha continúa al otro lado del terminador: es la misma
+          luna, con una parte alumbrada y otra no. */}
+      {!oscura && (
+        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.20)}</g>
+      )}
+      {!oscura && <path d={litPath} fill={`url(#term-${uid})`} />}
+      <circle r={R} fill={`url(#limbo-${uid})`} />
     </svg>
   )
 }
