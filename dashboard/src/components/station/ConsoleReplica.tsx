@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
 import { deriveCondition, historicValue, moonIllumination } from '../../weather'
@@ -132,6 +132,7 @@ function decNum(s: string): ReactNode {
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
 function MoonGlyph({ size = 42 }: { size?: number }) {
   const R = size / 2
+  const maresId = `mares-${useId().replace(/:/g, '')}`
   const { phase, illum, waxing } = moonIllumination(new Date())
   const rx = Math.max(0.4, Math.abs(R * Math.cos(2 * Math.PI * phase)))
   const gibbous = illum > 50
@@ -152,17 +153,21 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
           no por descuido: son dos astros distintos en la misma celda y la luna no brilla,
           refleja. El sol se queda vivo. */}
       <path d={litPath} fill="#e6d18f" />
-      {/* Mares, para que el disco no sea una pastilla lisa. Van DESPUÉS de las dos capas y
-          en negro translúcido, así que oscurecen la parte iluminada y apenas se notan en la
-          sombra --que es justo lo que hace la luna de verdad--. Sin `clipPath`: cada mancha
-          está colocada de modo que su centro más su radio no llegan a R, así que ninguna
-          puede asomar por el borde del disco, y así el componente no necesita un id único
-          que pudiera chocar si algún día se dibujan dos lunas en la misma página. */}
-      {([[-0.30, -0.34, 0.22], [0.11, -0.46, 0.15], [0.29, -0.09, 0.19],
-         [-0.16, 0.26, 0.15], [0.06, 0.06, 0.11], [-0.34, 0.02, 0.12]] as const)
-        .map(([cx, cy, r], i) => (
-          <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill="rgba(0,0,0,0.17)" />
-        ))}
+      {/* Mares, para que el disco no sea una pastilla lisa. Recortados a la parte ILUMINADA:
+          sin recorte caían sobre la sombra --donde el contraste es mayor-- y se veían como
+          cráteres en la mitad oscura mientras el creciente quedaba liso, exactamente al
+          revés de lo que se ve en el cielo. Así, en creciente fino apenas se adivinan y
+          cerca de la llena se ven todos, que es lo que hace la luna de verdad.
+          El id del recorte sale de `useId` y sin los dos puntos que mete React, para que
+          `url(#...)` sea una referencia limpia y dos lunas en la misma página no se pisen. */}
+      <clipPath id={maresId}><path d={litPath} /></clipPath>
+      <g clipPath={`url(#${maresId})`}>
+        {([[-0.30, -0.34, 0.22], [0.11, -0.46, 0.15], [0.29, -0.09, 0.19],
+           [-0.16, 0.26, 0.15], [0.06, 0.06, 0.11], [-0.34, 0.02, 0.12]] as const)
+          .map(([cx, cy, r], i) => (
+            <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill="rgba(0,0,0,0.20)" />
+          ))}
+      </g>
     </svg>
   )
 }
