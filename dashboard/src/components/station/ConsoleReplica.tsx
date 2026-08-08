@@ -434,19 +434,29 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
 // se pinza contra el extremo en vez de salirse del riel: ±5 hPa en 3 h ya es un
 // cambio brusco, y lo que importa entonces es "está al tope", no cuánto lo pasa.
 const PS_R = 5          // rango del riel, en hPa
-// 335 = la caja de la celda SIN sus bordes (339 menos 2+2), y el contenedor de este
-// riel ya no lleva sangría propia. La cuenta importa: el dibujo reserva 12 unidades a
-// cada lado dentro del viewBox (x0/x1, para que el puntero y los rótulos de los
-// extremos no se salgan), así que el trazo VISIBLE mide 335-24 = 311 px y arranca a 12
-// del borde. Justo lo mismo que el histograma de LLUVIA, que sí lleva sangría de 12 y
-// dibuja sus barras a ras. Con PS_W = 311 y sangría de 12 en el contenedor, los dos
-// márgenes se sumaban y el riel salía 22 px más corto que el histograma --medido--.
+// El contenedor de este riel NO lleva sangría propia: se estira a la caja de la celda sin
+// sus bordes, y todo el margen se reserva dentro del viewBox (PS_M), donde además viven el
+// "≤" y el "≥". Si se le pusiera sangría al contenedor, los dos márgenes se sumarían y el
+// riel saldría bastante más corto de lo que la cuenta dice --ya pasó, medido--.
 //
-// Ensancharlo deshace un estrechamiento anterior (261 → 221) que buscaba lo contrario:
+// El ancho de hoy deshace un estrechamiento antiguo (261 → 221) que buscaba lo contrario:
 // a lo ancho de la celda las marcas quedan muy separadas y el riel tira a parecer una
-// regla más que un indicador. El paso entre marcas sube de ~20 a ~31 px, y se acepta a
-// cambio de que los dos gráficos de la consola midan igual.
-const PS_W = 335
+// regla más que un indicador. Aquí el paso entre marcas es de ~30 px, que es el punto en
+// el que los once rótulos de -5 a 5 caben sin contarse.
+//
+// 333 = la caja de la celda SIN sus bordes (339 menos 3+3). Estuvo en 335 mientras el
+// borde medía 2 px; al subirlo a 3 el viewBox declaraba dos píxeles que ya no existían y
+// todo el dibujo se escalaba para caber, descolocando las cuentas de abajo.
+const PS_W = 333
+// Margen a cada lado DENTRO del viewBox, donde viven el "≤" y el "≥". Era 12, que dejaba
+// los símbolos a 2 px del riel: pegados, y montándose sobre sus extremos redondeados. A 18
+// quedan 6 px de aire a cada lado.
+//
+// El precio es que el trazo visible del riel baja de 311 a 297 px y deja de medir lo mismo
+// que el histograma de LLUVIA (309 con el borde de 3 px), que era el motivo de haberlo
+// ensanchado en su día. Se acepta: que los dos gráficos midan igual es una finura que
+// nadie mira, y dos símbolos aplastados contra el borde sí se ven.
+const PS_M = 18
 // 34 y no 32: los rótulos se mudan ARRIBA del riel y el puntero ABAJO, así que el
 // alto ya no lo fija el texto sino la suma riel + puntero. El puntero mide 13 y su
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
@@ -457,8 +467,8 @@ const PS_H = 34
 function PressureScale({ delta, endLabel, imperial }: {
   delta: number | null; endLabel: string; imperial: boolean
 }) {
-  const x0 = 12
-  const x1 = PS_W - 12
+  const x0 = PS_M
+  const x1 = PS_W - PS_M
   const mid = (x0 + x1) / 2
   const half = (x1 - x0) / 2
   const xOf = (v: number) => mid + (Math.max(-PS_R, Math.min(PS_R, v)) / PS_R) * half
@@ -525,8 +535,10 @@ function PressureScale({ delta, endLabel, imperial }: {
       {/* 13 y no 11 como los números: el glifo "≤" tiene mucho aire dentro de su
           caja y al mismo cuerpo que las cifras se veía la mitad de grande. A 13
           mide 10 de ancho y aún deja 2 px hasta el arranque del riel. */}
-      <text x={0} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
-      <text x={PS_W} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
+      {/* Con 2 px de sangría y no pegados a x=0 y x=PS_W: ahí tocaban el borde de la
+          celda, que con 3 px es bien visible y parecía que el símbolo se salía. */}
+      <text x={2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
+      <text x={PS_W - 2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
       {/* Puntero DEBAJO del riel y con la cola en uve, como la flecha del compás.
           Cruza el riel entero: la punta llega al borde de ARRIBA (y=12), no al de
           abajo, así que señala la casilla exacta en vez de quedarse apuntando desde
