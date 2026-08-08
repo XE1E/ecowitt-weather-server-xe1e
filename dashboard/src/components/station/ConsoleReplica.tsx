@@ -139,7 +139,10 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
   const s2 = gibbous ? s1 : 1 - s1
   const litPath = `M0,${-R} A ${R} ${R} 0 0 ${s1} 0 ${R} A ${rx} ${R} 0 0 ${s2} 0 ${-R} Z`
   return (
-    <svg width={size} height={size} viewBox={`${-R} ${-R} ${size} ${size}`}>
+    // flexShrink 0: sin él, en una fila que se pasa de ancho flex encoge el disco en vez
+    // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
+    // medido--. Mejor que el ajuste se note en el vecino y se corrija a mano.
+    <svg width={size} height={size} viewBox={`${-R} ${-R} ${size} ${size}`} style={{ flexShrink: 0 }}>
       <circle r={R} fill="#1b1b1b" />
       <path d={litPath} fill="#ffcf19" />
     </svg>
@@ -413,7 +416,7 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
   // cifras): así la pareja es inequívoca sin tener que suponer que el de arriba es el de
   // arriba.
   const row = (up: boolean, iso?: string) => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       {/* Sol sobre el horizonte, no un triángulo suelto: el triángulo decía la dirección
           pero no de QUÉ, así que había que deducir del contexto que hablaba del sol.
           Va como SVG y no como glifo de fuente a propósito: los únicos caracteres que
@@ -445,16 +448,22 @@ function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
             stroke="#ffcf19" strokeWidth="1.4" strokeLinecap="round" />
         ))}
       </svg>
-      <span className="seg" style={{ color: '#ffcf19', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
+      {/* 14 y no 17: las horas ceden cuerpo para que el disco lunar crezca, que es lo que
+          se mira en esta celda. A 14 el bloque de las cuatro cifras baja de ~57 px de ancho
+          a ~47 y sigue leyéndose de lejos --las horas de mín/máx de otras celdas andan por
+          ahí--. Es la decisión explícita: antes achicar el número que la luna. */}
+      <span className="seg" style={{ color: '#ffcf19', fontSize: 14, fontWeight: 800, lineHeight: 1 }}>
         {hhmm(iso) || '--:--'}
       </span>
     </div>
   )
-  // gap 6 entre las dos parejas: con las cuatro filas apiladas hay que separar pareja de
-  // pareja más de lo que separa el glifo de su hora (1), o las cuatro se leen como una
-  // lista y se pierde a qué hora pertenece cada sol.
+  // gap 8 entre las dos parejas contra 3 dentro de cada pareja: hay que separar pareja de
+  // pareja MÁS de lo que separa el glifo de su hora, o las cuatro filas se leen como una
+  // lista y se pierde a qué hora pertenece cada sol. Los dos valores subieron juntos (era
+  // 1 y 6) porque a 1 el sol quedaba pegado a las cifras. El alto lo permite: las dos
+  // parejas piden 82 px de los 95 que tiene el interior de la celda.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
       {row(true, sunrise)}
       {row(false, sunset)}
     </div>
@@ -1294,11 +1303,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               el que necesitan las dos horas.
               Padding lateral de 6 y no los 12 de `.cell`: en 146 px de celda, la luna y
               las dos horas piden casi todo el interior y con 12 por lado no caben.
-              El disco pasa de 50 a 76 px: lo permite haber apilado los glifos del sol
-              sobre sus horas (ver SunTimes), que devolvió 28 px de ancho. El tope no es ese
-              ancho sino el ALTO del interior, 91 px, así que 76 deja 15 de aire. */}
-          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '6px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <MoonGlyph size={76} />
+              CUENTA DEL ANCHO, medida y no estimada. El interior entre bordes son 139 px;
+              con sangría de 4 quedan 131 para la fila. Las horas a cuerpo 14 ocupan ~47 y
+              el hueco 5, así que al disco le quedan ~74. El tope por ALTO es 95 (109 de
+              celda menos bordes y sangría), así que manda el ancho.
+              La primera versión pidió 76 con sangría 6 y flex se los recortó a 63 sin
+              avisar; de ahí el `flexShrink: 0` del disco y que las horas cedan cuerpo. */}
+          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <MoonGlyph size={74} />
             <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
         </div>
