@@ -82,12 +82,18 @@ const ARY = RY - 1.5
 
 // Misma lógica de umbrales que UvSolarCard (tab Inicio), en hex para los estilos
 // inline de la consola. UV: verde→fucsia. Solar: gris (noche)→rojo (pico).
+// Cortes del índice UV de la OMS. Los tonos son los SATURADOS (500 de la escala) y no
+// los pastel de la primera versión (400): sobre el negro de la consola los pastel se
+// apagan, y este color tiene que verse desde el otro lado de la habitación.
+//
+// La tabla de abajo usa los mismos cortes, así que el número y su riel no pueden
+// contradecirse: si el dígito está naranja, la banda naranja es la que está encendida.
 function uvColor(uv: number): string {
-  if (uv >= 11) return '#e879f9'
-  if (uv >= 8) return '#f87171'
-  if (uv >= 6) return '#fb923c'
-  if (uv >= 3) return '#fde047'
-  return '#34d399'
+  if (uv >= 11) return '#d946ef'
+  if (uv >= 8) return '#ef4444'
+  if (uv >= 6) return '#f97316'
+  if (uv >= 3) return '#eab308'
+  return '#22c55e'
 }
 
 function solarColor(w: number): string {
@@ -233,65 +239,134 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
   // lluvioso-- dibujaría una barra a tope y parecería un diluvio. Con suelo, la altura
   // significa siempre lo mismo mientras no se pase de 10.
   const scale = Math.max(peak, 10)
-  // 40 px de barra: es lo que dio de sí la celda al quitarle el rótulo "LLUVIA" y subir
-  // la gota y las cifras. Con 28 el gráfico se veía de juguete.
+  // 40 px de RANURA. El relleno tiene su propio techo, 6 px más bajo: sin él el día del
+  // pico llegaba al borde de arriba y quedaba a 3 px de las cifras de la celda --medido--,
+  // que es lo que hacía ver el gráfico apretado. Con techo, la ranura tiene una tapa
+  // visible y ninguna barra parece escaparse hacia los números.
   const BAR_H = 40
+  const FILL_MAX = 34
+  // La ranura de cada día, tenue: sin ella un día de 0.2 mm era un hilo de 3 px sobre el
+  // negro, indistinguible de cero y de "sin dato". Contra su hueco sí se compara.
+  const RANURA = '#ffffff12'
+  const cols = (render: (d: DailyRain, i: number) => React.ReactNode) => (
+    <div style={{ display: 'flex', gap: 2, width: '100%', alignItems: 'flex-end' }}>
+      {data.map((d, i) => (
+        <div key={d.date} style={{ flex: 1, minWidth: 0 }}>{render(d, i)}</div>
+      ))}
+    </div>
+  )
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%' }}>
-      {data.map((d, i) => {
-        const v = d.rain
-        const hoy = i === data.length - 1
-        // Tres casos que NO son lo mismo y se ven distintos: sin resumen guardado
-        // (gris), cero lluvia (una uña del color de la lluvia, para que el día exista)
-        // y con lluvia (proporcional, con 3 px de mínimo para que nunca desaparezca).
-        const alto = v == null ? 3 : v <= 0 ? 2 : Math.max(3, (v / scale) * BAR_H)
-        const color = v == null ? '#3a3a3a' : 'var(--r)'
-        const opacidad = v == null ? 1 : v <= 0 ? 0.35 : hoy ? 1 : 0.75
-        const esPico = v != null && v > 0 && v === peak
-        return (
-          <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}
-            title={`${d.date}: ${v == null ? 'sin dato' : fmt(v)}`}>
-            <div style={{ height: BAR_H, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
+    <div style={{ width: '100%' }}>
+      {/* Línea de base continua bajo las ranuras, para que el cero tenga sitio. Va en el
+          contenedor de la fila y no en cada columna: con los huecos de 2 px, un borde por
+          columna se vería discontinuo. */}
+      <div style={{ borderBottom: '1px solid #6b6b6b' }}>
+        {cols((d) => {
+          const v = d.rain
+          // Tres casos que NO son lo mismo y se ven distintos: sin resumen guardado
+          // (gris), cero lluvia (una uña del color de la lluvia, para que el día exista)
+          // y con lluvia (proporcional, con 3 px de mínimo para que nunca desaparezca).
+          const alto = v == null ? 3 : v <= 0 ? 2 : Math.max(3, (v / scale) * FILL_MAX)
+          const color = v == null ? '#3a3a3a' : 'var(--r)'
+          // Saturado y sin atenuar cuando hay lluvia: el 0.75 de antes apagaba seis de
+          // los siete días. Cuál es hoy lo dice su letra en blanco, no un medio tono.
+          const opacidad = v == null ? 1 : v <= 0 ? 0.45 : 1
+          return (
+            <div style={{ height: BAR_H, display: 'flex', alignItems: 'flex-end',
+                          background: RANURA, borderRadius: '2px 2px 0 0' }}
+              title={`${d.date}: ${v == null ? 'sin dato' : fmt(v)}`}>
               <div style={{ width: '100%', height: alto, borderRadius: 2, background: color, opacity: opacidad,
                             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}>
-                {/* El valor del pico va DENTRO de su barra, no encima. Encima costaba un
-                    renglón de 11 px que esta celda no tiene --se metía bajo el "mm" del
-                    acumulado del mes-- y aquí no cuesta nada. Da la escala del gráfico
-                    sin gastar un eje. Sólo si la barra es bastante alta para contenerlo;
-                    si no, el dato sigue en el `title`. */}
-                {esPico && alto >= 17 && (
+                {/* El valor va DENTRO de su barra, no encima: encima costaba un renglón de
+                    11 px que esta celda no tiene. Se rotula CADA día en el que quepa, no
+                    sólo el pico: con varios rótulos se compara sin estimar alturas, y el
+                    que no cabe no estorba --el dato sigue en el `title`--. */}
+                {v != null && v > 0 && alto >= 17 && (
                   <span style={{ fontSize: 11, fontWeight: 800, color: '#06283d', lineHeight: 1, marginTop: 3 }}>
-                    {fmt(v as number)}
+                    {fmt(v)}
                   </span>
                 )}
               </div>
             </div>
-            {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para
-                saber cuál es cuál. */}
-            <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1, marginTop: 3,
-                          color: hoy ? 'var(--w)' : 'var(--lbl)' }}>
-              {dowLetter(d.date)}
-            </div>
+          )
+        })}
+      </div>
+      {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para saber
+          cuál es cuál. Fila aparte, con el mismo hueco, para que cada letra caiga bajo
+          su ranura. */}
+      <div style={{ marginTop: 3 }}>
+        {cols((d, i) => (
+          <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1, textAlign: 'center',
+                        color: i === data.length - 1 ? 'var(--w)' : 'var(--lbl)' }}>
+            {dowLetter(d.date)}
           </div>
-        )
-      })}
+        ))}
+      </div>
     </div>
   )
 }
 
-// Barra de nivel: dónde cae un valor dentro de su escala. Es la misma idea que el riel
-// del barómetro de PRES, que ya demostró que funciona: SOLAR, UV e ICA ya se pintan con
-// el color de su categoría, pero ese color sólo se entiende si uno recuerda los cortes,
-// y la barra lo vuelve legible sin recordar nada.
+type Band = { to: number; color: string }
+
+// Bandas de las escalas que SÍ tienen cortes oficiales.
+//
+// UV: los cinco tramos de la OMS, mismos cortes que `uvColor`.
+// IMECA: los cinco de la NADF-009-AIRE-2017. Los colores son los que devuelve el backend
+// en `imeca.color` (ver `receiver/app/services/imeca.py`); aquí hace falta la tabla
+// COMPLETA y no sólo el color del valor de ahora, porque el riel dibuja toda la escala.
+const UV_BANDS: Band[] = [
+  { to: 3, color: '#22c55e' },
+  { to: 6, color: '#eab308' },
+  { to: 8, color: '#f97316' },
+  { to: 11, color: '#ef4444' },
+  { to: 12, color: '#d946ef' },
+]
+const IMECA_BANDS: Band[] = [
+  { to: 50, color: '#22c55e' },
+  { to: 100, color: '#eab308' },
+  { to: 150, color: '#f97316' },
+  { to: 200, color: '#ef4444' },
+]
+// SOLAR no tiene escala oficial de bandas, así que lleva UNA sola, ámbar: repartirle
+// cortes de colores sería fingir un significado que los W/m² no tienen. Aquí la magnitud
+// la dice el largo, que es para lo que sirve un riel de un solo tono.
+const SOLAR_BANDS: Band[] = [{ to: 1000, color: '#f59e0b' }]
+
+// Riel de nivel: dónde cae un valor dentro de su escala, CON LOS CORTES A LA VISTA.
+//
+// La primera versión rellenaba una fracción de un color plano. La longitud decía cuánto,
+// pero el color no decía nada: de día la barra se veía llena y del mismo color a UV 3 que
+// a UV 11, y para saber qué significaba el valor seguía habiendo que recordar los cortes
+// --justo lo que esta función decía querer evitar y no conseguía--.
+//
+// Ahora el riel pinta las bandas de la escala atenuadas (ahí están los cortes, sin gastar
+// una leyenda) y las enciende a color pleno hasta donde llega el valor. Los huecos de 2 px
+// entre bandas son lo que hace visible cada corte.
+//
+// La atenuación va en el ALFA del color de fondo y no en `opacity` del contenedor: con
+// `opacity` el relleno encendido, que es hijo, se atenuaría también.
 //
 // Con divs y no en SVG: un SVG estirado con preserveAspectRatio="none" deformaría las
 // esquinas redondeadas, y aquí el ancho lo pone la celda.
-function LevelBar({ value, max, color }: { value?: number | null; max: number; color: string }) {
-  const f = value == null ? 0 : Math.max(0, Math.min(1, value / max))
+function LevelBar({ value, max, bands }: { value?: number | null; max: number; bands: Band[] }) {
+  const v = value == null ? null : Math.max(0, Math.min(max, value))
+  let from = 0
   return (
-    <div style={{ width: '100%', height: 7, borderRadius: 4, background: '#141414',
-                  border: '1px solid #5a5a5a', overflow: 'hidden' }}>
-      <div style={{ width: `${f * 100}%`, height: '100%', background: color, opacity: 0.85 }} />
+    <div style={{ width: '100%', height: 9, borderRadius: 4, background: '#141414',
+                  border: '1px solid #eaeaea', overflow: 'hidden', display: 'flex', gap: 2 }}>
+      {bands.map((b, i) => {
+        const to = Math.min(b.to, max)
+        const span = Math.max(0, to - from)
+        // Cuánto de ESTA banda cubre el valor, de 0 a 1. Calcularlo por banda evita
+        // recortar una capa superpuesta, que en divs pide saber el ancho en píxeles.
+        const cover = v == null || span === 0 ? 0 : Math.max(0, Math.min(1, (v - from) / span))
+        from = to
+        return (
+          <div key={i} style={{ flex: span, minWidth: 0, background: `${b.color}40` }}>
+            <div style={{ width: `${cover * 100}%`, height: '100%', background: b.color }} />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -393,7 +468,9 @@ function PressureScale({ delta, endLabel, imperial }: {
       })}
       {/* Relleno del centro al valor: da la magnitud sin tener que leer la escala */}
       {delta != null && Math.abs(x - mid) > 0.5 && (
-        <rect x={Math.min(mid, x)} y={13.5} width={Math.abs(x - mid)} height={6} fill={color} opacity={0.55} />
+        /* Sin atenuar: el 0.55 de antes dejaba el relleno a medio gas justo donde tiene
+           que verse, y sobre el interior oscuro del riel el color pleno no molesta. */
+        <rect x={Math.min(mid, x)} y={13.5} width={Math.abs(x - mid)} height={6} fill={color} />
       )}
       {/* Números CENTRADOS en su marca, encima del riel. Antes iban debajo y en las
           esquinas (anclados a start/end), así que el "-5" empezaba en la marca en vez
@@ -1232,8 +1309,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 esta latitud y altitud ronda esa cifra, así que un mediodía limpio llena
                 la barra y el ojo aprende el tope en un día. */}
             <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
-              <LevelBar value={data?.solar_radiation} max={1000}
-                color={data?.solar_radiation != null ? solarColor(data.solar_radiation) : '#5a5a5a'} />
+              <LevelBar value={data?.solar_radiation} max={1000} bands={SOLAR_BANDS} />
             </div>
           </div>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
@@ -1245,15 +1321,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 el tramo fucsia de `uvColor`), así que la barra llena coincide con el
                 color más alto y las dos señales dicen lo mismo. */}
             <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
-              <LevelBar value={data?.uv_index} max={12}
-                color={data?.uv_index != null ? uvColor(data.uv_index) : '#5a5a5a'} />
+              <LevelBar value={data?.uv_index} max={12} bands={UV_BANDS} />
             </div>
           </div>
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
               según la categoría de la norma, así que el número se lee de un
               vistazo sin tener que recordar los cortes. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ICA</div>
+            {/* IMECA y no "ICA": el número que muestra esta celda SIEMPRE ha sido el
+                IMECA --se pide a /api/airquality/imeca-- y el rótulo se había quedado
+                con el nombre genérico. Nombrarlo bien importa porque el IMECA tiene sus
+                propios cortes, que son los que dibuja el riel de abajo. */}
+            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>IMECA</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: imeca?.color || undefined }}>
               {imeca?.available && imeca.imeca != null ? imeca.imeca : '--'}
             </div>
@@ -1261,8 +1340,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 y el techo que esperamos no ver nunca, el mismo con el que se
                 dimensionaron las tres cifras de esta celda. */}
             <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
-              <LevelBar value={imeca?.available ? imeca.imeca : null} max={200}
-                color={imeca?.color || '#5a5a5a'} />
+              <LevelBar value={imeca?.available ? imeca.imeca : null} max={200} bands={IMECA_BANDS} />
             </div>
           </div>
         </div>
