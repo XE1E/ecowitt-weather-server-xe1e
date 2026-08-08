@@ -313,6 +313,47 @@ function HouseGlyph({ size = LOC_SIZE, filled = false }: { size?: number; filled
   )
 }
 
+// Señal RF del enlace con un sensor: cuatro barras crecientes, encendidas hasta el
+// nivel que manda el aparato. Es el PRIMER indicador de señal de todo el frontend --el
+// parser mapeaba `*sig` desde hace tiempo y nadie lo pintaba-- y va aquí, junto a la
+// casita, porque las dos cosas hablan del sensor y no de la magnitud.
+//
+// La escala es la de Ecowitt: 0-4, donde 0 es "el sensor está dado de alta pero no llega
+// nada". El color sigue el criterio del resto de la consola --que el tono diga lo mismo
+// que la forma-- con los cortes de `LevelBar`: 4-3 verde, 2 ámbar, 1-0 rojo. Las barras
+// apagadas se quedan en un gris que se ve en el panel del kiosco (#52525b): con el
+// #3f3f46 de la primera versión, en una pantalla que aplasta los oscuros, un nivel 1 y
+// un nivel 4 se parecían demasiado.
+//
+// QUIÉN LA MANDA: los gateways (GW1100/GW3000), uno por sensor emparejado. La consola
+// WS2910 NO manda señal de nada --verificado contra /api/current: no trae un solo campo
+// `signal_*`, sólo `battery_wh65` y `battery_ch1`-- así que en la celda EXT este glifo
+// queda listo pero no se dibuja hasta que el dato exista. Es el mismo criterio que la
+// pila: nada pintado sin lectura detrás.
+function SignalGlyph({ level, name, height = 13 }: { level: number; name: string; height?: number }) {
+  const n = Math.max(0, Math.min(4, Math.round(level)))
+  const color = n >= 3 ? '#22c55e' : n === 2 ? '#eab308' : '#ef4444'
+  const w = 3           // ancho de barra
+  const g = 2           // hueco entre barras
+  const total = 4 * w + 3 * g
+  return (
+    <svg width={total} height={height} viewBox={`0 0 ${total} ${height}`}>
+      {/* Como elemento `<title>` y no como atributo: en `<svg>` React no acepta `title`
+          como prop. Sólo se ve en el tab de la web; en el kiosco es una imagen. */}
+      <title>{`señal ${name}: ${n}/4`}</title>
+      {[0, 1, 2, 3].map((i) => {
+        // Cada barra un 25% más alta que la anterior, la última a tope: la altura dice
+        // el nivel incluso a quien no distinga los colores.
+        const h = height * (0.34 + 0.22 * i)
+        return (
+          <rect key={i} x={i * (w + g)} y={height - h} width={w} height={h} rx={1}
+            fill={i < n ? color : '#52525b'} />
+        )
+      })}
+    </svg>
+  )
+}
+
 // Estado de batería de un sensor: la pila se dibuja llena y verde, o casi vacía y
 // roja. Sólo distingue OK / baja porque es lo único que mandan el WS69 y los WN31
 // --Ecowitt los reporta como bandera 0/1, no como voltaje-- y por eso el relleno
@@ -914,6 +955,28 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     (remote as Record<string, unknown> | null)?.battery_wh32
     ?? (remote as Record<string, unknown> | null)?.battery_wh26
   )
+  // Señal RF del WN32, 0-4. Se prueban las dos claves por lo mismo que la batería, y
+  // llega del GATEWAY: el nivel es lo que el GW1100 sí sabe medir de sus sensores
+  // emparejados. Verificado contra /api/current?station=gw1100 el 2026-08-08: hoy no
+  // trae ningún `signal_*` porque no tiene sensores colgados; aparecerá con el WN32.
+  const sigNum = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+  const remoteOutSig = sigNum(
+    (remote as Record<string, unknown> | null)?.signal_wh32
+    ?? (remote as Record<string, unknown> | null)?.signal_wh26
+  )
+  // Señal del WS69, el mástil de la estación principal. Se lee con `as` porque el tipo
+  // `WeatherData` no declara los `signal_*` --nadie los usaba hasta ahora--.
+  //
+  // OJO: la consola WS2910 NO los manda. Verificado contra /api/current el 2026-08-08:
+  // ni un campo `signal_*`, sólo `battery_wh65` y `battery_ch1`. Así que este glifo
+  // queda montado pero NO se dibujará mientras la principal sea la WS2910; se vería
+  // solo si algún día el dato llega por un gateway. Preferimos dejarlo listo y que no
+  // se pinte, antes que inventar una señal a partir de otra cosa.
+  const outSig = sigNum(
+    (data as Record<string, unknown> | null | undefined)?.signal_wh65
+    ?? (data as Record<string, unknown> | null | undefined)?.signal_ws69
+  )
 
   // Tendencias estación remota (mismos umbrales que las locales: ±0.5 °C, ±3 %,
   // ±1 hPa; temp/humedad contra hace 1 h y presión contra hace 3 h).
@@ -1009,6 +1072,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
             <HouseGlyph />
           </div>
+          {/* Señal del WS69 a la IZQUIERDA de la casita, centrada con ella: la casa dice
+              dónde mide el sensor y esto cómo llega su enlace, así que las dos van juntas.
+              `top: 15` = centro de la casa (arranca en 6 y mide 30) menos medio glifo.
+              Con la WS2910 no se dibujará nunca, porque no manda el campo; ver `outSig`. */}
+          {outSig != null && (
+            <div style={{ position: 'absolute', top: 15, right: 42 }}>
+              <SignalGlyph level={outSig} name="WS69" />
+            </div>
+          )}
           {/* El termómetro se CENTRA a lo alto, en la banda que va del borde de arriba
               hasta donde empieza el mín/máx (de ahí el `bottom: 30`). Pegado al borde
               superior se veía apretado, y centrarlo en la celda ENTERA no vale: a 72 px
@@ -1498,6 +1570,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
             <HouseGlyph />
           </div>
+          {/* Señal del WN32 junto a la casita, igual que en EXT. Aquí SÍ va a haber dato:
+              el nivel 0-4 lo mide el GW1100 de cada sensor que tiene emparejado. */}
+          {remoteOutSig != null && (
+            <div style={{ position: 'absolute', top: 15, right: 44 }}>
+              <SignalGlyph level={remoteOutSig} name="WN32" />
+            </div>
+          )}
           {/* Pila del WN32, abajo a la derecha como en EXT y JARDÍN. Aquí es la única que
               puede llevar NIVEL y no sólo OK/baja --de ahí el relleno proporcional de
               `BatteryGlyph`-- aunque con el receiver de hoy llegará como bandera: ver la
