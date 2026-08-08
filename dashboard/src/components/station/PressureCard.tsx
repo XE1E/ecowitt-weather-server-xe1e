@@ -34,22 +34,34 @@ export function PressureCard({ data, stats, history }: Props) {
   // /api/history devuelve un punto por minuto: comparaba con 6 minutos atrás, y
   // como la presión no se mueve 1 hPa en 6 min, la tarjeta decía "Estable"
   // siempre. Ahora se busca por tiempo, igual que el resto de las tendencias.
+  // "Sube" / "Baja" y no "Subiendo" / "Bajando": la caja de Tendencia es un tercio de la
+  // tarjeta y no da para más. Medido, el contenido de "Subiendo" con su chevron pide 126 px
+  // y la caja deja 90 en escritorio y 79 en móvil, así que la palabra se salía de la
+  // tarjeta. Bajar el cuerpo o quitar el chevron no ahorraban lo suficiente --26 y 38 px--
+  // y además el chevron es lo que dice la dirección de un vistazo. Con cuatro letras entra
+  // con holgura en cualquier ancho. "Estable" se queda: es la única que no lleva chevron,
+  // así que dispone de toda la caja.
   let trend = 'Estable'
   let trendColor = 'text-slate-300'
   const prev = historicValue(history, (h) => h.pressure_relative, 3)
   if (p != null && prev != null) {
     const d = p - prev
-    if (d > 1) { trend = 'Subiendo'; trendColor = 'text-green-500' }
-    else if (d < -1) { trend = 'Bajando'; trendColor = 'text-red-500' }
+    if (d > 1) { trend = 'Sube'; trendColor = 'text-green-500' }
+    else if (d < -1) { trend = 'Baja'; trendColor = 'text-red-500' }
   }
 
   const box = (label: string, value: string, color = 'text-slate-100', icono?: string | null) => (
     <div className="rounded-lg bg-white/5 px-3 py-2">
       <p className="text-xs text-slate-400">{label}</p>
-      <p className={`text-lg font-bold ${color} flex items-center gap-1`}>
+      {/* `min-w-0` + `truncate` como cinturón: si algún día un valor vuelve a no caber
+          --una presión imperial larga, otra palabra de tendencia-- se corta DENTRO de su
+          caja con puntos suspensivos en vez de salirse de la tarjeta, que es el defecto que
+          tenía "Subiendo". Sin el `min-w-0` el hijo de un flex no se deja encoger y el
+          `truncate` no haría nada. */}
+      <p className={`text-lg font-bold ${color} flex items-center gap-1 min-w-0`}>
         {/* Chevron solo si hay tendencia: estable no lleva icono (ver theme/icons.ts) */}
         {icono && <WeatherIcon name={icono} size={ICON.compact} alt="" className="shrink-0 -my-1" />}
-        {value}
+        <span className="truncate">{value}</span>
       </p>
     </div>
   )
