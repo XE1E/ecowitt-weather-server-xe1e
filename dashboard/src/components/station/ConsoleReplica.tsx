@@ -130,15 +130,31 @@ function decNum(s: string): ReactNode {
 }
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
-function MoonGlyph({ size = 42 }: { size?: number }) {
+function MoonGlyph({ size = 42, illum, waxing }:
+  { size?: number; illum?: number; waxing?: boolean }) {
   const R = size / 2
   const maresId = `mares-${useId().replace(/:/g, '')}`
-  const { phase, illum, waxing } = moonIllumination(new Date())
-  const rx = Math.max(0.4, Math.abs(R * Math.cos(2 * Math.PI * phase)))
-  const gibbous = illum > 50
-  const s1 = waxing ? 1 : 0
+  // Iluminación y sentido: si el servidor los manda se usan ESOS, que salen de pyephem para
+  // las coordenadas y la elevación del sitio. El cálculo del navegador
+  // (`moonIllumination`) queda de respaldo para cuando el almanaque no responde: es un mes
+  // sinódico constante desde una luna nueva de referencia, o sea una aproximación.
+  const local = moonIllumination(new Date())
+  const ilum = illum ?? local.illum
+  const crece = waxing ?? local.waxing
+  // El radio horizontal del terminador se deduce de la ILUMINACIÓN, sin necesitar la fase:
+  //   illum = (1 - cos(2π·fase))/2 · 100   =>   |cos(2π·fase)| = |1 - 2·illum/100|
+  // Que es exactamente lo que calculaba antes desde `phase`, así que el dibujo no cambia;
+  // sólo la procedencia del número.
+  const rx = Math.max(0.4, R * Math.abs(1 - 2 * (ilum / 100)))
+  const gibbous = ilum > 50
+  const s1 = crece ? 1 : 0
   const s2 = gibbous ? s1 : 1 - s1
   const litPath = `M0,${-R} A ${R} ${R} 0 0 ${s1} 0 ${R} A ${rx} ${R} 0 0 ${s2} 0 ${-R} Z`
+  // Con iluminación 0 los dos arcos degeneran --se recorren dos veces por el mismo lado-- y
+  // el resultado es media luna encendida en plena luna NUEVA. Antes no podía pasar porque el
+  // cálculo local devuelve un float que nunca da 0 exacto; el almanaque, en cambio,
+  // REDONDEA a entero, así que 0 es alcanzable. Sin luz no se dibuja luz.
+  const oscura = ilum < 1
   return (
     // flexShrink 0: sin él, en una fila que se pasa de ancho flex encoge el disco en vez
     // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
@@ -152,7 +168,7 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
       {/* El amarillo de la luna es más pálido que el del sol (--y, #ffcf19), a propósito y
           no por descuido: son dos astros distintos en la misma celda y la luna no brilla,
           refleja. El sol se queda vivo. */}
-      <path d={litPath} fill="#e6d18f" />
+      {!oscura && <path d={litPath} fill="#e6d18f" />}
       {/* Mares, para que el disco no sea una pastilla lisa. Recortados a la parte ILUMINADA:
           sin recorte caían sobre la sombra --donde el contraste es mayor-- y se veían como
           cráteres en la mitad oscura mientras el creciente quedaba liso, exactamente al
@@ -160,7 +176,7 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
           cerca de la llena se ven todos, que es lo que hace la luna de verdad.
           El id del recorte sale de `useId` y sin los dos puntos que mete React, para que
           `url(#...)` sea una referencia limpia y dos lunas en la misma página no se pisen. */}
-      <clipPath id={maresId}><path d={litPath} /></clipPath>
+      <clipPath id={maresId}><path d={oscura ? '' : litPath} /></clipPath>
       <g clipPath={`url(#${maresId})`}>
         {([[-0.30, -0.34, 0.22], [0.11, -0.46, 0.15], [0.29, -0.09, 0.19],
            [-0.16, 0.26, 0.15], [0.06, 0.06, 0.11], [-0.34, 0.02, 0.12]] as const)
@@ -670,6 +686,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
   const [astro, setAstro] = useState<AstroData | null>(null)
+  const [moon, setMoon] = useState<{ illumination?: number; waxing?: boolean } | null>(null)
   const [rain7, setRain7] = useState<DailyRain[]>([])
 
   useEffect(() => {
@@ -708,6 +725,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // luna. Cada 30 min: son dos horas fijas del día, no hace falta más.
   useEffect(() => {
     const load = () => fetchForecast().then((r) => setAstro(r.astro)).catch(() => {})
+    load()
+    const i = setInterval(load, 30 * 60000)
+    return () => clearInterval(i)
+  }, [])
+
+  // Fase lunar del ALMANAQUE del servidor (pyephem, para las coordenadas y la elevación del
+  // sitio) en vez del cálculo del navegador, que es un mes sinódico constante desde una luna
+  // nueva de referencia. El dibujo del disco sólo necesita dos campos --iluminación y si
+  // crece--, y el terminador se deduce de la iluminación.
+  //
+  // Se pide aparte, como el IMECA: el amanecer y el atardecer de esta misma celda vienen de
+  // `fetchForecast` (Open-Meteo), que no trae la luna. Cada 30 min basta: la fase no cambia
+  // a la vista en menos, y su caché en el servidor es de 10.
+  useEffect(() => {
+    const load = () => fetch('/api/almanac')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setMoon(d?.available ? d.moon : null))
+      .catch(() => {})
     load()
     const i = setInterval(load, 30 * 60000)
     return () => clearInterval(i)
@@ -1337,7 +1372,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               La primera versión pidió 76 con sangría 6 y flex se los recortó a 63 sin
               avisar; de ahí el `flexShrink: 0` del disco y que las horas cedan cuerpo. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <MoonGlyph size={74} />
+            <MoonGlyph size={74} illum={moon?.illumination} waxing={moon?.waxing} />
             <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
         </div>
