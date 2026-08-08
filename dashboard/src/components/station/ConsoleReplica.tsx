@@ -1512,7 +1512,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               igual que las de EXT y HUMEDAD. Se dibujan siempre, también sin lectura:
               mientras el WN32 no esté instalado se verá la barra gris de "sin cambios"
               al lado de un "--". */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
+          {/* MISMOS números que INTERIOR y JARDÍN --gap 16, marginTop -10-- y no los 40 y
+              -6 que tenía: las cuatro celdas de temperatura+humedad de la consola
+              contienen lo mismo y ahora se maquetan igual. Medido sobre la captura con el
+              WN32 reportando, esos 4 px de más abajo y 24 de más ancho eran justo lo que
+              metía el rótulo "WN32" de la pila debajo del pie de las cifras de humedad: el
+              aire entre valores y pila era -4 px en vertical y -13 en horizontal, contra
+              -1 y -1 de JARDÍN, que es la referencia buena. */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -1684,7 +1691,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Al no haber flecha, el `paddingRight: 16` que le hacía sitio se va con
               ella y los dos valores quedan centrados de verdad en la celda.
               mismo ajuste que INTERIOR: se salia 1 px por abajo */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 40, marginTop: -6 }}>
+          {/* gap 16 / marginTop -10, los de INTERIOR y JARDÍN: esta celda y la del WN32
+              son pareja y las cuatro celdas de temperatura+humedad se maquetan igual. */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
