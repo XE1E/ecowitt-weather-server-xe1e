@@ -35,12 +35,15 @@ export function PressureCard({ data, stats, history }: Props) {
   // como la presión no se mueve 1 hPa en 6 min, la tarjeta decía "Estable"
   // siempre. Ahora se busca por tiempo, igual que el resto de las tendencias.
   // "Sube" / "Baja" y no "Subiendo" / "Bajando": la caja de Tendencia es un tercio de la
-  // tarjeta y no da para más. Medido, el contenido de "Subiendo" con su chevron pide 126 px
-  // y la caja deja 90 en escritorio y 79 en móvil, así que la palabra se salía de la
-  // tarjeta. Bajar el cuerpo o quitar el chevron no ahorraban lo suficiente --26 y 38 px--
-  // y además el chevron es lo que dice la dirección de un vistazo. Con cuatro letras entra
-  // con holgura en cualquier ancho. "Estable" se queda: es la única que no lleva chevron,
-  // así que dispone de toda la caja.
+  // tarjeta y no da para más. Todo medido en el ancho más apretado (móvil, 79 px útiles):
+  //
+  //   Subiendo  74 px de texto + 52 del chevron y su hueco = 126  →  se salía 47
+  //   Sube      41 px de texto + 36 (chevron ya a 32)       =  77  →  entra
+  //
+  // Hacían falta las DOS cosas: acortar la palabra ahorra 33 px y bajar el chevron de 48 a
+  // 32 otros 16, y ninguna por su cuenta alcanzaba los 47. Cuatro letras es además como lo
+  // rotula un barómetro. "Estable" se queda tal cual: es la única que no lleva chevron, así
+  // que dispone de la caja entera y con 59 px sobra.
   let trend = 'Estable'
   let trendColor = 'text-slate-300'
   const prev = historicValue(history, (h) => h.pressure_relative, 3)
@@ -59,8 +62,13 @@ export function PressureCard({ data, stats, history }: Props) {
           tenía "Subiendo". Sin el `min-w-0` el hijo de un flex no se deja encoger y el
           `truncate` no haría nada. */}
       <p className={`text-lg font-bold ${color} flex items-center gap-1 min-w-0`}>
-        {/* Chevron solo si hay tendencia: estable no lleva icono (ver theme/icons.ts) */}
-        {icono && <WeatherIcon name={icono} size={ICON.compact} alt="" className="shrink-0 -my-1" />}
+        {/* Chevron solo si hay tendencia: estable no lleva icono (ver theme/icons.ts).
+            A ICON.inline (32) y no ICON.compact (48): el chevron con su hueco costaba 52 px
+            de los 79 que deja la caja en móvil --medido--, o sea que se comía dos tercios y
+            dejaba 27 para la palabra. Y 48 px de icono al lado de texto de 18 estaba
+            desproporcionado; `inline` es justo el paso que la escala define para un icono
+            metido en una línea de texto. */}
+        {icono && <WeatherIcon name={icono} size={ICON.inline} alt="" className="shrink-0 -my-1" />}
         <span className="truncate">{value}</span>
       </p>
     </div>
