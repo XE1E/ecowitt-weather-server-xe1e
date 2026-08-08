@@ -888,6 +888,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [moon, setMoon] = useState<{ illumination?: number; waxing?: boolean } | null>(null)
   const [rain7, setRain7] = useState<DailyRain[]>([])
   const [alertas, setAlertas] = useState<AlertaViva[]>([])
+  /**
+   * Qué cargas de ESTA celda ya se intentaron, para no dejar que el renderer capture
+   * media consola.
+   *
+   * El `ready` que llega por prop sólo espera a `/api/current` (ver `KioskPage`), así que
+   * el renderer podía disparar la foto antes de que llegaran el pronóstico, el almanaque
+   * y el IMECA: la primera captura tras recrear los contenedores salía sin la tira de
+   * horas, sin amanecer/atardecer y con el IMECA en `---`, porque sus cachés en el
+   * servidor estaban frías. Antes del pronóstico horario eso sólo dejaba en blanco dos
+   * horas y un número; ahora se llevaría la tira, que es lo primero que se mira.
+   *
+   * Se marca que la carga TERMINÓ, no que trajo dato: si el IMECA estuviera caído de
+   * verdad, esperar a que traiga algo dejaría la pantalla SIN IMAGEN --el renderer acaba
+   * por tiempo-- en vez de con un `---`, que es lo correcto. Cada efecto marca su casilla
+   * tanto si responde como si falla.
+   */
+  const [cargado, setCargado] = useState({ fc: false, luna: false, imeca: false })
   const [horas, setHoras] = useState<ForecastHour[]>([])
 
   useEffect(() => {
@@ -928,6 +945,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     const load = () => fetchForecast()
       .then((r) => { setAstro(r.astro); setHoras(r.hours) })
       .catch(() => {})
+      .finally(() => setCargado((c) => (c.fc ? c : { ...c, fc: true })))
     load()
     const i = setInterval(load, 30 * 60000)
     return () => clearInterval(i)
@@ -946,6 +964,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setMoon(d?.available ? d.moon : null))
       .catch(() => {})
+      .finally(() => setCargado((c) => (c.luna ? c : { ...c, luna: true })))
     load()
     const i = setInterval(load, 30 * 60000)
     return () => clearInterval(i)
@@ -970,6 +989,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   useEffect(() => {
     const load = () => fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
       .then((r) => (r.ok ? r.json() : null)).then(setImeca).catch(() => {})
+      .finally(() => setCargado((c) => (c.imeca ? c : { ...c, imeca: true })))
     load()
     const i = setInterval(load, 30 * 60000)
     return () => clearInterval(i)
@@ -1114,6 +1134,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     .filter((h) => new Date(h.time).getTime() > now.getTime())
     .slice(0, 4)
 
+  // Listo de verdad: lo que dice el padre (hay lectura de la estación) Y que las tres
+  // cargas propias de esta pantalla se hayan intentado ya. Ver `cargado`.
+  const propioListo = cargado.fc && cargado.luna && cargado.imeca
+
   const kiosk = mode === 'kiosk'
 
   // Mapa de zonas táctiles, sólo en el display: se miden las celdas marcadas con
@@ -1124,7 +1148,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   return (
     <div
       ref={rootRef}
-      {...(kiosk ? { 'data-kiosk-ready': ready ? 'true' : 'false' } : {})}
+      {...(kiosk ? { 'data-kiosk-ready': ready && propioListo ? 'true' : 'false' } : {})}
       className={kiosk ? 'cns' : 'cns rounded-xl overflow-hidden mx-auto'}
       style={kiosk
         ? { width: 1024, height: 600, background: '#000', overflow: 'hidden' }
@@ -1625,50 +1649,66 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             por lo mismo, para que una condición larga ("NOCHE PARCIALMENTE NUBLADA") no
             se parta en dos renglones en el ancho nuevo. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          {/* El bloque se CENTRA a lo alto, no cuelga del borde de arriba: con el icono a 46
-            px el contenido ocupa poco mas de la mitad de la celda y toda el aire sobrante
-            se juntaba abajo. Centrado, reparte, y ademas iguala a su vecina la del sol y la
-            luna, que ya iba centrada. El `paddingTop: 6` se va con el mismo cambio. */}
-          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.05, textAlign: 'center' }}>{cond.label || 'CLIMA'}</div>
-            {/* AHORA + las PRÓXIMAS CUATRO HORAS. La consola decía el tiempo que hace y en
-                ningún sitio el que va a hacer: la probabilidad de lluvia por hora estaba en
-                el pronóstico desde siempre --168 h en `/api/forecast`-- y había que irse a
-                la página 1 para verla. En una pantalla de pared, "¿llueve al rato?" es la
-                pregunta que más veces se hace.
-                EL ICONO BAJA DE 108 A 46 px, que es el precio del cambio y se paga a gusto:
-                traía ~50 px de tinta en una caja de 108 --la caja incluso se salía de la
-                celda y la recortaba el `overflow`-- y la palabra de arriba ya dice qué
-                tiempo hace, así que el dibujo era el elemento más grande de la celda para
-                decir lo que ya estaba escrito.
-                CUENTA DEL ANCHO: el interior de esta celda son 161 px. Cuatro columnas de
-                ~22 px (el caso peor es "100%") más sus huecos piden ~103, así que al icono
-                le quedan 52; a 46 sobran 6 px de aire. Medido sobre la captura, no estimado.
-                La temperatura va en blanco y la probabilidad en el AZUL DE LA LLUVIA
-                (`--r`), el mismo de la celda de LLUVIA y de su histograma: así se sabe qué
-                es cada cifra sin rótulos que aquí no caben. */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: -2, width: '100%' }}>
+          {/* CELDA DE CIELO, en dos mitades. Arriba: icono a la izquierda y la
+              descripción a su derecha. Abajo: la tira de horas a TODO EL ANCHO.
+              La primera versión ponía el icono y la tira en la misma fila, y la tira se
+              quedaba con lo que sobraba --unos 100 px para cuatro columnas-- así que sus
+              cifras tenían que ir a 10-13 px y no se leían de lejos, que es el único sitio
+              desde el que se mira esta pantalla. Repartiendo por mitades, la tira pasa de
+              ~100 a 169 px de ancho y su temperatura de 13 a 19 px.
+              Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
+              hacen falta porque el icono ya trae aire por dentro. */}
+          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo}
+            style={{ display: 'flex', flexDirection: 'column', padding: '7px 8px' }}>
+            {/* MITAD DE ARRIBA. El icono a 46: con la tira fuera de esta fila vuelve a tener
+                sitio, y es el dibujo que identifica la celda de un vistazo. No más de 46,
+                MEDIDO: el interior de la celda son 96 px de alto con su sangría, y la tira
+                pide 47 (12 de la hora + 22 de la temperatura + 13 de la probabilidad). A 52
+                sumaban 100 y la fila de probabilidades salía CORTADA por el borde de abajo
+                --se vio en la captura, con la tinta llegando a y=109 de 110--.
+                La descripción va a su derecha, alineada a la izquierda y en dos o tres
+                renglones si hace falta --"NOCHE PARCIALMENTE NUBLADA" son 25 caracteres--:
+                aquí partir el texto no estorba a nadie, porque el bloque tiene la altura del
+                icono de al lado. Antes iba centrada arriba y una condición larga se partía
+                igual, pero empujando todo lo de abajo. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%' }}>
               <WeatherIcon name={cond.icon} size={46} className="weather-main-icon" />
-              {proximas.length > 0 && (
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {proximas.map((h) => (
-                    <div key={h.time} style={{ textAlign: 'center' }}>
-                      {/* La hora, sin minutos y sin ceros: son horas en punto del
-                          pronóstico y "22" se lee de un golpe. */}
-                      <div style={{ color: 'var(--lbl)', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>
-                        {new Date(h.time).getHours()}
-                      </div>
-                      <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 800, lineHeight: 1.25 }}>
-                        {u.temp(h.temp, 0)}
-                      </div>
-                      <div style={{ color: 'var(--r)', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
-                        {Math.round(h.precipProb)}%
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
+                            letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
+                {cond.label || 'CLIMA'}
+              </div>
             </div>
+            {/* MITAD DE ABAJO: AHORA + las PRÓXIMAS CUATRO HORAS. La consola decía el tiempo
+                que hace y en ningún sitio el que va a hacer: la probabilidad de lluvia por
+                hora estaba en `/api/forecast` desde siempre --168 h-- y había que irse a la
+                página 1 para verla. En una pantalla de pared, "¿llueve al rato?" es la
+                pregunta que más veces se hace.
+                `marginTop: auto` la pega al borde de abajo, y cada columna con `flex: 1` se
+                reparte el ancho a partes iguales: así las cuatro caen en la misma rejilla
+                aunque una diga "100%" y otra "9%".
+                CUERPOS, con el ancho que hay (169/4 = 42 px por columna): temperatura a 19 px
+                --el caso peor, "-10", mide 27-- hora a 12 y probabilidad a 13. La
+                temperatura va en blanco y la probabilidad en el AZUL DE LA LLUVIA (`--r`),
+                el mismo de la celda de LLUVIA y de su histograma, que es lo que dice qué es
+                cada cifra sin gastar rótulos. */}
+            {proximas.length > 0 && (
+              <div style={{ marginTop: 'auto', display: 'flex', width: '100%' }}>
+                {proximas.map((h) => (
+                  <div key={h.time} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+                    {/* La hora, sin minutos: son horas en punto del pronóstico. */}
+                    <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>
+                      {new Date(h.time).getHours()}
+                    </div>
+                    <div style={{ color: 'var(--w)', fontSize: 19, fontWeight: 800, lineHeight: 1.15 }}>
+                      {u.temp(h.temp, 0)}
+                    </div>
+                    <div style={{ color: 'var(--r)', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                      {Math.round(h.precipProb)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {/* SOL Y LUNA. Sin rótulo, por lo mismo que EXT o PRES: el disco lunar y las
               flechas de salida y puesta se explican solos, y la palabra "LUNA" ya se
