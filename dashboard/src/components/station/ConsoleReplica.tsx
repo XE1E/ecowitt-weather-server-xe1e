@@ -372,13 +372,9 @@ const SOLAR_BANDS: Band[] = SOLAR_STEPS.map((s, i) => ({
 //
 // Con divs y no en SVG: un SVG estirado con preserveAspectRatio="none" deformaría las
 // esquinas redondeadas, y aquí el ancho lo pone la celda.
-function LevelBar({ value, max, bands }: { value?: number | null; max: number; bands: Band[] }) {
+function LevelBar({ value, max, bands, hint = true }:
+  { value?: number | null; max: number; bands: Band[]; hint?: boolean }) {
   const v = value == null ? null : Math.max(0, Math.min(max, value))
-  // El tinte de lo APAGADO sólo tiene sentido con varias bandas, donde dibuja la escala.
-  // Con una sola --SOLAR-- cubría el riel entero de un ámbar mate, y una noche sin sol se
-  // veía como una barra llena de color apagado en vez de como una barra vacía. Ahí lo
-  // apagado se queda en el oscuro del riel y el largo dice todo.
-  const hint = bands.length > 1
   let from = 0
   return (
     <div style={{ width: '100%', height: 9, borderRadius: 4, background: '#141414',
@@ -1342,7 +1338,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 esta latitud y altitud ronda esa cifra, así que un mediodía limpio llena
                 la barra y el ojo aprende el tope en un día. */}
             <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
-              <LevelBar value={data?.solar_radiation} max={1000} bands={SOLAR_BANDS} />
+              {/* Sin `hint`: las bandas de SOLAR son tonos ANÁLOGOS --amarillo, ámbar,
+                  naranja, rojo-- y apagadas al 15% se funden en una mancha parduzca, así
+                  que el riel no leía como escala sino como una barra llena de color
+                  apagado. En UV e IMECA sí se dibuja, porque sus tonos son distintos entre
+                  sí y ahí el fantasma de la escala se entiende. El relleno sigue usando
+                  las cinco bandas, que es lo que hace que el riel y el dígito cambien de
+                  color juntos. */}
+              <LevelBar value={data?.solar_radiation} max={1000} bands={SOLAR_BANDS} hint={false} />
             </div>
           </div>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>

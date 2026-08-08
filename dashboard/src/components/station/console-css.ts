@@ -19,7 +19,12 @@ export const CONSOLE_CSS = `
      public/fonts/README.md. */
   @font-face{font-family:'DSEG14';src:url('/fonts/DSEG14Classic-Bold.woff2') format('woff2');font-display:block}
   .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
-    --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#6b7280;--brd-derivada:#ffffff;--brd-reloj:#ff4128;
+    /* La remota pasa de gris a AZUL. Con el fondo por grupo, el gris no daba: un gris al
+       7% sobre negro es indistinguible del blanco al 5% de la derivada, así que su fondo
+       tuvo que tirar a azul y la celda se quedaba con borde gris y fondo azul, la única
+       del tablero que no seguía su propio color. El azul es el 400 y no el 500 de la
+       humedad (--h) para que un borde no se confunda con el color de una cifra. */
+    --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#60a5fa;--brd-derivada:#ffffff;--brd-reloj:#ff4128;
     /* Fondo de cada grupo: el MISMO tono que su borde, a un 6-8% sobre negro. Así no hay
        un segundo código de color que aprender --el borde ya dice de quién es la celda-- y
        el fondo sólo lo hace legible de un vistazo, sin tener que seguir un contorno de
