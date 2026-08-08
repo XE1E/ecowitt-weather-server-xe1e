@@ -405,10 +405,27 @@ function LevelBar({ value, max, bands, hint = true }:
 function SunTimes({ sunrise, sunset }: { sunrise?: string; sunset?: string }) {
   const row = (up: boolean, iso?: string) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      {/* Triángulo a 14 y no a 11: a 11 competía en peso con los dos puntos del reloj
-          de al lado y costaba ver hacia dónde apuntaba, que es TODO lo que dice. */}
-      <svg width="14" height="14" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
-        <path d={up ? 'M6 1.5 L10.5 7.5 L1.5 7.5 Z' : 'M6 10.5 L10.5 4.5 L1.5 4.5 Z'} fill="#ffcf19" />
+      {/* Sol sobre el horizonte, no un triángulo suelto: el triángulo decía la dirección
+          pero no de QUÉ, así que había que deducir del contexto que hablaba del sol.
+          Va como SVG y no como glifo de fuente a propósito: los únicos caracteres que
+          existen para esto son emoji (🌅/🌇), y en el Chromium del servidor eso es apostar
+          a que la fuente esté instalada --ya pasó con DSEG-- y además entrarían a todo
+          color, fuera de la estética de la consola. Aquí el dibujo es determinista y
+          comparte el amarillo del resto de la celda.
+          La flecha se queda: es lo que distingue amanecer de atardecer, y sin ella los dos
+          dibujos serían idénticos. */}
+      <svg width="26" height="16" viewBox="0 0 26 16" style={{ flexShrink: 0 }}>
+        {/* Horizonte */}
+        <line x1="1" y1="13.5" x2="17" y2="13.5" stroke="#ffcf19" strokeWidth="1.4" strokeLinecap="round" />
+        {/* Medio sol asomando. Medio y no entero: entero se leía como una luna llena,
+            que es justo lo que hay dibujado al lado en esta misma celda. */}
+        <path d="M4.5 13.5 A 4.5 4.5 0 0 1 13.5 13.5 Z" fill="#ffcf19" />
+        {/* Tres rayos, a 1.3 de grosor para que aguanten al tamaño real */}
+        <line x1="5" y1="7.6" x2="3.4" y2="6" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
+        <line x1="9" y1="7.4" x2="9" y2="5" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
+        <line x1="13" y1="7.6" x2="14.6" y2="6" stroke="#ffcf19" strokeWidth="1.3" strokeLinecap="round" />
+        {/* Flecha aparte del sol, a la derecha, para no pisar los rayos */}
+        <path d={up ? 'M22 4.5 L25 9 L19 9 Z' : 'M22 11 L25 6.5 L19 6.5 Z'} fill="#ffcf19" />
       </svg>
       <span className="seg" style={{ color: '#ffcf19', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
         {hhmm(iso) || '--:--'}
@@ -924,15 +941,26 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0, transform: 'scale(1.2) translateY(2%)', transformOrigin: 'center center' }}>
               {/* Óvalo exterior más visible */}
               <ellipse cx="50" cy="40" rx={RX} ry={RY} stroke="#555" strokeWidth="1.5" fill="none" />
-              {/* Marcas de grados cada 30° */}
-              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
+              {/* Marcas cada 10° en TRES niveles, que es lo que hace que el aro parezca un
+                  instrumento y no un aro con doce palitos: los cuatro rumbos cardinales
+                  largos y claros, los 30° medios, y los 10° como pelo fino. Todas
+                  arrancan a distinta profundidad hacia dentro y acaban en el óvalo
+                  exterior, así que la jerarquía la dan el largo, el grosor y el tono a la
+                  vez --con sólo el color no se distinguen a esta escala--. */}
+              {Array.from({ length: 36 }, (_, i) => i * 10).map((deg) => {
                 const rad = (deg - 90) * Math.PI / 180
-                const x1 = 50 + 44 * Math.cos(rad)
-                const y1 = 40 + 34 * Math.sin(rad)
-                const x2 = 50 + RX * Math.cos(rad)
-                const y2 = 40 + RY * Math.sin(rad)
-                const isMajor = deg % 90 === 0
-                return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke={isMajor ? '#888' : '#555'} strokeWidth={isMajor ? 2 : 1} />
+                const nivel = deg % 90 === 0 ? 0 : deg % 30 === 0 ? 1 : 2
+                const [rx, ry, color, ancho] = [
+                  [41.5, 32, '#b4b4b4', 2],
+                  [44.5, 34.5, '#7c7c7c', 1.2],
+                  [46.5, 36, '#525252', 0.8],
+                ][nivel] as [number, number, string, number]
+                return (
+                  <line key={deg}
+                    x1={50 + rx * Math.cos(rad)} y1={40 + ry * Math.sin(rad)}
+                    x2={50 + RX * Math.cos(rad)} y2={40 + RY * Math.sin(rad)}
+                    stroke={color} strokeWidth={ancho} />
+                )
               })}
               {/* Óvalo interior */}
               <ellipse cx="50" cy="40" rx={RX_IN} ry={RY_IN} stroke="#444" strokeWidth="1" fill="none" />
