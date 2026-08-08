@@ -1625,7 +1625,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             por lo mismo, para que una condición larga ("NOCHE PARCIALMENTE NUBLADA") no
             se parta en dos renglones en el ancho nuevo. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
+          {/* El bloque se CENTRA a lo alto, no cuelga del borde de arriba: con el icono a 46
+            px el contenido ocupa poco mas de la mitad de la celda y toda el aire sobrante
+            se juntaba abajo. Centrado, reparte, y ademas iguala a su vecina la del sol y la
+            luna, que ya iba centrada. El `paddingTop: 6` se va con el mismo cambio. */}
+          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.05, textAlign: 'center' }}>{cond.label || 'CLIMA'}</div>
             {/* AHORA + las PRÓXIMAS CUATRO HORAS. La consola decía el tiempo que hace y en
                 ningún sitio el que va a hacer: la probabilidad de lluvia por hora estaba en
