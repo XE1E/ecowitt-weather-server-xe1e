@@ -58,7 +58,13 @@ export const CONSOLE_CSS = `
      que subirlo a RGB 35-50, que ya deja de ser un tono leve y se come el negro de la
      consola. Si algun dia hace falta marcar el grupo con mas fuerza, la via es una franja
      solida en un canto de la celda, que si tiene contraste. */
-  .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
+  /* Contorno de 3 px y no de 2: con el fondo descartado, el borde es la UNICA senal de a
+     que grupo pertenece la celda, y en el panel del kiosco 2 px se quedaban finos. No
+     descuadra la rejilla de 1024 aunque no haya box-sizing:border-box, porque las celdas
+     son grid items estirados y el borde se dibuja hacia dentro: cada celda pierde 2 px de
+     interior, no de caja. Donde eso se nota es en la fila SOLAR/UV/IMECA, ajustada al
+     pixel, que pasa de ~7 px de holgura por celda a ~5. */
+  .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:3px solid transparent}
   .cns .cell.main{border-color:var(--brd-main)}
   .cns .cell.jardin{border-color:var(--brd-jardin)}
   .cns .cell.remota{border-color:var(--brd-remota)}
@@ -67,10 +73,11 @@ export const CONSOLE_CSS = `
      lo estima el backend). Rocío y sensación SALIERON de este grupo: se derivan de
      la temperatura y la humedad de la principal, así que llevan su amarillo. */
   .cns .cell.derivada{border-color:var(--brd-derivada)}
-  /* El reloj lleva el contorno MÁS GRUESO de la consola (4 px contra 2): es puro
+  /* El reloj lleva el contorno MÁS GRUESO de la consola (5 px contra 3): es puro
      adorno, y se lo puede permitir porque es la única celda que no muestra una
-     magnitud, así que engrosarla no le quita sitio a ningún número. */
-  .cns .cell.reloj{border-color:var(--brd-reloj);border-width:4px}
+     magnitud, así que engrosarla no le quita sitio a ningún número. Sube con las demás
+     para conservar la diferencia: a 4 contra 3 ya no se notaba que era la destacada. */
+  .cns .cell.reloj{border-color:var(--brd-reloj);border-width:5px}
   .cns .col{display:flex;flex-direction:column}
   .cns .ctr{margin-top:auto;margin-bottom:auto}
   .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
