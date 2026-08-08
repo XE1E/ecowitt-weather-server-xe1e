@@ -143,8 +143,26 @@ function MoonGlyph({ size = 42 }: { size?: number }) {
     // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
     // medido--. Mejor que el ajuste se note en el vecino y se corrija a mano.
     <svg width={size} height={size} viewBox={`${-R} ${-R} ${size} ${size}`} style={{ flexShrink: 0 }}>
-      <circle r={R} fill="#1b1b1b" />
-      <path d={litPath} fill="#ffcf19" />
+      {/* La parte en sombra, en gris cálido y no en el casi negro de antes (#1b1b1b): sobre
+          el negro de la celda ese tono no se distinguía del fondo, así que no se veía el
+          DISCO completo y la fase se leía como una mancha suelta en vez de como una esfera
+          parcialmente iluminada. Con el disco visible, el terminador se nota. */}
+      <circle r={R} fill="#3c3a33" />
+      {/* El amarillo de la luna es más pálido que el del sol (--y, #ffcf19), a propósito y
+          no por descuido: son dos astros distintos en la misma celda y la luna no brilla,
+          refleja. El sol se queda vivo. */}
+      <path d={litPath} fill="#e6d18f" />
+      {/* Mares, para que el disco no sea una pastilla lisa. Van DESPUÉS de las dos capas y
+          en negro translúcido, así que oscurecen la parte iluminada y apenas se notan en la
+          sombra --que es justo lo que hace la luna de verdad--. Sin `clipPath`: cada mancha
+          está colocada de modo que su centro más su radio no llegan a R, así que ninguna
+          puede asomar por el borde del disco, y así el componente no necesita un id único
+          que pudiera chocar si algún día se dibujan dos lunas en la misma página. */}
+      {([[-0.30, -0.34, 0.22], [0.11, -0.46, 0.15], [0.29, -0.09, 0.19],
+         [-0.16, 0.26, 0.15], [0.06, 0.06, 0.11], [-0.34, 0.02, 0.12]] as const)
+        .map(([cx, cy, r], i) => (
+          <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill="rgba(0,0,0,0.17)" />
+        ))}
     </svg>
   )
 }
