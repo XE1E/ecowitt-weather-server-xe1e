@@ -146,8 +146,19 @@ export function AdminAlertas() {
           fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ])
         // Sembrar con los umbrales globales y sobreponer los propios de la estación.
+        //
+        // Si una clave NO viene en los globales se deja sin sembrar, en vez del `?? 0` que
+        // había antes. Ese cero era una trampa: cuando el panel no exponía todavía los
+        // umbrales de humedad interior, el campo de "alta" salía en 0 --pareciendo que no
+        // configuraba nada-- y guardar habría persistido 0 para la estación. Como el umbral
+        // propio gana sobre el global, la alarma de moho habría quedado disparada para
+        // siempre (humedad >= 0). Sin sembrar, el campo queda vacío, no se envía, y la regla
+        // sigue cayendo al valor global, que es el comportamiento seguro.
         const base: Record<string, number> = {}
-        for (const k of THRESHOLD_KEYS) base[k] = (globalCache as unknown as Record<string, number>)?.[k] ?? 0
+        for (const k of THRESHOLD_KEYS) {
+          const v = (globalCache as unknown as Record<string, number>)?.[k]
+          if (v != null) base[k] = v
+        }
         setSettings({ ...base, ...ov } as AlertSettings)
         setOfflineMin(station?.config?.watchdog_minutes ?? 15)
         setDisabled(Array.isArray(station?.config?.disabled_rules) ? station.config.disabled_rules : [])

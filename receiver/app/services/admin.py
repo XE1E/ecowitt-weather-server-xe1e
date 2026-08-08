@@ -117,6 +117,18 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_pressure_low": settings.alert_pressure_low,
         "alert_humidity_low": settings.alert_humidity_low,
         "alert_humidity_high": settings.alert_humidity_high,
+        # Humedad INTERIOR (la vigilancia de moho). Faltaban aquí, y era el motivo de que
+        # el panel no pudiera configurarlas: la página de alertas se siembra con lo que
+        # devuelve este diccionario, así que los dos campos salían vacíos, y al elegir una
+        # secundaria --que rellena lo que falta con 0-- el umbral de "alta" aparecía en 0.
+        # Un control en 0 mientras la regla salta a 65 se lee como que no configura nada.
+        #
+        # Peor: guardar así habría persistido 0 para la secundaria, y como el umbral de la
+        # estación gana sobre el global, la alarma de moho habría quedado disparada para
+        # siempre (humedad >= 0). La regla y sus valores por omisión existían desde el
+        # principio en config.py; lo único que faltaba era exponerlos al panel.
+        "alert_humidity_indoor_low": settings.alert_humidity_indoor_low,
+        "alert_humidity_indoor_high": settings.alert_humidity_indoor_high,
         "alert_pressure_drop_warn": settings.alert_pressure_drop_warn,
         "alert_pressure_drop_strong": settings.alert_pressure_drop_strong,
         "alert_pressure_rise_warn": settings.alert_pressure_rise_warn,
