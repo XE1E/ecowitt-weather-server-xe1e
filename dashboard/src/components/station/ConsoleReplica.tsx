@@ -1483,7 +1483,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             antes de fijarla. Copia la maquetación de esa celda (cuerpo 46, unidad 20)
             para que las dos se lean como pareja pese a estar en filas distintas. */}
         <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>WN32</span></div>
+          {/* Sólo "REMOTA", sin el nombre del aparato. Las tres celdas de allá llevan el
+              MISMO rótulo: lo que interesa de un vistazo es de qué SITIO viene la lectura
+              --que es lo que agrupa el contorno azul-- y no qué caja la mide, que es un
+              detalle de instalación. Lo que mide cada una lo dicen sus glifos: casa hueca
+              = a la intemperie (ésta), casa rellena = bajo techo, barómetro = presión; el
+              mismo criterio con el que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo.
+              Además el reparto de color anterior (procedencia en blanco, aparato en
+              morado) gastaba el morado de la PRESIÓN en un nombre de equipo. */}
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
               mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
               Absoluto por lo mismo que en EXT: si no, baja los valores. */}
@@ -1653,13 +1661,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        {/* REMOTA GW1100: se queda donde estaba y ahora es FIJA al sensor integrado
-            del gateway, que es interior. Antes esta misma celda se disfrazaba --si el
-            WN32 reportaba mostraba el exterior y cambiaba su propio rótulo-- porque era
-            la única celda para los dos sensores remotos. Con la celda WN32 de la fila 3
-            ya no hace falta: cada sensor tiene la suya y el rótulo no se mueve. */}
+        {/* Sensor INTEGRADO del gateway remoto, que mide bajo techo. Esta celda es FIJA a
+            él: antes se disfrazaba --si el WN32 reportaba mostraba el exterior y cambiaba
+            su propio rótulo-- porque era la única celda para los dos sensores de allá. Con
+            la celda de la fila 3 ya no hace falta, cada sensor tiene la suya.
+            Cuál de las dos es cada una lo dice el RELLENO de la casa, no el rótulo: las
+            tres celdas remotas se llaman igual (ver la nota de la primera). */}
         <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa RELLENA = bajo techo, al mismo tamaño que la hueca de la celda de
               arriba: puestas una encima de la otra, el relleno es lo único que cambia y
               se lee de un vistazo cuál de los dos sensores remotos es cada una.
@@ -1750,13 +1759,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         </div>
 
         <div className="cell col remota" data-nav={CONSOLA_NAV.remotaP}>
-          {/* "REMOTA GW1100" y no "PRESIÓN GW1100", con el mismo reparto de color que
-              la celda de arriba (procedencia en blanco, aparato en morado): las dos
-              celdas son el MISMO sensor y así se leen como bloque. Lo que mide cada
-              una ya lo dicen el glifo y la cifra --barómetro con hPa aquí, termómetro
-              con °C arriba--, que es como funciona el resto de la consola desde que
-              EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo. */}
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA <span style={{ color: 'var(--p)' }}>GW1100</span></div>
+          {/* "REMOTA" y no "PRESIÓN REMOTA": lo que mide esta celda lo dicen el barómetro
+              y los hPa, igual que arriba lo dicen el termómetro y los °C. Es como funciona
+              el resto de la consola desde que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin
+              rótulo, y lo que hace que las tres celdas de allá se lean como un bloque. */}
+          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* El mismo barómetro redondo que la celda PRES, en el mismo sitio y tamaño:
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
