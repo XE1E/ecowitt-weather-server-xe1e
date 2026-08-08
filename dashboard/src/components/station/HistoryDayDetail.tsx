@@ -104,7 +104,12 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
       <p className={`text-2xl font-bold ${cls}`}>{value}</p>
     </div>
   )
-  const minW = data.length > 30 ? `${Math.max(500, data.length * 8)}px` : '500px'
+  // TOPE de 1500 px, que es lo que ya hacía `StationTempChart` y aquí faltaba. Un día trae
+  // ~1300 lecturas al minuto, así que sin tope el lienzo salía de 10 448 px --medido con
+  // Playwright-- dentro de una tarjeta de 366 en móvil: 28 pantallas de scroll para ver un
+  // día, un 3.5% del día por pantalla. En escritorio no se notaba nunca porque el CSS de
+  // `.chart-scroll` fuerza `min-width:100%` a partir de 768 px.
+  const minW = data.length > 30 ? `${Math.min(1500, Math.max(500, data.length * 8))}px` : '500px'
 
   const LineCard = ({ title, unit, series }: { title: string; unit: string; series: { key: string; name: string; color: string; dash?: string }[] }) => (
     <div className="card">
@@ -165,9 +170,21 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
 
           {/* Gráficas por hora del día (mismos 5 grupos que el mes) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Sensación DISCONTINUA y dibujada encima de la temperatura. Las dos curvas
+                coinciden exactamente casi todos los días --la sensación solo se separa de
+                la temperatura con calor (índice de calor, >27°) o con frío y viento
+                (wind chill); en una jornada templada `feels_like` ES la temperatura, y el
+                servidor la devuelve idéntica: medido, 1308 de 1308 filas iguales, con 0.00°
+                de diferencia máxima--. Con las dos sólidas, la que se pinta después tapaba
+                a la otra y sólo se veía la curva morada de Sensación: parecía que no había
+                gráfica de temperatura.
+                Con la de encima discontinua se ven las dos: la naranja continua asomando
+                entre los huecos de la morada. Y cuando de verdad se separen, se leerán como
+                dos curvas distintas. Es el mismo recurso que ya usa el punto de rocío en la
+                gráfica de humedad y el pronóstico en la de la portada. */}
             <LineCard title="Temperatura" unit={u.tempU} series={[
               { key: 'temp', name: 'Temperatura', color: '#f97316' },
-              { key: 'feels', name: 'Sensación', color: '#a78bfa' },
+              { key: 'feels', name: 'Sensación', color: '#a78bfa', dash: '6 4' },
             ]} />
 
             {/* Viento: medio/máx (líneas) + dirección (puntos, eje derecho) */}
