@@ -10,7 +10,7 @@ import { MeteoGlyph } from '../MeteoGlyph'
 import type { RemoteHistRow } from '../../remote'
 // Amanecer/atardecer: no se calculan en local como la fase lunar, vienen del
 // pronóstico (Open-Meteo a través de nuestro backend, que además lo cachea).
-import { fetchForecast, type AstroData } from '../../forecast'
+import { fetchForecast, type AstroData, type ForecastHour } from '../../forecast'
 import { LOCATION } from '../../config'
 // El CSS vive aparte desde que las páginas de detalle del kiosco --a las que se
 // llega tocando una celda de aquí-- comparten su estética.
@@ -405,6 +405,69 @@ const battLevel = (v: unknown): number | null => {
   }
   return null
 }
+
+/** Alerta viva tal como la sirve `/api/alerts`: su clave y el mensaje ya redactado. */
+interface AlertaViva { key: string; message: string }
+
+/**
+ * Qué celda de la consola le toca a una alerta.
+ *
+ * La clave viene del motor (`alerts.py`) y trae la estación como PREFIJO cuando no es
+ * la principal: `gw1100:humidity_high`. Ese prefijo es lo que decide si la alerta pinta
+ * en las celdas de aquí o en las tres de la remota, que es justo la confusión que habría
+ * si sólo se mirara la categoría.
+ *
+ * Rocío y sensación tienen celda propia --la de derivadas-- aunque el motor los mete en
+ * la familia "temp": ahí es donde se leen sus cifras, así que ahí es donde hay que mirar.
+ *
+ * Batería, sensor perdido y estación caída devuelven null a propósito: la pila ya se
+ * pone roja sola, y la caída de la estación tiene su propio aviso en el reloj. Duplicarlo
+ * teñiría media consola por algo que ya se ve.
+ */
+type CeldaAlerta =
+  | 'ext' | 'hum' | 'pres' | 'viento' | 'lluvia' | 'rocio' | 'sensacion' | 'solar' | 'uv'
+  | 'interior' | 'remotaExt' | 'remotaInt' | 'remotaP'
+
+function celdaDeAlerta(key: string): CeldaAlerta | null {
+  const i = key.indexOf(':')
+  const esRemota = i >= 0
+  const r = esRemota ? key.slice(i + 1) : key
+  if (esRemota) {
+    if (r.startsWith('pressure_')) return 'remotaP'
+    if (r.startsWith('humidity_indoor')) return 'remotaInt'
+    // Lo que evalúa campos `*_outdoor` es del WN32; ver la nota de `remoteOutT`.
+    if (r.startsWith('humidity_') || r.startsWith('temp_')
+      || r.startsWith('dew_') || r.startsWith('feels_')) return 'remotaExt'
+    return null
+  }
+  if (r.startsWith('dew_')) return 'rocio'
+  if (r.startsWith('feels_')) return 'sensacion'
+  if (r.startsWith('temp_')) return 'ext'
+  if (r.startsWith('humidity_indoor')) return 'interior'
+  if (r.startsWith('humidity_')) return 'hum'
+  if (r.startsWith('pressure_')) return 'pres'
+  if (r === 'wind_high' || r === 'gust_high') return 'viento'
+  if (r.startsWith('rain_')) return 'lluvia'
+  if (r === 'uv_high') return 'uv'
+  if (r === 'solar_high') return 'solar'
+  return null
+}
+
+/**
+ * El mensaje del motor empieza por un EMOJI ("🌡️ Temperatura alta: 27 °C").
+ *
+ * En el kiosco eso sale como un cuadro vacío: el Chromium del renderer corre en un
+ * contenedor sin fuente de emoji en color, y es la misma razón por la que todos los
+ * iconos de la consola son SVG (ver el triángulo del aviso "SIN DATOS").
+ *
+ * Se quitan los emoji y se conservan las FLECHAS ↓ ↑, que están en las fuentes normales
+ * y son parte del mensaje de las reglas de tendencia: "↓ Temperatura cayendo 3.2°C/60min".
+ */
+const sinEmoji = (s: string) =>
+  s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')  // pictogramas
+    .replace(/\uFE0F/g, '')                                  // selector de variación
+    .replace(/\s+/g, ' ')
+    .trim()
 
 interface DailyRain { date: string; rain: number | null }
 
@@ -824,6 +887,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [astro, setAstro] = useState<AstroData | null>(null)
   const [moon, setMoon] = useState<{ illumination?: number; waxing?: boolean } | null>(null)
   const [rain7, setRain7] = useState<DailyRain[]>([])
+  const [alertas, setAlertas] = useState<AlertaViva[]>([])
+  const [horas, setHoras] = useState<ForecastHour[]>([])
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -860,7 +925,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // Astronomía del pronóstico, sólo para el amanecer/atardecer de la celda de la
   // luna. Cada 30 min: son dos horas fijas del día, no hace falta más.
   useEffect(() => {
-    const load = () => fetchForecast().then((r) => setAstro(r.astro)).catch(() => {})
+    const load = () => fetchForecast()
+      .then((r) => { setAstro(r.astro); setHoras(r.hours) })
+      .catch(() => {})
     load()
     const i = setInterval(load, 30 * 60000)
     return () => clearInterval(i)
@@ -881,6 +948,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .catch(() => {})
     load()
     const i = setInterval(load, 30 * 60000)
+    return () => clearInterval(i)
+  }, [])
+
+  // Alertas VIVAS. La consola tenía el motor de alertas al lado y no lo miraba: su único
+  // aviso era "SIN DATOS". Cada minuto basta --el motor ya trae histéresis propia, así que
+  // una alerta no aparece y desaparece entre dos sondeos-- y es lo mismo que cuesta la
+  // remota.
+  useEffect(() => {
+    const load = () => fetch('/api/alerts')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setAlertas(Array.isArray(j?.active) ? j.active : []))
+      .catch(() => {})
+    load()
+    const i = setInterval(load, 60000)
     return () => clearInterval(i)
   }, [])
 
@@ -1011,6 +1092,28 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     )
   })()
 
+  // Celdas con alguna alerta viva. Se marca TIÑENDO DE ROJO el glifo de identidad de la
+  // celda --el termómetro, la gota, el barómetro-- o su rótulo si no tiene glifo, en vez
+  // de meter un triángulo en una esquina: no queda ni una esquina libre en esta rejilla
+  // (medido celda por celda), el glifo se ve desde el otro lado del cuarto y así no se
+  // pierde el dibujo que dice qué mide la celda. El texto de la alerta va en el renglón
+  // del reloj, que ya hace ese papel con "SIN DATOS".
+  const celdasEnAlerta = new Set<string>()
+  for (const a of alertas) {
+    const c = celdaDeAlerta(a.key)
+    if (c) celdasEnAlerta.add(c)
+  }
+  // Color de un glifo o rótulo: el suyo, o el rojo de la alarma si su celda está avisando.
+  const alertaCol = (celda: CeldaAlerta, base: string) =>
+    celdasEnAlerta.has(celda) ? 'var(--red)' : base
+
+  // Próximas horas del pronóstico. `fetchForecast` ya devuelve las horas desde ahora con
+  // su icono de día o de noche resuelto, así que aquí sólo se descartan las pasadas --la
+  // lista incluye la hora en curso-- y se toman cuatro.
+  const proximas = horas
+    .filter((h) => new Date(h.time).getTime() > now.getTime())
+    .slice(0, 4)
+
   const kiosk = mode === 'kiosk'
 
   // Mapa de zonas táctiles, sólo en el display: se miden las celdas marcadas con
@@ -1091,7 +1194,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               centrado en la celda, empieza en x≈100 mientras el icono acaba en x≈84.
               Mismo criterio en HUMEDAD y en PRES. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="thermometer" size={72} color="#f97316" title="temperatura" />
+            <MeteoGlyph name="thermometer" size={72} color={alertaCol('ext', '#f97316')} title="temperatura" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
@@ -1165,7 +1268,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ahí arriba ya no quedaba celda. En la misma fila comparten línea base por
               construcción y no hay nada que cuadrar a mano. */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                        color: 'var(--v)', fontWeight: 800, marginTop: -4, lineHeight: 1.15 }}>
+                        color: alertaCol('viento', 'var(--v)'), fontWeight: 800, marginTop: -4, lineHeight: 1.15 }}>
             <span>
               <span className="seg" style={{ fontSize: 24 }}>{dir != null ? Math.round(dir) : '--'}</span>
               <span style={{ fontSize: 15, verticalAlign: 'super' }}>°</span>
@@ -1320,7 +1423,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
               borde de arriba, para dejarle la franja de abajo a las horas. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="humidity" size={65} color="#3b82f6" title="humedad" />
+            <MeteoGlyph name="humidity" size={65} color={alertaCol('hum', '#3b82f6')} title="humedad" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
@@ -1374,7 +1477,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               glifo quedaba un poco alto respecto al hueco que ocupa a la vista. Diez
               píxeles menos de exclusión lo bajan 5, que es lo que le faltaba. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#a78bfa')} title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
@@ -1410,7 +1513,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               y es el mismo papel que hacen el termómetro en EXT o el barómetro en PRES.
               44 y no 46: el hueco a la izquierda de las cifras es ese. */}
           <div style={{ position: 'absolute', top: 16, left: 12 }}>
-            <MeteoGlyph name="raindrops" size={44} color="#38bdf8" title="lluvia" />
+            <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')} title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
               viento: EVENTO es lo caído en el chubasco (`rain_event`), TASA la
@@ -1489,13 +1592,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div className="cell main" data-nav={CONSOLA_NAV.derivadas} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
+              <div style={{ color: alertaCol('rocio', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
               <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
                 {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
+              <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
               <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
                 {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
               </div>
@@ -1524,7 +1627,44 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 }}>
             <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.05, textAlign: 'center' }}>{cond.label || 'CLIMA'}</div>
-            <div style={{ marginTop: -10 }}><WeatherIcon name={cond.icon} size={108} className="weather-main-icon" /></div>
+            {/* AHORA + las PRÓXIMAS CUATRO HORAS. La consola decía el tiempo que hace y en
+                ningún sitio el que va a hacer: la probabilidad de lluvia por hora estaba en
+                el pronóstico desde siempre --168 h en `/api/forecast`-- y había que irse a
+                la página 1 para verla. En una pantalla de pared, "¿llueve al rato?" es la
+                pregunta que más veces se hace.
+                EL ICONO BAJA DE 108 A 46 px, que es el precio del cambio y se paga a gusto:
+                traía ~50 px de tinta en una caja de 108 --la caja incluso se salía de la
+                celda y la recortaba el `overflow`-- y la palabra de arriba ya dice qué
+                tiempo hace, así que el dibujo era el elemento más grande de la celda para
+                decir lo que ya estaba escrito.
+                CUENTA DEL ANCHO: el interior de esta celda son 161 px. Cuatro columnas de
+                ~22 px (el caso peor es "100%") más sus huecos piden ~103, así que al icono
+                le quedan 52; a 46 sobran 6 px de aire. Medido sobre la captura, no estimado.
+                La temperatura va en blanco y la probabilidad en el AZUL DE LA LLUVIA
+                (`--r`), el mismo de la celda de LLUVIA y de su histograma: así se sabe qué
+                es cada cifra sin rótulos que aquí no caben. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: -2, width: '100%' }}>
+              <WeatherIcon name={cond.icon} size={46} className="weather-main-icon" />
+              {proximas.length > 0 && (
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {proximas.map((h) => (
+                    <div key={h.time} style={{ textAlign: 'center' }}>
+                      {/* La hora, sin minutos y sin ceros: son horas en punto del
+                          pronóstico y "22" se lee de un golpe. */}
+                      <div style={{ color: 'var(--lbl)', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>
+                        {new Date(h.time).getHours()}
+                      </div>
+                      <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 800, lineHeight: 1.25 }}>
+                        {u.temp(h.temp, 0)}
+                      </div>
+                      <div style={{ color: 'var(--r)', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                        {Math.round(h.precipProb)}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {/* SOL Y LUNA. Sin rótulo, por lo mismo que EXT o PRES: el disco lunar y las
               flechas de salida y puesta se explican solos, y la palabra "LUNA" ya se
@@ -1563,7 +1703,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mismo criterio con el que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo.
               Además el reparto de color anterior (procedencia en blanco, aparato en
               morado) gastaba el morado de la PRESIÓN en un nombre de equipo. */}
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
+          <div style={{ color: alertaCol('remotaExt', 'var(--w)'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
               mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
               Absoluto por lo mismo que en EXT: si no, baja los valores. */}
@@ -1617,7 +1757,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         {/* Fila 4 */}
         <div className="cell col main" data-nav={CONSOLA_NAV.interior}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#fbbf24', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
+            <span style={{ color: alertaCol('interior', '#fbbf24'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
             {/* Casa RELLENA = bajo techo. Este es el tamaño (30) que ahora usan las
                 cuatro celdas con glifo de ubicación. */}
             <HouseGlyph filled />
@@ -1658,7 +1798,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             que tenía UV y que no se lee de ninguna manera. */}
         <div style={{ display: 'grid', gridTemplateColumns: '4.25fr 2.4fr 3.35fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
+            <div style={{ color: alertaCol('solar', '#f59e0b'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
               {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
             </div>
@@ -1681,7 +1821,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           </div>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
+            <div style={{ color: alertaCol('uv', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
             <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
               {data?.uv_index ?? '--'}
             </div>
@@ -1754,7 +1894,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Cuál de las dos es cada una lo dice el RELLENO de la casa, no el rótulo: las
             tres celdas remotas se llaman igual (ver la nota de la primera). */}
         <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
+          <div style={{ color: alertaCol('remotaInt', 'var(--w)'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa RELLENA = bajo techo, al mismo tamaño que la hueca de la celda de
               arriba: puestas una encima de la otra, el relleno es lo único que cambia y
               se lee de un vistazo cuál de los dos sensores remotos es cada una.
@@ -1819,6 +1959,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               concreta sino de todas a la vez, y porque el reloj de al lado es
               precisamente lo que hace que la pantalla parezca fresca cuando no lo está.
               El nombre no se pierde: sigue en el título de la página del kiosco. */}
+          {/* Orden de prioridad del renglón: primero la CAÍDA de la estación, luego las
+              ALERTAS vivas, y si no hay nada el nombre. La caída manda porque cuando no
+              llega dato las alertas se evalúan sobre lecturas congeladas, así que anunciar
+              "Temperatura alta" de un dato de hace una hora sería peor que no decir nada. */}
           {stale ? (
             /* El triángulo va en SVG y no como emoji ⚠: el Chromium del renderer corre
                en un contenedor sin fuente de emoji en color, y ahí el carácter saldría
@@ -1831,6 +1975,29 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
               </svg>
               SIN DATOS · {staleMin} MIN
+            </div>
+          ) : alertas.length > 0 ? (
+            /* Mismo triángulo y mismo rojo que la caída: para quien mira la pantalla las
+               dos cosas son "algo va mal", y el texto ya dice cuál.
+               Cuerpo 13 y hasta dos renglones: los mensajes del motor son frases enteras
+               ("Presión cayendo 2.3 hPa/60min (fuerte) - posible tormenta") y en los 312 px
+               de esta celda no entran en uno. La celda tiene sitio: el renglón del nombre
+               mide 16 px y hasta el reloj hay ~30 libres.
+               Con varias alertas se muestra la PRIMERA y se cuentan las demás: elegir "la
+               más grave" no es posible sin inventar un orden --el motor no expone nivel--,
+               y el "+N" al menos dice que hay más y que hay que ir a la web. */
+            <div style={{ color: 'var(--red)', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
+                          lineHeight: 1.08, marginTop: -2, display: 'flex', alignItems: 'flex-start',
+                          justifyContent: 'center', gap: 6, textAlign: 'left' }}>
+              <svg width="15" height="14" viewBox="0 0 16 15" style={{ flexShrink: 0, marginTop: 1 }}>
+                <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
+                <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
+                <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
+              </svg>
+              <span>
+                {sinEmoji(alertas[0].message)}
+                {alertas.length > 1 && ` · +${alertas.length - 1}`}
+              </span>
             </div>
           ) : (
             <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', marginTop: -2 }}>
@@ -1856,7 +2023,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            <MeteoGlyph name="barometer" size={46} color="#a78bfa" title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#a78bfa')} title="presión" />
           </div>
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={remotePressTrend} />
