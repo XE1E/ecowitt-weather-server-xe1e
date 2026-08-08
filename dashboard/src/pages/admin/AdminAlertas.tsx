@@ -396,7 +396,9 @@ export function AdminAlertas() {
 
           {/* Presion */}
           <div>
-            <p className="text-sm font-medium mb-1">📊 Presion</p>
+            {/* La presión NO es del WN32: el GW1100 trae barómetro propio, así que este
+                grupo sí le aplica y por eso nunca aparece atenuado en esa estación. */}
+            <p className="text-sm font-medium mb-1">📊 Presion{marca('pressure_relative', 'barómetro integrado')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('pressure_high')} onToggle={() => toggleRule('pressure_high')} />
@@ -519,7 +521,7 @@ export function AdminAlertas() {
       {/* Tendencia de presión (2 niveles). Aplica a ambas estaciones. */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <p className="text-sm font-medium mb-2">
-          📉 Tendencia de presión <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (caída = tormenta · subida = frente frío)</span>
+          📉 Tendencia de presión{marca('pressure_relative', 'barómetro integrado')} <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (caída = tormenta · subida = frente frío)</span>
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
