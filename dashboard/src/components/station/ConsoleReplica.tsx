@@ -96,12 +96,24 @@ function uvColor(uv: number): string {
   return '#22c55e'
 }
 
+// Cortes de la radiación solar. NO son una escala oficial --no existe una para los W/m²--
+// sino el código de la casa, y por eso vive en un solo sitio: la tabla `SOLAR_BANDS` de
+// más abajo se construye de aquí, así que el dígito y su riel usan los mismos cortes y
+// los mismos tonos y no pueden contradecirse.
+//
+// El primer tramo es gris y no un color del degradado: por debajo de 50 W/m² no hay sol
+// del que hablar, y un gris lo dice mejor que un amarillo apagado.
+const SOLAR_STEPS: { from: number; color: string }[] = [
+  { from: 0, color: '#94a3b8' },
+  { from: 50, color: '#eab308' },
+  { from: 250, color: '#f59e0b' },
+  { from: 550, color: '#f97316' },
+  { from: 800, color: '#ef4444' },
+]
 function solarColor(w: number): string {
-  if (w >= 800) return '#f87171'
-  if (w >= 550) return '#fb923c'
-  if (w >= 250) return '#fcd34d'
-  if (w >= 50) return '#fde047'
-  return '#94a3b8'
+  let c = SOLAR_STEPS[0].color
+  for (const s of SOLAR_STEPS) if (w >= s.from) c = s.color
+  return c
 }
 
 // Números de la consola: la parte decimal (".4") en fuente más chica, como una
@@ -336,10 +348,13 @@ const IMECA_BANDS: Band[] = [
   { to: 150, color: '#f97316' },
   { to: 200, color: '#ef4444' },
 ]
-// SOLAR no tiene escala oficial de bandas, así que lleva UNA sola, ámbar: repartirle
-// cortes de colores sería fingir un significado que los W/m² no tienen. Aquí la magnitud
-// la dice el largo, que es para lo que sirve un riel de un solo tono.
-const SOLAR_BANDS: Band[] = [{ to: 1000, color: '#f59e0b' }]
+// SOLAR: las bandas salen de `SOLAR_STEPS`, la misma tabla que colorea el dígito. El
+// último tramo se cierra en el tope de la escala (1000 W/m², el pico despejado a esta
+// latitud y altitud).
+const SOLAR_BANDS: Band[] = SOLAR_STEPS.map((s, i) => ({
+  to: SOLAR_STEPS[i + 1]?.from ?? 1000,
+  color: s.color,
+}))
 
 // Riel de nivel: dónde cae un valor dentro de su escala, CON LOS CORTES A LA VISTA.
 //

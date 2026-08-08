@@ -20,6 +20,15 @@ export const CONSOLE_CSS = `
   @font-face{font-family:'DSEG14';src:url('/fonts/DSEG14Classic-Bold.woff2') format('woff2');font-display:block}
   .cns{--t:#f97316;--h:#3b82f6;--p:#a78bfa;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;
     --brd-main:#fbbf24;--brd-jardin:#4ade80;--brd-remota:#6b7280;--brd-derivada:#ffffff;--brd-reloj:#ff4128;
+    /* Fondo de cada grupo: el MISMO tono que su borde, a un 6-8% sobre negro. Así no hay
+       un segundo código de color que aprender --el borde ya dice de quién es la celda-- y
+       el fondo sólo lo hace legible de un vistazo, sin tener que seguir un contorno de
+       2 px. Se dan como hex ya compuesto sobre negro y no como rgba para que el resultado
+       no dependa de lo que haya detrás de la celda.
+       La REMOTA es la excepción al "mismo tono": su borde es gris y un gris al 7% sobre
+       negro es indistinguible del blanco al 5% de la derivada, así que se tira a azul.
+       Son los cinco valores a tocar si el efecto queda fuerte o flojo. */
+    --bg-main:#140f03;--bg-jardin:#06120a;--bg-remota:#070c12;--bg-derivada:#0d0d0d;--bg-reloj:#120503;
     font-family:'Roboto Condensed','Arial Narrow','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
   .cns .lbl{color:var(--lbl);font-size:18px;font-weight:700;letter-spacing:2px;line-height:1}
   .cns .lbl .ac{color:var(--t)} .cns .lbl .acg{color:var(--v)}
@@ -45,18 +54,18 @@ export const CONSOLE_CSS = `
   .cns .decxs .dec{font-size:0.5em}
   .cns .rt{text-align:right}          /* valor pegado al borde derecho */
   .cns .cell{background:#000;position:relative;padding:9px 12px;overflow:hidden;min-width:0;min-height:0;border-radius:12px;border:2px solid transparent}
-  .cns .cell.main{border-color:var(--brd-main)}
-  .cns .cell.jardin{border-color:var(--brd-jardin)}
-  .cns .cell.remota{border-color:var(--brd-remota)}
+  .cns .cell.main{background:var(--bg-main);border-color:var(--brd-main)}
+  .cns .cell.jardin{background:var(--bg-jardin);border-color:var(--brd-jardin)}
+  .cns .cell.remota{background:var(--bg-remota);border-color:var(--brd-remota)}
   /* derivada = lo que no es una lectura cruda de un sensor de la estación: la
      condición del cielo, la luna, y solar/UV/ICA (el ICA ni siquiera es nuestro,
      lo estima el backend). Rocío y sensación SALIERON de este grupo: se derivan de
      la temperatura y la humedad de la principal, así que llevan su amarillo. */
-  .cns .cell.derivada{border-color:var(--brd-derivada)}
+  .cns .cell.derivada{background:var(--bg-derivada);border-color:var(--brd-derivada)}
   /* El reloj lleva el contorno MÁS GRUESO de la consola (4 px contra 2): es puro
      adorno, y se lo puede permitir porque es la única celda que no muestra una
      magnitud, así que engrosarla no le quita sitio a ningún número. */
-  .cns .cell.reloj{border-color:var(--brd-reloj);border-width:4px}
+  .cns .cell.reloj{background:var(--bg-reloj);border-color:var(--brd-reloj);border-width:4px}
   .cns .col{display:flex;flex-direction:column}
   .cns .ctr{margin-top:auto;margin-bottom:auto}
   .cns .bt{display:flex;justify-content:space-between;align-items:flex-start}
