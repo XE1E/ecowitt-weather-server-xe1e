@@ -271,19 +271,28 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
           // Saturado y sin atenuar cuando hay lluvia: el 0.75 de antes apagaba seis de
           // los siete días. Cuál es hoy lo dice su letra en blanco, no un medio tono.
           const opacidad = v == null ? 1 : v <= 0 ? 0.45 : 1
+          // Se rotula CADA día con lluvia, que es lo que permite comparar sin estimar
+          // alturas. Dentro de la barra si es bastante alta para contenerlo; si no,
+          // ENCIMA, que ahora cabe: el relleno tiene techo, así que sobre una barra baja
+          // queda toda la ranura libre. Antes sólo se rotulaba el pico porque el rótulo
+          // sólo podía ir dentro. Si no cabe de ninguna forma, el dato sigue en el `title`.
+          const dentro = v != null && v > 0 && alto >= 17
+          const encima = v != null && v > 0 && !dentro && BAR_H - alto >= 13
           return (
-            <div style={{ height: BAR_H, display: 'flex', alignItems: 'flex-end',
+            <div style={{ height: BAR_H, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                           background: RANURA, borderRadius: '2px 2px 0 0' }}
               title={`${d.date}: ${v == null ? 'sin dato' : fmt(v)}`}>
+              {encima && (
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--r)', lineHeight: 1,
+                              textAlign: 'center', marginBottom: 2 }}>
+                  {fmt(v as number)}
+                </div>
+              )}
               <div style={{ width: '100%', height: alto, borderRadius: 2, background: color, opacity: opacidad,
                             display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}>
-                {/* El valor va DENTRO de su barra, no encima: encima costaba un renglón de
-                    11 px que esta celda no tiene. Se rotula CADA día en el que quepa, no
-                    sólo el pico: con varios rótulos se compara sin estimar alturas, y el
-                    que no cabe no estorba --el dato sigue en el `title`--. */}
-                {v != null && v > 0 && alto >= 17 && (
+                {dentro && (
                   <span style={{ fontSize: 11, fontWeight: 800, color: '#06283d', lineHeight: 1, marginTop: 3 }}>
-                    {fmt(v)}
+                    {fmt(v as number)}
                   </span>
                 )}
               </div>
@@ -350,6 +359,11 @@ const SOLAR_BANDS: Band[] = [{ to: 1000, color: '#f59e0b' }]
 // esquinas redondeadas, y aquí el ancho lo pone la celda.
 function LevelBar({ value, max, bands }: { value?: number | null; max: number; bands: Band[] }) {
   const v = value == null ? null : Math.max(0, Math.min(max, value))
+  // El tinte de lo APAGADO sólo tiene sentido con varias bandas, donde dibuja la escala.
+  // Con una sola --SOLAR-- cubría el riel entero de un ámbar mate, y una noche sin sol se
+  // veía como una barra llena de color apagado en vez de como una barra vacía. Ahí lo
+  // apagado se queda en el oscuro del riel y el largo dice todo.
+  const hint = bands.length > 1
   let from = 0
   return (
     <div style={{ width: '100%', height: 9, borderRadius: 4, background: '#141414',
@@ -362,7 +376,11 @@ function LevelBar({ value, max, bands }: { value?: number | null; max: number; b
         const cover = v == null || span === 0 ? 0 : Math.max(0, Math.min(1, (v - from) / span))
         from = to
         return (
-          <div key={i} style={{ flex: span, minWidth: 0, background: `${b.color}40` }}>
+          // Alfa 26 (15%) y no 40 (25%): a 25 el amarillo y el naranja apagados tiraban a
+          // oliva y el riel se veía sucio. A 15 leen como un fantasma de la escala y el
+          // tramo encendido resalta. Los cortes se siguen viendo por los huecos de 2 px,
+          // que dejan ver el oscuro del riel.
+          <div key={i} style={{ flex: span, minWidth: 0, background: hint ? `${b.color}26` : 'transparent' }}>
             <div style={{ width: `${cover * 100}%`, height: '100%', background: b.color }} />
           </div>
         )
