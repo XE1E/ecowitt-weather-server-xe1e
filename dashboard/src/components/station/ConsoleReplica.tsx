@@ -1747,12 +1747,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.
-                El icono sube a 60. Para sacar esos píxeles la TIRA se aprieta un poco --la
-                hora a 11 px y el interlineado de la temperatura de 1.15 a 1.02-- con lo que
-                su caja baja de 47 a 43, y encima se sube 2 px con `marginBottom`. Cuentas:
-                interior 106 = icono 60 + tira 43 + los 2 de margen, o sea justo. Las cifras
-                de la tira NO cambian de tamaño; lo que se recorta es el aire entre sus tres
-                renglones, que no se echa de menos. Que la sangría sea de 2 no acerca el dibujo al borde tanto como
+                CUENTA BUENA DEL ALTO, y la de antes estaba mal: el contorno de esta celda va
+                de y=266 a y=372 en la captura, así que su interior son 103 px --no 106-- y con
+                la sangría de 2 quedan 99 para el contenido. Con el icono a 60 y la tira, el
+                contenido pedía 105: se desbordaba 6 px y la fila de probabilidades salía
+                CORTADA por el borde de abajo. El error venía de tomar como borde una
+                referencia de un recorte y no el contorno medido de la celda.
+                Cuentas de ahora: la fila del icono cede 14 px de maquetación
+                (`marginBottom: -14`), así que ocupa 48 de los 62 que mide el dibujo; la tira
+                pide 43 y se sube 4 más; total 95 de los 99. Los 14 px que la fila se descuenta
+                no pisan la tira porque los iconos de Meteocons traen aire DENTRO de su
+                lienzo: lo que se solapa es hueco, no dibujo. Comprobado en la captura.
+                La TIRA se aprieta también: la hora a 11 px y el interlineado de la
+                temperatura de 1.15 a 1.02, con lo que su caja baja de 47 a 43. Sus cifras NO
+                cambian de tamaño; lo que se recorta es el aire entre los tres renglones. Que la sangría sea de 2 no acerca el dibujo al borde tanto como
                 parece: los iconos de Meteocons traen su propio aire dentro del lienzo.
                 Con la sangría en 7 y el icono en 52 la fila de probabilidades ya salió
                 CORTADA una vez --tinta hasta y=109 de 110--, así que esto se mide en la
@@ -1762,8 +1770,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 aquí partir el texto no estorba a nadie, porque el bloque tiene la altura del
                 icono de al lado. Antes iba centrada arriba y una condición larga se partía
                 igual, pero empujando todo lo de abajo. */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
-              <WeatherIcon name={cond.icon} size={60} className="weather-main-icon" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          width: '100%', marginBottom: -14 }}>
+              <WeatherIcon name={cond.icon} size={62} className="weather-main-icon" />
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
@@ -1783,7 +1792,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 el mismo de la celda de LLUVIA y de su histograma, que es lo que dice qué es
                 cada cifra sin gastar rótulos. */}
             {proximas.length > 0 && (
-              <div style={{ marginTop: 'auto', marginBottom: 2, display: 'flex', width: '100%' }}>
+              <div style={{ marginTop: 'auto', marginBottom: 4, display: 'flex', width: '100%' }}>
                 {proximas.map((h) => (
                   <div key={h.time} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                     {/* La hora, sin minutos: son horas en punto del pronóstico. */}
