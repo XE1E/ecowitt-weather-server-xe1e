@@ -1222,10 +1222,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
           {/* Señal del WS69 a la IZQUIERDA de la casita, centrada con ella: la casa dice
               dónde mide el sensor y esto cómo llega su enlace, así que las dos van juntas.
-              `top: 15` = centro de la casa (arranca en 6 y mide 30) menos medio glifo.
+              `top: 10` para que las barras arranquen a la ALTURA DEL TEJADO y no centradas:
+              la casa va en `top: 6` con 30 px de caja, pero su dibujo empieza dentro --el
+              vértice del tejado cae en y=3 de un viewBox de 24, o sea en y≈10-- así que ése
+              es el borde de arriba que se ve. Centrada (top 15) la señal parecía colgada.
               Con la WS2910 no se dibujará nunca, porque no manda el campo; ver `outSig`. */}
           {outSig != null && (
-            <div style={{ position: 'absolute', top: 15, right: 42 }}>
+            <div style={{ position: 'absolute', top: 10, right: 42 }}>
               <SignalGlyph level={outSig} name="WS69" />
             </div>
           )}
@@ -1246,13 +1249,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               único sitio de la celda con hueco a media altura.
               SITIO, medido sobre la captura: la flecha va en `right: 12` y mide 20, así que
               su borde izquierdo cae a 32 px del borde; a `right: 38` quedan 6 px entre las
-              dos. El triángulo mide 21 px y no más porque en PRES es donde menos hueco hay
-              --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
+              dos. El triángulo mide 30 px, que es el tope de esta celda: ocupa de x=268 a
+              x=298 y la lectura acaba en 263, así que quedan 5 px de aire. En HUMEDAD cabría
+              más --tiene 60 px libres contra los 41 de aquí-- pero las dos llevan el mismo
+              para que se lean como pareja, que es como está maquetado todo lo demás.
               El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
               triángulo dice que es un aviso y no una lectura curiosa. */}
           {celdasEnAlerta.has('ext') && (
             <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
-              <WarnGlyph size={21} />
+              <WarnGlyph size={30} />
             </div>
           )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -1495,7 +1500,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               triángulo dice que es un aviso y no una lectura curiosa. */}
           {celdasEnAlerta.has('hum') && (
             <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
-              <WarnGlyph size={21} />
+              <WarnGlyph size={30} />
             </div>
           )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -1561,12 +1566,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
               El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
               triángulo dice que es un aviso y no una lectura curiosa. */}
-          {/* En PRES el triángulo va a 17 y no a 21 como en EXT y HUMEDAD: es la celda con
-              la lectura más ancha --"1023.7 mb" ocupa casi todo el hueco-- y a 21 quedaba
-              apretado entre la cifra y la flecha. */}
+          {/* En PRES el triángulo va a 24 y no a los 30 de EXT y HUMEDAD: es la celda con la
+              lectura más ancha de la consola --"1023.7 mb"-- y a 30 no cabría sin achicar la
+              cifra o pisar el barómetro. */}
           {celdasEnAlerta.has('pres') && (
             <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
-              <WarnGlyph size={17} />
+              <WarnGlyph size={24} />
             </div>
           )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -1581,9 +1586,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Corriéndola, su borde derecho queda en 271 y su izquierdo en 64, o sea a 8 px
               del barómetro (que acaba en 56): entra sin tocar nada. Es la única de las tres
               celdas que necesitaba el ajuste; EXT y HUMEDAD tenían 41 y 60 px libres.
-              44 y no 48: con el triángulo a 17 px basta con correr la lectura 12 px, y así
-              queda a 12 del barómetro en vez de a 8. */}
-          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 44 }}>
+              51 con el triángulo a 24: su borde izquierdo cae en x=274, así que la lectura
+              tiene que acabar antes de 268. Con eso su borde izquierdo queda en ~61, a 5 px
+              del barómetro (que acaba en 56). Es el precio de un triángulo grande en la celda
+              de la cifra más larga, y se paga aquí y no achicando la lectura. */}
+          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 51 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
@@ -1733,22 +1740,25 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
               hacen falta porque el icono ya trae aire por dentro. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo}
-            style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px' }}>
+            style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.
-                El icono sube a 54, y para eso la sangría vertical de la celda baja de 7 a 4:
-                el interior pasa de 96 a 102 px de alto y la tira pide 47 (12 de la hora + 22
-                de la temperatura + 13 de la probabilidad), así que 54 + 47 = 101 entra por
-                un píxel. Va apretado a propósito, que es lo que se pidió; el limite duro es
-                102, y a 52 la fila de probabilidades ya salió CORTADA una vez --tinta hasta
-                y=109 de 110-- cuando la sangría era de 7.
+                El icono sube a 58, y para eso la sangría vertical de la celda baja a 2: el
+                interior pasa a 106 px de alto y la tira pide 47 (12 de la hora + 22 de la
+                temperatura + 13 de la probabilidad), así que 58 + 47 = 105 entra por un
+                píxel. Ese es el TOPE de esta celda y va apretado a propósito, que es lo que
+                se pidió. Que la sangría sea de 2 no acerca el dibujo al borde tanto como
+                parece: los iconos de Meteocons traen su propio aire dentro del lienzo.
+                Con la sangría en 7 y el icono en 52 la fila de probabilidades ya salió
+                CORTADA una vez --tinta hasta y=109 de 110--, así que esto se mide en la
+                captura cada vez que se toca.
                 La descripción va a su derecha, alineada a la izquierda y en dos o tres
                 renglones si hace falta --"NOCHE PARCIALMENTE NUBLADA" son 25 caracteres--:
                 aquí partir el texto no estorba a nadie, porque el bloque tiene la altura del
                 icono de al lado. Antes iba centrada arriba y una condición larga se partía
                 igual, pero empujando todo lo de abajo. */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
-              <WeatherIcon name={cond.icon} size={54} className="weather-main-icon" />
+              <WeatherIcon name={cond.icon} size={58} className="weather-main-icon" />
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
@@ -1839,7 +1849,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Señal del WN32 junto a la casita, igual que en EXT. Aquí SÍ va a haber dato:
               el nivel 0-4 lo mide el GW1100 de cada sensor que tiene emparejado. */}
           {remoteOutSig != null && (
-            <div style={{ position: 'absolute', top: 15, right: 44 }}>
+            <div style={{ position: 'absolute', top: 10, right: 44 }}>
               <SignalGlyph level={remoteOutSig} name="WN32" />
             </div>
           )}
