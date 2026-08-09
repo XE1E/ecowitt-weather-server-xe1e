@@ -1046,6 +1046,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // el primer /api/current. Cuando de verdad no hay nada, las celdas ya salen todas en
   // "--", que lo dice sin necesidad de alarma.
   const stale = staleMin != null && staleMin >= STALE_MIN
+  // Hora del pico de ráfaga del día, para el rótulo de RÁFAGA DÍA.
+  const gustMaxTime = hhmm(stats?.wind_gust?.max_time)
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
   const hDay = stats?.humidity_outdoor      // …y para HUMEDAD, que los muestra igual
 
@@ -1173,6 +1175,35 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // Listo de verdad: lo que dice el padre (hay lectura de la estación) Y que las tres
   // cargas propias de esta pantalla se hayan intentado ya. Ver `cargado`.
   const propioListo = cargado.fc && cargado.luna && cargado.imeca
+
+  /**
+   * Rumbo DOMINANTE de las últimas 24 h, para marcarlo en el aro del compás.
+   *
+   * El compás dice de dónde sopla AHORA, y en una pantalla de pared eso se mira cien veces
+   * al día sin saber nunca si ese rumbo es el de siempre o una rareza. Esto lo añade sin
+   * pedir un dato nuevo al servidor: sale del histórico de 24 h que la consola ya tiene
+   * cargado.
+   *
+   * Es una media VECTORIAL y pesada por la velocidad, no el promedio de los grados: los
+   * grados son circulares --el promedio de 350° y 10° sería 180°, justo el contrario-- y una
+   * hora de viento fuerte dice más de la procedencia del aire que seis de brisa. Las calmas
+   * se descartan (bajo 0.5 km/h la veleta marca cualquier cosa) y se exige un mínimo de
+   * muestras para no dibujar una marca sacada de cuatro lecturas.
+   */
+  const rumboDominante = (() => {
+    let sx = 0, sy = 0, n = 0
+    for (const r of history) {
+      const d = typeof r.wind_direction === 'number' ? r.wind_direction : null
+      const v = typeof r.wind_speed === 'number' ? r.wind_speed : 0
+      if (d == null || v <= 0.5) continue
+      const t = (d * Math.PI) / 180
+      sx += v * Math.sin(t)
+      sy += v * Math.cos(t)
+      n++
+    }
+    if (n < 20 || (sx === 0 && sy === 0)) return null
+    return ((Math.atan2(sx, sy) * 180) / Math.PI + 360) % 360
+  })()
 
   const kiosk = mode === 'kiosk'
 
@@ -1406,6 +1437,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 })}
               {/* Óvalo interior */}
               <ellipse cx="50" cy="40" rx={RX_IN} ry={RY_IN} stroke="#444" strokeWidth="1" fill="none" />
+              {/* Marca del rumbo DOMINANTE de 24 h: un trazo verde apagado en el aro, del
+                  ancho de las marcas mayores pero en el color del viento, así que no se
+                  confunde ni con los palitos grises de los grados ni con la flecha viva, que
+                  va rellena y a color pleno. Sin rótulo: no cabe, y el color ya lo ata al
+                  viento. Ver `rumboDominante`. */}
+              {rumboDominante != null && (() => {
+                const rad = ((rumboDominante - 90) * Math.PI) / 180
+                return (
+                  <line
+                    x1={50 + 41 * Math.cos(rad)} y1={40 + 30 * Math.sin(rad)}
+                    x2={50 + RX * Math.cos(rad)} y2={40 + RY * Math.sin(rad)}
+                    stroke="var(--v)" strokeOpacity="0.5" strokeWidth="2.6" strokeLinecap="round"
+                  />
+                )
+              })()}
               {/* La flecha va ANTES de las letras cardinales: cuando el rumbo cae
                   justo en N/E/S/O las dos comparten el mismo punto del aro, y así
                   la letra queda encima y sigue legible. */}
@@ -1483,7 +1529,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 mintiendo por llamar promedio a una lectura instantánea. Es la misma
                 palabra que ya usa LLUVIA para su acumulado del día. */}
             <div style={{ flex: 1, textAlign: 'right' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>RÁFAGA DÍA</div>
+              {/* La HORA del pico, al lado del rótulo. Era la única cifra "del día" de la
+                  consola sin su hora, cuando el mín/máx de EXT y de HUMEDAD sí la llevan, y
+                  una ráfaga de 40 km/h no dice lo mismo si fue de madrugada que si acaba de
+                  pasar. Sale de `stats.wind_gust.max_time`, que ya venía en la respuesta.
+                  Va junto al rótulo y no junto a la cifra: ésta es de cuerpo 40 y añadirle algo
+                  detrás la empujaría contra el óvalo del compás. */}
+              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>
+                RÁFAGA DÍA
+                {gustMaxTime && (
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, marginLeft: 5 }}>{gustMaxTime}</span>
+                )}
+              </div>
               <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
                 {decNum(u.wind(data?.wind_gust_max_daily, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
               </div>
