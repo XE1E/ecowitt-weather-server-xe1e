@@ -174,11 +174,11 @@ Salieron de una ronda de propuestas; se hicieron las dos primeras (alertas en la
 próximas horas) y estas tres se dejaron para pensarlas, porque las tres pelean por píxeles
 en celdas ya ajustadas y el operador prefirió no forzarlas:
 
-1. **Máximo del día en UV y SOLAR** (`stats.uv_index.max`, `stats.solar_radiation.max`).
-   De noche esas celdas marcan 0 y dejan de decir nada. El problema es el sitio: en ~90 px
-   útiles ya van rótulo (16) + cifra (38) + categoría (13) + riel (9) con sus huecos, así
-   que no hay una fila más; y meterlo en el rótulo ("UV · MÁX 8") no cabe en 68 px de ancho.
-   Antes de intentarlo otra vez, MEDIR (ver la nota de medición en las memorias).
+1. ~~**Máximo del día en UV y SOLAR**~~ — ✅ **HECHO (2026-08-08)**. La salida no fue añadir
+   una fila (no cabía: en ~90 px útiles ya van rótulo, cifra, categoría y riel) sino
+   **conmutar el dato**: idea del operador. De noche, con la lectura viva en cero, la cifra
+   grande pasa a ser el máximo del día y el renglón de la unidad o del nivel dice "MÁXIMO",
+   las dos cosas en blanco puro; al amanecer vuelven solas. Cero píxeles de sitio nuevo.
 2. **Progreso del día** en la celda del sol y la luna: un arco entre amanecer y atardecer
    con la posición de ahora, o sea cuánta luz queda. No necesita ningún dato nuevo; el
    problema es que esa celda ya va justa (el disco lunar de 64 px más las dos horas piden

@@ -456,6 +456,17 @@ OMS no puedan separarse de los del color; el del IMECA lo manda el backend en `c
 la misma fuente de la que sale el color del dígito. Van a 13 px y no a 14 porque
 «MODERADO» —el caso de casi cualquier mañana— mide 68.2 px en un interior de 68.0.
 
+**De noche esas dos celdas enseñan el MÁXIMO DEL DÍA** en vez de su cero: la cifra grande
+pasa a `stats.<campo>.max`, el renglón de la unidad o del nivel dice «MÁXIMO», las dos cosas
+en **blanco puro** —el blanco no está en la rampa de colores de esas celdas, así que de un
+vistazo se sabe que ese número no es una lectura viva— y el riel se llena hasta ese máximo
+para no contradecir a la cifra. Al amanecer, con la primera lectura por encima de cero,
+vuelven solas a lo normal. Dos detalles del criterio: se exige que el máximo sea **> 0** y no
+sólo que la lectura esté a cero, porque los stats son del día en curso y a las 00:05 el
+máximo también es 0 (se anunciaría «0 MÁXIMO» toda la madrugada); y el corte es **< 1** y no
+«= 0», porque el UV llega entero pero la radiación puede quedarse en decimales de crepúsculo
+y entonces no conmutaría nunca. No aplica al IMECA, que no se apaga de noche.
+
 **Señal RF 0-4** junto a la casita, en EXT y en la remota exterior: cuatro barras que
 crecen en alto y en color (4-3 verde, 2 ámbar, 1-0 rojo). La manda el **gateway** por cada
 sensor emparejado; la consola WS2910 **no manda señal de nada** (verificado: `/api/current`

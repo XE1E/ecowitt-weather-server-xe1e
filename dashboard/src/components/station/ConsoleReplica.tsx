@@ -1046,6 +1046,29 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   // el primer /api/current. Cuando de verdad no hay nada, las celdas ya salen todas en
   // "--", que lo dice sin necesidad de alarma.
   const stale = staleMin != null && staleMin >= STALE_MIN
+  /**
+   * De noche, SOLAR y UV enseñan el MÁXIMO DEL DÍA en vez de su cero.
+   *
+   * Con el sol puesto esas dos celdas marcan 0 y dejan de decir nada durante media jornada,
+   * que en una pantalla de pared son muchas horas de dos celdas apagadas. La idea no cuesta
+   * ni un píxel de sitio: la cifra grande muestra el máximo y el renglón donde van la unidad
+   * (SOLAR) o el nivel en palabras (UV) dice "MÁXIMO". Al amanecer, con la primera lectura
+   * por encima de cero, las dos vuelven solas a lo normal.
+   *
+   * Se exige que el máximo sea MAYOR QUE CERO, no sólo que la lectura esté a cero: los stats
+   * son del día en curso y a las 00:05 el máximo también es 0, así que sin esa condición se
+   * anunciaría "0 MÁXIMO" toda la madrugada. Mientras el máximo sea 0 se sigue viendo la
+   * lectura normal, que es igual de honesta.
+   *
+   * El corte es "menor que 1" y no "igual a 0" porque el UV llega entero pero la radiación
+   * puede quedarse en decimales de crepúsculo (0.4 W/m²) y entonces nunca conmutaría.
+   */
+  const uvMaxDia = stats?.uv_index?.max ?? null
+  const solarMaxDia = stats?.solar_radiation?.max ?? null
+  const uvDeNoche = data?.uv_index != null && data.uv_index < 1 && uvMaxDia != null && uvMaxDia > 0
+  const solarDeNoche = data?.solar_radiation != null && data.solar_radiation < 1
+    && solarMaxDia != null && solarMaxDia > 0
+
   // Hora del pico de ráfaga del día, para el rótulo de RÁFAGA DÍA.
   const gustMaxTime = hhmm(stats?.wind_gust?.max_time)
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
@@ -2067,12 +2090,22 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: '4.25fr 2.4fr 3.35fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: alertaCol('solar', '#f59e0b'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SOLAR</div>
-            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined }}>
-              {data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
+            {/* De noche, el MÁXIMO DEL DÍA en BLANCO PURO --y no en el color de su banda-- para
+                que no se confunda con una lectura viva: el blanco no está en la rampa de
+                colores de esta celda, así que de un vistazo se sabe que ese número es de
+                antes. Ver `solarDeNoche`. */}
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
+                                             color: solarDeNoche ? '#fff' : (data?.solar_radiation != null ? solarColor(data.solar_radiation) : undefined) }}>
+              {solarDeNoche ? decNum((solarMaxDia as number).toFixed(0))
+                : data?.solar_radiation != null ? decNum(data.solar_radiation.toFixed(0)) : '--'}
             </div>
             {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
-                necesitan las cuatro cifras del caso peor. */}
-            <div className="u" style={{ fontSize: 14, color: 'var(--w)', lineHeight: 1, marginTop: 2 }}>W/m²</div>
+                necesitan las cuatro cifras del caso peor. De noche este renglón es el que
+                dice "MÁXIMO", también en blanco: rótulo y cifra van juntos. */}
+            <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 2,
+                                        color: solarDeNoche ? '#fff' : 'var(--w)' }}>
+              {solarDeNoche ? 'MÁXIMO' : 'W/m²'}
+            </div>
             {/* Barra al pie con `marginTop: auto`, que se come el aire sobrante y la pega
                 abajo sin fijarla en absoluto. Escala a 1000 W/m²: el pico despejado a
                 esta latitud y altitud ronda esa cifra, así que un mediodía limpio llena
@@ -2085,13 +2118,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                   sí y ahí el fantasma de la escala se entiende. El relleno sigue usando
                   las cinco bandas, que es lo que hace que el riel y el dígito cambien de
                   color juntos. */}
-              <LevelBar value={data?.solar_radiation} max={1000} bands={SOLAR_BANDS} hint={false} />
+              {/* El riel sigue a la cifra que se está mostrando: con el máximo arriba y el riel
+                  vacío, los dos se contradirían. */}
+              <LevelBar value={solarDeNoche ? solarMaxDia : data?.solar_radiation} max={1000} bands={SOLAR_BANDS} hint={false} />
             </div>
           </div>
           <div className="cell derivada" data-nav={CONSOLA_NAV.solar} style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: alertaCol('uv', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>UV</div>
-            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap', color: data?.uv_index != null ? uvColor(data.uv_index) : undefined }}>
-              {data?.uv_index ?? '--'}
+            {/* Mismo cambio de noche que en SOLAR: el máximo del día, en blanco puro. */}
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
+                                             color: uvDeNoche ? '#fff' : (data?.uv_index != null ? uvColor(data.uv_index) : undefined) }}>
+              {uvDeNoche ? Math.round(uvMaxDia as number) : (data?.uv_index ?? '--')}
             </div>
             {/* El NIVEL en el renglón donde SOLAR pone su unidad, y con su mismo formato
                 --blanco, 14 px-- porque hace el mismo papel: decir qué significa la cifra
@@ -2113,7 +2150,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 que las cifras de esta fila se quedaron en 38 en vez de 40. IMECA lleva el
                 13 también, aunque le sobre sitio, para que las dos CATEGORÍAS pesen igual
                 entre sí --lo de SOLAR es una unidad, otra cosa--. */}
-            {data?.uv_index != null && (
+            {/* De noche el nivel en palabras cede su renglón al rótulo MÁXIMO, en blanco como
+                la cifra. "MÁXIMO" mide ~55 px a cuerpo 13 y el interior de esta celda son 68,
+                así que entra igual que "MODERADO", que es el caso peor de los niveles. */}
+            {uvDeNoche ? (
+              <div className="u" style={{ fontSize: 13, color: '#fff', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+                MÁXIMO
+              </div>
+            ) : data?.uv_index != null && (
               <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
                 {uvLabel(data.uv_index).toUpperCase()}
               </div>
@@ -2122,7 +2166,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 el tramo fucsia de `uvColor`), así que la barra llena coincide con el
                 color más alto y las dos señales dicen lo mismo. */}
             <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
-              <LevelBar value={data?.uv_index} max={12} bands={UV_BANDS} />
+              <LevelBar value={uvDeNoche ? uvMaxDia : data?.uv_index} max={12} bands={UV_BANDS} />
             </div>
           </div>
           {/* ICA en el sitio que dejó la luna. El color lo decide el backend
