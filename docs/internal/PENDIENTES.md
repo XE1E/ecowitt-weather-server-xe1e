@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-05.
+> Última actualización: 2026-08-08.
 
 ## 1. Cuando llegue el WN32 (~2026-08-08) — depende de hardware
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -161,8 +161,30 @@ video fluido (solo JPEG), sería solo web. La HP10 de Ecowitt NO sirve para esto
 time‑lapse/snapshots, no stream; su `/capture` local solo da fotos).
 
 ## 5. Bonus (ya se puede) — señal RF por sensor
-El GW1100 ya está en línea y reporta `signal_*` (0‑4). Falta la UI: barras/íconos de
-señal por sensor (p. ej. en `AdminEstacionConfig` / tarjeta de sensores).
+El GW1100 ya está en línea y reporta `signal_*` (0‑4). **HECHO en la consola del kiosco**
+(2026-08-08, commit `9861acc`): `SignalGlyph` de cuatro barras junto a la casita, en EXT y
+en la remota exterior. Ojo con la expectativa: verificado contra la API ese día, **ninguna
+de las dos estaciones manda hoy un solo `signal_*`** —la principal porque la WS2910 no los
+emite nunca, la remota porque aún no tiene sensores emparejados— así que el glifo está
+puesto pero invisible, y en EXT lo seguirá siendo mientras la principal sea el WS2910.
+Falta la UI en el resto: `AdminEstacionConfig` y la tarjeta de sensores.
+
+## 5c. Consola — tres mejoras APLAZADAS por espacio (2026-08-08)
+Salieron de una ronda de propuestas; se hicieron las dos primeras (alertas en la celda y
+próximas horas) y estas tres se dejaron para pensarlas, porque las tres pelean por píxeles
+en celdas ya ajustadas y el operador prefirió no forzarlas:
+
+1. **Máximo del día en UV y SOLAR** (`stats.uv_index.max`, `stats.solar_radiation.max`).
+   De noche esas celdas marcan 0 y dejan de decir nada. El problema es el sitio: en ~90 px
+   útiles ya van rótulo (16) + cifra (38) + categoría (13) + riel (9) con sus huecos, así
+   que no hay una fila más; y meterlo en el rótulo ("UV · MÁX 8") no cabe en 68 px de ancho.
+   Antes de intentarlo otra vez, MEDIR (ver la nota de medición en las memorias).
+2. **Progreso del día** en la celda del sol y la luna: un arco entre amanecer y atardecer
+   con la posición de ahora, o sea cuánta luz queda. No necesita ningún dato nuevo; el
+   problema es que esa celda ya va justa (el disco lunar de 64 px más las dos horas piden
+   casi todo el interior, cuenta hecha en el código).
+3. **Sparkline de 24 h** en EXT y PRES. Es la que más moderniza el aspecto y la única que
+   **no tiene hueco**: habría que quitar o achicar algo de esas dos celdas.
 
 ## 6. Limpiar historial de presión falso (servidor) — ✅ HECHO (2026-07-25)
 La presión relativa de la principal (WS2910) del 2026-07-19 al 2026-07-24 estaba

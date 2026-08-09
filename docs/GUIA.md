@@ -383,9 +383,15 @@ dato, que es lo que agrupa la pantalla de un vistazo:
 |----------|-------------|--------|
 | Ámbar | Lectura de la estación principal | EXT, HUMEDAD, PRES, VIENTO, LLUVIA, INTERIOR, ROCÍO/SENSACIÓN/HUMIDEX |
 | Verde | Sensor de canal (WN31) | JARDÍN |
-| Gris | Estación remota | REMOTA WN32, REMOTA GW1100 (dos celdas: temp/humedad y presión) |
-| Blanco | Ni lectura cruda ni de la estación | condición, sol/luna, SOLAR, UV, ICA |
-| Rojo (4 px) | Reloj | fecha/hora |
+| Azul | Estación remota | las **tres** celdas rotuladas REMOTA: exterior (WN32), interior (integrado del gateway) y presión |
+| Blanco | Ni lectura cruda ni de la estación | condición + próximas horas, sol/luna, SOLAR, UV, IMECA |
+| Rojo (5 px) | Reloj | fecha/hora. Es la zona táctil principal (abre el menú), y por eso el rojo del reloj (`--red`) es **distinto** del de alarma (`--alarma`) |
+
+Las tres celdas de la remota se llaman **sólo «REMOTA»**, sin el modelo del aparato:
+lo que mide cada una lo dicen sus glifos —casa hueca = a la intemperie, casa rellena
+= bajo techo, barómetro = presión—, que es el mismo criterio por el que EXT, HUMEDAD,
+PRES y LLUVIA no llevan rótulo. Antes decían «REMOTA WN32» y «REMOTA GW1100» en
+morado, lo que además gastaba el color de la presión en un nombre de equipo.
 
 Varias celdas **no llevan rótulo** (EXT, HUMEDAD, PRES, VIENTO, LLUVIA): las
 identifica su icono —termómetro, gota, barómetro— igual que en una consola física.
@@ -419,6 +425,51 @@ mientras la flecha de la celda dice el sentido. Notas de implementación:
 - `PS_W = 335` es el ancho de la celda sin bordes, y el dibujo reserva 12 px a cada
   lado *por dentro* del `viewBox`: el contenedor no lleva sangría propia o los dos
   márgenes se suman y el riel sale más corto que el histograma de LLUVIA.
+
+**Avisos de alerta en la propia celda.** La consola pide `/api/alerts` cada minuto y
+señala la alerta viva de dos formas a la vez: tiñe de rojo (`--alarma`, rojo puro) el
+**glifo de identidad** de la celda afectada —o su rótulo si no tiene glifo— y dibuja un
+**triángulo con «!»** a la izquierda de su flecha de tendencia. La clave de la alerta
+trae la estación como prefijo (`gw1100:humidity_high`), y es eso lo que decide si pinta
+aquí o en una de las celdas de la remota; rocío y sensación van a la celda de derivadas,
+donde se leen sus cifras. Batería y sensor perdido no tiñen nada: la pila ya se pone roja
+sola. La celda de la remota exterior lleva **dos** triángulos, uno por lectura
+(temperatura a la izquierda, humedad bajo la casita), porque es la única con dos
+magnitudes y alarmas propias de cada una.
+
+El **texto** de la alerta va en el renglón del reloj, el mismo que se convierte en «SIN
+DATOS», y la caída tiene prioridad: sin dato nuevo las reglas se evalúan sobre lecturas
+congeladas. Dos cuidados con ese texto: los mensajes del motor empiezan por **emoji** y
+hay que quitarlo (el Chromium del renderer corre sin fuente de emoji en color y saldría
+un cuadro vacío), y se le recorta el **umbral entre paréntesis** para que quepa en una
+línea —con él, un mensaje de la remota se partía en dos y acababa pegado al borde—.
+
+**Próximas cuatro horas** en la celda de condición, bajo el icono y su descripción: hora,
+temperatura y **probabilidad de lluvia**, ésta en el azul de la lluvia. Sale de
+`fetchForecast()`, que ya devolvía las horas con su icono de día o de noche resuelto. El
+icono de condición bajó de 108 a 62 px para hacerle sitio: traía ~50 px de tinta en una
+caja que ni cabía en la celda.
+
+**UV e IMECA dicen su nivel en palabras** donde SOLAR pone su unidad. El de UV sale de
+`uvLabel` (`weather.ts`), compartido con la tarjeta de Inicio para que los cortes de la
+OMS no puedan separarse de los del color; el del IMECA lo manda el backend en `category`,
+la misma fuente de la que sale el color del dígito. Van a 13 px y no a 14 porque
+«MODERADO» —el caso de casi cualquier mañana— mide 68.2 px en un interior de 68.0.
+
+**Señal RF 0-4** junto a la casita, en EXT y en la remota exterior: cuatro barras que
+crecen en alto y en color (4-3 verde, 2 ámbar, 1-0 rojo). La manda el **gateway** por cada
+sensor emparejado; la consola WS2910 **no manda señal de nada** (verificado: `/api/current`
+no trae un solo campo `signal_*`), así que en EXT el glifo está montado pero no se dibuja.
+
+**Rumbo dominante de 24 h** como un punto verde metido en el riel del aro del compás,
+mientras la flecha sigue diciendo de dónde sopla ahora. Se calcula del histórico que la
+consola ya tiene cargado, con media **vectorial pesada por la velocidad**: promediar
+grados no vale —el promedio de 350° y 10° daría 180°, el rumbo contrario— y una hora de
+viento fuerte dice más de la procedencia del aire que seis de brisa. Descarta calmas
+(≤ 0.5 km/h) y exige 20 muestras.
+
+**La hora del pico de ráfaga** va encima del rótulo RÁFAGA DÍA (`stats.wind_gust.max_time`),
+no a su lado: al lado, el bloque se ensancha y su extremo izquierdo se mete bajo el óvalo.
 
 Datos que **sólo existen para esta vista** y conviene no confundir con lecturas del
 aparato:

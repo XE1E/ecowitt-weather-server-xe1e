@@ -450,18 +450,25 @@
           <tbody>
             <tr><td>Ámbar</td><td>Lo que mide la estación principal, en el patio</td></tr>
             <tr><td>Verde</td><td>El sensor del jardín</td></tr>
-            <tr><td>Gris</td><td>La estación remota, en el otro domicilio</td></tr>
+            <tr><td>Azul</td><td>La estación remota, en el otro domicilio</td></tr>
             <tr><td>Blanco</td><td>Lo que no es una lectura directa: el estado del cielo, el sol y la luna, y el índice de calidad del aire</td></tr>
             <tr><td>Rojo</td><td>El reloj</td></tr>
           </tbody>
         </table>
       </div>
 
-      <p>Verás <strong>dos celdas rotuladas «REMOTA GW1100»</strong>, una encima de la otra. No es un error: son el mismo aparato y lo que muestra cada una lo dice su contenido —temperatura y humedad arriba, presión abajo—, igual que en las celdas de la estación principal, donde tampoco hace falta rótulo para saber qué es un barómetro.</p>
+      <p>Verás <strong>tres celdas rotuladas «REMOTA»</strong>, una debajo de otra, y las tres dicen lo mismo a propósito: lo que interesa de un vistazo es de qué <em>sitio</em> viene la lectura, no qué caja la mide. Lo que mide cada una lo dice su dibujo: <strong>casa hueca</strong> = el sensor está a la intemperie, <strong>casa rellena</strong> = está bajo techo, y el <strong>barómetro</strong> = presión. Es el mismo criterio por el que las celdas de la estación principal tampoco necesitan rótulo.</p>
+
+      <h4>La celda del cielo</h4>
+      <p>Arriba, el <strong>dibujo del tiempo que hace ahora</strong> y su descripción al lado. Abajo, las <strong>próximas cuatro horas</strong>: la hora, la temperatura prevista y, en azul, la <strong>probabilidad de lluvia</strong>. Es la única parte de la consola que habla del futuro y responde de un vistazo a la pregunta que más veces se hace mirando una pantalla de pared: si va a llover al rato.</p>
 
       <h4>La celda del viento</h4>
       <p>En el <strong>centro del óvalo va la velocidad</strong> de este momento, con su unidad debajo. Arriba a la izquierda, la dirección en grados; arriba a la derecha, la misma dirección en letras (<code>NNE</code>, <code>OSO</code>…). La flecha recorre el borde del óvalo apuntando <strong>de dónde viene</strong> el aire.</p>
-      <p>Al pie, dos cifras que conviene no confundir. <strong>PROMEDIO</strong> es la media de los últimos diez minutos, no la lectura del instante: sirve para saber si de verdad hace viento o si fue un soplo. <strong>RÁFAGA DÍA</strong> es el pico más alto de toda la jornada, no la ráfaga de ahora — un día de viento se recuerda por su máxima, y esa cifra no baja hasta la medianoche.</p>
+      <p>Al pie, dos cifras que conviene no confundir. <strong>PROMEDIO</strong> es la media de los últimos diez minutos, no la lectura del instante: sirve para saber si de verdad hace viento o si fue un soplo. <strong>RÁFAGA DÍA</strong> es el pico más alto de toda la jornada, no la ráfaga de ahora — un día de viento se recuerda por su máxima, y esa cifra no baja hasta la medianoche. Encima de ese rótulo va <strong>la hora a la que se registró el pico</strong>: una ráfaga de 40 km/h no dice lo mismo si fue de madrugada que si acaba de pasar.</p>
+      <p>En el aro del compás hay además un <strong>punto verde</strong> que no se mueve con el viento: marca la <strong>dirección dominante de las últimas 24 horas</strong>. Mientras la flecha dice de dónde sopla en este momento, el punto dice de dónde ha venido el aire casi todo el día, así que se ve de un golpe si el viento de ahora es el de siempre o una rareza. No es el promedio de los grados —eso daría rumbos falsos— sino la dirección resultante, contando más las horas de viento fuerte que las de brisa.</p>
+
+      <h4>SOLAR, UV e IMECA</h4>
+      <p>Las tres llevan su cifra grande, una <strong>barra con la escala</strong> debajo —las bandas apagadas son los tramos de la escala y se enciende hasta donde llega el valor, así que no hay que recordar los cortes— y, en el renglón donde SOLAR pone su unidad, <strong>UV e IMECA dicen su nivel en palabras</strong>: «BAJO», «MODERADO», «ALTO», «MUY ALTO» o «EXTREMO» para el ultravioleta, y «BUENA», «REGULAR», «MALA», «MUY MALA» o «EXTREMA» para el aire. Un 8 de UV o un 65 de IMECA no significan nada si no te sabes las tablas de memoria; la palabra sí.</p>
 
       <h4>La celda de la lluvia</h4>
       <p>Tres números rotulados, cada uno responde a una pregunta distinta: <strong>TASA</strong> dice si está lloviendo <em>ahora</em> y con qué fuerza (en mm/h), <strong>EVENTO</strong> cuánto ha caído en este chubasco (y no se reinicia a medianoche, así que por la mañana todavía cuenta lo de anoche) y <strong>MES</strong> cuánto llevamos acumulado en el mes.</p>
@@ -479,7 +486,12 @@
       <p>Bajo los números de <strong>solar</strong>, <strong>UV</strong> e <strong>ICA</strong> hay una barra que se llena según lo alto que esté el valor en su escala. El número ya viene con color según su categoría, pero el color sólo se entiende recordando los cortes; la barra se entiende sin recordar nada. Es la misma idea que el riel de la presión de más arriba.</p>
 
       <h4>Baterías y avisos</h4>
-      <p>En la esquina inferior derecha de algunas celdas hay una <strong>pila</strong>: verde si el sensor tiene batería, roja si está por acabarse. Y si la estación deja de reportar, el nombre en la celda del reloj se convierte en un <strong>aviso rojo «SIN DATOS»</strong> con los minutos que lleva callada. Eso importa: sin él, la consola seguiría mostrando los últimos números con el reloj corriendo al lado, y parecerían frescos.</p>
+      <p>En la esquina inferior derecha de algunas celdas hay una <strong>pila</strong>: verde si el sensor tiene batería, roja si está por acabarse. Y junto a la casita puede aparecer un <strong>indicador de señal</strong> de cuatro barras, que dice lo bien que llega por radio ese sensor: verde si va sobrado, ámbar si va justo, rojo si apenas llega. Lo informan los <em>gateways</em>, no la consola de la estación principal, así que no todas las celdas lo tienen.</p>
+      <p>Y si la estación deja de reportar, el nombre en la celda del reloj se convierte en un <strong>aviso rojo «SIN DATOS»</strong> con los minutos que lleva callada. Eso importa: sin él, la consola seguiría mostrando los últimos números con el reloj corriendo al lado, y parecerían frescos.</p>
+
+      <h4>Cuando salta una alerta</h4>
+      <p>La consola no se limita a mostrar números: si una alerta está activa, <strong>lo dice en la celda del dato que la provocó</strong>. Su dibujo se pone <strong>rojo</strong> —el termómetro, la gota, el barómetro— y aparece un <strong>triángulo con un signo de admiración</strong> al lado de su flecha de tendencia. Así se ve desde el otro lado de la habitación qué es lo que va mal, sin leer una palabra.</p>
+      <p>El <strong>texto</strong> de la alerta sale en la celda del reloj, en el sitio del nombre de la estación. Si hay varias, se muestra una y al final aparece «+2» con las que faltan; el detalle completo está en el panel de alertas y en el correo. Si además la estación se queda callada, gana el aviso de «SIN DATOS»: cuando no llega dato nuevo, las alertas se estarían calculando sobre lecturas congeladas.</p>
       <p>Dos cosas que <strong>no son fallos</strong>. <strong>HUMIDEX</strong> marca <code>--</code> cuando la temperatura no llega a 20 °C, porque es un índice de bochorno y por debajo de eso no significa nada. Y la celda <strong>REMOTA WN32</strong> está en blanco hasta que ese sensor esté instalado; se dejó puesta a propósito, mostrando <code>--</code>, en vez de rellenarla con la lectura de interior.</p>
 
       <h3>Vista clásica</h3>
