@@ -855,9 +855,9 @@ function PressureScale({ delta, endLabel, imperial }: {
 function WarnGlyph({ size = 15 }: { size?: number }) {
   return (
     <svg width={size} height={size * 14 / 16} viewBox="0 0 16 15" style={{ flexShrink: 0 }}>
-      <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
-      <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
-      <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
+      <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--alarma)" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--alarma)" />
+      <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--alarma)" />
     </svg>
   )
 }
@@ -1146,7 +1146,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   }
   // Color de un glifo o rótulo: el suyo, o el rojo de la alarma si su celda está avisando.
   const alertaCol = (celda: CeldaAlerta, base: string) =>
-    celdasEnAlerta.has(celda) ? 'var(--red)' : base
+    celdasEnAlerta.has(celda) ? 'var(--alarma)' : base
 
   // Próximas horas del pronóstico. `fetchForecast` ya devuelve las horas desde ahora con
   // su icono de día o de noche resuelto, así que aquí sólo se descartan las pasadas --la
@@ -1566,17 +1566,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
               El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
               triángulo dice que es un aviso y no una lectura curiosa. */}
-          {/* En PRES el triángulo va ENCIMA de la flecha, no a su izquierda como en EXT y
-              HUMEDAD, y es la única forma de tenerlo grande sin tocar la lectura: "1023.7 mb"
-              es la cifra más ancha de la consola y llega hasta 15 px de la flecha, así que a
-              su izquierda sólo cabía un triángulo pequeño o corriendo la cifra --se probó, y
-              la dejaba pegada al barómetro--. Arriba, en cambio, la esquina está libre: la
-              lectura acaba en x=287 y esto empieza en 298.
-              Sigue pegado a la flecha, en su misma columna (`right: 12`), así que los dos
-              siguen leyéndose como una pareja. */}
+          {/* Mismo sitio y mismo tamaño que en EXT y HUMEDAD: a la izquierda de la flecha y
+              a 30 px. Estuvo un rato arriba a la derecha porque di por hecho que no cabía
+              aquí, tomando el ancho de la lectura ENTERA; pero el "mb" va en lo alto de la
+              cifra --`vertical-align: top`-- así que a la altura de la flecha lo último que
+              hay a la derecha es el decimal, y queda hueco de sobra. */}
           {celdasEnAlerta.has('pres') && (
-            <div style={{ position: 'absolute', top: 7, right: 12 }}>
-              <WarnGlyph size={26} />
+            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+              <WarnGlyph size={30} />
             </div>
           )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -1591,10 +1588,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Corriéndola, su borde derecho queda en 271 y su izquierdo en 64, o sea a 8 px
               del barómetro (que acaba en 56): entra sin tocar nada. Es la única de las tres
               celdas que necesitaba el ajuste; EXT y HUMEDAD tenían 41 y 60 px libres.
-              32, el de siempre: correrlo a 44 y luego a 51 para hacerle hueco al triángulo
-              dejaba la lectura pegada al barómetro y descolocaba la celda. El triángulo se
-              muda arriba (ver más abajo) y aquí no se toca nada. */}
-          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
+              `paddingRight` 32, el de siempre: correrlo para hacerle hueco al triángulo dejaba
+              la lectura pegada al barómetro y descolocaba la celda.
+              `marginTop` 12 y no 6: la lectura queda CENTRADA en la banda que va del borde de
+              arriba al riel, en vez de colgada del borde. Medido sobre el contorno de la celda
+              --interior y 136..259, o sea 124 px-- el riel arranca a 86 (va en `bottom: 4` y
+              mide 34) y la tinta de la lectura mide 56, así que centrarla es empezar a 15; con
+              marginTop 6 empezaba a 9. Los 6 px de diferencia son estos. */}
+          <div className="big gp rt" style={{ marginTop: 12, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
@@ -2118,7 +2119,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                en un contenedor sin fuente de emoji en color, y ahí el carácter saldría
                como un cuadro vacío. Todos los demás iconos de la consola ya son SVG por
                la misma razón. */
-            <div style={{ color: 'var(--red)', fontSize: 16, fontWeight: 800, letterSpacing: 1, lineHeight: 1, marginTop: -2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <div style={{ color: 'var(--alarma)', fontSize: 16, fontWeight: 800, letterSpacing: 1, lineHeight: 1, marginTop: -2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <WarnGlyph />
               SIN DATOS · {staleMin} MIN
             </div>
@@ -2132,7 +2133,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                Con varias alertas se muestra la PRIMERA y se cuentan las demás: elegir "la
                más grave" no es posible sin inventar un orden --el motor no expone nivel--,
                y el "+N" al menos dice que hay más y que hay que ir a la web. */
-            <div style={{ color: 'var(--red)', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
+            <div style={{ color: 'var(--alarma)', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
                           lineHeight: 1.08, marginTop: -2, display: 'flex', alignItems: 'flex-start',
                           justifyContent: 'center', gap: 6, textAlign: 'left' }}>
               <div style={{ marginTop: 1 }}><WarnGlyph /></div>
