@@ -1437,18 +1437,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 })}
               {/* Óvalo interior */}
               <ellipse cx="50" cy="40" rx={RX_IN} ry={RY_IN} stroke="#444" strokeWidth="1" fill="none" />
-              {/* Marca del rumbo DOMINANTE de 24 h: un trazo verde apagado en el aro, del
-                  ancho de las marcas mayores pero en el color del viento, así que no se
-                  confunde ni con los palitos grises de los grados ni con la flecha viva, que
-                  va rellena y a color pleno. Sin rótulo: no cabe, y el color ya lo ata al
-                  viento. Ver `rumboDominante`. */}
+              {/* Marca del rumbo DOMINANTE de 24 h: un PUNTO metido dentro del riel del aro.
+                  Fue un trazo radial apagado y no valía: a poca opacidad se confundía con los
+                  palitos grises de los grados, que son también radiales. Un círculo no se
+                  parece a nada más del dibujo --ni a las marcas ni a la flecha viva, que va en
+                  cuña-- así que aguanta ir a color casi pleno sin competir con ella.
+                  MEDIDAS: el riel va del óvalo interior (42×31) al exterior (49×38), o sea 7
+                  unidades de ancho, y el punto se centra en su mitad (45.5×34.5) con r=3.2, que
+                  lo deja del ancho del riel con tres décimas de aire a cada lado. Sin rótulo:
+                  no cabe, y el verde ya lo ata al viento. Ver `rumboDominante`. */}
               {rumboDominante != null && (() => {
                 const rad = ((rumboDominante - 90) * Math.PI) / 180
                 return (
-                  <line
-                    x1={50 + 41 * Math.cos(rad)} y1={40 + 30 * Math.sin(rad)}
-                    x2={50 + RX * Math.cos(rad)} y2={40 + RY * Math.sin(rad)}
-                    stroke="var(--v)" strokeOpacity="0.5" strokeWidth="2.6" strokeLinecap="round"
+                  <circle
+                    cx={50 + 45.5 * Math.cos(rad)} cy={40 + 34.5 * Math.sin(rad)}
+                    r={3.2} fill="var(--v)" fillOpacity="0.85"
                   />
                 )
               })()}
@@ -1529,17 +1532,30 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 mintiendo por llamar promedio a una lectura instantánea. Es la misma
                 palabra que ya usa LLUVIA para su acumulado del día. */}
             <div style={{ flex: 1, textAlign: 'right' }}>
-              {/* La HORA del pico, al lado del rótulo. Era la única cifra "del día" de la
+              {/* La HORA del pico, ENCIMA del rótulo. Era la única cifra "del día" de la
                   consola sin su hora, cuando el mín/máx de EXT y de HUMEDAD sí la llevan, y
                   una ráfaga de 40 km/h no dice lo mismo si fue de madrugada que si acaba de
                   pasar. Sale de `stats.wind_gust.max_time`, que ya venía en la respuesta.
-                  Va junto al rótulo y no junto a la cifra: ésta es de cuerpo 40 y añadirle algo
-                  detrás la empujaría contra el óvalo del compás. */}
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>
-                RÁFAGA DÍA
+                  Estuvo AL LADO del rótulo y no valía: "RÁFAGA DÍA 19:43" es más ancho que la
+                  palabra sola y, al ir el bloque alineado a la derecha, su extremo izquierdo se
+                  metía debajo del óvalo del compás.
+                  Va ABSOLUTA y anclada al borde de arriba del rótulo (`bottom: 100%`), así que
+                  el rótulo no se mueve ni un píxel de donde estaba y la hora no ocupa sitio en
+                  el flujo: no puede empujar al valor ni descuadrar el bloque de PROMEDIO, que
+                  se alinea con éste. Pegada a la derecha, donde el óvalo ya ha subido y deja
+                  negro libre. */}
+              <div style={{ position: 'relative', color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>
                 {gustMaxTime && (
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, marginLeft: 5 }}>{gustMaxTime}</span>
+                  <span style={{ position: 'absolute', bottom: '100%', right: 0, fontSize: 11,
+                                 fontWeight: 700, letterSpacing: 0, lineHeight: 1.15, whiteSpace: 'nowrap',
+                                 /* BLANCO puro y no el `--w` (#eaeaea) que hereda del rótulo: a
+                                    11 px sobre negro ese casi-blanco se lee apagado al lado de
+                                    la palabra, que va a 15. */
+                                 color: '#fff' }}>
+                    {gustMaxTime}
+                  </span>
                 )}
+                RÁFAGA DÍA
               </div>
               <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
                 {decNum(u.wind(data?.wind_gust_max_daily, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
