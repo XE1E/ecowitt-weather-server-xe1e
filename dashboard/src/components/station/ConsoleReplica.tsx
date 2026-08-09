@@ -568,13 +568,19 @@ function RainHistogram({ data, fmt }: { data: DailyRain[]; fmt: (mm: number) => 
           )
         })}
       </div>
-      {/* Hoy en blanco y el resto en gris: sin eso hay que contar las barras para saber
-          cuál es cuál. Fila aparte, con el mismo hueco, para que cada letra caiga bajo
-          su ranura. */}
+      {/* Hoy DESTACADO y el resto más apagado: sin eso hay que contar las barras para saber
+          cuál es cuál. Fila aparte, con el mismo hueco, para que cada letra caiga bajo su
+          ranura.
+          Los días pasados suben del `--lbl` (#8a8a8a) a #bdbdbd: a 11 px sobre negro ese gris
+          de rótulo se apagaba, y en el panel del kiosco --que aplasta los tonos bajos-- casi
+          desaparecía; son la referencia para leer las barras, no una etiqueta que se pueda
+          ignorar. Y HOY va en blanco y en 800, así que se distingue por color Y por peso, no
+          sólo por un tono. */}
       <div style={{ marginTop: 3 }}>
         {cols((d, i) => (
-          <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1, textAlign: 'center',
-                        color: i === data.length - 1 ? 'var(--w)' : 'var(--lbl)' }}>
+          <div style={{ fontSize: 11, lineHeight: 1, textAlign: 'center',
+                        fontWeight: i === data.length - 1 ? 800 : 700,
+                        color: i === data.length - 1 ? 'var(--w)' : '#bdbdbd' }}>
             {dowLetter(d.date)}
           </div>
         ))}
@@ -1856,21 +1862,25 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
             style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: alertaCol('rocio', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ROCÍO</div>
-            <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
+            {/* Mismos cuerpos que la fila de SOLAR/UV/IMECA --rótulo 16, cifra 38-- para que
+                las dos filas de tres celdas pesen igual. Medido antes de subirlos: a 34 la
+                cifra más ancha de estas tres ocupaba 79 px de los ~100 de interior, así que a
+                38 quedan ~88 y siguen entrando. */}
+            <div style={{ color: alertaCol('rocio', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ROCÍO</div>
+            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
               {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
           </div>
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
             style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SENSACIÓN</div>
-            <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
+            <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SENSACIÓN</div>
+            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
               {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
           </div>
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
             style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>HUMIDEX</div>
+            <div style={{ color: 'var(--w)', fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>HUMIDEX</div>
             {/* Sin unidad: el humidex es un índice, no una temperatura, aunque se exprese en
                 una escala parecida. Ponerle °C invitaría a compararlo con las dos cifras de al
                 lado como si midieran lo mismo.
@@ -1884,7 +1894,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 aporta la fuente de siete segmentos y el HALO --sin él, con sólo `seg`, esta
                 cifra se veía apagada al lado de sus dos vecinas, que brillan por la clase
                 `gt`-- y el color lo pone el nivel. */}
-            <div className="gw seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap',
+            <div className="gw seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap',
                                          color: humidexDeAyer ? '#fff'
                                            : data?.humidex != null ? humidexColor(data.humidex) : 'var(--lbl)' }}>
               {data?.humidex != null ? decNum(data.humidex.toFixed(1))

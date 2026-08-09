@@ -124,6 +124,10 @@ def all_time_records(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Récord de bochorno. Sale del `humidex_max` de cada día, así que existe para todo el
         # histórico desde que se recalcularon los resúmenes con `force`.
         "humidex_max": best("humidex_max", True),
+        # Noche más cálida: el MÁXIMO de las mínimas diarias, no un mínimo. Es un récord
+        # clásico y dice algo que "más calor" no dice: una noche que no baja es lo que hace
+        # insoportable un día caluroso, y en clima urbano es el indicador que más se mueve.
+        "warm_night": best("temp_min", True),
         "days": len(rows),
     }
 

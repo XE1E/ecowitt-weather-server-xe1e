@@ -124,6 +124,9 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
           { k: 'HUMEDAD MÁXIMA', v: f(val(a.hum_max), 0), u: '%', cuando: dm(fecha(a.hum_max)), glow: H },
           { k: 'HUMEDAD MÍNIMA', v: f(val(a.hum_min), 0), u: '%', cuando: dm(fecha(a.hum_min)), glow: H },
           { k: 'MÁS BOCHORNO', v: f(val(a.humidex_max), 1), cuando: dm(fecha(a.humidex_max)), glow: T },
+          // El máximo de las MÍNIMAS: la noche que no bajó. Cierra la columna en diez filas,
+          // que es lo que la rejilla necesita para no dejar una celda vacía.
+          { k: 'NOCHE MÁS CÁLIDA', v: u.temp(val(a.warm_night)), u: u.tempU, cuando: dm(fecha(a.warm_night)), glow: T },
         ] as Fila[],
         pie: `${typeof a.days === 'number' ? a.days : '--'} DÍAS REGISTRADOS`
           + (cuantos ? ` · UN DÍA COMO HOY, ${cuantos} ${cuantos === 1 ? 'AÑO' : 'AÑOS'} ATRÁS` : ''),
