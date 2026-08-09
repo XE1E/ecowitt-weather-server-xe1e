@@ -441,8 +441,16 @@ El **texto** de la alerta va en el renglón del reloj, el mismo que se convierte
 DATOS», y la caída tiene prioridad: sin dato nuevo las reglas se evalúan sobre lecturas
 congeladas. Dos cuidados con ese texto: los mensajes del motor empiezan por **emoji** y
 hay que quitarlo (el Chromium del renderer corre sin fuente de emoji en color y saldría
-un cuadro vacío), y se le recorta el **umbral entre paréntesis** para que quepa en una
-línea —con él, un mensaje de la remota se partía en dos y acababa pegado al borde—.
+un cuadro vacío), y se le recorta el **umbral entre paréntesis**, que es la parte
+que no hace falta a esa distancia y sigue entera en el correo y en la web.
+
+El renglón admite **dos líneas** y se recorta con puntos suspensivos a partir de la tercera.
+El tope no es un descuido: una tercera línea empuja el reloj fuera de la celda. Para que las
+dos entraran hubo que sacar 12 px de la celda, y el sitio salió de dos medidas —interior de
+99 px, texto 28, fila del reloj 53 y su separación 6—: la sangría vertical baja de 9 a 3, y
+la fila del reloj medía 55 en vez de 53 porque la mandaba la **caja de línea** de los dígitos
+de 46 px (interlineado 1.2 por defecto) y no su tinta; con `lineHeight: 1` esos 2 px se van al
+aire de arriba, que es donde se notan.
 
 **Próximas cuatro horas** en la celda de condición, bajo el icono y su descripción: hora,
 temperatura y **probabilidad de lluvia**, ésta en el azul de la lluvia. Sale de

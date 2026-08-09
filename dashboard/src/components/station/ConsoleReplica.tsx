@@ -2259,7 +2259,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           </div>
         </div>
 
-        <div className="cell reloj" data-nav={CONSOLA_NAV.reloj} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Sangría vertical de 4 y no los 9 de `.cell`: son 10 px de alto que necesita el
+            aviso cuando ocupa DOS renglones. Cuentas medidas sobre la captura --interior de
+            99 px-- : el texto a dos líneas pide 28, la fila del reloj 53 y su separación 6, o
+            sea 87 de los 93 que quedan con esta sangría de 3. Con la de 9 sólo había 81 y el
+            segundo renglón se salía por abajo.
+            La fila del reloj medía 55 y no 53 porque la mandaba la CAJA DE LÍNEA de los dígitos
+            de 46 px (1.2 de interlineado por defecto), no su tinta; con `lineHeight: 1` la caja
+            se ajusta al dibujo y esos 2 px se van al aire de arriba, que es donde se notan. */}
+        <div className="cell reloj" data-nav={CONSOLA_NAV.reloj} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3px 12px' }}>
           {/* El título va aquí, en el hueco que dejan "HORA" y "FECHA": esas dos
               etiquetas sobraban --un reloj y una fecha se reconocen solos-- y esta
               es la única celda que no muestra una magnitud, así que el nombre de la
@@ -2301,11 +2309,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                           lineHeight: 1.08, display: 'flex', alignItems: 'flex-start',
                           justifyContent: 'center', gap: 6, textAlign: 'left' }}>
               <div style={{ marginTop: 1 }}><WarnGlyph /></div>
-              {/* UNA sola línea, con puntos suspensivos si aún así no cabe: dos renglones no
-                  entran en esta celda sin comerse el aire de arriba (el reloj y la fecha ya
-                  ocupan ~53 px de los 98 del interior). `minWidth: 0` es lo que permite que un
-                  hijo de flex se recorte en vez de estirar la caja. */}
-              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {/* Hasta DOS renglones. Con uno solo se cortaban mensajes de todos los días --el
+                  rótulo de la estación entre corchetes ya se come media línea-- y con dos entran
+                  completos: 13 px de cuerpo por ~288 de ancho son unos 50 caracteres por
+                  renglón. El tope de dos es a propósito y no un descuido: un tercero volvería a
+                  empujar el reloj fuera de la celda, así que si algún mensaje se pasa, se recorta
+                  con puntos suspensivos (`WebkitLineClamp`, que es lo que Chromium entiende y
+                  esto se dibuja en Chromium).
+                  `minWidth: 0` es lo que permite que un hijo de flex se recorte en vez de
+                  estirar la caja. */}
+              <span style={{ minWidth: 0, display: '-webkit-box', WebkitLineClamp: 2,
+                             WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {textoAlerta(alertas[0].message)}
                 {alertas.length > 1 && ` · +${alertas.length - 1}`}
               </span>
@@ -2315,8 +2329,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Estación Clima XE1E
             </div>
           )}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 26, marginTop: 4 }}>
-            <div className="gw seg" style={{ fontSize: 46, fontWeight: 800 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
+          {/* `marginTop` 6 y no 4: dos píxeles más de separación con el aviso, que ahora puede
+              ocupar dos renglones y quedaba muy pegado al reloj. */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 26, marginTop: 6 }}>
+            <div className="gw seg" style={{ fontSize: 46, fontWeight: 800, lineHeight: 1 }}>{pad(now.getHours())}:{pad(now.getMinutes())}</div>
             <div style={{ textAlign: 'center', lineHeight: 1.02 }}>
               <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{DIAS_CORTO[now.getDay()].toUpperCase()}</div>
               <div className="gw" style={{ fontSize: 26, fontWeight: 800 }}>{now.getDate()} {MESES_CORTO[now.getMonth()]}</div>
