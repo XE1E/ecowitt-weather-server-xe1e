@@ -1566,12 +1566,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
               El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
               triángulo dice que es un aviso y no una lectura curiosa. */}
-          {/* En PRES el triángulo va a 24 y no a los 30 de EXT y HUMEDAD: es la celda con la
-              lectura más ancha de la consola --"1023.7 mb"-- y a 30 no cabría sin achicar la
-              cifra o pisar el barómetro. */}
+          {/* En PRES el triángulo va ENCIMA de la flecha, no a su izquierda como en EXT y
+              HUMEDAD, y es la única forma de tenerlo grande sin tocar la lectura: "1023.7 mb"
+              es la cifra más ancha de la consola y llega hasta 15 px de la flecha, así que a
+              su izquierda sólo cabía un triángulo pequeño o corriendo la cifra --se probó, y
+              la dejaba pegada al barómetro--. Arriba, en cambio, la esquina está libre: la
+              lectura acaba en x=287 y esto empieza en 298.
+              Sigue pegado a la flecha, en su misma columna (`right: 12`), así que los dos
+              siguen leyéndose como una pareja. */}
           {celdasEnAlerta.has('pres') && (
-            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
-              <WarnGlyph size={24} />
+            <div style={{ position: 'absolute', top: 7, right: 12 }}>
+              <WarnGlyph size={26} />
             </div>
           )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
@@ -1586,11 +1591,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Corriéndola, su borde derecho queda en 271 y su izquierdo en 64, o sea a 8 px
               del barómetro (que acaba en 56): entra sin tocar nada. Es la única de las tres
               celdas que necesitaba el ajuste; EXT y HUMEDAD tenían 41 y 60 px libres.
-              51 con el triángulo a 24: su borde izquierdo cae en x=274, así que la lectura
-              tiene que acabar antes de 268. Con eso su borde izquierdo queda en ~61, a 5 px
-              del barómetro (que acaba en 56). Es el precio de un triángulo grande en la celda
-              de la cifra más larga, y se paga aquí y no achicando la lectura. */}
-          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 51 }}>
+              32, el de siempre: correrlo a 44 y luego a 51 para hacerle hueco al triángulo
+              dejaba la lectura pegada al barómetro y descolocaba la celda. El triángulo se
+              muda arriba (ver más abajo) y aquí no se toca nada. */}
+          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
@@ -1743,11 +1747,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.
-                El icono sube a 58, y para eso la sangría vertical de la celda baja a 2: el
-                interior pasa a 106 px de alto y la tira pide 47 (12 de la hora + 22 de la
-                temperatura + 13 de la probabilidad), así que 58 + 47 = 105 entra por un
-                píxel. Ese es el TOPE de esta celda y va apretado a propósito, que es lo que
-                se pidió. Que la sangría sea de 2 no acerca el dibujo al borde tanto como
+                El icono sube a 60. Para sacar esos píxeles la TIRA se aprieta un poco --la
+                hora a 11 px y el interlineado de la temperatura de 1.15 a 1.02-- con lo que
+                su caja baja de 47 a 43, y encima se sube 2 px con `marginBottom`. Cuentas:
+                interior 106 = icono 60 + tira 43 + los 2 de margen, o sea justo. Las cifras
+                de la tira NO cambian de tamaño; lo que se recorta es el aire entre sus tres
+                renglones, que no se echa de menos. Que la sangría sea de 2 no acerca el dibujo al borde tanto como
                 parece: los iconos de Meteocons traen su propio aire dentro del lienzo.
                 Con la sangría en 7 y el icono en 52 la fila de probabilidades ya salió
                 CORTADA una vez --tinta hasta y=109 de 110--, así que esto se mide en la
@@ -1758,7 +1763,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 icono de al lado. Antes iba centrada arriba y una condición larga se partía
                 igual, pero empujando todo lo de abajo. */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
-              <WeatherIcon name={cond.icon} size={58} className="weather-main-icon" />
+              <WeatherIcon name={cond.icon} size={60} className="weather-main-icon" />
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
@@ -1778,14 +1783,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 el mismo de la celda de LLUVIA y de su histograma, que es lo que dice qué es
                 cada cifra sin gastar rótulos. */}
             {proximas.length > 0 && (
-              <div style={{ marginTop: 'auto', display: 'flex', width: '100%' }}>
+              <div style={{ marginTop: 'auto', marginBottom: 2, display: 'flex', width: '100%' }}>
                 {proximas.map((h) => (
                   <div key={h.time} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                     {/* La hora, sin minutos: son horas en punto del pronóstico. */}
-                    <div style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>
+                    <div style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
                       {new Date(h.time).getHours()}
                     </div>
-                    <div style={{ color: 'var(--w)', fontSize: 19, fontWeight: 800, lineHeight: 1.15 }}>
+                    <div style={{ color: 'var(--w)', fontSize: 19, fontWeight: 800, lineHeight: 1.02 }}>
                       {u.temp(h.temp, 0)}
                     </div>
                     <div style={{ color: 'var(--r)', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
