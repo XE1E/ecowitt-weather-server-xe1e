@@ -1796,8 +1796,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <div style={{ marginTop: 'auto', marginBottom: 4, display: 'flex', width: '100%' }}>
                 {proximas.map((h) => (
                   <div key={h.time} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-                    {/* La hora, sin minutos: son horas en punto del pronóstico. */}
-                    <div style={{ color: 'var(--lbl)', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                    {/* La hora, sin minutos: son horas en punto del pronóstico.
+                        En un gris CLARO (#bdbdbd) y no en el `--lbl` (#8a8a8a) del resto de los
+                        rótulos: aquí la hora no es una etiqueta que se pueda ignorar --sin ella
+                        las tres cifras de su columna no significan nada-- y a 11 px sobre negro
+                        el gris de rótulo se apagaba, más aún en el panel del kiosco, que aplasta
+                        los tonos bajos. Sigue por debajo del blanco de la temperatura, que es lo
+                        que manda en la columna. */}
+                    <div style={{ color: '#bdbdbd', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
                       {new Date(h.time).getHours()}
                     </div>
                     <div style={{ color: 'var(--w)', fontSize: 19, fontWeight: 800, lineHeight: 1.02 }}>
@@ -2168,10 +2174,29 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#a78bfa')} title="presión" />
           </div>
+          {/* Aviso de esta celda, con el mismo sitio y tamaño que en EXT, HUMEDAD y PRES:
+              a la izquierda de la flecha y a 30 px. Aquí la lectura SÍ estorbaba de verdad y
+              hubo que correrla --ver el `paddingRight` de abajo--: a diferencia de PRES, en
+              esta celda el bloque de la cifra cae a media altura, justo donde va el triángulo,
+              y su "mb" llegaba hasta x=287 (medido) cuando el triángulo empieza en 268. */}
+          {celdasEnAlerta.has('remotaP') && (
+            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+              <WarnGlyph size={30} />
+            </div>
+          )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={remotePressTrend} />
           </div>
-          <div className="big gp ctr rt" style={{ marginTop: 8, fontSize: 46, paddingRight: 32 }}>
+          {/* `paddingRight` 57 y no 32: los 25 px de más son el sitio del triángulo de aviso.
+              MEDIDO sobre la captura, no calculado: la lectura ocupa de x=117 a x=287 --el
+              bloque 267-287 es el "mb"-- y el triángulo empieza en 268, así que hay que dejarla
+              acabando bastante antes. A 57 los números decían 6 px de separación y a la vista
+              quedaba PEGADO: el "mb" y el triángulo caen a la misma altura --la unidad va con
+              `vertical-align: top`-- así que se leían como un solo bloque. Con 66 la lectura va
+              de 89 a 253 y quedan 15 px, que ya separan. El barómetro acaba en 56, así que
+              todavía le sobran 33 px por la izquierda: aquí hay sitio, al contrario que en
+              PRES, porque esta cifra es de cuerpo 46 y no 56. */}
+          <div className="big gp ctr rt" style={{ marginTop: 8, fontSize: 46, paddingRight: 66 }}>
             {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
         </div>
