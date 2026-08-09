@@ -66,8 +66,9 @@ presenta, y hacer crecer la plataforma a voluntad.
   - `/` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/pro`).
   - `/pro` — **Vista completa**: varias secciones con cintillo de navegación,
     unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA).
-- **Pantalla física:** también hay una **pantalla ESP32-S3 Waveshare** que muestra
-  las condiciones en tiempo real.
+- **Pantallas físicas:** el mismo servidor alimenta un **kiosco táctil ESP32-S3
+  Waveshare**, un **e-paper LilyGo 4.7"** y un **reloj de píxeles Ulanzi TC001**,
+  que muestran las condiciones sin abrir un navegador (ver §7).
 
 ---
 
@@ -81,6 +82,10 @@ Kit **Ecowitt WS2910** + sensor **WS69** + termohigrómetros **WN31**.
 | **WS69 (7-en-1)** | Sensor exterior integrado | Temperatura y humedad exterior, velocidad y dirección del viento, ráfaga, lluvia (tasa/evento/día/…), radiación solar e índice UV |
 | **WN31 (×8)** | Termohigrómetros de canal | Temperatura y humedad en hasta **8 canales** independientes (habitaciones, exterior secundario, etc.) |
 | **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede **disparar alertas propias** (y publicar/MQTT) activándolas **por estación** (ver §6) |
+
+Fuera del kit Ecowitt hay dos añadidos, ambos opcionales y ambos detallados en
+§7: la **cámara Tapo C325WB** del exterior y las **pantallas físicas** (kiosco
+táctil Waveshare ESP32-S3, e-paper LilyGo 4.7" y reloj de píxeles Ulanzi TC001).
 
 **Baterías:** la WS69, la consola y cada canal WN31 reportan estado de batería
 (OK / baja). El sistema **avisa** cuando alguna está baja (ver §7).
@@ -134,16 +139,19 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
   WS69 + WN31  ──HTTP push──►  Cloudflare (Orange Cloud, HTTPS)
        │        protocolo         │
        │        Ecowitt           ▼
-       │                        Caddy (TLS, Origin Cert)
+  C325WB (casa) ─JPEG push─►  Caddy (TLS, Origin Cert)
        │                          │
        │                          ▼
        │                     Dashboard (React)  ◄── navegador del usuario
        │                          │  (sirve la web y hace de proxy /api)
+       │                          ├──► Renderer (Chromium) ──► kiosco Waveshare
        │                          ▼
        └──────────────►   Receiver (FastAPI)  ──►  InfluxDB 2.7 (histórico)
-                                  │
+                                  │                     │
+                                  │                     └─► Grafana (opt-in)
                                   ├─► MQTT / Home Assistant (opcional)
-                                  ├─► Alertas (Telegram / log)
+                                  ├─► Alertas (Telegram / correo / log)
+                                  ├─► Pantallas (e-paper LilyGo, reloj Ulanzi)
                                   └─► Redes públicas (WU, Windy, PWS, OWM, CWOP)
 ```
 
@@ -151,7 +159,12 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
 - **receiver** (FastAPI, Python): recibe el push, procesa y guarda; expone la API.
 - **influxdb** (InfluxDB 2.7): base de series temporales (histórico).
 - **dashboard** (React + Nginx): sirve la web y reenvía `/api/*` al receiver.
+- **renderer** (Chromium headless): fotografía las páginas del kiosco y las sirve
+  como JPEG en `/api/display.jpg` (ver §7). Sólo lo consume la pantalla física.
 - **caddy**: TLS/HTTPS con certificado *Origin* de Cloudflare.
+- **grafana** *(opcional, perfil `grafana`)*: apagado por defecto. Apunta a
+  InfluxDB y sirve para hurgar en el dato crudo; el sitio no lo necesita y el
+  proxy no lo publica (ver §14).
 - **cloudflare**: proxy (Orange Cloud), cache y protección delante del VPS.
 
 **Frecuencia de actualización (front-end):**
@@ -235,8 +248,13 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 Lo que sí corresponde a este documento:
 
-- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 14
-  pestañas) y la clásica de una sola página en `/`. El panel vive en `/admin`, el
+- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 15
+  pestañas: Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Tablas,
+  Climatología, Radar, Cámara, Astronomía, Calidad del aire, Aeronáutica,
+  Estación remota, Widget y Consola) y la clásica de una sola página en `/`.
+  La lista viva es `NAV_ACTIVE` en `dashboard/src/pages/StationLayout.tsx`.
+  **Consola** no tiene página propia: monta el mismo `ConsoleReplica` que pinta
+  el kiosco (§7), así que lo que se ve en el navegador es lo que hay en la pared. El panel vive en `/admin`, el
   kiosco en `/kiosko?page=N` y el widget embebible en `/widget`.
 - **Estado compartido.** `StationDataProvider` (`dashboard/src/station-data.tsx`)
   centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
@@ -283,7 +301,18 @@ Ejemplo del código:
 ## 7. Pantallas físicas
 
 Además del sitio web, el servidor alimenta **pantallas físicas dedicadas** que
-muestran el clima en tiempo real sin necesidad de abrir un navegador.
+muestran el clima en tiempo real sin necesidad de abrir un navegador. Son tres, y
+se reparten en **dos modelos opuestos**:
+
+| Pantalla | Quién dibuja | Qué le sirve el servidor |
+|---|---|---|
+| **Waveshare ESP32-S3** táctil 7" | el **servidor** (cliente tonto) | la pantalla ya hecha, `GET /api/display.jpg` |
+| **LilyGo e-paper** 4.7" | el **display** (cliente gordo) | dato con forma WeatherAPI, `GET /api/epaper/forecast.json` |
+| **Ulanzi TC001** (reloj píxel) | el **display** | dato con forma WeatherAPI, `GET /api/svitrix` |
+
+El primer modelo hace que añadir pantallas sea trabajo de servidor; el segundo
+deja al firmware su propio dibujado, y el servidor sólo suplanta la API que ese
+firmware ya sabía consumir.
 
 ### Waveshare ESP32-S3 (pantalla táctil 7")
 
@@ -570,6 +599,39 @@ Detalle en el `README.md` de esa carpeta.
 > arrastran `font-family: DSEG7`, así que aplicadas a texto con letras lo deforman.
 > Para texto, `.seg14` o color inline.
 
+### LilyGo e-paper 4.7"
+
+Un **display e-paper de 4.7"** que vive en **deep sleep**: despierta, pide una vez
+y se vuelve a dormir. Al revés que el kiosco, **dibuja él mismo** sus 11+ pantallas,
+así que el servidor no le manda imagen sino dato.
+
+El truco está en `GET /api/epaper/forecast.json` (`services/epaper.py`): sirve el
+dato **real de la estación** con la forma de **WeatherAPI `forecast.json`**, que es
+justo lo que el `DecodeWeatherAPI()` del firmware ya sabía parsear. Así el display
+**cambia de fuente sin tocar una línea de su dibujado** —pantallas, táctil y deep
+sleep se quedan igual— y puede volver a WeatherAPI.com como respaldo cambiando sólo
+la URL. Es el mismo patrón de `svitrix.py`, que cubre `current.json` para el reloj,
+y de hecho reusa su `build_weatherapi()` para el bloque `current`. Encima añade:
+
+- `forecast.forecastday[]` de **tres días con sus 24 horas**, que el e-paper
+  necesita para sus gráficas.
+- `astro` calculado con **pyephem** para las coordenadas exactas del sitio.
+- un bloque **`xe1e{}`** con lo que WeatherAPI no puede dar: radiación solar, lluvia
+  del evento, IMECA, los **máximos medidos** del día y la tendencia real de presión.
+
+> **Este endpoint nunca devuelve 503**, al contrario que `/api/svitrix`. El e-paper
+> pide una sola vez por ciclo, así que un error no se reintenta: lo dejaría con la
+> pantalla vieja hasta el siguiente despertar. Si falta el dato de la estación se cae
+> al pronóstico de la hora en curso y lo marca en `xe1e.source`; y cada fuente externa
+> se pide con tolerancia a fallos, porque que se caiga WAQI o el IMECA no puede costar
+> la pantalla entera.
+
+El texto va en español porque el firmware se configura con `Language = "es"`, igual
+que devolvería WeatherAPI con `lang=es`; los códigos WMO de Open-Meteo se traducen a
+condición de WeatherAPI en una tabla que cubre **todos** los casos del `switch` del
+firmware —importa, porque su caso por omisión dibuja «nublado» y un código no
+contemplado pasaría desapercibido—.
+
 ### SVITRIX-XE1E (Ulanzi TC001)
 
 Firmware personalizado para el **reloj píxel Ulanzi TC001** (matriz LED 32×8).
@@ -775,9 +837,11 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/airquality` · `GET /api/airquality/imeca` | AQI e IMECA estimado (+ pronóstico) |
 | `GET /api/satellite` | imagen satelital NASA GIBS (proxy) |
 | `GET /api/earthquakes` | sismos recientes (USGS / SSN) |
-| `GET /api/svitrix` | datos para SVITRIX-XE1E (Ulanzi TC001) |
-| `GET /api/display.jpg?page=N` | imagen JPEG para pantalla Waveshare |
-| `POST /api/kiosk/local` | recibe lecturas del BME280 de la pantalla Waveshare |
+| `GET /api/svitrix` | datos para SVITRIX-XE1E (Ulanzi TC001), con forma WeatherAPI `current.json` |
+| `GET /api/epaper/forecast.json` | datos para el e-paper LilyGo, con forma WeatherAPI `forecast.json` (3 días × 24 h + bloque `xe1e`). **Nunca devuelve 503** |
+| `GET /api/display.jpg?page=N` | imagen JPEG para pantalla Waveshare (la sirve el contenedor `renderer`) |
+| `POST /api/kiosk/local` · `GET /api/kiosk/local` | recibe y devuelve las lecturas del BME280 de la pantalla Waveshare |
+| `POST /api/camera/upload` · `GET /api/camera/latest.jpg` · `status` · `days` | cámara del exterior (ver §7) |
 | `POST /api/admin/login` · `GET/POST /api/admin/settings` · `GET /api/admin/status` | administración |
 | `POST /data/report/` | **entrada** del push de la estación (Ecowitt) |
 
@@ -799,6 +863,17 @@ cd ~/ecowitt-weather-server-xe1e
 git pull
 docker compose up -d --build      # --build cuando cambian dependencias o imágenes
 docker compose ps                 # verificar estado
+```
+
+**Grafana (opcional):** el `docker-compose.yml` trae un Grafana ya apuntado a
+InfluxDB, **apagado por defecto** tras el perfil `grafana`. No hace falta para
+nada del sitio —es para hurgar en el dato crudo cuando algo no cuadra—, y por eso
+queda **fuera del reverse proxy**: publica el 3000 del VPS, que el cortafuegos no
+abre, así que se llega por **túnel SSH** (igual que al admin de InfluxDB):
+`ssh -L 3000:localhost:3000 …`.
+
+```bash
+docker compose --profile grafana up -d    # credenciales: GRAFANA_ADMIN_* del .env
 ```
 
 **Configuración inicial (`.env`):** credenciales de InfluxDB, `ADMIN_USER` /
@@ -855,4 +930,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-08-01.*
+*Última actualización: 2026-08-09.*
