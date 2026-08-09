@@ -841,6 +841,27 @@ function PressureScale({ delta, endLabel, imperial }: {
   )
 }
 
+/**
+ * Triángulo de aviso con su "!" dentro. Estaba escrito a mano dentro de la celda del
+ * reloj; ahora lo llevan también las celdas que avisan, así que vive aquí.
+ *
+ * En SVG y no como emoji ⚠: el Chromium del renderer corre en un contenedor sin fuente
+ * de emoji en color y saldría como un cuadro vacío. Es la misma razón por la que todos
+ * los iconos de la consola son dibujos.
+ *
+ * El trazo NO escala con el tamaño --se queda en 1.6 del viewBox de 16-- porque a 21 px
+ * un borde proporcionalmente más gordo se come el hueco interior y el "!" deja de leerse.
+ */
+function WarnGlyph({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * 14 / 16} viewBox="0 0 16 15" style={{ flexShrink: 0 }}>
+      <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
+      <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
+    </svg>
+  )
+}
+
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
@@ -1220,6 +1241,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="thermometer" size={72} color={alertaCol('ext', '#f97316')} title="temperatura" />
           </div>
+          {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
+              propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el
+              único sitio de la celda con hueco a media altura.
+              SITIO, medido sobre la captura: la flecha va en `right: 12` y mide 20, así que
+              su borde izquierdo cae a 32 px del borde; a `right: 38` quedan 6 px entre las
+              dos. El triángulo mide 21 px y no más porque en PRES es donde menos hueco hay
+              --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
+              El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
+              triángulo dice que es un aviso y no una lectura curiosa. */}
+          {celdasEnAlerta.has('ext') && (
+            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+              <WarnGlyph size={21} />
+            </div>
+          )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={tempTrend} />
           </div>
@@ -1449,6 +1484,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="humidity" size={65} color={alertaCol('hum', '#3b82f6')} title="humedad" />
           </div>
+          {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
+              propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el
+              único sitio de la celda con hueco a media altura.
+              SITIO, medido sobre la captura: la flecha va en `right: 12` y mide 20, así que
+              su borde izquierdo cae a 32 px del borde; a `right: 38` quedan 6 px entre las
+              dos. El triángulo mide 21 px y no más porque en PRES es donde menos hueco hay
+              --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
+              El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
+              triángulo dice que es un aviso y no una lectura curiosa. */}
+          {celdasEnAlerta.has('hum') && (
+            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+              <WarnGlyph size={21} />
+            </div>
+          )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
@@ -1503,13 +1552,38 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#a78bfa')} title="presión" />
           </div>
+          {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
+              propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el
+              único sitio de la celda con hueco a media altura.
+              SITIO, medido sobre la captura: la flecha va en `right: 12` y mide 20, así que
+              su borde izquierdo cae a 32 px del borde; a `right: 38` quedan 6 px entre las
+              dos. El triángulo mide 21 px y no más porque en PRES es donde menos hueco hay
+              --la lectura llegaba a 15 px de la flecha-- y las tres celdas lo llevan igual.
+              El teñido del glifo se queda: el color se ve de lejos y dice QUÉ falla; el
+              triángulo dice que es un aviso y no una lectura curiosa. */}
+          {/* En PRES el triángulo va a 17 y no a 21 como en EXT y HUMEDAD: es la celda con
+              la lectura más ancha --"1023.7 mb" ocupa casi todo el hueco-- y a 21 quedaba
+              apretado entre la cifra y la flecha. */}
+          {celdasEnAlerta.has('pres') && (
+            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+              <WarnGlyph size={17} />
+            </div>
+          )}
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
           </div>
           {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
               y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
               marginTop, no con centrado automático, igual que las otras dos. */}
-          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 32 }}>
+          {/* `paddingRight` 48 y no 32: los 16 px de más son el sitio del triángulo de
+              aviso. Medido: la lectura acababa a 15 px de la flecha --"1023.7 mb" llega
+              hasta x=287 y la flecha empieza en 302-- y ahí no cabe un triángulo de 21.
+              Corriéndola, su borde derecho queda en 271 y su izquierdo en 64, o sea a 8 px
+              del barómetro (que acaba en 56): entra sin tocar nada. Es la única de las tres
+              celdas que necesitaba el ajuste; EXT y HUMEDAD tenían 41 y 60 px libres.
+              44 y no 48: con el triángulo a 17 px basta con correr la lectura 12 px, y así
+              queda a 12 del barómetro en vez de a 8. */}
+          <div className="big gp rt" style={{ marginTop: 6, fontSize: 56, paddingRight: 44 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
@@ -1659,20 +1733,22 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
               hacen falta porque el icono ya trae aire por dentro. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo}
-            style={{ display: 'flex', flexDirection: 'column', padding: '7px 8px' }}>
-            {/* MITAD DE ARRIBA. El icono a 46: con la tira fuera de esta fila vuelve a tener
-                sitio, y es el dibujo que identifica la celda de un vistazo. No más de 46,
-                MEDIDO: el interior de la celda son 96 px de alto con su sangría, y la tira
-                pide 47 (12 de la hora + 22 de la temperatura + 13 de la probabilidad). A 52
-                sumaban 100 y la fila de probabilidades salía CORTADA por el borde de abajo
-                --se vio en la captura, con la tinta llegando a y=109 de 110--.
+            style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px' }}>
+            {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
+                del borde izquierdo-- y separados 8 px.
+                El icono sube a 54, y para eso la sangría vertical de la celda baja de 7 a 4:
+                el interior pasa de 96 a 102 px de alto y la tira pide 47 (12 de la hora + 22
+                de la temperatura + 13 de la probabilidad), así que 54 + 47 = 101 entra por
+                un píxel. Va apretado a propósito, que es lo que se pidió; el limite duro es
+                102, y a 52 la fila de probabilidades ya salió CORTADA una vez --tinta hasta
+                y=109 de 110-- cuando la sangría era de 7.
                 La descripción va a su derecha, alineada a la izquierda y en dos o tres
                 renglones si hace falta --"NOCHE PARCIALMENTE NUBLADA" son 25 caracteres--:
                 aquí partir el texto no estorba a nadie, porque el bloque tiene la altura del
                 icono de al lado. Antes iba centrada arriba y una condición larga se partía
                 igual, pero empujando todo lo de abajo. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%' }}>
-              <WeatherIcon name={cond.icon} size={46} className="weather-main-icon" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
+              <WeatherIcon name={cond.icon} size={54} className="weather-main-icon" />
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
@@ -1723,7 +1799,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               La primera versión pidió 76 con sangría 6 y flex se los recortó a 63 sin
               avisar; de ahí el `flexShrink: 0` del disco y que las horas cedan cuerpo. */}
           <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <MoonGlyph size={74} illum={moon?.illumination} waxing={moon?.waxing} />
+            {/* El disco baja de 74 a 64 px: al lado de las dos horas se veía desproporcionado.
+                Va dentro de una caja de 74 --el tamaño de ANTES-- centrada: si se encogiera el
+                glifo a secas, esta fila es un flex centrado y las horas se correrían 5 px hacia
+                la izquierda. Con la caja fija, en esta celda no se mueve nada más. */}
+            <div style={{ width: 74, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+              <MoonGlyph size={64} illum={moon?.illumination} waxing={moon?.waxing} />
+            </div>
             <SunTimes sunrise={astro?.sunrise} sunset={astro?.sunset} />
           </div>
         </div>
@@ -2013,11 +2095,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                como un cuadro vacío. Todos los demás iconos de la consola ya son SVG por
                la misma razón. */
             <div style={{ color: 'var(--red)', fontSize: 16, fontWeight: 800, letterSpacing: 1, lineHeight: 1, marginTop: -2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <svg width="15" height="14" viewBox="0 0 16 15" style={{ flexShrink: 0 }}>
-                <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
-                <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
-                <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
-              </svg>
+              <WarnGlyph />
               SIN DATOS · {staleMin} MIN
             </div>
           ) : alertas.length > 0 ? (
@@ -2033,11 +2111,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <div style={{ color: 'var(--red)', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
                           lineHeight: 1.08, marginTop: -2, display: 'flex', alignItems: 'flex-start',
                           justifyContent: 'center', gap: 6, textAlign: 'left' }}>
-              <svg width="15" height="14" viewBox="0 0 16 15" style={{ flexShrink: 0, marginTop: 1 }}>
-                <path d="M8 0.5 L15.5 14 L0.5 14 Z" fill="none" stroke="var(--red)" strokeWidth="1.6" strokeLinejoin="round" />
-                <rect x="7.1" y="5" width="1.8" height="5" rx="0.9" fill="var(--red)" />
-                <rect x="7.1" y="11" width="1.8" height="1.8" rx="0.9" fill="var(--red)" />
-              </svg>
+              <div style={{ marginTop: 1 }}><WarnGlyph /></div>
               <span>
                 {sinEmoji(alertas[0].message)}
                 {alertas.length > 1 && ` · +${alertas.length - 1}`}
