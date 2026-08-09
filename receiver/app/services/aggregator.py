@@ -121,6 +121,9 @@ def all_time_records(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "press_min": best("press_min", False),
         "hum_max": best("hum_max", True),
         "hum_min": best("hum_min", False),
+        # Récord de bochorno. Sale del `humidex_max` de cada día, así que existe para todo el
+        # histórico desde que se recalcularon los resúmenes con `force`.
+        "humidex_max": best("humidex_max", True),
         "days": len(rows),
     }
 
@@ -269,6 +272,13 @@ def period_summary(rows: List[Dict[str, Any]], lat: Optional[float] = None) -> D
         # como números sueltos porque ClimatePage ya los pinta así.
         "press_max": _best(rows, "press_max", True),
         "press_min": _best(rows, "press_min", False),
+        # El humidex del periodo va con FECHA (`_best`) y no pelado como el UV y el solar: en
+        # un resumen mensual lo que se quiere saber es qué día apretó, igual que con la
+        # presión mínima. Y se cuentan los días BOCHORNOSOS, que es el equivalente de "días
+        # con lluvia" para este índice: un mes con tres días a 32 no es el mismo mes que uno
+        # con quince. El corte son 30, el primer tramo de incomodidad de Environment Canada.
+        "humidex_max": _best(rows, "humidex_max", True),
+        "humidex_days": sum(1 for r in rows if (r.get("humidex_max") or 0) >= 30),
         "uv_max": (lambda v: max(v) if v else None)([r["uv_max"] for r in rows if r.get("uv_max") is not None]),
         "solar_max": (lambda v: max(v) if v else None)([r["solar_max"] for r in rows if r.get("solar_max") is not None]),
         "hdd": round(hdd, 1),

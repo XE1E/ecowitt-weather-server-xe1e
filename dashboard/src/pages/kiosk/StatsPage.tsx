@@ -28,6 +28,7 @@ interface Resumen {
   wind_avg?: number; gust_max?: Best; wind_dir?: number
   hum_max?: number; hum_min?: number
   press_max?: Best | number; press_min?: Best | number
+  humidex_max?: Best; humidex_days?: number
 }
 interface Records {
   all_time?: Record<string, Best | number>
@@ -98,6 +99,11 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
           { k: 'PRESIÓN MÍN', v: u.press(g('pressure_relative', 'min')), u: u.pressU, glow: P },
           { k: 'RÁFAGA MÁX', v: u.wind(g('wind_gust', 'max')), u: u.windU, glow: V },
           { k: 'LLUVIA', v: u.rain(g('rain_daily', 'max')), u: u.rainU, glow: R },
+          // Humidex SIN UNIDAD, que es un índice. Y el rocío entra con él, no de relleno: son
+          // la pareja de la humedad sentida, y además dejan las filas en número PAR, que es lo
+          // que la rejilla necesita para no quedarse con una celda vacía abajo a la derecha.
+          { k: 'HUMIDEX MÁX', v: f(g('humidex', 'max'), 1), glow: T },
+          { k: 'ROCÍO MÁX', v: u.temp(g('dew_point', 'max')), u: u.tempU, glow: T },
         ] as Fila[],
         pie: 'MÍNIMAS Y MÁXIMAS DEL DÍA EN CURSO',
       }
@@ -117,6 +123,7 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
           { k: 'PRESIÓN MÍNIMA', v: u.press(val(a.press_min)), u: u.pressU, cuando: dm(fecha(a.press_min)), glow: P },
           { k: 'HUMEDAD MÁXIMA', v: f(val(a.hum_max), 0), u: '%', cuando: dm(fecha(a.hum_max)), glow: H },
           { k: 'HUMEDAD MÍNIMA', v: f(val(a.hum_min), 0), u: '%', cuando: dm(fecha(a.hum_min)), glow: H },
+          { k: 'MÁS BOCHORNO', v: f(val(a.humidex_max), 1), cuando: dm(fecha(a.humidex_max)), glow: T },
         ] as Fila[],
         pie: `${typeof a.days === 'number' ? a.days : '--'} DÍAS REGISTRADOS`
           + (cuantos ? ` · UN DÍA COMO HOY, ${cuantos} ${cuantos === 1 ? 'AÑO' : 'AÑOS'} ATRÁS` : ''),
@@ -150,6 +157,12 @@ export function StatsPage({ s, slug }: { s: StatsKey; slug: string }) {
         { k: 'HUMEDAD MÍNIMA', v: f(r.hum_min, 0), u: '%', glow: H },
         { k: 'VIENTO MEDIO', v: u.wind(r.wind_avg), u: u.windU, glow: V },
         { k: 'RÁFAGA MÁXIMA', v: u.wind(val(r.gust_max)), u: u.windU, cuando: dm(fecha(r.gust_max)), glow: V },
+        // El humidex cierra la columna de la temperatura, de donde sale. "DÍAS BOCHORNOSOS"
+        // es a este índice lo que "días con lluvia" a la lluvia: un mes con tres días a 32 no
+        // es el mismo mes que uno con quince. El corte son 30, el primer tramo de Environment
+        // Canada, y lo cuenta el backend sobre los máximos diarios.
+        { k: 'HUMIDEX MÁXIMO', v: f(val(r.humidex_max), 1), cuando: dm(fecha(r.humidex_max)), glow: T },
+        { k: 'DÍAS BOCHORNOSOS', v: `${r.humidex_days ?? '--'} de ${r.days ?? '--'}`, glow: T },
       ] as Fila[],
       pie: `${r.days ?? 0} DÍAS CON REGISTRO`,
     }
