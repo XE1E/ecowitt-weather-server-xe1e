@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { deriveCondition, historicValue, moonIllumination, uvLabel } from '../../weather'
+import { deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -1069,6 +1069,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const solarDeNoche = data?.solar_radiation != null && data.solar_radiation < 1
     && solarMaxDia != null && solarMaxDia > 0
 
+  /**
+   * El HUMIDEX también enseña el máximo del día cuando no hay valor vivo, con el mismo
+   * criterio que SOLAR y UV. Aquí el caso no es la noche sino el FRÍO: el receiver no calcula
+   * el índice por debajo de 20 °C (no significa nada ahí), así que el campo desaparece y la
+   * celda se pasaba media jornada en "--". Con esto, en cuanto el día ha apretado, sigue
+   * diciendo cuánto apretó.
+   */
+  const humidexMaxDia = stats?.humidex?.max ?? null
+  const humidexDeAyer = data?.humidex == null && humidexMaxDia != null && humidexMaxDia > 0
+
   // Hora del pico de ráfaga del día, para el rótulo de RÁFAGA DÍA.
   const gustMaxTime = hhmm(stats?.wind_gust?.max_time)
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
@@ -1828,10 +1838,26 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>HUMIDEX</div>
               {/* Sin unidad: el humidex es un índice, no una temperatura, aunque se
                   exprese en una escala parecida. Ponerle °C invitaría a compararlo con
-                  las dos cifras de al lado como si midieran lo mismo. */}
-              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {data?.humidex != null ? decNum(data.humidex.toFixed(1)) : '--'}
+                  las dos cifras de al lado como si midieran lo mismo.
+                  Sin valor vivo (por debajo de 20 °C no existe) muestra el MÁXIMO DEL DÍA en
+                  blanco, igual que SOLAR y UV de noche: el blanco no está en los colores de
+                  esta celda, así que se sabe que ese número no es de ahora. */}
+              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4,
+                                               color: humidexDeAyer ? '#fff' : undefined }}>
+                {data?.humidex != null ? decNum(data.humidex.toFixed(1))
+                  : humidexDeAyer ? decNum((humidexMaxDia as number).toFixed(1)) : '--'}
               </div>
+              {/* El NIVEL en palabras, con los tramos de Environment Canada (`humidexLabel`,
+                  compartido con la web). Un "31.4" no dice nada a nadie que no se sepa la
+                  escala; "INCÓMODO" sí. A 12 px, que es lo que deja esta columna de ~100 px
+                  para el caso más largo, "MUY INCÓMODO". */}
+              {(data?.humidex != null || humidexDeAyer) && (
+                <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
+                                            color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
+                  {humidexDeAyer ? 'MÁXIMO'
+                    : humidexLabel(data!.humidex as number).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
         </div>

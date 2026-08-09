@@ -225,6 +225,14 @@ class InfluxDBStorage:
                 "pressure_relative",
                 "uv_index",
                 "solar_radiation",
+                # Humidex: se calcula en el pipeline (converter) por encima de 20 °C y se
+                # guardaba sin que nadie le sacara estadística. Entra aquí y con eso lo gana
+                # TODO a la vez --/api/stats/daily, los récords, el kiosco y el resumen
+                # diario, que aplanan lo que devuelve este método-- y además de forma
+                # RETROACTIVA: esto lee el dato crudo, cuya retención es infinita, así que el
+                # máximo de cualquier día pasado sale igual. Cuesta un campo más en una
+                # consulta que ya va agrupada por `_field`, no una consulta más.
+                "humidex",
                 "temperature_indoor",
                 "humidity_indoor",
                 "temperature_ch1",

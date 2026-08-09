@@ -1,5 +1,5 @@
 import { WeatherData } from '../../types'
-import { deriveCondition, wetBulb, historicValue } from '../../weather'
+import { deriveCondition, wetBulb, historicValue, humidexLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
 import { TrendArrow, getTrend } from '../TrendArrow'
@@ -50,8 +50,17 @@ export function CurrentConditions({ data, history }: { data: WeatherData; histor
         <p>Sensación <span className="text-slate-200">{u.temp(data.feels_like)}{u.tempU}</span></p>
         <p>Punto de rocío <span className="text-slate-200">{u.temp(data.dew_point)}{u.tempU}</span></p>
         {wb !== undefined && <p>Bulbo húmedo <span className="text-slate-200">{u.temp(wb)}{u.tempU}</span></p>}
+        {/* El humidex va SIN UNIDAD y SIN CONVERTIR, al contrario que las tres líneas de
+            arriba. Es un índice, no una temperatura: pasarlo por `u.temp` lo convertía a °F en
+            modo imperial --un humidex de 31 se mostraba como 88, que no significa nada, porque
+            la escala de Environment Canada está definida en la escala Celsius-- y el °C
+            invitaba a compararlo con la sensación y el rocío como si midiera lo mismo. La
+            consola ya lo mostraba así; esto era la incoherencia entre las dos pantallas. */}
         {data.humidex !== undefined && (
-          <p>Humidex <span className="text-slate-200">{u.temp(data.humidex)}{u.tempU}</span></p>
+          <p>Humidex{' '}
+            <span className="text-slate-200">{data.humidex.toFixed(1)}</span>
+            <span className="ml-1 text-xs">{humidexLabel(data.humidex).toLowerCase()}</span>
+          </p>
         )}
         {data.cloud_base !== undefined && (
           // "sobre el suelo" no sobra: la fórmula de Espy da altura AGL, y en la

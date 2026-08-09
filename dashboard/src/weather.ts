@@ -199,6 +199,24 @@ export function uvLabel(uv: number): string {
   return 'Bajo'
 }
 
+/**
+ * Nivel de bochorno del HUMIDEX, con los tramos de Environment Canada, que es quien define
+ * el índice: hasta 29 confort, 30-39 incomodidad, 40-45 mucha incomodidad, 46+ peligro y
+ * 54+ riesgo de golpe de calor.
+ *
+ * Las palabras van CORTAS ("Muy incómodo" y no "Mucha incomodidad") porque el consumidor más
+ * apretado es la celda de la consola, que tiene ~100 px de ancho para ellas. Vive aquí, como
+ * `uvLabel`, para que la web y la consola no puedan acabar diciendo cosas distintas del mismo
+ * número.
+ */
+export function humidexLabel(h: number): string {
+  if (h >= 54) return 'Extremo'
+  if (h >= 46) return 'Peligro'
+  if (h >= 40) return 'Muy incómodo'
+  if (h >= 30) return 'Incómodo'
+  return 'Confort'
+}
+
 /** Cardinal direction (Spanish) from degrees. */
 export function cardinal(deg: number): string {
   return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]

@@ -89,6 +89,12 @@ def flatten_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
         "dew_avg": g("dew_point", "avg"),
         "uv_max": g("uv_index", "max"),
         "solar_max": g("solar_radiation", "max"),
+        # Del humidex se guarda el MÁXIMO y su hora, no la media: es un índice de bochorno y
+        # lo que se recuerda de un día es cuánto llegó a apretar, no su promedio --que además
+        # sale bajo, porque de noche el índice no existe (el converter no lo calcula por
+        # debajo de 20 °C) y esas horas no cuentan--.
+        "humidex_max": g("humidex", "max"),
+        "humidex_max_time": g("humidex", "max_time"),
     }
     return {k: v for k, v in out.items() if v is not None}
 
