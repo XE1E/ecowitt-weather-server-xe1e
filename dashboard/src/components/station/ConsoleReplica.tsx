@@ -598,6 +598,27 @@ const UV_BANDS: Band[] = [
   { to: 11, color: '#ef4444' },
   { to: 12, color: '#d946ef' },
 ]
+// HUMIDEX: los tramos de Environment Canada, los mismos que nombra `humidexLabel`, así que
+// la palabra, el color del número y la banda encendida no pueden contradecirse.
+//
+// La escala llega a 60 aunque el índice no exista por debajo de 20: el riel arranca en 0 como
+// todos los demás y eso deja el primer tramo largo, pero un riel que empezara en 20 mentiría
+// sobre lo que significa "vacío". A cambio, en esta ubicación --2250 m-- el valor vive casi
+// siempre en el primer tramo, y eso ya es información: aquí el bochorno es la excepción.
+const HUMIDEX_BANDS: Band[] = [
+  { to: 30, color: '#22c55e' },
+  { to: 40, color: '#eab308' },
+  { to: 46, color: '#f97316' },
+  { to: 54, color: '#ef4444' },
+]
+function humidexColor(h: number): string {
+  if (h >= 54) return '#d946ef'
+  if (h >= 46) return '#ef4444'
+  if (h >= 40) return '#f97316'
+  if (h >= 30) return '#eab308'
+  return '#22c55e'
+}
+
 const IMECA_BANDS: Band[] = [
   { to: 50, color: '#22c55e' },
   { to: 100, color: '#eab308' },
@@ -1820,44 +1841,66 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             HUMIDEX aparece SÓLO con 20 °C o más: es un índice de bochorno y el receiver
             no lo calcula por debajo de eso (ver calculate_derived_values), así que de
             madrugada marcará "--" y eso es correcto, no una avería. */}
-        <div className="cell main" data-nav={CONSOLA_NAV.derivadas} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', width: '100%' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: alertaCol('rocio', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>ROCÍO</div>
-              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
-              </div>
+        {/* TRES CELDAS, una por derivado, en vez de una sola con tres columnas. El motivo es
+            el humidex: al ser un ÍNDICE le toca su riel de escala, como a UV y al IMECA, y un
+            riel dentro de una celda compartida se leería como si midiera las tres cifras.
+            Partida, cada dato tiene su caja, su contorno y su sitio para lo que necesite.
+            Estructura y medidas copiadas de la fila de SOLAR/UV/IMECA --rótulo, cifra, renglón
+            de apoyo y riel al pie con `marginTop: auto`-- así que las dos filas de tres celdas
+            de la consola se leen igual. Cada celda mide (342-6)/3 = 112 px, o sea 100 de
+            interior con la sangría de 3, donde el caso peor ("SENSACIÓN", ~70 px) entra.
+            Las tres conservan el contorno ÁMBAR: los tres se derivan de la temperatura y la
+            humedad de la estación principal, así que siguen siendo suyos. Y las tres llevan el
+            mismo `data-nav`, como ya hacen la condición y la luna: las tres van al detalle de
+            temperatura, que es de donde salen. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
+          <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
+            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: alertaCol('rocio', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>ROCÍO</div>
+            <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
+              {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>SENSACIÓN</div>
-              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4 }}>
-                {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
-              </div>
+          </div>
+          <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
+            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SENSACIÓN</div>
+            <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap' }}>
+              {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>HUMIDEX</div>
-              {/* Sin unidad: el humidex es un índice, no una temperatura, aunque se
-                  exprese en una escala parecida. Ponerle °C invitaría a compararlo con
-                  las dos cifras de al lado como si midieran lo mismo.
-                  Sin valor vivo (por debajo de 20 °C no existe) muestra el MÁXIMO DEL DÍA en
-                  blanco, igual que SOLAR y UV de noche: el blanco no está en los colores de
-                  esta celda, así que se sabe que ese número no es de ahora. */}
-              <div className="gt seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 4,
-                                               color: humidexDeAyer ? '#fff' : undefined }}>
-                {data?.humidex != null ? decNum(data.humidex.toFixed(1))
-                  : humidexDeAyer ? decNum((humidexMaxDia as number).toFixed(1)) : '--'}
+          </div>
+          <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
+            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>HUMIDEX</div>
+            {/* Sin unidad: el humidex es un índice, no una temperatura, aunque se exprese en
+                una escala parecida. Ponerle °C invitaría a compararlo con las dos cifras de al
+                lado como si midieran lo mismo.
+                El NÚMERO va del color de su tramo --como UV y el IMECA, y no del naranja de la
+                temperatura, que es lo que hacía antes por herencia de la clase `gt`--, así que
+                el color, la palabra y la banda encendida del riel dicen los tres lo mismo.
+                Sin valor vivo (por debajo de 20 °C el índice no existe) muestra el MÁXIMO DEL
+                DÍA en blanco, igual que SOLAR y UV de noche: el blanco no está en la escala, así
+                que se sabe que ese número no es de ahora. */}
+            {/* `gw seg` con el color inline, el mismo patrón que SOLAR, UV e IMECA: la clase
+                aporta la fuente de siete segmentos y el HALO --sin él, con sólo `seg`, esta
+                cifra se veía apagada al lado de sus dos vecinas, que brillan por la clase
+                `gt`-- y el color lo pone el nivel. */}
+            <div className="gw seg" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, marginTop: 6, whiteSpace: 'nowrap',
+                                         color: humidexDeAyer ? '#fff'
+                                           : data?.humidex != null ? humidexColor(data.humidex) : 'var(--lbl)' }}>
+              {data?.humidex != null ? decNum(data.humidex.toFixed(1))
+                : humidexDeAyer ? decNum((humidexMaxDia as number).toFixed(1)) : '--'}
+            </div>
+            {(data?.humidex != null || humidexDeAyer) && (
+              <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
+                                          color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
+                {humidexDeAyer ? 'MÁXIMO' : humidexLabel(data!.humidex as number).toUpperCase()}
               </div>
-              {/* El NIVEL en palabras, con los tramos de Environment Canada (`humidexLabel`,
-                  compartido con la web). Un "31.4" no dice nada a nadie que no se sepa la
-                  escala; "INCÓMODO" sí. A 12 px, que es lo que deja esta columna de ~100 px
-                  para el caso más largo, "MUY INCÓMODO". */}
-              {(data?.humidex != null || humidexDeAyer) && (
-                <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
-                                            color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
-                  {humidexDeAyer ? 'MÁXIMO'
-                    : humidexLabel(data!.humidex as number).toUpperCase()}
-                </div>
-              )}
+            )}
+            {/* Riel con las bandas a la vista, como UV e IMECA: es lo que convierte el número
+                en "y esto cuánto es". Sigue a la cifra que se está mostrando --si arriba va el
+                máximo del día, el riel marca ese máximo-- o no cuadrarían. */}
+            <div style={{ marginTop: 'auto', width: '100%', paddingTop: 4 }}>
+              <LevelBar value={humidexDeAyer ? humidexMaxDia : data?.humidex} max={60} bands={HUMIDEX_BANDS} />
             </div>
           </div>
         </div>

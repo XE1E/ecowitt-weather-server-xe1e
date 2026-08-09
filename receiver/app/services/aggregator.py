@@ -479,13 +479,21 @@ async def compute_and_store_day(
     return {"date": date_str, **fields}
 
 
-async def backfill(storage, days: int = 90, station: Optional[str] = None) -> int:
+async def backfill(storage, days: int = 90, station: Optional[str] = None,
+                   force: bool = False) -> int:
     """
     Rellena los resúmenes de los últimos `days` días locales que falten.
     Hoy y ayer se recalculan siempre (pueden estar incompletos).
     Devuelve cuántos días se (re)escribieron.
 
     station: None para principal, nombre para secundarias.
+
+    `force` recalcula TAMBIÉN los días que ya tienen resumen. Hace falta cuando se añade un
+    campo nuevo al resumen --pasó con `humidex_max`--: sin él, los días ya escritos se saltan
+    y el campo nuevo sólo aparece de hoy en adelante. El dato crudo tiene retención infinita,
+    así que recalcular un día viejo da el mismo resultado que darlo el día que ocurrió.
+    No se pone en el arranque a propósito: son ~90 consultas a InfluxDB y no hay motivo para
+    pagarlas en cada reinicio.
     """
     today = datetime.now(_TZ)
     existing = {
@@ -496,7 +504,7 @@ async def backfill(storage, days: int = 90, station: Optional[str] = None) -> in
     for i in range(days):
         day = today - timedelta(days=i)
         date_str = day.strftime("%Y-%m-%d")
-        if date_str in existing and i > 1:
+        if not force and date_str in existing and i > 1:
             continue  # ya existe y no es hoy/ayer
         try:
             if await compute_and_store_day(storage, day, station=station):
