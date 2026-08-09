@@ -61,7 +61,7 @@ export function TablesPage() {
                 : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
             }`}
           >
-            Remota (GW1100)
+            Remota
           </button>
         </div>
       </div>
@@ -75,7 +75,7 @@ export function TablesPage() {
         <StationSummaryTable
           data={currentData}
           stats={currentStats}
-          label={selected === 'principal' ? 'Estacion Principal — WS2910' : 'Estacion Remota — GW1100'}
+          label={selected === 'principal' ? 'Estacion Principal — WS2910' : 'Estacion Remota'}
           indoorPrimary={selected === 'remota' && currentData.temperature_outdoor == null}
         />
       ) : (

@@ -426,7 +426,7 @@ interface AlertaViva { key: string; message: string }
  */
 type CeldaAlerta =
   | 'ext' | 'hum' | 'pres' | 'viento' | 'lluvia' | 'rocio' | 'sensacion' | 'solar' | 'uv'
-  | 'interior' | 'remotaExt' | 'remotaInt' | 'remotaP'
+  | 'interior' | 'remotaExtT' | 'remotaExtH' | 'remotaInt' | 'remotaP'
 
 function celdaDeAlerta(key: string): CeldaAlerta | null {
   const i = key.indexOf(':')
@@ -435,9 +435,11 @@ function celdaDeAlerta(key: string): CeldaAlerta | null {
   if (esRemota) {
     if (r.startsWith('pressure_')) return 'remotaP'
     if (r.startsWith('humidity_indoor')) return 'remotaInt'
-    // Lo que evalúa campos `*_outdoor` es del WN32; ver la nota de `remoteOutT`.
-    if (r.startsWith('humidity_') || r.startsWith('temp_')
-      || r.startsWith('dew_') || r.startsWith('feels_')) return 'remotaExt'
+    // Lo que evalúa campos `*_outdoor` es del WN32. Su celda tiene DOS lecturas y cada una
+    // lleva su propio triángulo, así que aquí se separan: la humedad a la derecha y la
+    // familia de la temperatura --con rocío y sensación, que salen de ella-- a la izquierda.
+    if (r.startsWith('humidity_')) return 'remotaExtH'
+    if (r.startsWith('temp_') || r.startsWith('dew_') || r.startsWith('feels_')) return 'remotaExtT'
     return null
   }
   if (r.startsWith('dew_')) return 'rocio'
@@ -468,6 +470,19 @@ const sinEmoji = (s: string) =>
     .replace(/\uFE0F/g, '')                                  // selector de variación
     .replace(/\s+/g, ' ')
     .trim()
+
+/**
+ * El mensaje, recortado para el renglón del reloj.
+ *
+ * Se le quita el UMBRAL entre paréntesis --"Presión alta: 1024.4 hPa (≥ 1008 hPa)"--. No es
+ * capricho de espacio: con él, un mensaje de la estación remota (que además lleva delante su
+ * rótulo entre corchetes) se partía en DOS renglones y su tinta acababa pegada al borde de
+ * arriba, a 0 px, medido en la captura. Y el umbral es justo la parte que no hace falta a la
+ * distancia a la que se mira esta pantalla: lo que se necesita saber es "la presión está
+ * alta y va por 1024.4". El umbral sigue entero en el correo y en la web, que es donde se
+ * consulta y se ajusta.
+ */
+const textoAlerta = (msg: string) => sinEmoji(msg).replace(/\s*\([^)]*\)\s*/g, ' ').trim()
 
 interface DailyRain { date: string; rain: number | null }
 
@@ -1860,13 +1875,36 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mismo criterio con el que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo.
               Además el reparto de color anterior (procedencia en blanco, aparato en
               morado) gastaba el morado de la PRESIÓN en un nombre de equipo. */}
-          <div style={{ color: alertaCol('remotaExt', 'var(--w)'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
+          <div style={{ color: celdasEnAlerta.has('remotaExtT') || celdasEnAlerta.has('remotaExtH') ? 'var(--alarma)' : 'var(--w)',
+                        fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
               mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
               Absoluto por lo mismo que en EXT: si no, baja los valores. */}
           <div style={{ position: 'absolute', top: 6, right: 8 }} title="sensor exterior">
             <HouseGlyph />
           </div>
+          {/* DOS avisos en esta celda, uno por lectura, porque aquí hay dos magnitudes y un
+              solo triángulo no diría cuál de las dos falla --es la única celda de la consola
+              con dos lecturas y alarmas propias de cada una--.
+              A 26 px y no a los 30 del resto: en esta celda los triángulos no van en una
+              banda vacía sino entre cosas (el rótulo arriba, la casita, la pila), y a 30 se
+              notaba apretado.
+              SITIO, medido con el WN32 reportando: la lectura de temperatura ocupa x 66..153 y
+              la de humedad x 192..275; la casita va en y 6..36 (x 294..324) y la pila abajo a
+              la derecha. Así que el de temperatura entra a la izquierda en x 14..40 --52 px
+              libres-- y el de humedad bajo la casita en x 296..322, entre ella y la pila. Los
+              dos a `top: 44`, o sea a la altura del centro de las cifras (que van de y 34 a
+              82), y a la misma altura entre ellos. */}
+          {celdasEnAlerta.has('remotaExtT') && (
+            <div style={{ position: 'absolute', top: 44, left: 14 }}>
+              <WarnGlyph size={26} />
+            </div>
+          )}
+          {celdasEnAlerta.has('remotaExtH') && (
+            <div style={{ position: 'absolute', top: 44, right: 10 }}>
+              <WarnGlyph size={26} />
+            </div>
+          )}
           {/* Señal del WN32 junto a la casita, igual que en EXT. Aquí SÍ va a haber dato:
               el nivel 0-4 lo mide el GW1100 de cada sensor que tiene emparejado. */}
           {remoteOutSig != null && (
@@ -2139,12 +2177,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                Con varias alertas se muestra la PRIMERA y se cuentan las demás: elegir "la
                más grave" no es posible sin inventar un orden --el motor no expone nivel--,
                y el "+N" al menos dice que hay más y que hay que ir a la web. */
+            /* SIN el `marginTop: -2` que lleva el renglón del nombre: ese medio píxel de
+               subida vale para una línea sola, pero el aviso ocupa dos y su tinta acababa a
+               6 px del borde de arriba --medido--, o sea metida en la sangría de 9. */
             <div style={{ color: 'var(--alarma)', fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
-                          lineHeight: 1.08, marginTop: -2, display: 'flex', alignItems: 'flex-start',
+                          lineHeight: 1.08, display: 'flex', alignItems: 'flex-start',
                           justifyContent: 'center', gap: 6, textAlign: 'left' }}>
               <div style={{ marginTop: 1 }}><WarnGlyph /></div>
-              <span>
-                {sinEmoji(alertas[0].message)}
+              {/* UNA sola línea, con puntos suspensivos si aún así no cabe: dos renglones no
+                  entran en esta celda sin comerse el aire de arriba (el reloj y la fecha ya
+                  ocupan ~53 px de los 98 del interior). `minWidth: 0` es lo que permite que un
+                  hijo de flex se recorte en vez de estirar la caja. */}
+              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {textoAlerta(alertas[0].message)}
                 {alertas.length > 1 && ` · +${alertas.length - 1}`}
               </span>
             </div>

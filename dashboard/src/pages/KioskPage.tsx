@@ -286,7 +286,7 @@ export function KioskPage() {
       <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.04] flex flex-col p-5">
         <p className="text-[28px] text-slate-200 font-semibold text-center mb-3">📡 Remota</p>
 
-        <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Exterior · WN32</p>
+        <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Exterior</p>
         <div className="flex items-center justify-around mb-4">
           <div className="text-center">
             <p className="text-[46px] leading-none font-bold" style={{ color: '#fbbf24' }}>
@@ -303,7 +303,7 @@ export function KioskPage() {
         </div>
 
         <div className="border-t border-white/10 pt-3">
-          <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Interior · GW1100</p>
+          <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Interior</p>
           <div className="flex items-center justify-around">
             <div className="text-center">
               <p className="text-[34px] leading-none font-bold" style={{ color: '#f97316' }}>

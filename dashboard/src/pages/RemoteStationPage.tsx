@@ -117,7 +117,7 @@ export function RemoteStationPage() {
   const offline = data?.received_at ? isStale(data.received_at) : false
   const s = stats ?? {}
 
-  // Exterior (WN32) - puede no existir aún
+  // Exterior - puede no existir aún
   const tOut = data?.temperature_outdoor
   const hOut = data?.humidity_outdoor
   const dewOut = dewPointC(tOut, hOut)
@@ -157,7 +157,7 @@ export function RemoteStationPage() {
       <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <div>
           <h2 className="text-xl font-bold">{REMOTE_LABEL}</h2>
-          <p className="text-sm text-slate-400">GW1100 + WN32 (exterior)</p>
+          <p className="text-sm text-slate-400">Sensor exterior + sensor integrado</p>
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-400">
           {data && (
@@ -191,11 +191,11 @@ export function RemoteStationPage() {
         <>
           {/* Condiciones actuales */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            {/* Exterior (WN32) */}
+            {/* Exterior */}
             <div className="card">
               <p className="card-title flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                Exterior (WN32)
+                Exterior
               </p>
               {hasOutdoor ? (
                 <div className="grid grid-cols-3 gap-2">
@@ -218,17 +218,17 @@ export function RemoteStationPage() {
                 </div>
               ) : (
                 <div className="text-center py-6 text-slate-500">
-                  <p className="text-sm">Sensor WN32 no detectado</p>
+                  <p className="text-sm">Sensor exterior no detectado</p>
                   <p className="text-xs mt-1">Se mostrará cuando esté conectado</p>
                 </div>
               )}
             </div>
 
-            {/* Interior (GW1100) */}
+            {/* Interior */}
             <div className="card">
               <p className="card-title flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                Interior (GW1100)
+                Interior
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
@@ -278,7 +278,7 @@ export function RemoteStationPage() {
                 <div>
                   <p className="text-xs text-amber-400 font-medium mb-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    Exterior (WN32)
+                    Exterior
                   </p>
                   <div className="grid gap-2">
                     <StatTile
@@ -302,7 +302,7 @@ export function RemoteStationPage() {
               <div>
                 <p className="text-xs text-sky-400 font-medium mb-2 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-                  Interior (GW1100)
+                  Interior
                 </p>
                 <div className="grid gap-2">
                   <StatTile
@@ -344,7 +344,7 @@ export function RemoteStationPage() {
                     metric === 'outdoor' ? 'bg-amber-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
-                  Exterior (WN32)
+                  Exterior
                 </button>
                 <button
                   onClick={() => setMetric('indoor')}
@@ -352,7 +352,7 @@ export function RemoteStationPage() {
                     metric === 'indoor' ? 'bg-sky-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
-                  Interior (GW1100)
+                  Interior
                 </button>
                 <button
                   onClick={() => setMetric('pressure')}

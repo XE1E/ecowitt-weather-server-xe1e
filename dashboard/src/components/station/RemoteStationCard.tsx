@@ -87,7 +87,7 @@ export function RemoteStationCard() {
       </div>
 
       {/* Exterior - WN32 */}
-      <p className="text-xs text-slate-400 mb-1">Exterior (WN32)</p>
+      <p className="text-xs text-slate-400 mb-1">Exterior</p>
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="thermometer" size={24} />
@@ -113,7 +113,7 @@ export function RemoteStationCard() {
       </div>
 
       {/* Interior - GW1100 */}
-      <p className="text-xs text-slate-400 mb-1">Interior (GW1100)</p>
+      <p className="text-xs text-slate-400 mb-1">Interior</p>
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
           <WeatherIcon name="thermometer" size={24} />

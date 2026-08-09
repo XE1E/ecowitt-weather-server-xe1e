@@ -336,7 +336,7 @@ export function AdminAlertas() {
               Pide `temperature_outdoor`: la regla evalúa ESE campo y ninguno más, así que en
               una estación que solo mide interior no se dispararía nunca. */}
           <div className={tiene('temperature_outdoor') ? undefined : 'opacity-60'}>
-            <p className="text-sm font-medium mb-1">🌡️ Temperatura{marca('temperature_outdoor', 'WN32')}</p>
+            <p className="text-sm font-medium mb-1">🌡️ Temperatura{marca('temperature_outdoor', 'sensor exterior')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('temp_high')} onToggle={() => toggleRule('temp_high')} />
@@ -417,7 +417,7 @@ export function AdminAlertas() {
 
           {/* Humedad EXTERIOR (humidity_outdoor) */}
           <div className={tiene('humidity_outdoor') ? undefined : 'opacity-60'}>
-            <p className="text-sm font-medium mb-1">💧 Humedad exterior{marca('humidity_outdoor', 'WN32')}</p>
+            <p className="text-sm font-medium mb-1">💧 Humedad exterior{marca('humidity_outdoor', 'sensor exterior')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('humidity_high')} onToggle={() => toggleRule('humidity_high')} />
@@ -458,7 +458,7 @@ export function AdminAlertas() {
           {/* Punto de rocío: lo DERIVA el servidor de la temperatura y la humedad
               exteriores, así que solo existe donde hay sensor exterior. */}
           <div className={tiene('dew_point') ? undefined : 'opacity-60'}>
-            <p className="text-sm font-medium mb-1">🥵 Punto de rocío{marca('dew_point', 'WN32')}</p>
+            <p className="text-sm font-medium mb-1">🥵 Punto de rocío{marca('dew_point', 'sensor exterior')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('dew_high')} onToggle={() => toggleRule('dew_high')} />
@@ -478,7 +478,7 @@ export function AdminAlertas() {
           {/* Sensación térmica (heat index con calor, wind chill con frío). La deriva el
               servidor de la temperatura, la humedad y el viento EXTERIORES. */}
           <div className={tiene('feels_like') ? undefined : 'opacity-60'}>
-            <p className="text-sm font-medium mb-1">🌡️ Sensación térmica{marca('feels_like', 'WN32')}</p>
+            <p className="text-sm font-medium mb-1">🌡️ Sensación térmica{marca('feels_like', 'sensor exterior')}</p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <RuleGate on={!isOff('feels_high')} onToggle={() => toggleRule('feels_high')} />
@@ -555,7 +555,7 @@ export function AdminAlertas() {
           ella se calcula sobre la lectura EXTERIOR, así que va marcada igual. */}
       <div className={`bg-slate-800/50 rounded-xl border border-white/10 p-4 ${tiene('temperature_outdoor') ? '' : 'opacity-60'}`}>
         <p className="text-sm font-medium mb-2">
-          🌡️ Tendencia de temperatura{marca('temperature_outdoor', 'WN32')} <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (una caída rápida suele ser la llegada de una tormenta)</span>
+          🌡️ Tendencia de temperatura{marca('temperature_outdoor', 'sensor exterior')} <span className="text-xs text-slate-500 font-normal">— cambio dentro de la ventana (una caída rápida suele ser la llegada de una tormenta)</span>
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
