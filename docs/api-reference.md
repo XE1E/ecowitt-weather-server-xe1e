@@ -230,7 +230,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
-| `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco |
+| `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`) |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
@@ -336,7 +336,7 @@ curl -s https://clima.xe1e.net/api/svitrix | jq '.current | {temp_c, uv, solar_r
 | `feels_like` | °C | Sensación térmica |
 | `heat_index` | °C | Índice de calor (solo en temp > 27°C) |
 | `wind_chill` | °C | Sensación térmica por viento (solo temp < 10°C) |
-| `humidex` | °C | Índice de bochorno (temp + humedad, sobre ~20°C) |
+| `humidex` | índice | Bochorno (temp + humedad, sobre ~20°C). **Sin unidad**: la escala de Environment Canada está definida sobre la Celsius, así que convertirlo a °F daría un número sin significado |
 | `cloud_base` | m | Altura estimada de la base de nubes |
 | `temperature_ch1`…`ch8` | °C | Canales WN31 (1-8) |
 

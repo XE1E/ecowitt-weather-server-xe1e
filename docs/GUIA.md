@@ -192,6 +192,34 @@ parsear → convertir a métrico → calibrar → QC rangos → QC picos → der
    registro por día con mín/máx/prom/total y la hora de cada extremo, que hace
    rápidas las consultas de récords y climatología.
 
+**El humidex tiene estadística desde 2026-08-08**, y se consigue con una línea: entra en
+`stats_fields` (`storage.py`), que es la lista que consulta `get_daily_stats`. De ahí lo
+heredan **todos** sus consumidores a la vez —`/api/stats/daily`, los récords, el kiosco y el
+resumen diario, que aplanan lo que devuelve ese método— y además de forma **retroactiva**,
+porque la consulta lee el dato crudo, cuya retención es infinita.
+
+Del resumen diario se guardan `humidex_max` y `humidex_max_time`, **no la media**: de un día
+se recuerda cuánto llegó a apretar, y la media saldría engañosamente baja porque de noche el
+índice no existe y esas horas no cuentan. En los récords hay `humidex_max` (de siempre, con
+fecha) y, por periodo, `humidex_max` con fecha más `humidex_days` —los días con máximo ≥ 30,
+que es a este índice lo que «días con lluvia» a la lluvia—.
+
+⚠️ **Al añadir un campo nuevo al resumen hay que forzar el recálculo.** El backfill salta los
+días que ya tienen resumen (sólo refresca hoy y ayer), así que el campo nuevo aparecería sólo
+de ese día en adelante. Para eso `aggregator.backfill()` acepta `force=True`:
+
+```bash
+docker compose exec -T receiver python -c "
+import asyncio
+from app.main import storage, settings
+from app.services import aggregator
+asyncio.run(aggregator.backfill(storage, days=90, station=None, force=True))
+"
+```
+
+No se pone en el arranque a propósito: son ~90 consultas a InfluxDB y no hay motivo para
+pagarlas en cada reinicio.
+
 Todos los ajustes (calibración, QC, alertas, tokens, redes) se editan **en
 caliente** desde el panel de administración, sin reiniciar (ver §6).
 
@@ -381,7 +409,7 @@ dato, que es lo que agrupa la pantalla de un vistazo:
 
 | Contorno | Significado | Celdas |
 |----------|-------------|--------|
-| Ámbar | Lectura de la estación principal | EXT, HUMEDAD, PRES, VIENTO, LLUVIA, INTERIOR, ROCÍO/SENSACIÓN/HUMIDEX |
+| Ámbar | Lectura de la estación principal | EXT, HUMEDAD, PRES, VIENTO, LLUVIA, INTERIOR, y las **tres** de ROCÍO · SENSACIÓN · HUMIDEX |
 | Verde | Sensor de canal (WN31) | JARDÍN |
 | Azul | Estación remota | las **tres** celdas rotuladas REMOTA: exterior (WN32), interior (integrado del gateway) y presión |
 | Blanco | Ni lectura cruda ni de la estación | condición + próximas horas, sol/luna, SOLAR, UV, IMECA |
@@ -506,7 +534,29 @@ aparato:
   un ISO sin zona como hora local; sin añadirle la `Z` la antigüedad sale desfasada
   las 6 h del huso y el aviso nunca salta.
 - **HUMIDEX** aparece sólo con 20 °C o más, porque el receiver no lo calcula por
-  debajo (§4). Un `--` ahí de madrugada es correcto.
+  debajo (§4). Sin valor vivo la celda muestra el **máximo del día** en blanco con el
+  rótulo «MÁXIMO», igual que SOLAR y UV de noche; el `--` queda sólo para cuando el día
+  todavía no ha llegado a 20 °C.
+
+**Los tres derivados son TRES CELDAS**, no una con tres columnas, y el motivo es el
+humidex: al ser un ÍNDICE le toca su riel de escala como a UV y al IMECA, y un riel dentro
+de una celda compartida se leería como si midiera las tres cifras. Estructura y cuerpos
+copiados de la fila SOLAR/UV/IMECA —rótulo 16, cifra 38, renglón de apoyo y riel al pie—
+así que las dos filas de tres celdas de la consola pesan igual. Cada celda mide (342−6)/3 =
+112 px, o sea 100 de interior, donde el caso peor («SENSACIÓN», ~70 px) entra.
+
+En el HUMIDEX, el **número toma el color de su tramo** —no el naranja de la temperatura que
+heredaba de la clase `gt`— y debajo va el **nivel en palabras**, con los cortes de
+Environment Canada (`humidexLabel` en `weather.ts`, compartido con la tarjeta de la web para
+que no puedan divergir): hasta 29 confort, 30-39 incómodo, 40-45 muy incómodo, 46+ peligro y
+54+ extremo. Color, palabra y banda encendida del riel salen de los mismos cortes, así que
+no pueden contradecirse. El riel llega a 60 aunque el índice no exista por debajo de 20:
+arranca en 0 como todos los demás, y uno que empezara en 20 mentiría sobre lo que significa
+«vacío».
+
+ROCÍO y SENSACIÓN llevan el **rótulo arriba** —los tres de la fila caen en la misma línea— y
+el **valor centrado** en el hueco que queda debajo (`margin: auto 0`), que es el que el
+humidex gasta en su riel. Centrar la celda entera bajaba también el rótulo.
 
 **Dos tipografías**, las dos de la familia DSEG (OFL) en `dashboard/public/fonts/`:
 **DSEG7** de siete segmentos para las cifras y **DSEG14** de catorce para el rumbo

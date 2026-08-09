@@ -169,6 +169,15 @@ emite nunca, la remota porque aún no tiene sensores emparejados— así que el 
 puesto pero invisible, y en EXT lo seguirá siendo mientras la principal sea el WS2910.
 Falta la UI en el resto: `AdminEstacionConfig` y la tarjeta de sensores.
 
+## 5d. Humidex — ✅ HECHO (2026-08-08)
+Se calculaba y se guardaba desde el principio, pero no tenía estadística, no tenía nivel y
+las dos pantallas que lo mostraban no coincidían en la unidad. Ahora: entra en `stats_fields`
+(y con eso lo heredan récords, kiosco y resumen diario, de forma retroactiva), el resumen
+diario guarda `humidex_max`/`humidex_max_time`, los récords traen el de siempre y por periodo
+con `humidex_days` (≥ 30), tiene celda propia en la consola con riel, color por tramo y nivel
+en palabras, y muestra el máximo del día cuando no hay valor vivo. La web dejó de convertirlo
+a °F. De paso entró "noche más cálida" (máximo de las mínimas) en los récords.
+
 ## 5c. Consola — tres mejoras APLAZADAS por espacio (2026-08-08)
 Salieron de una ronda de propuestas; se hicieron las dos primeras (alertas en la celda y
 próximas horas) y estas tres se dejaron para pensarlas, porque las tres pelean por píxeles

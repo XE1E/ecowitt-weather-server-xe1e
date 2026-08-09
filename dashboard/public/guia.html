@@ -493,7 +493,12 @@
       <h4>Cuando salta una alerta</h4>
       <p>La consola no se limita a mostrar números: si una alerta está activa, <strong>lo dice en la celda del dato que la provocó</strong>. Su dibujo se pone <strong>rojo</strong> —el termómetro, la gota, el barómetro— y aparece un <strong>triángulo con un signo de admiración</strong> al lado de su flecha de tendencia. Así se ve desde el otro lado de la habitación qué es lo que va mal, sin leer una palabra.</p>
       <p>El <strong>texto</strong> de la alerta sale en la celda del reloj, en el sitio del nombre de la estación. Si hay varias, se muestra una y al final aparece «+2» con las que faltan; el detalle completo está en el panel de alertas y en el correo. Si además la estación se queda callada, gana el aviso de «SIN DATOS»: cuando no llega dato nuevo, las alertas se estarían calculando sobre lecturas congeladas.</p>
-      <p>Dos cosas que <strong>no son fallos</strong>. <strong>HUMIDEX</strong> marca <code>--</code> cuando la temperatura no llega a 20 °C, porque es un índice de bochorno y por debajo de eso no significa nada. Y la celda <strong>REMOTA WN32</strong> está en blanco hasta que ese sensor esté instalado; se dejó puesta a propósito, mostrando <code>--</code>, en vez de rellenarla con la lectura de interior.</p>
+      <h4>ROCÍO · SENSACIÓN · HUMIDEX</h4>
+      <p>Tres celdas con lo que <strong>no se mide sino que se deduce</strong> de la temperatura y la humedad. El <strong>rocío</strong> es la temperatura a la que el aire se saturaría —cuanto más se acerca a la temperatura real, más pegajoso está el ambiente— y la <strong>sensación</strong> es lo que la piel percibe, que con calor y humedad es más de lo que marca el termómetro.</p>
+      <p>El <strong>humidex</strong> es el que tiene celda especial, porque es un <strong>índice</strong> y no una temperatura: por eso va <strong>sin unidad</strong>, lleva su <strong>barra de escala</strong> como el UV y el IMECA, y su número <strong>cambia de color</strong> según el nivel. Debajo, la palabra: «CONFORT» hasta 29, «INCÓMODO» de 30 a 39, «MUY INCÓMODO» de 40 a 45, «PELIGRO» a partir de 46 y «EXTREMO» de 54, que son los tramos de Environment Canada, quien define el índice. Color, palabra y barra dicen siempre lo mismo.</p>
+      <p>Por debajo de 20 °C el humidex <strong>no existe</strong> —no significa nada ahí—, así que en su lugar la celda muestra <strong>el máximo que alcanzó ese día</strong>, en blanco y con la palabra «MÁXIMO», igual que hacen SOLAR y UV al caer la noche. En una jornada fresca de principio a fin verás <code>--</code>, y eso también es correcto.</p>
+
+      <p>Una cosa que <strong>no es un fallo</strong>: la celda <strong>REMOTA</strong> de arriba a la derecha está en blanco hasta que su sensor exterior esté instalado; se dejó puesta a propósito, mostrando <code>--</code>, en vez de rellenarla con la lectura de interior.</p>
 
       <h3>Vista clásica</h3>
       <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas. Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>
@@ -584,7 +589,7 @@
       <ul>
         <li><strong>Sensación térmica.</strong> Combina el <em>heat index</em> cuando hace calor (la humedad impide sudar, así que se siente más) y el <em>wind chill</em> cuando hace frío (el viento arranca calor del cuerpo, así que se siente menos).</li>
         <li><strong>Bulbo húmedo.</strong> La temperatura mínima alcanzable evaporando agua. Es el límite físico del enfriamiento por sudor: si el bulbo húmedo se acerca a la temperatura del cuerpo, sudar deja de servir. Es el indicador más serio de estrés por calor.</li>
-        <li><strong>Humidex.</strong> El índice canadiense de bochorno, útil por encima de ~20 °C.</li>
+        <li><strong>Humidex.</strong> El índice canadiense de bochorno, útil por encima de ~20 °C. No es una temperatura aunque su escala se le parezca, así que se muestra <strong>sin unidad</strong> y con su nivel al lado: confort, incómodo, muy incómodo, peligro o extremo. Tiene además su propia estadística —máximo del día, del mes, del año y de siempre, y los <em>días bochornosos</em> de cada periodo, los que pasaron de 30—.</li>
         <li><strong>Base de nubes.</strong> Estimación de a qué altura se forman las nubes, a partir de la separación entre temperatura y punto de rocío.</li>
       </ul>
 
