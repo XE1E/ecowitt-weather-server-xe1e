@@ -1860,10 +1860,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             mismo `data-nav`, como ya hacen la condición y la luna: las tres van al detalle de
             temperatura, que es de donde salen. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3, minWidth: 0, minHeight: 0 }}>
-          {/* CENTRADA en los dos ejes, al contrario que la de HUMIDEX: ésta no lleva riel,
-              así que colgada del borde de arriba dejaba todo el hueco de abajo vacío. */}
+          {/* El RÓTULO cuelga del borde de arriba, al mismo nivel que el de HUMIDEX --los tres
+              rótulos de la fila tienen que caer en la misma línea-- y el VALOR se centra en el
+              hueco que queda debajo, con `margin: auto 0`. Centrar la celda entera bajaba
+              también el rótulo, que era el efecto que no se quería. */}
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
-            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             {/* Mismos cuerpos que la fila de SOLAR/UV/IMECA --rótulo 16, cifra 38-- para que
                 las dos filas de tres celdas pesen igual. Medido antes de subirlos: a 34 la
                 cifra más ancha de estas tres ocupaba 79 px de los ~100 de interior, así que a
@@ -1873,16 +1875,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 se centra la LÍNEA completa (cifra + unidad). Encogida, la tinta acababa corrida
                 a la derecha --28 px de margen a la izquierda contra 9 a la derecha, medido en la
                 captura-- porque la unidad y el decimal no pesan lo mismo a cada lado. */}
-            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 6,
+            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
                                              whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
               {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
           </div>
-          {/* CENTRADA en los dos ejes, como ROCÍO. */}
+          {/* Rótulo arriba y valor centrado en lo que queda, como ROCÍO. */}
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
-            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SENSACIÓN</div>
-            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, marginTop: 6,
+            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
                                              whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
               {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
             </div>
