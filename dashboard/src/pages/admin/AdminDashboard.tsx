@@ -122,9 +122,10 @@ function StationCard({ station }: { station: Station }) {
   const wn31 = sensors.filter(s => s.type === 'WN31')
   const console = sensors.find(s => s.type === 'console')
   const lowBatt = sensors.filter(s => s.active && !s.battery_ok).length
+  const externalSensors = sensors.filter(s => s.type && s.type !== 'console' && s.type !== 'WS69' && s.type !== 'WN31')
   const hw = isPrincipal
     ? [ws69.length > 0 && 'WS69', wn31.length > 0 && `WN31(${wn31.length})`].filter(Boolean).join('+') || station.model
-    : station.model || 'GW1100'
+    : [station.model || 'GW1100', ...externalSensors.map(s => s.type)].join(' + ')
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
