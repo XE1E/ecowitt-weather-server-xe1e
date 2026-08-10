@@ -59,6 +59,17 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
 - **WN32 operativo desde 2026-08-09.** Verificado: el servidor lo detecta como sensor
   exterior de la estación remota GW1100, reportando temperatura, humedad, batería OK.
   Datos llegando cada ~1 min.
+- **Bug de firmware GW1100: presión relativa cae ~26 hPa al enlazar WN32.**
+  Detectado 2026-08-09. Al conectar el WN32 al GW1100, la presión **absoluta** no
+  cambia (~781 hPa), pero la **relativa** cae de ~1026 a ~999 hPa — como si el
+  firmware reseteara la altitud a 0m. Verificado en el historial:
+  - 19:16 UTC sin WN32: P.Abs=781.1, P.Rel=1025.8 (altitud 2240m)
+  - 19:18 UTC con WN32: P.Abs=781.0, P.Rel=999.2 (¡bug!)
+  
+  **Workaround:** subir la altitud configurada en el GW1100 de 2240m a **2430m**
+  (+190m) para compensar los ~26 hPa perdidos. No es solución real — es un bug del
+  firmware Ecowitt, no del servidor. El servidor solo recibe `baromrelin`/`baromabsin`
+  y los guarda tal cual.
 - [x] Presión: la lógica "presión en fila Exterior cuando no hay sensor interior"
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
