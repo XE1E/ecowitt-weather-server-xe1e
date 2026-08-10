@@ -237,6 +237,8 @@ async def get_consensus_forecast(
         current_data,
         result.get("pressure"),
         result["hourly"][:1] if result["hourly"] else None,
+        lat=lat,
+        lon=lon,
     )
 
     # 6. Generar alertas de corto plazo
@@ -340,18 +342,50 @@ def _merge_daily(
     return days
 
 
+def _solar_elevation(lat: float, lon: float) -> float:
+    """
+    Elevación del sol en grados (aproximación sin ecuación del tiempo).
+    Suficiente para clasificar nubosidad por índice de claridad.
+    """
+    import math
+    now = datetime.now(timezone.utc)
+    doy = now.timetuple().tm_yday
+    decl = 23.45 * math.sin(math.radians(360 * (284 + doy) / 365))
+    solar_hour = now.hour + now.minute / 60 + lon / 15
+    H = 15 * (solar_hour - 12)
+    s = (math.sin(math.radians(lat)) * math.sin(math.radians(decl)) +
+         math.cos(math.radians(lat)) * math.cos(math.radians(decl)) * math.cos(math.radians(H)))
+    return math.degrees(math.asin(max(-1, min(1, s))))
+
+
+def _clearness_index(solar_wm2: float, elevation_deg: float) -> Optional[float]:
+    """
+    Índice de claridad: radiación medida ÷ la que habría con cielo despejado.
+    Permite juzgar nubosidad sin depender de la hora del día.
+    Devuelve None si el sol está muy bajo (< 5°).
+    """
+    import math
+    if elevation_deg < 5:
+        return None
+    clear_sky = 1361 * math.sin(math.radians(elevation_deg))
+    return solar_wm2 / clear_sky if clear_sky > 0 else None
+
+
 def _determine_current(
     station: Optional[Dict[str, Any]],
     pressure: Optional[Dict[str, Any]],
     forecast_now: Optional[List[Dict[str, Any]]],
+    lat: float = 19.38,
+    lon: float = -99.17,
 ) -> Dict[str, Any]:
     """
     Determina la condición actual combinando fuentes.
 
     Prioridad:
     1. Si la estación detecta lluvia -> "Lloviendo" (dato real)
-    2. Si la presión indica tormenta inminente -> "Tormenta cercana"
-    3. Si no, usar el pronóstico de la hora actual
+    2. Radiación solar de día -> nubosidad real (índice de claridad)
+    3. Si la presión indica tormenta inminente -> "Tormenta cercana"
+    4. Si no, usar el pronóstico de la hora actual
     """
     result: Dict[str, Any] = {
         "code": 0,
@@ -378,7 +412,28 @@ def _determine_current(
                 result["label"] = "Llovizna"
             return result
 
-    # 2. ¿La presión indica tormenta inminente?
+    # 2. De día: usar radiación solar para determinar nubosidad REAL
+    if station:
+        solar = station.get("solar_radiation")
+        if solar is not None:
+            elev = _solar_elevation(lat, lon)
+            kt = _clearness_index(solar, elev)
+            if kt is not None:
+                # Índice de claridad disponible: clasificar nubosidad
+                if kt > 0.65:
+                    result["code"] = 0
+                    result["label"] = "Despejado"
+                elif kt > 0.35:
+                    result["code"] = 2
+                    result["label"] = "Parcialmente nublado"
+                else:
+                    result["code"] = 3
+                    result["label"] = "Nublado"
+                result["source"] = "station"
+                result["clearness_index"] = round(kt, 2)
+                # No retornar: la presión puede añadir alerta de tormenta
+
+    # 3. ¿La presión indica tormenta inminente?
     if pressure and pressure.get("storm_likely"):
         result["storm_approaching"] = True
         hours = pressure.get("hours_to_rain", 3)
