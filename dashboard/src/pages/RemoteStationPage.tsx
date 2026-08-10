@@ -197,12 +197,17 @@ export function RemoteStationPage() {
                 Exterior (WN32)
               </p>
               {hasOutdoor ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                     <WeatherIcon name="thermometer" size={28} />
                     <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Temp</p>
                     {tempOutTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempOutTrend)} unit={u.tempU} threshold={0.5} />}
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+                    <WeatherIcon name="thermometer" size={28} />
+                    <p className="text-xl font-bold text-orange-300 mt-1">{data?.feels_like != null ? `${u.temp(data.feels_like)}${u.tempU}` : '--'}</p>
+                    <p className="text-xs text-slate-400">Sensación</p>
                   </div>
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                     <WeatherIcon name="humidity" size={28} />
