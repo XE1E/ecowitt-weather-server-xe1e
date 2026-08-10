@@ -938,7 +938,7 @@ interface ImecaData {
 }
 
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
-  const { data, history, stats } = useStationData()
+  const { data, history, stats, consensus } = useStationData()
   const u = useUnits()
   // Contenedor raíz: de él cuelgan las celdas con `data-nav` que se miden para el
   // mapa de zonas del display.
@@ -1058,23 +1058,46 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     return () => clearInterval(i)
   }, [])
 
-  // Código WMO de la hora actual del pronóstico, para que deriveCondition lo use
-  // de noche en lugar de la heurística de humedad (que es muy imprecisa).
-  const currentForecastCode = (() => {
-    if (!horas.length) return undefined
-    const nowMs = now.getTime()
-    // Buscar la hora del pronóstico más cercana a ahora
-    let best = horas[0]
-    let bestDiff = Infinity
-    for (const h of horas) {
-      const diff = Math.abs(new Date(h.time).getTime() - nowMs)
-      if (diff < bestDiff) { bestDiff = diff; best = h }
+  // Condición actual: preferir el consenso si está disponible (combina estación +
+  // presión + Open-Meteo + WeatherAPI). Si no, fallback a deriveCondition local.
+  const cond = (() => {
+    // Si el consenso tiene condición actual, usarla
+    if (consensus?.current) {
+      const c = consensus.current
+      const isDay = (data?.solar_radiation ?? 0) > 5 || (now.getHours() >= 7 && now.getHours() < 19)
+      const suffix = isDay ? 'day' : 'night'
+      // Mapear código WMO a icono (simplificado)
+      const iconMap: Record<number, string> = {
+        0: `clear-${suffix}`, 1: `clear-${suffix}`, 2: `partly-cloudy-${suffix}`,
+        3: `overcast-${suffix}`, 45: `fog-${suffix}`, 48: `fog-${suffix}`,
+        51: 'drizzle', 53: 'drizzle', 55: 'drizzle',
+        61: `overcast-${suffix}-rain`, 63: `overcast-${suffix}-rain`, 65: `overcast-${suffix}-rain`,
+        80: `partly-cloudy-${suffix}-rain`, 81: `partly-cloudy-${suffix}-rain`, 82: `overcast-${suffix}-rain`,
+        95: 'thunderstorms-rain', 96: 'thunderstorms-rain', 99: 'thunderstorms-rain',
+      }
+      return {
+        icon: iconMap[c.code] ?? `partly-cloudy-${suffix}`,
+        label: c.label,
+        stormApproaching: c.storm_approaching,
+        source: c.source,
+      }
     }
-    // Solo usar si está dentro de 90 minutos (para no usar un pronóstico viejo)
-    return bestDiff < 90 * 60 * 1000 ? best.code : undefined
-  })()
 
-  const cond = data ? deriveCondition(data, currentForecastCode) : { icon: '', label: '' }
+    // Fallback: código WMO de la hora actual del pronóstico para deriveCondition
+    const currentForecastCode = (() => {
+      if (!horas.length) return undefined
+      const nowMs = now.getTime()
+      let best = horas[0]
+      let bestDiff = Infinity
+      for (const h of horas) {
+        const diff = Math.abs(new Date(h.time).getTime() - nowMs)
+        if (diff < bestDiff) { bestDiff = diff; best = h }
+      }
+      return bestDiff < 90 * 60 * 1000 ? best.code : undefined
+    })()
+
+    return data ? { ...deriveCondition(data, currentForecastCode), stormApproaching: false, source: 'local' } : { icon: '', label: '', stormApproaching: false, source: 'none' }
+  })()
   const dir = data?.wind_direction
 
   // ¿Sigue llegando el dato, o la consola está enseñando números congelados? Hasta

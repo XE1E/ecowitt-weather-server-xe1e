@@ -15,6 +15,46 @@ export interface LocalForecast {
   forecast?: string
 }
 
+export interface ConsensusForecast {
+  current?: {
+    code: number
+    label: string
+    source: string
+    rain_now: boolean
+    storm_approaching: boolean
+  }
+  pressure?: {
+    trend: string
+    delta_3h: number | null
+    delta_1h: number | null
+    storm_likely: boolean
+    hours_to_rain: number | null
+    confidence: string
+    message: string
+  }
+  hourly: Array<{
+    time: string
+    code: number
+    temperature: number | null
+    precip_prob: number
+    consensus: string
+  }>
+  daily: Array<{
+    date: string
+    code: number
+    temp_max: number | null
+    temp_min: number | null
+    precip_prob: number
+  }>
+  alerts: Array<{
+    type: string
+    severity: string
+    title: string
+    message: string
+  }>
+  sources: string[]
+}
+
 interface StationData {
   data: WeatherData | null
   stats: DailyStats['stats'] | null
@@ -24,6 +64,7 @@ interface StationData {
   forecast: ForecastResult | null
   compare: Comparison | null
   localForecast: LocalForecast | null
+  consensus: ConsensusForecast | null
   loading: boolean
 }
 
@@ -39,6 +80,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
   const [compare, setCompare] = useState<Comparison | null>(null)
   const [localForecast, setLocalForecast] = useState<LocalForecast | null>(null)
+  const [consensus, setConsensus] = useState<ConsensusForecast | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -74,8 +116,20 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(i)
   }, [])
 
+  // Pronóstico de consenso (combina estación + presión + Open-Meteo + WeatherAPI)
+  useEffect(() => {
+    const load = () =>
+      fetch('/api/forecast/consensus')
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setConsensus)
+        .catch(() => {})
+    load()
+    const i = setInterval(load, 5 * 60000) // Cada 5 min
+    return () => clearInterval(i)
+  }, [])
+
   return (
-    <Ctx.Provider value={{ data, stats, history, forecast, compare, localForecast, loading }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ data, stats, history, forecast, compare, localForecast, consensus, loading }}>{children}</Ctx.Provider>
   )
 }
 
