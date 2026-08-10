@@ -287,7 +287,7 @@ export function AdminIntegraciones() {
           <span className="text-xs text-slate-400 w-14">API Key</span>
           <TextField value={settings.weatherapi_key} onChange={(v) => update('weatherapi_key', v)} placeholder="API Key" type="password" masked={settings.weatherapi_key_masked} className="flex-1 max-w-md" />
         </div>
-        <p className="text-xs text-slate-500 mt-2">Mejora el pronóstico combinándolo con Open-Meteo. Plan gratuito: 1M llamadas/mes.</p>
+        <p className="text-xs text-slate-500 mt-2">Opcional: mejora la precisión del pronóstico combinándolo con Open-Meteo. Sin key, el sistema usa solo Open-Meteo + presión local. Plan gratuito: 1M llamadas/mes.</p>
       </div>
 
       {/* WAQI */}
