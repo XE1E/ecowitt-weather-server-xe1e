@@ -124,6 +124,10 @@ class Settings(BaseSettings):
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None
 
+    # WeatherAPI.com - API key gratuita (hasta 1M llamadas/mes)
+    # Complementa Open-Meteo con datos más precisos para ciudades grandes
+    weatherapi_key: Optional[str] = None
+
     # Control de calidad (QC): descarta lecturas fuera de rango antes de guardar
     qc_enabled: bool = True
     # Filtro de picos: descarta saltos imposibles entre lecturas consecutivas

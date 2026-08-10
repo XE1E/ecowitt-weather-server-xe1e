@@ -36,6 +36,8 @@ from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
 from .services import openmeteo
+from .services import weatherapi
+from .services import forecast_consensus
 from .services.almanac import get_almanac
 from .services import satellite
 from .services.windrose import compute_wind_rose
@@ -2017,6 +2019,48 @@ async def get_local_forecast():
     except Exception as e:
         logger.error(f"Error building local forecast: {e}")
         return {"available": False, "reason": "error"}
+
+
+@app.get("/api/forecast/consensus")
+async def get_consensus_forecast_endpoint():
+    """
+    Pronóstico combinado: estación local + presión + Open-Meteo + WeatherAPI.
+
+    Combina múltiples fuentes para mayor precisión:
+    - Prioriza datos reales de la estación si está lloviendo
+    - Usa tendencia de presión para alertas de corto plazo (0-3h)
+    - Compara Open-Meteo vs WeatherAPI y muestra el más conservador
+    """
+    try:
+        lat = getattr(settings, "cwop_latitude", 19.380359)
+        lon = getattr(settings, "cwop_longitude", -99.174564)
+
+        # Datos actuales de la estación
+        current_data = latest_by_station.get(None)
+
+        # Histórico de presión (últimas 4 horas)
+        pressure_history = []
+        try:
+            rows = await storage.query_history(start="-4h", fields=["pressure_relative"])
+            for r in rows:
+                ts = r.get("_time")
+                p = r.get("pressure_relative")
+                if ts and p:
+                    from datetime import datetime, timezone
+                    if isinstance(ts, str):
+                        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    pressure_history.append((ts, p))
+        except Exception as e:
+            logger.warning(f"No se pudo obtener histórico de presión: {e}")
+
+        return await forecast_consensus.get_consensus_forecast(
+            lat, lon,
+            current_data=current_data,
+            pressure_history=pressure_history,
+        )
+    except Exception as e:
+        logger.error(f"Error en pronóstico de consenso: {e}")
+        raise HTTPException(status_code=500, detail="Error generando pronóstico combinado")
 
 
 @app.get("/api/alerts")
