@@ -1,9 +1,9 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-08.
+> Última actualización: 2026-08-09.
 
-## 1. Cuando llegue el WN32 (~2026-08-08) — depende de hardware
+## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
 GW1100 = interior** (se **apaga la trampa** `treat_indoor_as_outdoor`).
 Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
@@ -15,7 +15,7 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       alarma **llevaba tiempo sin vigilar nada**, no era una tarea futura — al
       retirar la trampa, `humidity_indoor` no lo evaluaba ninguna regla.
       De paso, `temperature_indoor` entró en la vigilancia de "sensor perdido".
-- [ ] **Barrido interior/exterior en TODO el servidor.** Al quitar la trampa dejan de
+- [x] **Barrido interior/exterior en TODO el servidor.** Al quitar la trampa dejan de
       coincidir "lo que el GW1100 manda" con "lo que el servidor rotula", así que hay
       que revisar a detalle, extremo a extremo, que las lecturas del **WN32 salgan
       como exteriores** y las del **integrado del GW1100 como interiores**. No basta
@@ -54,8 +54,11 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
         (`publish_all` solo se invoca cuando `station is None`). `/api/display.jpg`
         renderiza páginas ya revisadas. Verificado, no supuesto.
       - Histórico ya guardado: las filas del 2026-07-24 en adelante quedaron con la
-        semántica de la trampa. Decidir si se reetiquetan o se deja la discontinuidad
-        documentada.
+        semántica de la trampa. **Se deja la discontinuidad documentada** — no se
+        reetiquetan.
+- **WN32 operativo desde 2026-08-09.** Verificado: el servidor lo detecta como sensor
+  exterior de la estación remota GW1100, reportando temperatura, humedad, batería OK.
+  Datos llegando cada ~1 min.
 - [x] Presión: la lógica "presión en fila Exterior cuando no hay sensor interior"
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
