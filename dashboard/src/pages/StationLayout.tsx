@@ -166,6 +166,11 @@ export function StationLayout() {
                     GitHub — ecowitt-weather-server-xe1e
                   </a>
                 </p>
+                <p>
+                  <NavLink to="/pro/disclaimer" className="text-blue-400 hover:text-blue-300">
+                    Aviso Legal / Disclaimer
+                  </NavLink>
+                </p>
                 <p>Stack propio (FastAPI + InfluxDB + React)</p>
               </div>
             </div>
