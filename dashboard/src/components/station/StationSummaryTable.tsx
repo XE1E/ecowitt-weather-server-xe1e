@@ -43,8 +43,8 @@ interface Props {
   data: WeatherData
   stats: DailyStats['stats'] | null
   label?: string
-  /** Si es true, muestra interior como sensor principal (para estaciones sin exterior) */
-  indoorPrimary?: boolean
+  /** Si es true, muestra solo datos de estación remota (T/H exterior+interior, presión) */
+  isRemote?: boolean
 }
 
 type TrendDir = 'up' | 'down' | 'stable'
@@ -119,21 +119,21 @@ const COLORS = {
   solar: '#fcd34d',
 }
 
-export function StationSummaryTable({ data, stats, label, indoorPrimary = false }: Props) {
+export function StationSummaryTable({ data, stats, label, isRemote = false }: Props) {
   const u = useUnits()
   const s = stats
 
-  // Para remota (indoorPrimary): T/H exterior es del WN32, interior del GW1100
-  // Para principal: T/H exterior es del WS69, interior de la consola
+  // Para remota (isRemote): T/H exterior (WN32), T/H interior (GW1100), presión
+  // Para principal: todos los sensores (WS69, consola, WN31, viento, lluvia, etc)
 
   const rows: RowData[] = useMemo(() => {
     const list: RowData[] = []
 
-    if (indoorPrimary) {
-      // REMOTA: WN32 exterior (cuando esté), GW1100 interior, presión
+    if (isRemote) {
+      // REMOTA: solo WN32 exterior, GW1100 interior, presión (sin viento, lluvia, UV, jardín)
       list.push(
         {
-          label: 'Temperatura',
+          label: 'Temperatura Exterior (WN32)',
           kind: 'temp',
           current: data.temperature_outdoor,
           min: s?.temperature_outdoor?.min,
@@ -145,7 +145,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           color: COLORS.temp,
         },
         {
-          label: 'Humedad',
+          label: 'Humedad Exterior (WN32)',
           kind: 'hum',
           current: data.humidity_outdoor,
           min: s?.humidity_outdoor?.min,
@@ -169,19 +169,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           color: COLORS.temp,
         },
         {
-          label: 'Presión atmosférica',
-          kind: 'press',
-          current: data.pressure_relative,
-          min: s?.pressure_relative?.min,
-          minTime: s?.pressure_relative?.min_time,
-          max: s?.pressure_relative?.max,
-          maxTime: s?.pressure_relative?.max_time,
-          avg: s?.pressure_relative?.avg,
-          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
-          color: COLORS.press,
-        },
-        {
-          label: 'Temperatura Interior',
+          label: 'Temperatura Interior (GW1100)',
           kind: 'temp',
           current: data.temperature_indoor,
           min: s?.temperature_indoor?.min,
@@ -193,7 +181,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           color: COLORS.temp,
         },
         {
-          label: 'Humedad Interior',
+          label: 'Humedad Interior (GW1100)',
           kind: 'hum',
           current: data.humidity_indoor,
           min: s?.humidity_indoor?.min,
@@ -203,6 +191,18 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
           avg: s?.humidity_indoor?.avg,
           trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
           color: COLORS.hum,
+        },
+        {
+          label: 'Presión atmosférica',
+          kind: 'press',
+          current: data.pressure_relative,
+          min: s?.pressure_relative?.min,
+          minTime: s?.pressure_relative?.min_time,
+          max: s?.pressure_relative?.max,
+          maxTime: s?.pressure_relative?.max_time,
+          avg: s?.pressure_relative?.avg,
+          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+          color: COLORS.press,
         }
       )
     } else {
@@ -392,7 +392,7 @@ export function StationSummaryTable({ data, stats, label, indoorPrimary = false 
     // u.system entra en las deps porque `extra` (la precipitación) ya formatea
     // con las unidades activas: sin ella no se refrescaría al cambiar de sistema.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, s, indoorPrimary, u.system])
+  }, [data, s, isRemote, u.system])
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-white/10 overflow-hidden">
