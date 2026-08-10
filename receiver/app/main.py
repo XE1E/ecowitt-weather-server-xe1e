@@ -2041,12 +2041,11 @@ async def get_consensus_forecast_endpoint():
         # Histórico de presión (últimas 4 horas)
         pressure_history = []
         try:
-            rows = await storage.query_history(start="-4h", fields=["pressure_relative"])
+            rows = await storage.query(start="-4h", fields=["pressure_relative"])
             for r in rows:
                 ts = r.get("_time")
                 p = r.get("pressure_relative")
                 if ts and p:
-                    from datetime import datetime, timezone
                     if isinstance(ts, str):
                         ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
                     pressure_history.append((ts, p))
