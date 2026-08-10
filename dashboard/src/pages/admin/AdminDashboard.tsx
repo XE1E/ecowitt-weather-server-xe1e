@@ -28,6 +28,7 @@ interface PublicationStatus {
   pws: boolean
   owm: boolean
   cwop: boolean
+  awekas: boolean
 }
 
 interface AdminStatus {
@@ -148,6 +149,7 @@ function StationCard({ station }: { station: Station }) {
       <p className="text-xs text-slate-500 mb-2">{hw}</p>
       <div className="space-y-1">
         {console && <SensorRow sensor={console} online={station.status === 'online'} />}
+        {externalSensors.map(s => <SensorRow key={s.id} sensor={s} online={station.status === 'online'} />)}
         {ws69.map(s => <SensorRow key={s.id} sensor={s} online={station.status === 'online'} />)}
         {wn31.map(s => <SensorRow key={s.id} sensor={s} online={station.status === 'online'} />)}
         {sensors.length === 0 && <p className="text-slate-500 text-xs italic">Sin sensores</p>}
@@ -297,7 +299,7 @@ export function AdminDashboard() {
 
   const alerts = status?.active_alerts || []
   const history = status?.alert_history || []
-  const pub = status?.publication || { wu: false, windy: false, pws: false, owm: false, cwop: false }
+  const pub = status?.publication || { wu: false, windy: false, pws: false, owm: false, cwop: false, awekas: false }
 
   return (
     <div className="space-y-4">
@@ -490,6 +492,9 @@ export function AdminDashboard() {
             </span>
             <span className={`text-xs ${pub.cwop ? 'text-emerald-400' : 'text-slate-500'}`}>
               {pub.cwop ? '●' : '○'} CWOP
+            </span>
+            <span className={`text-xs ${pub.awekas ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.awekas ? '●' : '○'} AWEKAS
             </span>
           </div>
         </div>
