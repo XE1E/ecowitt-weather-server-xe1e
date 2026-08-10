@@ -1058,7 +1058,23 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     return () => clearInterval(i)
   }, [])
 
-  const cond = data ? deriveCondition(data) : { icon: '', label: '' }
+  // Código WMO de la hora actual del pronóstico, para que deriveCondition lo use
+  // de noche en lugar de la heurística de humedad (que es muy imprecisa).
+  const currentForecastCode = (() => {
+    if (!horas.length) return undefined
+    const nowMs = now.getTime()
+    // Buscar la hora del pronóstico más cercana a ahora
+    let best = horas[0]
+    let bestDiff = Infinity
+    for (const h of horas) {
+      const diff = Math.abs(new Date(h.time).getTime() - nowMs)
+      if (diff < bestDiff) { bestDiff = diff; best = h }
+    }
+    // Solo usar si está dentro de 90 minutos (para no usar un pronóstico viejo)
+    return bestDiff < 90 * 60 * 1000 ? best.code : undefined
+  })()
+
+  const cond = data ? deriveCondition(data, currentForecastCode) : { icon: '', label: '' }
   const dir = data?.wind_direction
 
   // ¿Sigue llegando el dato, o la consola está enseñando números congelados? Hasta

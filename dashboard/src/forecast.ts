@@ -29,6 +29,7 @@ export interface ForecastHour {
   temp: number
   precipProb: number
   icon: string
+  code: number       // WMO code, para pasar a deriveCondition de noche
 }
 
 export interface ForecastResult {
@@ -316,6 +317,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
       temp: h.temperature_2m[i],
       precipProb: h.precipitation_probability?.[i] ?? 0,
       icon: wmoToIcon(h.weather_code[i], isDayAt(h.time[i])).icon,
+      code: h.weather_code[i],
     })
   }
 

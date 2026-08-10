@@ -43,11 +43,35 @@ export interface Condition {
 }
 
 /**
+ * Convierte un código WMO a Condition para usar con el pronóstico.
+ * `isDay` elige la variante diurna o nocturna del icono.
+ */
+export function wmoToCondition(code: number, isDay: boolean): Condition {
+  const s = isDay ? 'day' : 'night'
+  if (code === 0) return { icon: `clear-${s}`, label: isDay ? 'Despejado' : 'Noche despejada', fx: 'clear', intensity: 0.7 }
+  if (code === 1) return { icon: `clear-${s}`, label: isDay ? 'Mayormente despejado' : 'Noche despejada', fx: 'clear', intensity: 0.6 }
+  if (code === 2) return { icon: `partly-cloudy-${s}`, label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+  if (code === 3) return { icon: `overcast-${s}`, label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
+  if (code === 45 || code === 48) return { icon: `fog-${s}`, label: 'Niebla', fx: 'fog', intensity: 0.7 }
+  if (code >= 51 && code <= 57) return { icon: `partly-cloudy-${s}-drizzle`, label: 'Llovizna', fx: 'rain', intensity: 0.35 }
+  if (code >= 61 && code <= 65) return { icon: `overcast-${s}-rain`, label: code >= 65 ? 'Lluvia fuerte' : 'Lluvia', fx: 'rain', intensity: code >= 65 ? 1 : 0.7 }
+  if (code === 66 || code === 67) return { icon: `overcast-${s}-sleet`, label: 'Lluvia helada', fx: 'rain', intensity: 0.6 }
+  if (code >= 71 && code <= 77) return { icon: `overcast-${s}-snow`, label: 'Nieve', fx: 'snow', intensity: 0.7 }
+  if (code >= 80 && code <= 82) return { icon: `partly-cloudy-${s}-rain`, label: 'Chubascos', fx: 'rain', intensity: code >= 82 ? 1 : 0.7 }
+  if (code === 85 || code === 86) return { icon: `overcast-${s}-snow`, label: 'Chubascos de nieve', fx: 'snow', intensity: 0.7 }
+  if (code >= 95) return { icon: `thunderstorms-${s}-rain`, label: 'Tormenta', fx: 'storm', intensity: 1 }
+  return { icon: `partly-cloudy-${s}`, label: 'Variable', fx: 'partly-cloudy', intensity: 0.5 }
+}
+
+/**
  * Ecowitt stations don't send a "weather condition" code, so we derive one from
  * the available measurements (rain rate, solar radiation, UV, temperature,
  * humidity, wind) plus day/night. Good enough for the hero icon and FX theme.
+ *
+ * De noche, si se pasa `forecastCode` (código WMO de Open-Meteo), se usa en lugar
+ * de la heurística de humedad, que es muy imprecisa para juzgar nubosidad sin sol.
  */
-export function deriveCondition(d: WeatherData): Condition {
+export function deriveCondition(d: WeatherData, forecastCode?: number): Condition {
   const hour = new Date().getHours()
   const solar = d.solar_radiation ?? 0
   const isDay = solar > 5 || (hour >= 7 && hour < 19)
@@ -59,7 +83,7 @@ export function deriveCondition(d: WeatherData): Condition {
   const wind = d.wind_speed ?? 0
   const lightning = d.rain_event // not real lightning; placeholder, see below
 
-  // Precipitation
+  // Precipitation: los datos de la estación tienen prioridad sobre el pronóstico
   if (rain > 0) {
     const snowing = temp <= 1
     const heavy = rain >= 7.6
@@ -98,7 +122,13 @@ export function deriveCondition(d: WeatherData): Condition {
     if (kt > 0.35) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
     return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
   }
-  // Night: stars effect for clear night
+
+  // Noche: usar el pronóstico de Open-Meteo si está disponible
+  if (forecastCode != null) {
+    return wmoToCondition(forecastCode, false)
+  }
+
+  // Fallback nocturno: heurística de humedad (menos precisa)
   if (humidity < 70) return { icon: 'clear-night', label: 'Noche despejada', fx: 'clear', intensity: 0.5 }
   return { icon: 'partly-cloudy-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.4 }
 }
