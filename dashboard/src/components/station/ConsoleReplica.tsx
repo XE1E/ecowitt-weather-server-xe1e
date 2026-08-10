@@ -1283,25 +1283,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
    * pedir un dato nuevo al servidor: sale del histórico de 24 h que la consola ya tiene
    * cargado.
    *
-   * Es una media VECTORIAL y pesada por la velocidad, no el promedio de los grados: los
-   * grados son circulares --el promedio de 350° y 10° sería 180°, justo el contrario-- y una
-   * hora de viento fuerte dice más de la procedencia del aire que seis de brisa. Las calmas
-   * se descartan (bajo 0.5 km/h la veleta marca cualquier cosa) y se exige un mínimo de
-   * muestras para no dibujar una marca sacada de cuatro lecturas.
+   * Usa el mismo método que la Rosa de Vientos del backend: divide en 16 sectores de 22.5°
+   * y devuelve el centro del sector con más lecturas (ignorando calmas bajo 0.5 km/h).
    */
   const rumboDominante = (() => {
-    let sx = 0, sy = 0, n = 0
+    const sectors = Array(16).fill(0)
+    let total = 0
     for (const r of history) {
       const d = typeof r.wind_direction === 'number' ? r.wind_direction : null
       const v = typeof r.wind_speed === 'number' ? r.wind_speed : 0
       if (d == null || v <= 0.5) continue
-      const t = (d * Math.PI) / 180
-      sx += v * Math.sin(t)
-      sy += v * Math.cos(t)
-      n++
+      const idx = Math.round(((d % 360 + 360) % 360) / 22.5) % 16
+      sectors[idx]++
+      total++
     }
-    if (n < 20 || (sx === 0 && sy === 0)) return null
-    return ((Math.atan2(sx, sy) * 180) / Math.PI + 360) % 360
+    if (total < 20) return null
+    const maxIdx = sectors.indexOf(Math.max(...sectors))
+    if (sectors[maxIdx] === 0) return null
+    return maxIdx * 22.5
   })()
 
   const kiosk = mode === 'kiosk'
