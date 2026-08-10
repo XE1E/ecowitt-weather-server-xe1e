@@ -140,6 +140,7 @@ export function StationLayout() {
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Estación</p>
                 <p>Hardware: Ecowitt WS2910 + WS69 + WN31</p>
+                <p>Ecowitt GW1100 + WN32</p>
                 <p>Ubicación: {LOCATION.label}</p>
                 <p>Coordenadas: {LOCATION.latitude}, {LOCATION.longitude}</p>
                 <p>Datos desde: 2026</p>
@@ -147,7 +148,7 @@ export function StationLayout() {
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Datos</p>
                 <p>Estación vía protocolo Ecowitt</p>
-                <p>Pronóstico y astronomía: Open-Meteo</p>
+                <p>Pronóstico y Astronomía: Open-Meteo, Weather API, SMN y datos locales</p>
                 <p>Radar: Ventusky · Satélite: NASA GIBS</p>
                 <p>Calidad del aire: WAQI · IMECA (Open-Meteo)</p>
                 <p>Sismos: USGS / SSN (México)</p>

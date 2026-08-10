@@ -126,7 +126,6 @@ export function RemoteStationPage() {
   // Interior (sensor integrado GW1100)
   const tIn = data?.temperature_indoor
   const hIn = data?.humidity_indoor
-  const dewIn = dewPointC(tIn, hIn)
 
   // Tendencias
   const tempOutTrend = trendOver(history, 'temperature_outdoor', 3)
@@ -191,11 +190,11 @@ export function RemoteStationPage() {
         <>
           {/* Condiciones actuales */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            {/* Exterior */}
+            {/* Exterior (sensor WN32) */}
             <div className="card">
               <p className="card-title flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                Exterior
+                Exterior (WN32)
               </p>
               {hasOutdoor ? (
                 <div className="grid grid-cols-3 gap-2">
@@ -224,13 +223,13 @@ export function RemoteStationPage() {
               )}
             </div>
 
-            {/* Interior */}
+            {/* Interior (sensor integrado del GW1100, no tiene rocío) */}
             <div className="card">
               <p className="card-title flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                Interior
+                Interior (GW1100)
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                   <WeatherIcon name="thermometer" size={28} />
                   <p className="text-xl font-bold text-amber-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
@@ -241,11 +240,6 @@ export function RemoteStationPage() {
                   <WeatherIcon name="humidity" size={28} />
                   <p className="text-xl font-bold text-cyan-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
                   <p className="text-xs text-slate-400">Humedad</p>
-                </div>
-                <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="thermometer" size={28} />
-                  <p className="text-xl font-bold text-emerald-300 mt-1">{dewIn != null ? `${u.temp(dewIn)}${u.tempU}` : '--'}</p>
-                  <p className="text-xs text-slate-400">Rocío</p>
                 </div>
               </div>
             </div>

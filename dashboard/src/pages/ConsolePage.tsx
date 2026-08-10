@@ -20,7 +20,7 @@ export function ConsolePage() {
   return (
     <div>
       <p className="text-slate-400 mb-4">
-        Réplica de la consola física Ecowitt. Esta es la vista que se despliega en la pantalla del kiosco.
+        Reemplazo de la consola física Ecowitt. Esta es la vista que se despliega en la pantalla del kiosco.
       </p>
       <ConsoleReplica />
     </div>
