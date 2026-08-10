@@ -701,6 +701,7 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
             "pws": settings.pws_enabled,
             "owm": settings.owm_enabled,
             "cwop": settings.cwop_enabled,
+            "awekas": settings.awekas_enabled,
         },
     }
 
