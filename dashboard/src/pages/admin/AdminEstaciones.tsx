@@ -4,14 +4,31 @@ import { useAdminAuth } from '../../admin-auth'
 import { parseServerDate } from '../../weather'
 import { statusLabel, statusDot } from '../../components/admin-ui'
 
+interface SensorDetail {
+  id: string
+  type: string
+  label: string
+}
+
 interface Station {
   name: string | null
   label: string
   last_received: string | null
   status: 'online' | 'offline' | 'unknown'
   sensors: string[]
+  sensors_detail?: SensorDetail[]
   model: string | null
   passkey_hint?: string
+}
+
+/** Extrae los tipos de sensores únicos (ej: "WN32", "WS69") para mostrar junto al modelo */
+function sensorTypes(s: Station): string {
+  if (!s.sensors_detail?.length) return ''
+  const types = new Set<string>()
+  for (const sd of s.sensors_detail) {
+    if (sd.type && sd.type !== 'console') types.add(sd.type)
+  }
+  return Array.from(types).join(' + ')
 }
 
 function AddStationModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
@@ -215,7 +232,10 @@ export function AdminEstaciones() {
                     <div className="text-xs text-slate-500 ml-6">Passkey: {s.passkey_hint}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-400">{s.model || '—'}</td>
+                <td className="px-4 py-3 text-slate-400">
+                  {s.model || '—'}
+                  {sensorTypes(s) && <span className="text-sky-400 ml-1">+ {sensorTypes(s)}</span>}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1 text-sm ${
                     s.status === 'online' ? 'text-emerald-400' :
