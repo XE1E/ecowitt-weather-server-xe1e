@@ -2012,7 +2012,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 icono de al lado. Antes iba centrada arriba y una condición larga se partía
                 igual, pero empujando todo lo de abajo. */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                          width: '100%', marginBottom: -14 }}>
+                          width: '100%', marginTop: -10, marginBottom: -14 }}>
               <WeatherIcon name={cond.icon} size={62} className="weather-main-icon" />
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
