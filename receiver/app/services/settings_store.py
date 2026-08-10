@@ -87,6 +87,7 @@ EDITABLE_KEYS = {
     "email_enabled", "smtp_host", "smtp_port", "smtp_user", "smtp_password",
     "smtp_tls", "email_from", "email_to", "email_categories",
     "waqi_token",
+    "weatherapi_key",
     # Control de calidad
     "qc_enabled",
     "qc_spike_enabled",
@@ -131,6 +132,7 @@ SECRET_KEYS = {
     "smtp_password",
     "ecowitt_secure_token",
     "waqi_token",
+    "weatherapi_key",
     "wu_station_key",
     "pws_password",
     "windy_api_key",

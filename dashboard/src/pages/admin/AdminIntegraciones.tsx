@@ -13,6 +13,8 @@ interface IntegSettings {
   hass_discovery_prefix: string
   waqi_token: string | null
   waqi_token_masked: string | null
+  weatherapi_key: string | null
+  weatherapi_key_masked: string | null
   ecowitt_secure_enabled: boolean
   ecowitt_secure_token: string | null
   ecowitt_secure_token_masked: string | null
@@ -268,6 +270,24 @@ export function AdminIntegraciones() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* WeatherAPI */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-sm font-medium">🌤️ WeatherAPI.com (Pronóstico)</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+            settings.weatherapi_key || settings.weatherapi_key_masked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-600/40 text-slate-400'
+          }`}>
+            {settings.weatherapi_key || settings.weatherapi_key_masked ? '✓ Configurado' : 'Sin API key'}
+          </span>
+          <a href="https://www.weatherapi.com/signup.aspx" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener API key →</a>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 w-14">API Key</span>
+          <TextField value={settings.weatherapi_key} onChange={(v) => update('weatherapi_key', v)} placeholder="API Key" type="password" masked={settings.weatherapi_key_masked} className="flex-1 max-w-md" />
+        </div>
+        <p className="text-xs text-slate-500 mt-2">Mejora el pronóstico combinándolo con Open-Meteo. Plan gratuito: 1M llamadas/mes.</p>
       </div>
 
       {/* WAQI */}

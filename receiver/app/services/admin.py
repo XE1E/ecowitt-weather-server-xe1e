@@ -168,6 +168,7 @@ def public_settings(settings) -> Dict[str, Any]:
         "email_to": settings.email_to,
         "email_categories": settings.email_categories,
         "waqi_token_masked": mask(settings.waqi_token),
+        "weatherapi_key_masked": mask(settings.weatherapi_key),
         # Control de calidad
         "qc_enabled": settings.qc_enabled,
         "qc_spike_enabled": settings.qc_spike_enabled,
