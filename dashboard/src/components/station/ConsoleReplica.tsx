@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { beaufort, deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
+import { deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -1584,7 +1584,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           </div>
           {/* PROM + RÁFAGA en una línea, al pie de la celda del viento */}
-          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 20 }}>
+          {/* PROMEDIO a la izquierda y RÁFAGA a la derecha: deja libre el centro, que
+              es justo por donde baja el punto más bajo del óvalo, así el óvalo cabe
+              sin tener que achicarlo.
+
+              Cada bloque ANCLADO a su lado (`flex: 1` + textAlign left/right) y no
+              centrado: con textAlign center la etiqueta se recentra sobre el valor,
+              de modo que al pasar de "9.8" a "24.3" la etiqueta se movía sola. Con
+              el anclaje, etiqueta y valor comparten borde y las cifras crecen hacia
+              el centro, donde hay hueco, sin desacomodar nada. */}
+          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 2 }}>
             {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
                 `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
                 este rótulo mentía, y además repetía clavado el número del centro del
@@ -1635,28 +1644,6 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               </div>
             </div>
           </div>
-          {/* Barra Beaufort: 12 segmentos como en la tarjeta de Inicio */}
-          {(() => {
-            const bf = data?.wind_speed != null ? beaufort(data.wind_speed) : null
-            return (
-              <div style={{ position: 'absolute', bottom: 3, left: 9, right: 9 }}>
-                <div style={{ fontSize: 9, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
-                  {bf ? bf.label.toUpperCase() : ''}
-                </div>
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <span key={i} style={{
-                      height: 4,
-                      flex: 1,
-                      borderRadius: 1,
-                      backgroundColor: i < (bf?.scale ?? 0) ? '#34d399' : 'rgba(255,255,255,0.15)',
-                      border: '1px solid rgba(255,255,255,0.25)'
-                    }} />
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
         </div>
 
         {/* HUMEDAD en fila 1 columna 3. Ocupa el sitio de la celda VEL, que
