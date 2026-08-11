@@ -141,18 +141,29 @@ function decNum(s: string): ReactNode {
 }
 
 // Mapa de manchas, en coordenadas normalizadas (-1..1 sobre el radio) y con su radio
-// en la misma escala. Son las SEIS de siempre, en el mismo sitio: no pretenden ser el
-// mapa de los mares de verdad --a 74 px eso se convierte en papilla-- sino romper la
-// pastilla lisa. Vive fuera del componente porque ahora la dibujan DOS capas, la de la
-// cara iluminada y la de la sombra, y las dos tienen que usar la misma lista o el
-// relieve no coincidiría a los lados del terminador.
+// en la misma escala. Pretenden evocar los mares lunares: Mare Imbrium arriba a la
+// izquierda, Oceanus Procellarum a la izquierda, Mare Serenitatis y Tranquillitatis
+// al centro-derecha, etc. A 74 px no cabe el detalle real, pero la distribución y
+// densidad dan la impresión correcta. Vive fuera del componente porque ahora la
+// dibujan DOS capas, la de la cara iluminada y la de la sombra, y las dos tienen que
+// usar la misma lista o el relieve no coincidiría a los lados del terminador.
 const MARES = [
-  [-0.30, -0.34, 0.22],
-  [0.11, -0.46, 0.15],
-  [0.29, -0.09, 0.19],
-  [-0.16, 0.26, 0.15],
-  [0.06, 0.06, 0.11],
-  [-0.34, 0.02, 0.12],
+  // Manchas principales (mares grandes)
+  [-0.32, -0.30, 0.24],   // Mare Imbrium (arriba izq)
+  [0.08, -0.42, 0.16],    // Mare Serenitatis (arriba centro)
+  [0.30, -0.12, 0.20],    // Mare Crisium (derecha)
+  [-0.18, 0.22, 0.17],    // Mare Nubium (abajo izq)
+  [0.04, 0.04, 0.13],     // Mare Vaporum (centro)
+  [-0.38, 0.00, 0.14],    // Oceanus Procellarum parte (izquierda)
+  // Manchas secundarias (mares menores y cráteres)
+  [0.22, -0.38, 0.10],    // Lacus Somniorum
+  [-0.10, -0.52, 0.09],   // Mare Frigoris borde
+  [0.38, 0.18, 0.11],     // Mare Fecunditatis
+  [-0.44, -0.22, 0.10],   // borde oeste
+  [0.14, 0.32, 0.12],     // Mare Nectaris
+  [-0.26, 0.44, 0.09],    // borde sur
+  [0.32, 0.38, 0.08],     // cráter sur-este
+  [-0.50, 0.24, 0.07],    // borde oeste bajo
 ] as const
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
@@ -263,19 +274,19 @@ function MoonGlyph({ size = 42, illum, waxing }:
       {/* Manchas de la CARA EN SOMBRA. Antes iban recortadas a la parte iluminada y la
           sombra quedaba lisa; ahora las llevan las dos, que es lo que se ve en el cielo
           --el disco entero está manchado, no sólo lo que le da el sol--.
-          Se marcan MÁS que las de la luz (0.26 contra 0.20) por dos razones: el gris de la
+          Se marcan MÁS que las de la luz (0.35 contra 0.28) por dos razones: el gris de la
           sombra tiene menos recorrido hasta el negro que el amarillo de la luz, y el panel
           del kiosco aplasta los tonos oscuros (ver la nota del fondo de las celdas en
           `console-css.ts`), así que una diferencia fina ahí no llega a verse. Van sobre el
           disco COMPLETO, no sobre la sombra recortada: la cara iluminada las tapa después
           con su propio relleno, y así no hay que construir un segundo recorte. */}
-      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.26)}</g>
+      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.35)}</g>
       {!oscura && <path d={litPath} fill={`url(#luz-${uid})`} />}
       {/* Manchas de la CARA ILUMINADA, recortadas a ella. Al usar la misma lista que la
           capa de la sombra, cada mancha continúa al otro lado del terminador: es la misma
           luna, con una parte alumbrada y otra no. */}
       {!oscura && (
-        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.20)}</g>
+        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.28)}</g>
       )}
       {!oscura && <path d={litPath} fill={`url(#term-${uid})`} />}
       <circle r={R} fill={`url(#limbo-${uid})`} />
