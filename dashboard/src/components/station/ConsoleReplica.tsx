@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
+import { beaufort, deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -1593,57 +1593,53 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               de modo que al pasar de "9.8" a "24.3" la etiqueta se movía sola. Con
               el anclaje, etiqueta y valor comparten borde y las cifras crecen hacia
               el centro, donde hay hueco, sin desacomodar nada. */}
-          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 2 }}>
-            {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
-                `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
-                este rótulo mentía, y además repetía clavado el número del centro del
-                óvalo --el mismo dato dos veces en la misma celda--.
-                El promedio lo calcula el servidor sobre las muestras guardadas: la
-                estación no manda ninguno (ver `get_wind_avg10m` en el receiver). */}
+          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 16 }}>
+            {/* PROMEDIO con tamaño reducido igual que celda lluvia */}
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>PROMEDIO</div>
-              <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                {decNum(u.wind(data?.wind_speed_avg10m, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>PROMEDIO</div>
+              <div className="gv seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.wind(data?.wind_speed_avg10m, 1))}<span className="u" style={{ fontSize: 14, color: 'var(--v)' }}>{u.windU}</span>
               </div>
             </div>
-            {/* RÁFAGA muestra el MÁXIMO DEL DÍA (`wind_gust_max_daily`), no la ráfaga
-                del instante. Un día de viento se recuerda por su pico, y la ráfaga
-                instantánea casi siempre marcaba lo mismo que la velocidad --o 0.0--, con
-                lo que la celda gastaba una de sus tres cifras en repetir otra.
-                El rótulo dice "DÍA" para no repetir el pecado de PROMEDIO, que estuvo
-                mintiendo por llamar promedio a una lectura instantánea. Es la misma
-                palabra que ya usa LLUVIA para su acumulado del día. */}
+            {/* RÁFAGA DÍA con tamaño reducido */}
             <div style={{ flex: 1, textAlign: 'right' }}>
-              {/* La HORA del pico, ENCIMA del rótulo. Era la única cifra "del día" de la
-                  consola sin su hora, cuando el mín/máx de EXT y de HUMEDAD sí la llevan, y
-                  una ráfaga de 40 km/h no dice lo mismo si fue de madrugada que si acaba de
-                  pasar. Sale de `stats.wind_gust.max_time`, que ya venía en la respuesta.
-                  Estuvo AL LADO del rótulo y no valía: "RÁFAGA DÍA 19:43" es más ancho que la
-                  palabra sola y, al ir el bloque alineado a la derecha, su extremo izquierdo se
-                  metía debajo del óvalo del compás.
-                  Va ABSOLUTA y anclada al borde de arriba del rótulo (`bottom: 100%`), así que
-                  el rótulo no se mueve ni un píxel de donde estaba y la hora no ocupa sitio en
-                  el flujo: no puede empujar al valor ni descuadrar el bloque de PROMEDIO, que
-                  se alinea con éste. Pegada a la derecha, donde el óvalo ya ha subido y deja
-                  negro libre. */}
-              <div style={{ position: 'relative', color: 'var(--w)', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>
+              <div style={{ position: 'relative', color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
                 {gustMaxTime && (
-                  <span style={{ position: 'absolute', bottom: '100%', right: 0, fontSize: 11,
+                  <span style={{ position: 'absolute', bottom: '100%', right: 0, fontSize: 10,
                                  fontWeight: 700, letterSpacing: 0, lineHeight: 1.15, whiteSpace: 'nowrap',
-                                 /* BLANCO puro y no el `--w` (#eaeaea) que hereda del rótulo: a
-                                    11 px sobre negro ese casi-blanco se lee apagado al lado de
-                                    la palabra, que va a 15. */
                                  color: '#fff' }}>
                     {gustMaxTime}
                   </span>
                 )}
                 RÁFAGA DÍA
               </div>
-              <div className="gv seg" style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                {decNum(u.wind(data?.wind_gust_max_daily, 1))}<span className="u" style={{ fontSize: 16, color: 'var(--v)' }}>{u.windU}</span>
+              <div className="gv seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                {decNum(u.wind(data?.wind_gust_max_daily, 1))}<span className="u" style={{ fontSize: 14, color: 'var(--v)' }}>{u.windU}</span>
               </div>
             </div>
           </div>
+          {/* Barra Beaufort */}
+          {(() => {
+            const bf = data?.wind_speed != null ? beaufort(data.wind_speed) : null
+            return (
+              <div style={{ position: 'absolute', bottom: 4, left: 9, right: 9 }}>
+                <div style={{ fontSize: 9, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
+                  {bf ? bf.label.toUpperCase() : ''}
+                </div>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <span key={i} style={{
+                      height: 4,
+                      flex: 1,
+                      borderRadius: 1,
+                      backgroundColor: i < (bf?.scale ?? 0) ? '#34d399' : 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.25)'
+                    }} />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* HUMEDAD en fila 1 columna 3. Ocupa el sitio de la celda VEL, que
