@@ -720,10 +720,18 @@ class AlertService:
         para disparar, evitando falsos positivos por variaciones del modelo.
         """
         s = self._settings
-        if not self.enabled or not getattr(s, "alert_visual_enabled", True):
+        if not self.enabled:
+            logger.debug("check_sky: alertas deshabilitadas globalmente")
+            return
+        if not getattr(s, "alert_visual_enabled", True):
+            logger.debug("check_sky: alertas visuales deshabilitadas")
             return
         if not analysis or analysis.get("error"):
+            logger.debug("check_sky: análisis inválido o con error")
             return
+        logger.info("check_sky: evaluando análisis %s/%s/%s",
+                    analysis.get("sky_condition"), analysis.get("cloud_type"),
+                    analysis.get("development"))
 
         # Reglas deshabilitadas
         disabled = set(getattr(s, "alert_visual_rules_disabled", []) or [])
@@ -769,13 +777,18 @@ class AlertService:
             if triggered:
                 # Incrementar contador de consecutivos
                 self._sky_consecutive[key] = self._sky_consecutive.get(key, 0) + 1
+                logger.info("check_sky: %s triggered, consecutivos=%d/%d",
+                            key, self._sky_consecutive[key], self._SKY_HYSTERESIS)
                 # Disparar solo si cumple histéresis
                 if self._sky_consecutive[key] >= self._SKY_HYSTERESIS and not was_active:
                     self.active[key] = message
                     self._add_to_history(key, message, resolved=False)
+                    logger.info("check_sky: DISPARANDO ALERTA %s", key)
                     await self._safe_notify(f"⚠️ ALERTA VISUAL — {message}", category="visual")
             else:
                 # Condición no cumplida: resetear contador
+                if self._sky_consecutive.get(key, 0) > 0:
+                    logger.debug("check_sky: %s no triggered, reseteando contador", key)
                 self._sky_consecutive[key] = 0
                 if was_active:
                     self._add_to_history(key, self.active[key], resolved=True)
