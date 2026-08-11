@@ -1584,7 +1584,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           </div>
           {/* PROM + RÁFAGA + barra Beaufort al pie de la celda del viento */}
-          <div style={{ display: 'flex', alignItems: 'center', marginTop: -8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: -11 }}>
             {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
                 `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
                 este rótulo mentía, y además repetía clavado el número del centro del
@@ -1640,7 +1640,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             const bf = data?.wind_speed != null ? beaufort(data.wind_speed) : null
             return (
               <div style={{ position: 'absolute', bottom: 3, left: 9, right: 9 }}>
-                <div style={{ fontSize: 9, color: '#34d399', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
                   {bf ? bf.label.toUpperCase() : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 2 }}>
