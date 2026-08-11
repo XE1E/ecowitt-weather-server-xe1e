@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Camera, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Camera, RefreshCw, AlertTriangle, Cloud, CloudRain, TrendingUp } from 'lucide-react'
 import { relativeTime } from '../../weather'
 
 /**
@@ -13,12 +13,62 @@ import { relativeTime } from '../../weather'
  * subida desde casa y un proceso de vídeo corriendo para siempre, y para un sitio de
  * clima la foto cada pocos minutos dice más.
  */
+interface SkyAnalysis {
+  cloud_type?: string
+  cloud_coverage_pct?: number
+  sky_condition?: string
+  visibility?: string
+  precipitation_visible?: boolean
+  development?: string
+  description?: string
+  forecast_hint?: string
+  analyzed_at?: string
+  provider?: string
+  model?: string
+  error?: string
+}
+
 interface Estado {
   available?: boolean
   captured_at?: string
   age_seconds?: number
   stale?: boolean
   bytes?: number
+  analysis?: SkyAnalysis
+}
+
+const SKY_CONDITION_ES: Record<string, string> = {
+  clear: 'Despejado',
+  partly_cloudy: 'Parcialmente nublado',
+  mostly_cloudy: 'Mayormente nublado',
+  overcast: 'Cubierto',
+  foggy: 'Neblina',
+  rainy: 'Lluvia',
+  stormy: 'Tormenta',
+  night: 'Noche',
+  unknown: 'Desconocido',
+}
+
+const CLOUD_TYPE_ES: Record<string, string> = {
+  cirrus: 'Cirros',
+  cumulus: 'Cúmulos',
+  stratus: 'Estratos',
+  cumulonimbus: 'Cumulonimbos',
+  altocumulus: 'Altocúmulos',
+  stratocumulus: 'Estratocúmulos',
+  nimbostratus: 'Nimboestratos',
+  clear: 'Despejado',
+  mixed: 'Mixto',
+  unknown: 'Desconocido',
+}
+
+const VISIBILITY_ES: Record<string, string> = {
+  excellent: 'Excelente',
+  good: 'Buena',
+  moderate: 'Moderada',
+  poor: 'Pobre',
+  very_poor: 'Muy pobre',
+  unknown: 'Desconocida',
 }
 
 /** Cada cuánto se pregunta si hay foto nueva. La cadencia acordada es de 5-10 min. */
@@ -130,6 +180,75 @@ export function CameraCard({ ocultarSiVacia = false }: {
               FOTO ANTIGUA
             </div>
           )}
+        </div>
+      )}
+
+      {/* Análisis del cielo con IA */}
+      {hayFoto && st?.analysis && !st.analysis.error && (
+        <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+          <p className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-sky-400" />
+            Análisis del cielo
+          </p>
+
+          {/* Descripción principal */}
+          {st.analysis.description && (
+            <p className="text-sm text-slate-300 mb-3">
+              {st.analysis.description}
+            </p>
+          )}
+
+          {/* Grid de métricas */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            <div className="text-center p-2 rounded-lg bg-white/[0.03]">
+              <p className="text-xs text-slate-500 mb-1">Condición</p>
+              <p className="text-sm font-medium text-slate-200">
+                {SKY_CONDITION_ES[st.analysis.sky_condition || ''] || st.analysis.sky_condition}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-white/[0.03]">
+              <p className="text-xs text-slate-500 mb-1">Nubes</p>
+              <p className="text-sm font-medium text-slate-200">
+                {CLOUD_TYPE_ES[st.analysis.cloud_type || ''] || st.analysis.cloud_type}
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-white/[0.03]">
+              <p className="text-xs text-slate-500 mb-1">Cobertura</p>
+              <p className="text-sm font-medium text-slate-200">
+                {st.analysis.cloud_coverage_pct ?? '—'}%
+              </p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-white/[0.03]">
+              <p className="text-xs text-slate-500 mb-1">Visibilidad</p>
+              <p className="text-sm font-medium text-slate-200">
+                {VISIBILITY_ES[st.analysis.visibility || ''] || st.analysis.visibility}
+              </p>
+            </div>
+          </div>
+
+          {/* Pronóstico */}
+          {st.analysis.forecast_hint && (
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
+              <TrendingUp className="w-4 h-4 text-sky-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-sky-200">
+                {st.analysis.forecast_hint}
+              </p>
+            </div>
+          )}
+
+          {/* Precipitación visible */}
+          {st.analysis.precipitation_visible && (
+            <div className="flex items-center gap-2 mt-2 text-amber-400 text-sm">
+              <CloudRain className="w-4 h-4" />
+              Precipitación visible en el horizonte
+            </div>
+          )}
+
+          {/* Pie: proveedor y hora */}
+          <p className="text-xs text-slate-600 mt-3">
+            Analizado por {st.analysis.provider === 'gemini' ? 'Gemini' : 'Claude'}
+            {st.analysis.analyzed_at && ` · ${relativeTime(st.analysis.analyzed_at)}`}
+          </p>
         </div>
       )}
 
