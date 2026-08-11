@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     alert_air_enabled: bool = False
     alert_aqi_threshold: float = 100.0
     alert_imeca_threshold: float = 100.0
+    # Avisos visuales (análisis del cielo con IA). Se evalúan con cada foto.
+    # Reglas: sky_storm (cumulonimbus en desarrollo), sky_precipitation (lluvia
+    # visible en horizonte), sky_visibility (visibilidad reducida).
+    alert_visual_enabled: bool = True
+    alert_visual_rules_disabled: List[str] = []
 
     # Telegram notifications
     telegram_enabled: bool = False

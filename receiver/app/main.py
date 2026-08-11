@@ -1931,13 +1931,19 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             anthropic_model=settings.camera_analysis_model_anthropic,
             gemini_model=settings.camera_analysis_model_gemini,
         )
-        _camera.save_analysis(analysis.to_dict())
+        analysis_dict = analysis.to_dict()
+        _camera.save_analysis(analysis_dict)
         if analysis.error:
             logger.warning("Análisis del cielo con error (%s): %s",
                            analysis.provider or "?", analysis.error)
         else:
             logger.info("Análisis del cielo (%s): %s, %d%% nubes",
                         analysis.provider, analysis.sky_condition, analysis.cloud_coverage_pct)
+            # Evaluar alertas visuales (tormenta, precipitación visible, visibilidad)
+            try:
+                await alert_service.check_sky(analysis_dict)
+            except Exception as e:
+                logger.error("Error evaluando alertas visuales: %s", e)
     except Exception as e:
         logger.error("Error en análisis del cielo: %s", e)
 

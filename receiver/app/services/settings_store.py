@@ -79,6 +79,8 @@ EDITABLE_KEYS = {
     "alert_air_enabled",
     "alert_aqi_threshold",
     "alert_imeca_threshold",
+    "alert_visual_enabled",
+    "alert_visual_rules_disabled",
     "telegram_enabled",
     "telegram_bot_token",
     "telegram_chat_id",

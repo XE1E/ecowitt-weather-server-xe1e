@@ -192,16 +192,16 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 
 ## Plan de implementación propuesto
 
-### Fase 1: Condiciones actuales (1-2 horas)
-- [ ] Agregar resumen del análisis en página de inicio
-- [ ] Mostrar descripción + condición + cobertura
-- [ ] Diseño compacto que no ocupe mucho espacio
+### Fase 1: Condiciones actuales (1-2 horas) — COMPLETADA (2026-08-11)
+- [x] Agregar resumen del análisis en página de inicio (SkyAnalysisCard)
+- [x] Mostrar descripción + condición + cobertura + visibilidad + pronóstico
+- [x] Diseño compacto, se oculta si no hay análisis
 
-### Fase 2: Alertas visuales (2-3 horas)
-- [ ] Agregar categoría "visual" al sistema de alertas
-- [ ] Reglas: cumulonimbus+building, precipitation_visible, visibility poor
-- [ ] Histéresis: requerir 2 análisis consecutivos para disparar
-- [ ] Configurable desde Admin (activar/desactivar cada regla)
+### Fase 2: Alertas visuales (2-3 horas) — COMPLETADA (2026-08-11)
+- [x] Agregar categoría "visual" al sistema de alertas
+- [x] Reglas: sky_storm, sky_precipitation, sky_visibility
+- [x] Histéresis: requerir 2 análisis consecutivos para disparar
+- [x] Configurable desde Admin (alert_visual_enabled, alert_visual_rules_disabled)
 
 ### Fase 3: Nowcasting básico (3-4 horas)
 - [ ] Guardar últimos N análisis en memoria o archivo

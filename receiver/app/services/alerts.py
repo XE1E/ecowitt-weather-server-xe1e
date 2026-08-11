@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air", "visual"]
 
 
 def _category_for(rule_key: str) -> str:
@@ -53,6 +53,8 @@ def _category_for(rule_key: str) -> str:
         return "sensor"
     if rule_key in ("aqi_high", "imeca_high"):
         return "air"
+    if rule_key.startswith("sky_"):
+        return "visual"
     return "other"
 
 
@@ -698,6 +700,77 @@ class AlertService:
                     srv.login(s.smtp_user, s.smtp_password or "")
                 srv.send_message(msg, from_addr=sender, to_addrs=recipients)
         logger.info(f"Email alert sent to {recipients}")
+
+    # --- Alertas visuales (análisis del cielo con IA) ---
+    # Histéresis: contador de análisis consecutivos con la condición activa.
+    # Requiere N análisis seguidos para disparar (evita falsos positivos).
+    _sky_consecutive: Dict[str, int] = {}
+    _SKY_HYSTERESIS = 2  # análisis consecutivos requeridos
+
+    async def check_sky(self, analysis: Optional[Dict[str, Any]]) -> None:
+        """
+        Evalúa el análisis del cielo y dispara alertas visuales.
+
+        Reglas:
+        - sky_storm: cumulonimbus + development=building → tormenta formándose
+        - sky_precipitation: precipitation_visible=true → lluvia aproximándose
+        - sky_visibility: visibility=poor/very_poor → visibilidad reducida
+
+        Usa histéresis: la condición debe cumplirse en N análisis consecutivos
+        para disparar, evitando falsos positivos por variaciones del modelo.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_visual_enabled", True):
+            return
+        if not analysis or analysis.get("error"):
+            return
+
+        # Reglas deshabilitadas
+        disabled = set(getattr(s, "alert_visual_rules_disabled", []) or [])
+
+        checks = [
+            (
+                "sky_storm",
+                analysis.get("cloud_type") == "cumulonimbus"
+                and analysis.get("development") == "building",
+                f"⛈️ Tormenta formándose: se observan cumulonimbos en desarrollo",
+            ),
+            (
+                "sky_precipitation",
+                analysis.get("precipitation_visible") is True,
+                f"🌧️ Precipitación visible: se observa lluvia en el horizonte",
+            ),
+            (
+                "sky_visibility",
+                analysis.get("visibility") in ("poor", "very_poor"),
+                f"🌫️ Visibilidad reducida: {analysis.get('visibility', 'baja')}",
+            ),
+        ]
+
+        for key, triggered, message in checks:
+            if key in disabled:
+                # Regla apagada: limpiar estado
+                self.active.pop(key, None)
+                self._sky_consecutive.pop(key, None)
+                continue
+
+            was_active = key in self.active
+
+            if triggered:
+                # Incrementar contador de consecutivos
+                self._sky_consecutive[key] = self._sky_consecutive.get(key, 0) + 1
+                # Disparar solo si cumple histéresis
+                if self._sky_consecutive[key] >= self._SKY_HYSTERESIS and not was_active:
+                    self.active[key] = message
+                    self._add_to_history(key, message, resolved=False)
+                    await self._safe_notify(f"⚠️ ALERTA VISUAL — {message}", category="visual")
+            else:
+                # Condición no cumplida: resetear contador
+                self._sky_consecutive[key] = 0
+                if was_active:
+                    self._add_to_history(key, self.active[key], resolved=True)
+                    self.active.pop(key, None)
+                    await self._safe_notify(f"✅ Normalizado — {message}", category="visual")
 
     # --- Pruebas desde el panel (fuerzan el envío por un canal concreto) ---
     async def send_test_telegram(self) -> None:
