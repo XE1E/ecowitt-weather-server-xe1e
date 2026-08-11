@@ -18,6 +18,7 @@ import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { RadarCard } from '../components/station/RadarCard'
 import { CameraCard } from '../components/station/CameraCard'
+import { SkyAnalysisCard } from '../components/station/SkyAnalysisCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { MetarCard } from '../components/station/MetarCard'
@@ -46,6 +47,7 @@ export function HomePage() {
         {/* Columna izquierda */}
         <div className="space-y-4">
           <CurrentConditions data={data} history={history} />
+          <SkyAnalysisCard />
           <PrecipitationCard data={data} forecast={forecast} />
           <ForecastCard forecast={forecast} />
           <ForecastCompareCard forecast={forecast} />
