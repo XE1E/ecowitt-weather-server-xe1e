@@ -1622,7 +1622,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {(() => {
             const bf = data?.wind_speed != null ? beaufort(data.wind_speed) : null
             return (
-              <div style={{ position: 'absolute', bottom: 4, left: 9, right: 9 }}>
+              <div style={{ position: 'absolute', bottom: 9, left: 9, right: 9 }}>
                 <div style={{ fontSize: 9, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
                   {bf ? bf.label.toUpperCase() : ''}
                 </div>
@@ -1822,7 +1822,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               negativo, que era para compensar el rótulo que ya no está) y sangradas por
               la izquierda para dejarle su hueco a la gota. */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
-                        gap: 2, paddingLeft: 52 }}>
+                        gap: 2, paddingLeft: 48, paddingRight: 4 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
