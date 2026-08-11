@@ -840,16 +840,11 @@ function PressureScale({ delta, endLabel, imperial }: {
            que verse, y sobre el interior oscuro del riel el color pleno no molesta. */
         <rect x={Math.min(mid, x)} y={13.5} width={Math.abs(x - mid)} height={6} fill={color} />
       )}
-      {/* Números CENTRADOS en su marca, encima del riel. Antes iban debajo y en las
-          esquinas (anclados a start/end), así que el "-5" empezaba en la marca en vez
-          de caer sobre ella y la escala parecía correrse hacia dentro. */}
+      {/* Números CENTRADOS en su marca, DEBAJO del riel. */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const t = tickLabel(v)
-        // 9 px para los rótulos largos: el único que lo necesita es el "-0.15" de
-        // imperial, que a 11 px mide 28 y centrado en la marca del extremo (x=12) se
-        // saldría del viewBox por la izquierda. A 9 px mide 22 y entra justo.
         return t == null ? null : (
-          <text key={v} x={xOf(v)} y={8.5} fill="#eaeaea" fontSize={t.length > 2 ? 9 : 11}
+          <text key={v} x={xOf(v)} y={32} fill="#eaeaea" fontSize={t.length > 2 ? 9 : 11}
             fontWeight="700" textAnchor="middle">{t}</text>
         )
       })}
@@ -868,17 +863,6 @@ function PressureScale({ delta, endLabel, imperial }: {
           celda, que con 3 px es bien visible y parecía que el símbolo se salía. */}
       <text x={2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
       <text x={PS_W - 2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
-      {/* Puntero DEBAJO del riel y con la cola en uve, como la flecha del compás.
-          Cruza el riel entero: la punta llega al borde de ARRIBA (y=12), no al de
-          abajo, así que señala la casilla exacta en vez de quedarse apuntando desde
-          fuera. Mide 18×22 --era 14×8 antes de todo esto y se perdía entre las
-          marcas--; al ser tan afilado, a la altura del riel sólo ocupa 7 px de los
-          31 que hay entre marca y marca, y donde tapa el relleno lo tapa con su
-          mismo color. Va el último para que ningún trazo del riel se le monte
-          encima. */}
-      {delta != null && (
-        <polygon points={`${x},12 ${x - 9},34 ${x},29 ${x + 9},34`} fill={color} />
-      )}
     </svg>
   )
 }
