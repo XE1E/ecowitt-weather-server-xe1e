@@ -1584,7 +1584,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           </div>
           {/* PROM + RÁFAGA + barra Beaufort al pie de la celda del viento */}
-          <div style={{ display: 'flex', alignItems: 'center', marginTop: -11 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: -18 }}>
             {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
                 `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
                 este rótulo mentía, y además repetía clavado el número del centro del
@@ -1649,7 +1649,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                       height: 4,
                       flex: 1,
                       borderRadius: 1,
-                      backgroundColor: i < (bf?.scale ?? 0) ? '#34d399' : 'rgba(255,255,255,0.10)'
+                      backgroundColor: i < (bf?.scale ?? 0) ? '#34d399' : 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.25)'
                     }} />
                   ))}
                 </div>
