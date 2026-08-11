@@ -394,6 +394,60 @@ error que el kiosco daría por bueno; sin lo segundo, una petición a mitad del 
 serviría media foto —que el navegador pinta a medias, sin dar error—. El histórico se
 poda por **días completos** (`CAMERA_RETENTION_DAYS`, 7 por defecto).
 
+##### Análisis del cielo con IA
+
+Cada foto se analiza automáticamente con un modelo de visión (**Gemini** o **Claude**)
+para extraer información sobre el estado del cielo:
+
+| Campo | Qué detecta | Ejemplo |
+|-------|-------------|---------|
+| `sky_condition` | Condición general | clear, partly_cloudy, stormy |
+| `cloud_type` | Tipo de nubes (clasificación meteorológica) | cumulus, cumulonimbus, cirrus |
+| `cloud_coverage_pct` | Porcentaje de cobertura | 0-100 |
+| `visibility` | Visibilidad | excellent, good, poor |
+| `development` | Estado de desarrollo de las nubes | building, stable, dissipating |
+| `precipitation_visible` | Lluvia visible en el horizonte | true/false |
+| `forecast_hint` | Pronóstico a corto plazo | "Posible lluvia en 30-60 min" |
+
+El análisis se muestra en la **tarjeta "Estado del cielo"** del inicio y en la página
+de **Cámara**, junto con el histórico diario.
+
+**Endpoints:**
+
+| Endpoint | Qué |
+|----------|-----|
+| `GET /api/camera/analysis` | Último análisis + tendencia (nowcasting) |
+| `GET /api/camera/analysis/validation` | Validación vs pronóstico de Open-Meteo |
+| `GET /api/camera/analysis/history` | Sin params: lista días; con `?date=YYYY-MM-DD`: datos del día |
+| `GET /api/camera/analysis/providers` | Info de proveedores configurados |
+
+**Nowcasting (tendencias):** el sistema guarda los últimos 12 análisis (~1 hora con
+cadencia de 5 min) y calcula tendencias: "↑ Nublándose", "↓ Despejando", "→ Estable",
+"⛈️ Posible tormenta" (cobertura + desarrollo intensificándose), "🌧️ Precipitación
+aproximándose" (lluvia apareció en horizonte).
+
+**Validación vs modelos:** compara lo que **ve** la cámara con lo que **predicen** los
+modelos (Open-Meteo) y muestra un indicador de confianza: ✓ Coincide (95%),
+≈ Similar (80%), ? Difiere (60%), ⚠ Discrepa (30%).
+
+**Alertas visuales:** el sistema puede notificar (Telegram/correo) cuando detecta:
+- `sky_storm`: Nubes de tormenta (cumulonimbus) en desarrollo
+- `sky_precipitation`: Lluvia visible en el horizonte
+- `sky_visibility`: Visibilidad reducida (pobre o muy pobre)
+
+Las alertas usan **histéresis** (requieren 2 análisis consecutivos) para evitar falsos
+positivos. Se activan en Admin → Notificaciones → categoría "Visual (cielo)".
+
+**Configuración:** en Admin → Sistema hay opciones para:
+- Habilitar/deshabilitar el análisis
+- Elegir proveedor (auto, gemini, anthropic)
+- API keys de Gemini (tier gratuito: 1500 req/día) y Anthropic (de pago)
+
+**Archivos guardados:**
+- `latest_analysis.json` — último análisis
+- `analysis_history.json` — últimos 12 para tendencias
+- `YYYY-MM-DD/analysis.json` — histórico del día
+
 > **Ojo con nginx y las rutas de la API acabadas en `.jpg`.** Las `location` por regex
 > ganan a las de prefijo, así que la regla de estáticos `\.jpg$` se tragaba
 > `/api/camera/latest.jpg` y devolvía su propio 404 con la foto guardada. El bloque de

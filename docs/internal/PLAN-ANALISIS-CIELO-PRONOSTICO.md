@@ -218,11 +218,13 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 - [x] Estadísticas del día: promedio, mín, máx cobertura + condiciones observadas
 - [x] Navegación entre días disponibles
 
-### Fase 5: Validación de modelos (4-5 horas, opcional)
-- [ ] Mapear sky_condition a códigos WMO
-- [ ] Comparar con pronóstico de la hora actual
-- [ ] Mostrar indicador de confianza o discrepancia
-- [ ] Requiere más investigación de qué tan confiable es
+### Fase 5: Validación de modelos (4-5 horas) — COMPLETADA (2026-08-11)
+- [x] Mapear sky_condition a códigos WMO (sky_validation.py)
+- [x] Comparar con pronóstico actual de Open-Meteo
+- [x] Niveles de coincidencia: exact, close, differ, conflict
+- [x] Confianza ajustada: 95% exact, 80% close, 60% differ, 30% conflict
+- [x] Endpoint /api/camera/analysis/validation
+- [x] Indicador visual en SkyAnalysisCard
 
 ---
 

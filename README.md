@@ -22,7 +22,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Tablas** | Resumen tabular de todas las variables (actual, mín/máx del día), con selector entre **estación principal y remota** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día" |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
-| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece |
+| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
@@ -32,7 +32,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 
 Además: **panel de administración** (`/admin`, usuario/contraseña) con **wizard de configuración inicial** (5 pasos: bienvenida, estación, alertas, publicación, resumen) y 8 páginas: Dashboard (indicador en tiempo real, historial de alertas, acciones rápidas), Estaciones (agregar/eliminar secundarias, configuración individual con servicios por estación), Alertas (umbrales), Calibración (offsets/multiplicadores), Publicación (redes públicas), Notificaciones (Telegram y correo SMTP, con envío de prueba y selector de categorías por canal), Integraciones (MQTT/HA con estado de conexión, test y reconexión en caliente; WAQI), y Sistema (QC, visor de logs). Todo editable en caliente sin reiniciar. **Tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
 
-**Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, estación caída, y calidad del aire) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos.
+**Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, estación caída, calidad del aire, y **visuales** —tormentas, precipitación, visibilidad—) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos.
 
 **Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap y CWOP/APRS.
 
@@ -174,6 +174,8 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/epaper/forecast.json` | Dato con forma WeatherAPI `forecast.json` para el display e-paper LilyGo |
 | GET | `/api/display.jpg?page=<slug>` | Pantalla del kiosco ya renderizada como JPEG (+ cabecera `X-Kiosk-Nav`) |
 | POST/GET | `/api/camera/upload` · `/api/camera/latest.jpg` | Sube y sirve la foto del exterior (token propio `CAMERA_UPLOAD_TOKEN`) |
+| GET | `/api/camera/analysis` · `/api/camera/analysis/validation` | Análisis del cielo con IA + validación vs pronóstico |
+| GET | `/api/camera/analysis/history` | Histórico diario de análisis (lista días o `?date=YYYY-MM-DD`) |
 | GET | `/health` | Estado del servicio |
 
 > **Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan `?station=<nombre>` para consultar una **estación secundaria** (p. ej. `gw1100`); sin el parámetro devuelven la **principal**.
@@ -210,6 +212,7 @@ Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 ## Documentación
 
 - **[Guía completa](docs/GUIA.md)** — manual de referencia (hardware, arquitectura, cada página, API, operación)
+- [Análisis del cielo con IA](docs/guias/analisis-cielo.md) — cómo funciona, nowcasting, alertas visuales
 - [Referencia de API](docs/api-reference.md)
 - [Despliegue en el VPS](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md)
 - [Configurar el gateway/consola](docs/setup-gateway.md)
