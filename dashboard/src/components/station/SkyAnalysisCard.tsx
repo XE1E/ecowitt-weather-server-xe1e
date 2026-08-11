@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Cloud, Eye, CloudRain, TrendingUp, Sparkles } from 'lucide-react'
+import { Cloud, Eye, CloudRain, TrendingUp, Sparkles, CheckCircle2 } from 'lucide-react'
 import { relativeTime } from '../../weather'
 
 /**
@@ -20,6 +20,16 @@ interface Trend {
   icon: string
   samples: number
   span_minutes: number
+}
+
+interface Validation {
+  validated: boolean
+  match?: 'exact' | 'close' | 'differ' | 'conflict'
+  confidence?: number
+  summary?: string
+  icon?: string
+  explanation?: string
+  reason?: string
 }
 
 interface Analysis {
@@ -91,6 +101,7 @@ const POLL_MS = 60_000
 
 export function SkyAnalysisCard() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [validation, setValidation] = useState<Validation | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetch_ = useCallback(() => {
@@ -99,6 +110,12 @@ export function SkyAnalysisCard() {
       .then(setAnalysis)
       .catch(() => setAnalysis(null))
       .finally(() => setLoading(false))
+
+    // Obtener validación por separado (no bloquea)
+    fetch('/api/camera/analysis/validation')
+      .then(r => r.ok ? r.json() : null)
+      .then(setValidation)
+      .catch(() => setValidation(null))
   }, [])
 
   useEffect(() => {
@@ -188,6 +205,31 @@ export function SkyAnalysisCard() {
             {analysis.trend.span_minutes > 0 && (
               <span>· últimos {analysis.trend.span_minutes} min</span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Validación vs pronóstico */}
+      {validation?.validated && (
+        <div className={`mt-3 p-2 rounded-lg border flex items-center gap-2 ${
+          validation.match === 'exact' || validation.match === 'close'
+            ? 'bg-emerald-500/10 border-emerald-500/20'
+            : validation.match === 'conflict'
+            ? 'bg-amber-500/10 border-amber-500/20'
+            : 'bg-slate-500/10 border-slate-500/20'
+        }`}>
+          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
+            validation.match === 'exact' || validation.match === 'close'
+              ? 'text-emerald-400'
+              : validation.match === 'conflict'
+              ? 'text-amber-400'
+              : 'text-slate-400'
+          }`} />
+          <div>
+            <p className="text-sm">{validation.summary}</p>
+            <p className="text-xs text-slate-500">
+              Confianza: {Math.round((validation.confidence || 0) * 100)}%
+            </p>
           </div>
         </div>
       )}

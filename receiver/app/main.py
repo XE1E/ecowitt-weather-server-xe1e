@@ -41,6 +41,7 @@ from .services import forecast_consensus
 from .services.almanac import get_almanac
 from .services import satellite
 from .services.windrose import compute_wind_rose
+from .services import sky_validation
 from .services import smn
 from .services import svitrix
 from .services import epaper
@@ -2053,6 +2054,60 @@ async def camera_analysis_history(date: Optional[str] = None):
         },
         "entries": data,
     }
+
+
+@app.get("/api/camera/analysis/validation")
+async def camera_analysis_validation():
+    """
+    Valida el análisis del cielo contra el pronóstico actual.
+
+    Compara lo que VE la cámara con lo que PREDICEN los modelos para
+    detectar discrepancias y dar una medida de confianza.
+    """
+    analysis = _camera.get_analysis()
+    if not analysis or analysis.get("error"):
+        return {"validated": False, "reason": "Sin análisis disponible"}
+
+    # Obtener pronóstico de Open-Meteo y extraer hora actual
+    try:
+        forecast = await openmeteo.get_forecast(
+            settings.cwop_latitude,
+            settings.cwop_longitude,
+            days=1
+        )
+        # Extraer datos de la hora actual
+        hourly = forecast.get("hourly", {})
+        times = hourly.get("time", [])
+        now = datetime.now().strftime("%Y-%m-%dT%H:00")
+        try:
+            idx = times.index(now)
+        except ValueError:
+            idx = 0 if times else -1
+
+        if idx >= 0:
+            forecast_current = {
+                "weather_code": hourly.get("weather_code", [None])[idx],
+                "cloud_cover": hourly.get("cloud_cover", [0])[idx],
+            }
+        else:
+            forecast_current = None
+    except Exception:
+        forecast_current = None
+
+    if not forecast_current or forecast_current.get("weather_code") is None:
+        return {"validated": False, "reason": "No se pudo obtener pronóstico actual"}
+
+    # Validar
+    result = sky_validation.validate_analysis(analysis, forecast_current)
+
+    # Agregar info del análisis para contexto
+    result["analysis"] = {
+        "sky_condition": analysis.get("sky_condition"),
+        "cloud_coverage_pct": analysis.get("cloud_coverage_pct"),
+        "analyzed_at": analysis.get("analyzed_at"),
+    }
+
+    return result
 
 
 @app.get("/api/camera/latest.jpg")
