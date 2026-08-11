@@ -1,6 +1,7 @@
 import { Camera } from 'lucide-react'
 import { LOCATION } from '../config'
 import { CameraCard } from '../components/station/CameraCard'
+import { SkyAnalysisHistory } from '../components/station/SkyAnalysisHistory'
 import { PageInfo } from '../components/station/PageInfo'
 
 /**
@@ -20,6 +21,8 @@ export function CameraPage() {
       </p>
 
       <CameraCard />
+
+      <SkyAnalysisHistory />
 
       <PageInfo>
         <p>

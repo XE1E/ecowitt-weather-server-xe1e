@@ -2013,6 +2013,48 @@ async def camera_analysis_providers():
     }
 
 
+@app.get("/api/camera/analysis/history")
+async def camera_analysis_history(date: Optional[str] = None):
+    """
+    Histórico de análisis del cielo.
+
+    - Sin parámetros: lista los días disponibles con análisis
+    - Con ?date=YYYY-MM-DD: devuelve los análisis de ese día
+    """
+    if date is None:
+        days = _camera.get_analysis_days()
+        return {"days": days}
+
+    # Validar formato de fecha
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido (usar YYYY-MM-DD)")
+
+    data = _camera.get_daily_analysis(date)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
+
+    # Calcular estadísticas del día
+    coverages = [e.get("coverage", 0) for e in data]
+    conditions = {}
+    for e in data:
+        c = e.get("condition", "unknown")
+        conditions[c] = conditions.get(c, 0) + 1
+
+    return {
+        "date": date,
+        "count": len(data),
+        "stats": {
+            "coverage_avg": round(sum(coverages) / len(coverages), 1) if coverages else 0,
+            "coverage_min": min(coverages) if coverages else 0,
+            "coverage_max": max(coverages) if coverages else 0,
+            "conditions": conditions,
+        },
+        "entries": data,
+    }
+
+
 @app.get("/api/camera/latest.jpg")
 async def camera_latest():
     """La última captura. 404 mientras no haya llegado ninguna."""

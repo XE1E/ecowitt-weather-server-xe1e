@@ -207,6 +207,7 @@ class CameraStore:
             json.dump(analysis, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.latest_analysis)
         self._append_to_history(analysis)
+        self._append_to_daily(analysis)
 
     def _load_history(self) -> list:
         """Carga el historial de análisis."""
@@ -327,6 +328,86 @@ class CameraStore:
             return int((last - first).total_seconds() / 60)
         except (KeyError, ValueError):
             return 0
+
+    # ── histórico diario de análisis ─────────────────────────────────────────
+
+    def _daily_analysis_path(self, date_str: str) -> str:
+        """Ruta al archivo de análisis del día (YYYY-MM-DD)."""
+        return os.path.join(self.base, date_str, "analysis.json")
+
+    def _append_to_daily(self, analysis: Dict[str, Any]) -> None:
+        """Agrega un análisis al archivo diario correspondiente."""
+        if analysis.get("error"):
+            return
+        ts_str = analysis.get("analyzed_at", "")
+        if not ts_str:
+            return
+        try:
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            date_str = ts.astimezone().strftime("%Y-%m-%d")
+        except ValueError:
+            return
+
+        path = self._daily_analysis_path(date_str)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        # Cargar existente o crear nuevo
+        try:
+            with open(path, encoding="utf-8") as f:
+                daily = json.load(f)
+        except (OSError, ValueError):
+            daily = []
+
+        # Agregar entrada compacta
+        entry = {
+            "ts": ts_str,
+            "coverage": analysis.get("cloud_coverage_pct", 0),
+            "condition": analysis.get("sky_condition", "unknown"),
+            "cloud_type": analysis.get("cloud_type", "unknown"),
+            "visibility": analysis.get("visibility", "unknown"),
+            "development": analysis.get("development", "unknown"),
+            "precip": analysis.get("precipitation_visible", False),
+        }
+        daily.append(entry)
+
+        # Guardar
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(daily, f, ensure_ascii=False)
+        os.replace(tmp, path)
+
+    def get_daily_analysis(self, date_str: str) -> Optional[list]:
+        """Obtiene el histórico de análisis de un día específico (YYYY-MM-DD)."""
+        path = self._daily_analysis_path(date_str)
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+
+    def get_analysis_days(self) -> list:
+        """Lista los días que tienen análisis guardados, del más reciente al más antiguo."""
+        out = []
+        try:
+            for nombre in sorted(os.listdir(self.base), reverse=True):
+                ruta = os.path.join(self.base, nombre)
+                if not os.path.isdir(ruta):
+                    continue
+                try:
+                    datetime.strptime(nombre, "%Y-%m-%d")
+                except ValueError:
+                    continue
+                analysis_path = os.path.join(ruta, "analysis.json")
+                if os.path.exists(analysis_path):
+                    try:
+                        with open(analysis_path, encoding="utf-8") as f:
+                            data = json.load(f)
+                        out.append({"date": nombre, "count": len(data)})
+                    except (OSError, ValueError):
+                        pass
+        except OSError:
+            pass
+        return out
 
     def get_analysis(self) -> Optional[Dict[str, Any]]:
         """Lee el último análisis del cielo, si existe."""
