@@ -112,30 +112,30 @@ def pressure_forecast(
         delta_1h = current_pressure - pressure_1h_ago
         result["delta_1h"] = round(delta_1h, 1)
 
-    # Clasificar tendencia
-    if delta_3h <= -6:
+    # Clasificar tendencia (umbrales calibrados: -3 hPa/3h es caída significativa)
+    if delta_3h <= -7:
         result["trend"] = "falling_fast"
         result["storm_likely"] = True
         result["hours_to_rain"] = 0.5
         result["confidence"] = "high"
         result["message"] = "Caída muy rápida de presión. Tormenta inminente (0-1h)."
-    elif delta_3h <= -3:
+    elif delta_3h <= -5:
         result["trend"] = "falling_fast"
         result["storm_likely"] = True
         result["hours_to_rain"] = 1.5
         result["confidence"] = "high"
         result["message"] = "Caída rápida de presión. Lluvia probable en 1-2 horas."
-    elif delta_3h <= -1.5:
+    elif delta_3h <= -3:
         result["trend"] = "falling"
         result["storm_likely"] = True
         result["hours_to_rain"] = 3
         result["confidence"] = "medium"
         result["message"] = "Presión bajando. Posible lluvia en 2-4 horas."
-    elif delta_3h < 1.5:
+    elif delta_3h < 3:
         result["trend"] = "stable"
         result["confidence"] = "medium"
         result["message"] = "Presión estable. Sin cambios significativos esperados."
-    elif delta_3h < 3:
+    elif delta_3h < 5:
         result["trend"] = "rising"
         result["confidence"] = "medium"
         result["message"] = "Presión subiendo. Tiempo mejorando."
@@ -147,7 +147,7 @@ def pressure_forecast(
     # Si además la presión de 1h muestra aceleración, aumentar confianza
     if pressure_1h_ago is not None:
         delta_1h = current_pressure - pressure_1h_ago
-        if delta_3h < -1.5 and delta_1h < -1:
+        if delta_3h < -3 and delta_1h < -1.5:
             result["confidence"] = "high"
             if result["hours_to_rain"]:
                 result["hours_to_rain"] = max(0.5, result["hours_to_rain"] - 0.5)
@@ -285,16 +285,24 @@ def _merge_hourly(
             wa_temp = wa_hour.get("temp")
             wa_prob = wa_hour.get("precip_prob")
 
-            # Consenso: usar el código más severo
+            # Consenso: promediar severidad (evita sesgo pesimista)
             if wa_code is not None:
-                code = om_code if _severity(om_code) > _severity(wa_code) else wa_code
-                consensus = "both" if _severity(om_code) == _severity(wa_code) else "conservative"
+                om_sev = _severity(om_code)
+                wa_sev = _severity(wa_code)
+                if om_sev == wa_sev:
+                    code = om_code
+                    consensus = "both"
+                else:
+                    # Usar el código cuya severidad esté más cerca del promedio
+                    avg_sev = (om_sev + wa_sev) / 2
+                    code = om_code if abs(om_sev - avg_sev) <= abs(wa_sev - avg_sev) else wa_code
+                    consensus = "averaged"
             else:
                 code = om_code
                 consensus = "open-meteo"
 
-            # Probabilidad: la mayor
-            prob = max(om_prob or 0, wa_prob or 0)
+            # Probabilidad: promedio (no el máximo)
+            prob = round((om_prob or 0) + (wa_prob or 0)) // 2 if wa_prob is not None else (om_prob or 0)
 
             # Temperatura: promedio si ambas disponibles
             if om_temp is not None and wa_temp is not None:
@@ -413,6 +421,7 @@ def _determine_current(
             return result
 
     # 2. De día: usar radiación solar para determinar nubosidad REAL
+    station_has_cloudiness = False
     if station:
         solar = station.get("solar_radiation")
         if solar is not None:
@@ -420,6 +429,7 @@ def _determine_current(
             kt = _clearness_index(solar, elev)
             if kt is not None:
                 # Índice de claridad disponible: clasificar nubosidad
+                station_has_cloudiness = True
                 if kt > 0.65:
                     result["code"] = 0
                     result["label"] = "Despejado"
@@ -431,27 +441,26 @@ def _determine_current(
                     result["label"] = "Nublado"
                 result["source"] = "station"
                 result["clearness_index"] = round(kt, 2)
-                # No retornar: la presión puede añadir alerta de tormenta
 
     # 3. ¿La presión indica tormenta inminente?
     if pressure and pressure.get("storm_likely"):
         result["storm_approaching"] = True
         hours = pressure.get("hours_to_rain", 3)
-        if hours <= 1:
-            result["label"] = f"Tormenta inminente (~{int(hours*60)} min)"
-        else:
-            result["label"] = f"Lluvia probable en {hours:.0f}h"
-        result["source"] = "pressure"
-        result["code"] = 80  # Rain showers
-        # No retornar aún, dejar que el pronóstico dé más detalle
+        # Solo actualizar label con alerta, no sobrescribir la nubosidad real
+        if not station_has_cloudiness:
+            if hours <= 1:
+                result["label"] = f"Tormenta inminente (~{int(hours*60)} min)"
+            else:
+                result["label"] = f"Lluvia probable en {hours:.0f}h"
+            result["source"] = "pressure"
+            result["code"] = 80
 
-    # 3. Usar pronóstico de la hora actual
-    if forecast_now and len(forecast_now) > 0:
+    # 4. Usar pronóstico SOLO si no tenemos dato real de la estación
+    if not station_has_cloudiness and forecast_now and len(forecast_now) > 0:
         fc = forecast_now[0]
-        if not result["storm_approaching"] or _severity(fc["code"]) > _severity(result["code"]):
+        if not result["storm_approaching"]:
             result["code"] = fc["code"]
             result["source"] = "forecast"
-            # Traducir código a label
             result["label"] = _code_to_label(fc["code"])
 
     return result
