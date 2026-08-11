@@ -1,0 +1,250 @@
+# Plan — Integración del análisis del cielo en pronóstico y condiciones
+
+> Escrito el 2026-08-11. Vive en git.
+>
+> **Estado:** análisis del cielo implementado y funcionando con Gemini (gratis).
+> Este documento evalúa cómo usarlo para mejorar pronóstico y condiciones actuales.
+
+## Contexto
+
+El sistema ya analiza cada foto de la cámara con Gemini Vision y extrae:
+
+```json
+{
+  "cloud_type": "cumulonimbus",
+  "cloud_coverage_pct": 90,
+  "sky_condition": "stormy",
+  "visibility": "good",
+  "precipitation_visible": false,
+  "development": "building",
+  "description": "Cielo amenazante con cumulonimbos...",
+  "forecast_hint": "Alta probabilidad de precipitaciones en 30-60 min"
+}
+```
+
+La pregunta es: **¿cómo usar esta información visual para complementar los datos de
+sensores y los pronósticos de modelos numéricos?**
+
+---
+
+## Opción 1: Condiciones actuales enriquecidas
+
+### Qué es
+Mostrar el análisis del cielo junto a los datos de sensores en la página principal
+y/o en la tarjeta de condiciones actuales.
+
+### Implementación
+- Agregar sección "Estado del cielo" en la página de inicio
+- Mostrar: descripción, condición, tipo de nubes, cobertura
+- Opcional: icono dinámico basado en `sky_condition`
+
+### Pros
+- **Inmediato**: ya tenemos los datos, solo hay que mostrarlos
+- **Valor único**: ninguna otra estación meteorológica casera tiene esto
+- **Contexto visual**: "hace 25°C con cielo parcialmente nublado" es más útil que solo "25°C"
+- **Bajo costo**: solo es UI, no requiere lógica adicional
+
+### Contras
+- **Dependencia de la cámara**: si no hay foto reciente, no hay análisis
+- **Subjetivo**: la descripción puede variar entre análisis consecutivos
+- **Redundancia parcial**: el icono del clima ya intenta representar la condición
+
+### Beneficio estimado: ⭐⭐⭐⭐ Alto
+Es el "low-hanging fruit" — máximo valor con mínimo esfuerzo.
+
+---
+
+## Opción 2: Nowcasting (pronóstico 0-2 horas)
+
+### Qué es
+Usar el análisis visual para predecir el clima de las próximas 1-2 horas, comparando
+análisis consecutivos y detectando tendencias.
+
+### Implementación
+1. Guardar historial de análisis (últimas 6-12 capturas, ~30-60 min)
+2. Comparar campos clave entre análisis:
+   - `cloud_coverage_pct`: ¿aumentando o disminuyendo?
+   - `development`: ¿building → stable → dissipating?
+   - `precipitation_visible`: ¿apareció?
+   - `sky_condition`: ¿cambió de partly_cloudy a stormy?
+3. Generar predicción basada en tendencias:
+   - Cobertura subiendo + development=building → "Nublándose, posible lluvia"
+   - Cobertura bajando + development=dissipating → "Despejando"
+   - precipitation_visible=true → "Lluvia aproximándose"
+
+### Pros
+- **Pronóstico hiperlocal**: los modelos numéricos tienen resolución de km, esto es metros
+- **Tiempo real**: actualiza cada 5 min vs cada hora de los modelos
+- **Detecta lo visible**: una cortina de lluvia en el horizonte aparece aquí antes que en el radar
+
+### Contras
+- **Complejidad**: requiere lógica de tendencias y umbrales
+- **Ruido**: el análisis puede variar aunque el cielo no cambie (luz, ángulo del sol)
+- **Limitado a lo visible**: no predice lo que viene de atrás del horizonte
+- **Noche**: el análisis nocturno es menos preciso
+
+### Beneficio estimado: ⭐⭐⭐ Medio-Alto
+Valor real pero requiere calibración y manejo de casos edge.
+
+---
+
+## Opción 3: Validación/ajuste del pronóstico de modelos
+
+### Qué es
+Comparar lo que DICEN los modelos (Open-Meteo, WeatherAPI) con lo que SE VE en la
+cámara, y ajustar la confianza o el pronóstico mostrado.
+
+### Implementación
+1. Al consultar el pronóstico, también consultar el último análisis del cielo
+2. Comparar condiciones:
+   ```
+   Modelo dice: "Despejado"
+   Cámara ve: "stormy, cumulonimbus, 90%"
+   → Discrepancia alta → Mostrar advertencia o ajustar
+   ```
+3. Reglas de validación:
+   - Modelo=clear + cámara=clear → ✓ Alta confianza
+   - Modelo=clear + cámara=stormy → ⚠ "Modelos desactualizados, se observan tormentas"
+   - Modelo=rain + cámara=clear → ⚠ "Lluvia prevista pero cielo despejado por ahora"
+
+### Pros
+- **Corrección en tiempo real**: los modelos se actualizan cada 1-6h, la cámara cada 5 min
+- **Honestidad**: muestra cuando hay incertidumbre
+- **Detecta errores de modelos**: los modelos fallan especialmente con tormentas convectivas
+
+### Contras
+- **Complejidad de mapeo**: ¿cómo comparar "partly_cloudy" de la cámara con códigos WMO?
+- **Alcance temporal**: la cámara ve el AHORA, los modelos predicen FUTURO
+- **Falsos positivos**: discrepancias que no significan error (nubes pasajeras)
+
+### Beneficio estimado: ⭐⭐⭐ Medio
+Interesante pero difícil de calibrar bien.
+
+---
+
+## Opción 4: Alertas automáticas visuales
+
+### Qué es
+Disparar alertas basadas en lo que la cámara detecta, independiente de los sensores.
+
+### Implementación
+Agregar reglas al sistema de alertas existente:
+
+| Condición detectada | Alerta |
+|---|---|
+| `cloud_type=cumulonimbus` + `development=building` | ⛈️ Tormenta formándose |
+| `precipitation_visible=true` | 🌧️ Lluvia aproximándose |
+| `visibility=poor` o `very_poor` | 🌫️ Visibilidad reducida |
+| `sky_condition=stormy` | ⚠️ Condiciones tormentosas |
+
+### Pros
+- **Anticipación**: alerta ANTES de que los sensores detecten lluvia/cambio de presión
+- **Integración natural**: usa el sistema de alertas existente (Telegram, correo)
+- **Único**: ninguna estación casera tiene alertas basadas en visión
+
+### Contras
+- **Falsos positivos**: nubes lejanas que nunca llegan
+- **Spam potencial**: si el análisis oscila, puede generar muchas alertas
+- **Requiere histéresis**: igual que las alertas de sensores, necesita persistencia
+
+### Beneficio estimado: ⭐⭐⭐⭐ Alto
+Valor claro y tangible, especialmente para tormentas.
+
+---
+
+## Opción 5: Histórico y estadísticas
+
+### Qué es
+Guardar todos los análisis para generar estadísticas de cielo a lo largo del tiempo.
+
+### Implementación
+1. Guardar cada análisis en archivo o InfluxDB (ya se guarda la foto, agregar el JSON)
+2. Consultas tipo:
+   - "Promedio de cobertura de nubes por hora del día"
+   - "Días con cielo despejado este mes"
+   - "Frecuencia de cada tipo de nube"
+
+### Pros
+- **Climatología visual**: dato único que no existe en estaciones convencionales
+- **Validación a posteriori**: comparar análisis vs lluvia real registrada
+- **Interesante para el usuario**: "tu cielo típico a las 3pm es parcialmente nublado"
+
+### Contras
+- **Almacenamiento**: ~1KB por análisis × 288/día × 365 = ~100 MB/año (manejable)
+- **Valor diferido**: no es útil hasta tener semanas/meses de datos
+- **Complejidad de visualización**: requiere gráficas nuevas
+
+### Beneficio estimado: ⭐⭐ Medio-Bajo a corto plazo, alto a largo plazo
+
+---
+
+## Comparativa resumen
+
+| Opción | Esfuerzo | Beneficio | Prioridad sugerida |
+|---|---|---|---|
+| 1. Condiciones actuales | Bajo | Alto | **1º** |
+| 4. Alertas visuales | Medio | Alto | **2º** |
+| 2. Nowcasting | Medio-Alto | Medio-Alto | **3º** |
+| 3. Validación de modelos | Alto | Medio | 4º |
+| 5. Histórico | Bajo-Medio | Bajo→Alto | 5º (paralelo) |
+
+---
+
+## Plan de implementación propuesto
+
+### Fase 1: Condiciones actuales (1-2 horas)
+- [ ] Agregar resumen del análisis en página de inicio
+- [ ] Mostrar descripción + condición + cobertura
+- [ ] Diseño compacto que no ocupe mucho espacio
+
+### Fase 2: Alertas visuales (2-3 horas)
+- [ ] Agregar categoría "visual" al sistema de alertas
+- [ ] Reglas: cumulonimbus+building, precipitation_visible, visibility poor
+- [ ] Histéresis: requerir 2 análisis consecutivos para disparar
+- [ ] Configurable desde Admin (activar/desactivar cada regla)
+
+### Fase 3: Nowcasting básico (3-4 horas)
+- [ ] Guardar últimos N análisis en memoria o archivo
+- [ ] Calcular tendencia de cobertura y desarrollo
+- [ ] Mostrar indicador de tendencia: "↑ Nublándose" / "↓ Despejando" / "→ Estable"
+- [ ] Agregar al `forecast_hint` del análisis o como campo separado
+
+### Fase 4: Histórico (2-3 horas, puede ir en paralelo)
+- [ ] Guardar análisis en archivo diario JSON (junto al histórico de fotos)
+- [ ] Endpoint `/api/camera/analysis/history?date=YYYY-MM-DD`
+- [ ] Visualización básica: gráfica de cobertura del día
+
+### Fase 5: Validación de modelos (4-5 horas, opcional)
+- [ ] Mapear sky_condition a códigos WMO
+- [ ] Comparar con pronóstico de la hora actual
+- [ ] Mostrar indicador de confianza o discrepancia
+- [ ] Requiere más investigación de qué tan confiable es
+
+---
+
+## Decisiones pendientes
+
+1. **¿Dónde mostrar el análisis en la página principal?**
+   - Opción A: Tarjeta dedicada "Estado del cielo"
+   - Opción B: Integrado en la tarjeta de condiciones actuales
+   - Opción C: Solo en la página de la cámara (actual)
+
+2. **¿Alertas visuales van a Telegram/correo o solo se muestran en la web?**
+   - Depende de cuántos falsos positivos genere en la práctica
+
+3. **¿Historial de análisis en InfluxDB o en archivos JSON?**
+   - JSON es más simple y ya tenemos el patrón con las fotos
+   - InfluxDB permite queries más potentes
+
+4. **¿Análisis solo de día?**
+   - Reduciría llamadas a la API y evita análisis de poca utilidad
+   - Usar sunrise/sunset del almanac para decidir
+
+---
+
+## Referencias
+
+- Análisis implementado: `receiver/app/services/sky_analyzer.py`
+- Documentación de cámara: `docs/internal/PLAN-CAMARA-EXTERIOR.md`
+- Sistema de alertas: `receiver/app/services/alerts.py`
+- Pronóstico consensus: `receiver/app/services/forecast_consensus.py`
