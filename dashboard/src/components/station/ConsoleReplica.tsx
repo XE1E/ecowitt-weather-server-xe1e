@@ -1788,7 +1788,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               desalojado): sin ella y sin rótulo, nada diría que esta celda es de lluvia,
               y es el mismo papel que hacen el termómetro en EXT o el barómetro en PRES.
               44 y no 46: el hueco a la izquierda de las cifras es ese. */}
-          <div style={{ position: 'absolute', top: 16, left: 12 }}>
+          {/* overflow: visible evita que la animación de escala recorte el glifo */}
+          <div style={{ position: 'absolute', top: 16, left: 12, overflow: 'visible' }}>
             <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')} title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del

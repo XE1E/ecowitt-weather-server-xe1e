@@ -78,6 +78,47 @@ const RETOQUES: Record<string, (svg: string) => string> = {
 /** Nombres disponibles como glifo teñible. */
 export type GlyphName = keyof typeof CRUDOS
 
+/**
+ * Animaciones por tipo de glifo. Cada icono tiene su movimiento característico:
+ * - thermometer: pulso suave (escala)
+ * - humidity: rebote vertical (gota cayendo)
+ * - barometer: balanceo sutil (como aguja)
+ * - raindrops: rebote con escala (gotas salpicando)
+ */
+const ANIMACIONES: Record<string, string> = {
+  thermometer: 'glyph-pulse 2.5s ease-in-out infinite',
+  humidity: 'glyph-bounce 2s ease-in-out infinite',
+  barometer: 'glyph-swing 3s ease-in-out infinite',
+  raindrops: 'glyph-drip 1.8s ease-in-out infinite',
+}
+
+// Inyectar keyframes una sola vez en el documento
+if (typeof document !== 'undefined' && !document.getElementById('meteo-glyph-animations')) {
+  const style = document.createElement('style')
+  style.id = 'meteo-glyph-animations'
+  style.textContent = `
+    @keyframes glyph-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    @keyframes glyph-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes glyph-swing {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(3deg); }
+      75% { transform: rotate(-3deg); }
+    }
+    @keyframes glyph-drip {
+      0%, 100% { transform: scale(1) translateY(0); }
+      30% { transform: scale(1.06) translateY(-3px); }
+      60% { transform: scale(0.97) translateY(2px); }
+    }
+  `
+  document.head.appendChild(style)
+}
+
 interface Props {
   name: GlyphName | string
   /** ALTO del glifo en px. El ancho sale de la proporción real de la tinta. */
@@ -115,6 +156,7 @@ export function MeteoGlyph({ name, size, color, title }: Props) {
   }, [name, uid])
 
   if (!prep) return null
+  const anim = ANIMACIONES[name]
   return (
     <span
       role="img"
@@ -128,6 +170,8 @@ export function MeteoGlyph({ name, size, color, title }: Props) {
         width: Math.round(size * prep.ratio),
         color,
         lineHeight: 0,
+        transformOrigin: 'center center',
+        animation: anim,
       }}
       // Contenido estático de un paquete npm, no entrada de usuario.
       dangerouslySetInnerHTML={{ __html: prep.svg }}
