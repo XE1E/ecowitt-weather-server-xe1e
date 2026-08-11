@@ -891,7 +891,7 @@ function WarnGlyph({ size = 15 }: { size?: number }) {
 type Trend = 'up' | 'down' | 'stable'
 
 // Flechita de tendencia (sube / baja / estable) reutilizada por varias celdas.
-function TrendGlyph({ trend, width = 20, height = 24, style }: {
+function TrendGlyph({ trend, width = 24, height = 28, style }: {
   trend: Trend; width?: number; height?: number; style?: React.CSSProperties
 }) {
   return (
@@ -1721,7 +1721,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               glifo quedaba un poco alto respecto al hueco que ocupa a la vista. Diez
               píxeles menos de exclusión lo bajan 5, que es lo que le faltaba. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#a78bfa')} title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#8b5cf6')} title="presión" />
           </div>
           {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
               propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el
