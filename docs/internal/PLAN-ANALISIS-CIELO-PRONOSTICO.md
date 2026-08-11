@@ -203,11 +203,13 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 - [x] Histéresis: requerir 2 análisis consecutivos para disparar
 - [x] Configurable desde Admin (alert_visual_enabled, alert_visual_rules_disabled)
 
-### Fase 3: Nowcasting básico (3-4 horas)
-- [ ] Guardar últimos N análisis en memoria o archivo
-- [ ] Calcular tendencia de cobertura y desarrollo
-- [ ] Mostrar indicador de tendencia: "↑ Nublándose" / "↓ Despejando" / "→ Estable"
-- [ ] Agregar al `forecast_hint` del análisis o como campo separado
+### Fase 3: Nowcasting básico (3-4 horas) — COMPLETADA (2026-08-11)
+- [x] Guardar últimos 12 análisis en archivo (analysis_history.json)
+- [x] Calcular tendencia de cobertura (delta >10% = significativo)
+- [x] Calcular tendencia de desarrollo (building→stable→dissipating)
+- [x] Detectar aparición de precipitación visible
+- [x] Mostrar en UI: "↑ Nublándose", "↓ Despejando", "→ Estable", "⛈️ Posible tormenta"
+- [x] Endpoint /api/camera/analysis incluye campo `trend` con detalles
 
 ### Fase 4: Histórico (2-3 horas, puede ir en paralelo)
 - [ ] Guardar análisis en archivo diario JSON (junto al histórico de fotos)
