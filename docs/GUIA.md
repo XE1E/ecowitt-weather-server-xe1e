@@ -847,6 +847,140 @@ sugerido por cada red aunque la estación reporte cada minuto.
 
 ---
 
+## 11½. Sistema de pronóstico
+
+El sistema combina **múltiples fuentes** de pronóstico para mayor precisión y fiabilidad,
+siguiendo el principio de que el **dato real de la estación tiene prioridad** sobre cualquier
+modelo externo.
+
+### Fuentes de pronóstico
+
+| Fuente | Qué aporta | Archivo |
+|--------|------------|---------|
+| **Estación local** | Condición REAL ahora (lluvia, radiación solar → nubosidad) | — |
+| **Tendencia de presión** | Alerta de tormenta inminente (0-3h), método Zambretti | `forecaster.py` |
+| **Open-Meteo** | Pronóstico horario gratuito (1-7 días), códigos WMO | `openmeteo.py` |
+| **WeatherAPI** | Más preciso para ciudades grandes (1-3 días), requiere API key | `weatherapi.py` |
+| **SMN (CONAGUA)** | Pronóstico oficial por municipio (4 días + 48h) | `smn.py` |
+
+### Arquitectura del consenso (`forecast_consensus.py`)
+
+El sistema de **consenso** combina todas las fuentes con esta lógica de prioridad:
+
+```
+1. ¿Está lloviendo según la estación? → "Lloviendo" (dato REAL, no pronóstico)
+2. ¿Hay radiación solar? → Nubosidad REAL por índice de claridad
+3. ¿La presión indica tormenta inminente? → "Tormenta cercana"
+4. Si no hay dato local → Usar pronóstico promediado
+```
+
+**Principios clave:**
+- La estación local tiene **prioridad absoluta** si hay precipitación (el pluviómetro es dato real)
+- El **índice de claridad** (radiación medida ÷ teórica) determina nubosidad real de día
+- La **tendencia de presión** detecta tormentas ANTES de que lleguen (caída de presión)
+- Cuando Open-Meteo y WeatherAPI difieren, se usa el **promedio de severidad** (no el peor caso)
+
+### Pronóstico local por presión (`forecaster.py`)
+
+Método clásico del barómetro (base Zambretti): la presión a nivel del mar y su **tendencia
+en las últimas 3 horas** anticipan el tiempo a corto plazo:
+
+| Cambio 3h (hPa) | Tendencia | Pronóstico |
+|-----------------|-----------|------------|
+| ≤ -7 | Cayendo muy rápido | Tormenta inminente (0-1h) |
+| -7 a -5 | Cayendo rápido | Lluvia probable en 1-2h |
+| -5 a -3 | Bajando | Posible lluvia en 2-4h |
+| -3 a +3 | Estable | Sin cambios esperados |
+| +3 a +5 | Subiendo | Tiempo mejorando |
+| > +5 | Subiendo rápido | Cielos despejando |
+
+**Endpoint:** `GET /api/forecast/local`
+
+### Open-Meteo (`openmeteo.py`)
+
+Pronóstico horario y diario gratuito, sin API key. Se cachea 15 min en el servidor con
+fallback a copia stale si el origen no responde.
+
+**Campos obtenidos:**
+- Diarios: `weather_code`, `temp_max/min`, `precip_probability`, `precip_sum`, `wind`, `sunrise/sunset`
+- Horarios: `weather_code`, `temp`, `precip_probability` (+ campos extras para e-paper)
+
+**Códigos WMO:** Open-Meteo usa códigos WMO estándar (0=despejado, 3=nublado, 61-65=lluvia,
+95-99=tormenta). Ver `_WMO_SEVERITY` en `forecast_consensus.py` para la tabla completa.
+
+**Endpoint:** `GET /api/forecast?lat=&lon=`
+
+### WeatherAPI (`weatherapi.py`)
+
+Complemento de Open-Meteo con mejor precisión para ciudades grandes. Requiere API key
+gratuita (1M llamadas/mes). Los códigos propios se convierten a WMO para unificar
+(`_WEATHERAPI_TO_WMO`).
+
+**Normalización:** la respuesta se transforma al formato Open-Meteo para que el frontend
+pueda usar cualquiera de las dos fuentes sin cambios.
+
+**Endpoint:** (interno, se usa solo para el consenso)
+
+### Consenso combinado (`forecast_consensus.py`)
+
+**Endpoint:** `GET /api/forecast/consensus`
+
+Combina todas las fuentes y devuelve:
+
+```json
+{
+  "current": {
+    "code": 2,
+    "label": "Parcialmente nublado",
+    "source": "station",
+    "rain_now": false,
+    "storm_approaching": false,
+    "clearness_index": 0.58
+  },
+  "pressure": {
+    "trend": "stable",
+    "delta_3h": -0.8,
+    "storm_likely": false,
+    "confidence": "medium",
+    "message": "Presión estable..."
+  },
+  "hourly": [...],  // 48 horas, promedio de fuentes
+  "daily": [...],   // 7 días
+  "alerts": [...],  // Alertas generadas
+  "sources": ["pressure", "open-meteo", "weatherapi"]
+}
+```
+
+**Fusión de pronósticos horarios:**
+- Se usa Open-Meteo como base y se enriquece con WeatherAPI
+- Cuando ambos difieren, se calcula el **promedio de severidad** (evita sesgo pesimista)
+- Probabilidad de precipitación: promedio de ambas fuentes
+- Temperatura: promedio si ambas disponibles
+
+### Caché y resiliencia
+
+Todos los servicios de pronóstico siguen el patrón de **caché con fallback**:
+
+1. Si hay copia en caché y no expiró (15 min) → se sirve
+2. Se intenta obtener dato fresco del origen
+3. Si falla pero hay copia expirada → se sirve marcada como `stale: true`
+4. Si no hay copia → error (solo `/api/epaper/forecast.json` nunca da 503)
+
+El campo `stale` permite al frontend mostrar advertencia de dato viejo.
+
+### Integración con displays
+
+| Display | Endpoint | Formato |
+|---------|----------|---------|
+| Dashboard web | `/api/forecast`, `/api/forecast/consensus` | JSON propio |
+| E-paper LilyGo | `/api/epaper/forecast.json` | WeatherAPI `forecast.json` |
+| Ulanzi TC001 | `/api/svitrix` | WeatherAPI `current.json` |
+
+El endpoint e-paper **nunca devuelve 503**: si falta dato cae al pronóstico y lo marca en
+`xe1e.source`, porque el display despierta, pide una vez y se vuelve a dormir.
+
+---
+
 ## 12. Fuentes de datos externas
 
 | Fuente | Qué aporta | Frecuencia / caché |
