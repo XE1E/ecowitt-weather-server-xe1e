@@ -372,6 +372,151 @@ La cámara (Tapo C325WB) vive **detrás del NAT de casa** y el servidor en el VP
 que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada 5 min y
 lo **empuja**. Ver `docs/internal/PLAN-CAMARA-EXTERIOR.md`.
 
+##### Arquitectura del flujo de captura
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              RED LOCAL (casa)                                    │
+│                                                                                  │
+│  ┌──────────────┐     RTSP/TCP      ┌──────────────────────────────────────┐    │
+│  │ Tapo C325WB  │ ────────────────► │  Raspberry Pi / nodo captura         │    │
+│  │ (cámara 2K)  │   stream1/554     │  ┌────────────────────────────────┐  │    │
+│  └──────────────┘                   │  │  captura-camara.sh (timer 5m)  │  │    │
+│                                     │  │  ├─ ffmpeg: 1 frame RTSP→JPEG  │  │    │
+│                                     │  │  ├─ escala a max 1600px        │  │    │
+│                                     │  │  └─ reintentos (3× con backoff)│  │    │
+│                                     │  └────────────────────────────────┘  │    │
+│                                     └───────────────┬──────────────────────┘    │
+└─────────────────────────────────────────────────────┼────────────────────────────┘
+                                                      │
+                                          POST /api/camera/upload
+                                          X-Camera-Token: $TOKEN
+                                          Content-Type: image/jpeg
+                                          (TLS pinning directo al VPS)
+                                                      │
+                                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              VPS Oracle (servidor)                               │
+│                                                                                  │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │  receiver/app/services/camera.py  (CameraStore)                           │  │
+│  │  ┌─────────────────────────────────────────────────────────────────────┐  │  │
+│  │  │  save(data, taken_at)                                               │  │  │
+│  │  │  ├─ Validar tamaño (1 KB - 12 MB)                                   │  │  │
+│  │  │  ├─ Validar firma JPEG (FFD8FF)                                     │  │  │
+│  │  │  ├─ Escritura ATÓMICA: tmp → rename                                 │  │  │
+│  │  │  │   └─ Evita servir media foto durante volcado                     │  │  │
+│  │  │  ├─ Guardar metadato (captured_at, bytes) → latest.json             │  │  │
+│  │  │  ├─ Archivar en histórico: YYYY-MM-DD/HHMMSS.jpg                    │  │  │
+│  │  │  └─ Purgar días > CAMERA_RETENTION_DAYS (7)                         │  │  │
+│  │  └─────────────────────────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                        │                                         │
+│                                        ▼                                         │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │  Análisis con IA (sky_analyzer.py)                                        │  │
+│  │  ├─ Gemini Vision o Claude (según config)                                 │  │
+│  │  ├─ Extrae: condición, nubes, cobertura, visibilidad, desarrollo, precip  │  │
+│  │  └─ Guarda: latest_analysis.json, history, diario                         │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                        │                                         │
+│                       ┌────────────────┼────────────────┐                        │
+│                       ▼                ▼                ▼                        │
+│               ┌───────────┐    ┌───────────┐    ┌───────────┐                   │
+│               │ Dashboard │    │  Kiosco   │    │  Alertas  │                   │
+│               │ /pro/cam  │    │ Waveshare │    │ Telegram  │                   │
+│               └───────────┘    └───────────┘    └───────────┘                   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+##### El script de captura (`scripts/captura-camara.sh`)
+
+Corre en una Raspberry Pi (o cualquier Linux en la red local) cada 5 min vía timer
+de systemd. Por qué es necesario: la cámara solo habla RTSP/ONVIF dentro de la LAN
+(FAQ de TP-Link), el servidor está en un VPS externo, y el router no tiene reenvío
+de puertos. Alguien **dentro de casa** tiene que sacar la foto y **empujarla**.
+
+**Configuración** (`camara.env`):
+```bash
+CAMERA_IP=192.168.1.100       # IP de la Tapo en la LAN
+CAMERA_USER=admin             # Credenciales del stream RTSP
+CAMERA_PASS=secreto
+CAMERA_STREAM=stream1         # stream1=alta res, stream2=baja
+API_URL=https://clima.xe1e.net
+UPLOAD_TOKEN=token_secreto    # El mismo que CAMERA_UPLOAD_TOKEN del servidor
+MAX_WIDTH=1600                # Escalar a este ancho máximo
+RETRIES=3                     # Reintentos si ffmpeg falla
+VPS_IP=163.192.147.208        # IP directa del VPS (salta Cloudflare)
+TLS_PIN=sha256//xxxxx         # Pin de clave pública para validar TLS
+```
+
+**Captura con ffmpeg:**
+```bash
+ffmpeg -rtsp_transport tcp \
+  -i "rtsp://user:pass@IP:554/stream1" \
+  -ss 1 -frames:v 1 -q:v 3 \
+  -vf "scale='min(1600,iw)':-2" \
+  -f image2 foto.jpg
+```
+- `-rtsp_transport tcp`: evita bandas por paquetes UDP perdidos
+- `-ss 1`: descarta el primer segundo (el primer keyframe suele venir incompleto)
+- `-q:v 3`: calidad JPEG buena sin llegar a 1 MB
+- `scale`: reduce si excede MAX_WIDTH, mantiene proporción
+
+**Manejo de VPN/túnel:** si el nodo sale por una VPN (p.ej. AMPRNet), Cloudflare
+puede bloquear esa IP. El script detecta si la ruta al VPS pasa por `tun*|ppp*|wg*`
+y la reescribe para salir por la LAN real, sin tocar la configuración permanente.
+
+**TLS pinning:** al ir directo al VPS (saltando Cloudflare), el certificado Origin
+de Cloudflare no valida con CAs públicas. En lugar de deshabilitar TLS, se fija la
+clave pública del servidor (`--pinnedpubkey`). Sin `TLS_PIN`, el script **no envía**.
+
+**Reintentos con backoff:** si ffmpeg falla, reintenta hasta `RETRIES` veces con
+esperas crecientes (5s, 10s, 15s). Si todos fallan, **no sube nada** — es mejor dejar
+la foto anterior (que el servidor marcará como stale) que subir un JPEG roto.
+
+**Modo sin cámara:** si las credenciales están en valores placeholder (`CAMBIAR`),
+el script sale limpiamente con código 0. Así el timer puede quedar activo esperando
+que se configure la cámara, sin llenar el journal de errores.
+
+##### Procesamiento en el servidor (`CameraStore`)
+
+**Validaciones al recibir:**
+1. **Tamaño mínimo** (1 KB): rechaza cuerpos vacíos o triviales
+2. **Tamaño máximo** (12 MB): la Tapo 2K da ~200-600 KB; 12 MB es un tope de seguridad
+3. **Firma JPEG** (`FFD8FF`): rechaza HTML de portales cautivos, errores de ffmpeg, etc.
+
+**Escritura atómica:**
+```python
+tmp = "latest.jpg.tmp"
+with open(tmp, "wb") as f:
+    f.write(data)
+os.replace(tmp, "latest.jpg")  # rename atómico
+```
+Sin esto, una petición GET durante el volcado serviría media imagen.
+
+**Estructura de archivos:**
+```
+/data/camera/
+├── latest.jpg              # La última captura
+├── latest.json             # Metadato: {"captured_at": "...", "bytes": 123456}
+├── latest_analysis.json    # Último análisis de IA
+├── analysis_history.json   # Últimos 12 análisis (para nowcasting)
+└── 2026-08-11/
+    ├── 080532.jpg          # Histórico del día (HHMMSS.jpg)
+    ├── 081033.jpg
+    └── analysis.json       # Todos los análisis del día
+```
+
+**Retención:** el histórico se poda por **días completos**, no por número de fotos.
+Si un día solo llegaron 10 capturas, no se borran para hacer hueco; se borran cuando
+el día tiene más de `CAMERA_RETENTION_DAYS` (default 7) de antigüedad.
+
+**Detección de foto vieja:** `stale_seconds` (default 1200 = 20 min). Si la foto
+tiene más edad, `stale: true` en el status y el kiosco puede mostrarlo visualmente.
+
+##### Endpoints de la cámara
+
 | Endpoint | Qué |
 |---|---|
 | `POST /api/camera/upload` | Recibe la captura. Multipart (campo `file`) o el JPEG en crudo |
@@ -384,15 +529,15 @@ curl -H "X-Camera-Token: $TOKEN" --data-binary @foto.jpg \
      https://clima.xe1e.net/api/camera/upload
 ```
 
+**Códigos de respuesta:**
+- `200`: subida OK
+- `400`: el contenido no es un JPEG válido
+- `401`: token incorrecto
+- `503`: `CAMERA_UPLOAD_TOKEN` no configurado en el servidor
+
 `CAMERA_UPLOAD_TOKEN` es un token **propio**, no el del panel de administración: lo
 lleva un script desatendido y, si se filtra, sólo permite subir fotos. Sin token
 configurado la subida responde **503** y no guarda nada.
-
-Se valida que el cuerpo sea un JPEG de verdad (firma SOI) y se escribe con `rename`
-atómico: sin lo primero, un `ffmpeg` que falle dejaría `latest.jpg` con un mensaje de
-error que el kiosco daría por bueno; sin lo segundo, una petición a mitad del volcado
-serviría media foto —que el navegador pinta a medias, sin dar error—. El histórico se
-poda por **días completos** (`CAMERA_RETENTION_DAYS`, 7 por defecto).
 
 ##### Análisis del cielo con IA
 
