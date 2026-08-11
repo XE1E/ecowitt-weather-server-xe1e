@@ -241,7 +241,7 @@ class Settings(BaseSettings):
     gemini_api_key: Optional[str] = None
     # Modelos por proveedor (se usan defaults si no se especifican)
     camera_analysis_model_anthropic: str = "claude-sonnet-4-20250514"
-    camera_analysis_model_gemini: str = "gemini-2.0-flash"
+    camera_analysis_model_gemini: str = "gemini-2.5-flash"
 
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)

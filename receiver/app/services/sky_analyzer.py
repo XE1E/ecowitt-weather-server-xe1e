@@ -267,7 +267,7 @@ async def _analyze_gemini(
 # Modelos por defecto para cada proveedor
 DEFAULT_MODELS = {
     "anthropic": "claude-sonnet-4-20250514",
-    "gemini": "gemini-2.0-flash",
+    "gemini": "gemini-2.5-flash",
 }
 
 
@@ -402,9 +402,9 @@ PROVIDER_INFO = {
     "gemini": {
         "name": "Google Gemini",
         "models": [
-            {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash (recomendado)"},
-            {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash"},
-            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (mejor calidad)"},
+            {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (recomendado)"},
+            {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (mejor calidad)"},
+            {"id": "gemini-flash-latest", "name": "Gemini Flash (última versión)"},
         ],
         "free_tier": True,
         "pricing": "Gratis hasta 15 req/min, 1M tokens/día",
