@@ -211,10 +211,12 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 - [x] Mostrar en UI: "↑ Nublándose", "↓ Despejando", "→ Estable", "⛈️ Posible tormenta"
 - [x] Endpoint /api/camera/analysis incluye campo `trend` con detalles
 
-### Fase 4: Histórico (2-3 horas, puede ir en paralelo)
-- [ ] Guardar análisis en archivo diario JSON (junto al histórico de fotos)
-- [ ] Endpoint `/api/camera/analysis/history?date=YYYY-MM-DD`
-- [ ] Visualización básica: gráfica de cobertura del día
+### Fase 4: Histórico (2-3 horas) — COMPLETADA (2026-08-11)
+- [x] Guardar análisis en archivo diario JSON (analysis.json por carpeta de día)
+- [x] Endpoint `/api/camera/analysis/history` (sin params: lista días, con ?date=: datos del día)
+- [x] Componente SkyAnalysisHistory con gráfica de barras de cobertura
+- [x] Estadísticas del día: promedio, mín, máx cobertura + condiciones observadas
+- [x] Navegación entre días disponibles
 
 ### Fase 5: Validación de modelos (4-5 horas, opcional)
 - [ ] Mapear sky_condition a códigos WMO
