@@ -31,7 +31,7 @@ const METRICS: Record<MetricKey, {
 }> = {
   temp: { label: 'Temperatura', color: '#f97316', field: 'temperature_outdoor',
     unit: (u) => u.tempU, conv: (u, v) => u.tempN(v) },
-  pressure: { label: 'Presión', color: '#a78bfa', field: 'pressure_relative',
+  pressure: { label: 'Presión', color: '#8b5cf6', field: 'pressure_relative',
     unit: (u) => u.pressU, conv: (u, v) => u.pressN(v) },
   wind: { label: 'Viento', color: '#22c55e', field: 'wind_speed',
     unit: (u) => u.windU, conv: (u, v) => u.windN(v) },

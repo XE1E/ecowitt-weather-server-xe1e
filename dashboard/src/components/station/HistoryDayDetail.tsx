@@ -282,7 +282,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
                     <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} labelFormatter={(l) => fmtTick(Number(l))} formatter={(v: number, n: string) => [n === 'Presión' ? `${nf(v)} ${u.pressU}` : `${nf(v)} ${u.rateU}`, n]} />
                     <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                       <Bar yAxisId="r" dataKey="rain" name="Tasa de lluvia" fill="#38bdf8" radius={[3, 3, 0, 0]} />
-                      <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+                      <Line yAxisId="p" type="monotone" dataKey="press" name="Presión" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

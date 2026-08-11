@@ -51,7 +51,7 @@ const nf = (v: number) => Number(v).toLocaleString('es-MX', { maximumFractionDig
 // Colores
 const COL = {
   temp: '#f97316',    // naranja
-  press: '#a78bfa',   // morado
+  press: '#8b5cf6',   // morado
   rain: '#38bdf8',    // azul claro
   wind: '#22c55e',    // verde
   hum: '#3b82f6',     // azul oscuro

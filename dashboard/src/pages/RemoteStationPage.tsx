@@ -400,7 +400,7 @@ export function RemoteStationPage() {
                           <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['auto', 'auto']} unit={` ${u.pressU}`} />
                           <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
-                          <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#a78bfa" dot={false} strokeWidth={2} connectNulls />
+                          <Line type="monotone" dataKey="pressure" name={`Presión ${u.pressU}`} stroke="#8b5cf6" dot={false} strokeWidth={2} connectNulls />
                         </>
                       )}
                     </LineChart>

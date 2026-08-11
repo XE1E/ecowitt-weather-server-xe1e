@@ -96,8 +96,8 @@ export function PressureCard({ data, stats, history }: Props) {
               <AreaChart data={series} margin={{ top: 6, right: 8, left: 2, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
                 {/* Rejilla discreta: gris muy tenue, punteada, sin robar foco a la línea */}
@@ -119,7 +119,7 @@ export function PressureCard({ data, stats, history }: Props) {
                   labelFormatter={(l) => stampFmt(Number(l))}
                   formatter={(v: number) => [`${v.toFixed(u.system === 'imperial' ? 2 : 1)} ${u.pressU}`, 'Presión']}
                 />
-                <Area type="monotone" dataKey="p" stroke="#a78bfa" strokeWidth={2} fill="url(#pFill)" dot={false} activeDot={{ r: 3, fill: '#a78bfa', strokeWidth: 0 }} isAnimationActive={false} />
+                <Area type="monotone" dataKey="p" stroke="#8b5cf6" strokeWidth={2} fill="url(#pFill)" dot={false} activeDot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

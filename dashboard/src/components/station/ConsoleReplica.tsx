@@ -2143,13 +2143,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
-              <TrendGlyph trend={remoteOutTempTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              <TrendGlyph trend={remoteOutTempTrend} width={20} height={24} style={{ position: 'absolute', top: 10, right: -4 }} />
             </span>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutH != null ? remoteOutH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
               </span>
-              <TrendGlyph trend={remoteOutHumTrend} width={14} height={18} style={{ position: 'absolute', top: 12, right: -2 }} />
+              <TrendGlyph trend={remoteOutHumTrend} width={20} height={24} style={{ position: 'absolute', top: 10, right: -4 }} />
             </span>
           </div>
         </div>
@@ -2459,7 +2459,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#a78bfa')} title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#8b5cf6')} title="presión" />
           </div>
           {/* Aviso de esta celda, con el mismo sitio y tamaño que en EXT, HUMEDAD y PRES:
               a la izquierda de la flecha y a 30 px. Aquí la lectura SÍ estorbaba de verdad y
