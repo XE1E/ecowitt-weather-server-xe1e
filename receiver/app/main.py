@@ -1974,6 +1974,7 @@ async def camera_analysis():
             "has_anthropic_key": has_anthropic,
             "has_gemini_key": has_gemini,
         }
+    trend = _camera.get_trend()
     return {
         "available": True,
         "enabled": settings.camera_analysis_enabled,
@@ -1981,6 +1982,7 @@ async def camera_analysis():
         "active_provider": resolved,
         "has_anthropic_key": has_anthropic,
         "has_gemini_key": has_gemini,
+        "trend": trend,
         **analysis,
     }
 

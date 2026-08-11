@@ -58,6 +58,10 @@ class CameraStore:
     def latest_analysis(self) -> str:
         return os.path.join(self.base, "latest_analysis.json")
 
+    @property
+    def analysis_history(self) -> str:
+        return os.path.join(self.base, "analysis_history.json")
+
     # ── escritura ────────────────────────────────────────────────────────────
     def save(self, data: bytes, taken_at: Optional[datetime] = None) -> Dict[str, Any]:
         """
@@ -191,13 +195,138 @@ class CameraStore:
         return out
 
     # ── análisis del cielo ───────────────────────────────────────────────────
+
+    # Cuántos análisis guardar para calcular tendencias (~1 hora con cadencia 5 min)
+    HISTORY_SIZE = 12
+
     def save_analysis(self, analysis: Dict[str, Any]) -> None:
-        """Guarda el análisis del cielo de la última captura."""
+        """Guarda el análisis del cielo de la última captura y lo agrega al historial."""
         os.makedirs(self.base, exist_ok=True)
         tmp = self.latest_analysis + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(analysis, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.latest_analysis)
+        self._append_to_history(analysis)
+
+    def _load_history(self) -> list:
+        """Carga el historial de análisis."""
+        try:
+            with open(self.analysis_history, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return []
+
+    def _save_history(self, history: list) -> None:
+        """Guarda el historial de análisis."""
+        tmp = self.analysis_history + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False)
+        os.replace(tmp, self.analysis_history)
+
+    def _append_to_history(self, analysis: Dict[str, Any]) -> None:
+        """Agrega un análisis al historial, manteniendo solo los últimos N."""
+        if analysis.get("error"):
+            return
+        history = self._load_history()
+        entry = {
+            "ts": analysis.get("analyzed_at", datetime.now(timezone.utc).isoformat()),
+            "coverage": analysis.get("cloud_coverage_pct", 0),
+            "condition": analysis.get("sky_condition", "unknown"),
+            "development": analysis.get("development", "unknown"),
+            "precip": analysis.get("precipitation_visible", False),
+        }
+        history.append(entry)
+        if len(history) > self.HISTORY_SIZE:
+            history = history[-self.HISTORY_SIZE:]
+        self._save_history(history)
+
+    def get_trend(self) -> Optional[Dict[str, Any]]:
+        """
+        Calcula tendencia del cielo basada en análisis recientes.
+
+        Retorna None si no hay suficiente historial (mínimo 3 análisis).
+        """
+        history = self._load_history()
+        if len(history) < 3:
+            return None
+
+        # Comparar primera y última mitad del historial
+        mid = len(history) // 2
+        old_half = history[:mid]
+        new_half = history[mid:]
+
+        old_cov = sum(h["coverage"] for h in old_half) / len(old_half)
+        new_cov = sum(h["coverage"] for h in new_half) / len(new_half)
+        cov_delta = new_cov - old_cov
+
+        # Tendencia de cobertura: cambio de >10% es significativo
+        if cov_delta > 10:
+            cov_trend = "increasing"
+            cov_icon = "↑"
+        elif cov_delta < -10:
+            cov_trend = "decreasing"
+            cov_icon = "↓"
+        else:
+            cov_trend = "stable"
+            cov_icon = "→"
+
+        # Tendencia de desarrollo (building -> stable -> dissipating)
+        dev_order = {"building": 2, "stable": 1, "dissipating": 0, "unknown": 1}
+        old_dev = sum(dev_order.get(h["development"], 1) for h in old_half) / len(old_half)
+        new_dev = sum(dev_order.get(h["development"], 1) for h in new_half) / len(new_half)
+        dev_delta = new_dev - old_dev
+
+        if dev_delta > 0.5:
+            dev_trend = "intensifying"
+        elif dev_delta < -0.5:
+            dev_trend = "weakening"
+        else:
+            dev_trend = "stable"
+
+        # Detectar si apareció precipitación
+        old_precip = any(h["precip"] for h in old_half)
+        new_precip = any(h["precip"] for h in new_half)
+        precip_appearing = new_precip and not old_precip
+
+        # Generar resumen textual
+        if precip_appearing:
+            summary = "🌧️ Precipitación aproximándose"
+            icon = "🌧️"
+        elif cov_trend == "increasing" and dev_trend == "intensifying":
+            summary = "⛈️ Nublándose, posible tormenta"
+            icon = "⛈️"
+        elif cov_trend == "increasing":
+            summary = "☁️ Nublándose"
+            icon = "↑"
+        elif cov_trend == "decreasing":
+            summary = "🌤️ Despejando"
+            icon = "↓"
+        else:
+            summary = "→ Estable"
+            icon = "→"
+
+        return {
+            "coverage_trend": cov_trend,
+            "coverage_delta": round(cov_delta, 1),
+            "coverage_icon": cov_icon,
+            "development_trend": dev_trend,
+            "precip_appearing": precip_appearing,
+            "summary": summary,
+            "icon": icon,
+            "samples": len(history),
+            "span_minutes": self._history_span_minutes(history),
+        }
+
+    def _history_span_minutes(self, history: list) -> int:
+        """Calcula cuántos minutos cubre el historial."""
+        if len(history) < 2:
+            return 0
+        try:
+            first = datetime.fromisoformat(history[0]["ts"].replace("Z", "+00:00"))
+            last = datetime.fromisoformat(history[-1]["ts"].replace("Z", "+00:00"))
+            return int((last - first).total_seconds() / 60)
+        except (KeyError, ValueError):
+            return 0
 
     def get_analysis(self) -> Optional[Dict[str, Any]]:
         """Lee el último análisis del cielo, si existe."""

@@ -10,6 +10,18 @@ import { relativeTime } from '../../weather'
  * Se oculta automáticamente si no hay análisis disponible.
  */
 
+interface Trend {
+  coverage_trend: 'increasing' | 'decreasing' | 'stable'
+  coverage_delta: number
+  coverage_icon: string
+  development_trend: 'intensifying' | 'weakening' | 'stable'
+  precip_appearing: boolean
+  summary: string
+  icon: string
+  samples: number
+  span_minutes: number
+}
+
 interface Analysis {
   available: boolean
   enabled?: boolean
@@ -24,6 +36,7 @@ interface Analysis {
   analyzed_at?: string
   provider?: string
   error?: string
+  trend?: Trend | null
 }
 
 const SKY_CONDITION_ES: Record<string, string> = {
@@ -160,6 +173,22 @@ export function SkyAnalysisCard() {
         <div className="flex items-start gap-2 p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
           <TrendingUp className="w-4 h-4 text-sky-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-sky-200">{analysis.forecast_hint}</p>
+        </div>
+      )}
+
+      {/* Tendencia (Nowcasting) */}
+      {analysis.trend && (
+        <div className="mt-3 p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">{analysis.trend.icon}</span>
+            <span className="text-sm font-medium text-violet-200">{analysis.trend.summary}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <span>Cobertura: {analysis.trend.coverage_icon} {analysis.trend.coverage_delta > 0 ? '+' : ''}{analysis.trend.coverage_delta}%</span>
+            {analysis.trend.span_minutes > 0 && (
+              <span>· últimos {analysis.trend.span_minutes} min</span>
+            )}
+          </div>
         </div>
       )}
 
