@@ -1489,8 +1489,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               "N" (1) comparten el borde derecho y la palabra no se mueve al cambiar
               el viento, el mismo anclaje que PROMEDIO/RÁFAGA. */}
           {/* Compás ovalado grande: ocupa el centro de las 2 filas fusionadas */}
-          <div style={{ position: 'absolute', top: 20, left: 0, right: 0, height: 130 }}>
-            <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
+          <div style={{ flex: 1, position: 'relative', minHeight: 0, marginTop: -18 }}>
+            <svg viewBox="0 0 100 80" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0, transform: 'scale(1.0)', transformOrigin: 'center center' }}>
               {/* Óvalo exterior más visible */}
               <ellipse cx="50" cy="40" rx={RX} ry={RY} stroke="#555" strokeWidth="1.5" fill="none" />
               {/* Marcas cada 10° en TRES niveles, que es lo que hace que el aro parezca un
@@ -1583,8 +1583,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <div className="u" style={{ fontSize: 20, color: 'var(--v)', lineHeight: 1, marginTop: 3 }}>{u.windU}</div>
             </div>
           </div>
-          {/* PROM + RÁFAGA + barra Beaufort al pie de la celda del viento */}
-          <div style={{ position: 'absolute', bottom: 24, left: 9, right: 9, display: 'flex', alignItems: 'center' }}>
+          {/* PROM + RÁFAGA al pie de la celda del viento */}
+          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 18 }}>
             {/* PROMEDIO muestra `wind_speed_avg10m`, la media de 10 min, y no
                 `wind_speed`, que es la lectura INSTANTÁNEA. Con el campo instantáneo
                 este rótulo mentía, y además repetía clavado el número del centro del
