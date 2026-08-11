@@ -459,9 +459,16 @@ def _determine_current(
     if not station_has_cloudiness and forecast_now and len(forecast_now) > 0:
         fc = forecast_now[0]
         if not result["storm_approaching"]:
-            result["code"] = fc["code"]
-            result["source"] = "forecast"
-            result["label"] = _code_to_label(fc["code"])
+            fc_code = fc["code"]
+            # Si la estación dice rain_rate=0, no mostrar precipitación del pronóstico
+            # El pluviómetro es dato real; el pronóstico puede equivocarse
+            station_says_no_rain = station and station.get("rain_rate", 0) == 0
+            if station_says_no_rain and _precip_likely(fc_code):
+                # Degradar a "Nublado" - el pronóstico esperaba lluvia pero no hay
+                fc_code = 3
+            result["code"] = fc_code
+            result["source"] = "forecast" if fc_code == fc["code"] else "station+forecast"
+            result["label"] = _code_to_label(fc_code)
 
     return result
 
