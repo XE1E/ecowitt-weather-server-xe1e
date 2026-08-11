@@ -95,7 +95,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
                 <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                 <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#2563eb" strokeWidth={2} dot={false} connectNulls />
                 <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>

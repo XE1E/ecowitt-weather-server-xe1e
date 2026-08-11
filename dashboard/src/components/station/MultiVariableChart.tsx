@@ -54,7 +54,7 @@ const COL = {
   press: '#8b5cf6',   // morado
   rain: '#38bdf8',    // azul claro
   wind: '#22c55e',    // verde
-  hum: '#3b82f6',     // azul oscuro
+  hum: '#2563eb',     // azul oscuro
 }
 
 export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded }: Props) {

@@ -62,7 +62,7 @@ export interface VarDef {
  */
 export const VARIABLES: Record<VarKey, VarDef> = {
   temp:  { label: 'TEMPERATURA', color: '#f97316', glow: 'gt', celdas: 'EXT · ROCÍO/SENSACIÓN/HUMIDEX' },
-  hum:   { label: 'HUMEDAD',     color: '#3b82f6', glow: 'gh', celdas: 'HUMEDAD' },
+  hum:   { label: 'HUMEDAD',     color: '#2563eb', glow: 'gh', celdas: 'HUMEDAD' },
   press: { label: 'PRESIÓN',     color: '#8b5cf6', glow: 'gp', celdas: 'PRES · PRESIÓN REMOTA' },
   wind:  { label: 'VIENTO',      color: '#22c55e', glow: 'gv', celdas: 'compás · velocidad/rumbo' },
   rain:  { label: 'LLUVIA',      color: '#38bdf8', glow: 'gr', celdas: 'LLUVIA' },

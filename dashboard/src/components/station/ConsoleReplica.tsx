@@ -1653,7 +1653,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
               borde de arriba, para dejarle la franja de abajo a las horas. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="humidity" size={65} color={alertaCol('hum', '#3b82f6')} title="humedad" />
+            <MeteoGlyph name="humidity" size={65} color={alertaCol('hum', '#2563eb')} title="humedad" />
           </div>
           {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
               propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el

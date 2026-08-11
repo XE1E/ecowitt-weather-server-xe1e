@@ -144,7 +144,7 @@ export function TemperatureChart() {
               />
               <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="value" stroke={m.color} strokeWidth={2} dot={false} name={`${m.label} (${unit})`} />
-                <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#3b82f6" strokeWidth={2} dot={false} name="Humedad (%)" />
+                <Line yAxisId="humidity" type="monotone" dataKey="humidity" stroke="#2563eb" strokeWidth={2} dot={false} name="Humedad (%)" />
               </LineChart>
             </ResponsiveContainer>
           </div>

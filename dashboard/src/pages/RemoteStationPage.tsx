@@ -382,7 +382,7 @@ export function RemoteStationPage() {
                           <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
                           <Line yAxisId="left" type="monotone" dataKey="tempOut" name={`Temp ${u.tempU}`} stroke="#f97316" dot={false} strokeWidth={2} connectNulls />
-                          <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#3b82f6" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humOut" name="Humedad %" stroke="#2563eb" dot={false} strokeWidth={2} connectNulls />
                         </>
                       )}
                       {metric === 'indoor' && (
@@ -392,7 +392,7 @@ export function RemoteStationPage() {
                           <Tooltip contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }} cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }} labelFormatter={(v) => new Date(v).toLocaleString('es-MX')} />
                           <Legend />
                           <Line yAxisId="left" type="monotone" dataKey="tempIn" name={`Temp ${u.tempU}`} stroke="#38bdf8" dot={false} strokeWidth={2} connectNulls />
-                          <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#3b82f6" dot={false} strokeWidth={2} connectNulls />
+                          <Line yAxisId="right" type="monotone" dataKey="humIn" name="Humedad %" stroke="#2563eb" dot={false} strokeWidth={2} connectNulls />
                         </>
                       )}
                       {metric === 'pressure' && (

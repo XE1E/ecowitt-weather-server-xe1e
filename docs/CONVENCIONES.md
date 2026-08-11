@@ -9,7 +9,7 @@ Documento de referencia para uniformizar estilos en todo el dashboard y kiosko.
 | Temperatura | Naranja | `#f97316` | `orange-500` |
 | Presión atmosférica | Morado | `#8b5cf6` | `violet-500` |
 | Precipitación | Azul claro | `#38bdf8` | `sky-400` |
-| Humedad | Azul oscuro | `#3b82f6` | `blue-500` |
+| Humedad | Azul oscuro | `#2563eb` | `blue-600` |
 | Viento | Verde | `#22c55e` | `green-500` |
 | Viento máximo | Verde oscuro | `#16a34a` | `green-600` |
 | Punto de rocío | Verde esmeralda | `#10b981` | `emerald-500` |

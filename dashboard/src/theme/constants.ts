@@ -8,7 +8,7 @@ export const WEATHER_COLORS = {
   temperature: '#f97316',      // orange-500
   pressure: '#8b5cf6',         // violet-500
   precipitation: '#38bdf8',    // sky-400
-  humidity: '#3b82f6',         // blue-500
+  humidity: '#2563eb',         // blue-600
   wind: '#22c55e',             // green-500
   dewPoint: '#10b981',         // emerald-500
   uv: '#a78bfa',               // violet-400

@@ -24,7 +24,7 @@ export const CONSOLE_CSS = `
      de EXT el cambio apenas se notaba, y ademas mezclaba dos significados en un color.
      El de alarma pasa a rojo puro (matiz 0): contra el naranja, el azul y el morado de los
      glifos se distingue de golpe, que es lo unico que se le pide. */
-  .cns{--t:#f97316;--h:#3b82f6;--p:#8b5cf6;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;--alarma:#ff1414;
+  .cns{--t:#f97316;--h:#2563eb;--p:#8b5cf6;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;--alarma:#ff1414;
     /* La remota va en AZUL y no en el gris que tenia. Con el contorno como unica senal de
        grupo --se probo tenir el fondo y no sirve, ver abajo-- el gris #6b7280 era el que
        menos se veia de los cinco en el panel del kiosco, que aplasta los tonos oscuros.

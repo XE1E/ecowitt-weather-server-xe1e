@@ -225,7 +225,7 @@ export function KioskPage() {
               {bigCard('Temperatura', L.temperature != null ? `${u.temp(L.temperature)}` : '--', u.tempU,
                 `mín ${mn.temperature != null ? u.temp(mn.temperature) : '--'}° · máx ${mx.temperature != null ? u.temp(mx.temperature) : '--'}°`, '#f97316')}
               {bigCard('Humedad', L.humidity != null ? `${L.humidity.toFixed(0)}` : '--', '%',
-                `mín ${mn.humidity?.toFixed(0) ?? '--'}% · máx ${mx.humidity?.toFixed(0) ?? '--'}%`, '#3b82f6')}
+                `mín ${mn.humidity?.toFixed(0) ?? '--'}% · máx ${mx.humidity?.toFixed(0) ?? '--'}%`, '#2563eb')}
               {bigCard('Presión', L.pressure != null ? `${u.press(L.pressure)}` : '--', u.pressU,
                 `mín ${mn.pressure != null ? u.press(mn.pressure) : '--'} · máx ${mx.pressure != null ? u.press(mx.pressure) : '--'}`, '#8b5cf6')}
             </div>
@@ -252,7 +252,7 @@ export function KioskPage() {
     )
     const HumIcon = () => (
       <svg width="32" height="44" viewBox="0 0 24 32" fill="none">
-        <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#3b82f6" strokeWidth="2" fill="#3b82f6" fillOpacity="0.3" />
+        <path d="M12 4 C12 4 4 14 4 20 C4 25.5 7.6 28 12 28 C16.4 28 20 25.5 20 20 C20 14 12 4 12 4 Z" stroke="#2563eb" strokeWidth="2" fill="#2563eb" fillOpacity="0.3" />
       </svg>
     )
     const BigSensorCard = ({ title, icon, values }: {
@@ -312,7 +312,7 @@ export function KioskPage() {
               <p className="text-[13px] text-slate-400 mt-1">Temp</p>
             </div>
             <div className="text-center">
-              <p className="text-[34px] leading-none font-bold" style={{ color: '#3b82f6' }}>
+              <p className="text-[34px] leading-none font-bold" style={{ color: '#2563eb' }}>
                 {remote?.humidity_indoor != null ? `${remote.humidity_indoor.toFixed(0)}%` : '--'}
               </p>
               <p className="text-[13px] text-slate-400 mt-1">Humedad</p>
@@ -338,7 +338,7 @@ export function KioskPage() {
             icon="🛋"
             values={[
               { label: 'Temperatura', value: data?.temperature_indoor != null ? `${u.temp(data.temperature_indoor)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
-              { label: 'Humedad', value: data?.humidity_indoor != null ? `${data.humidity_indoor.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
+              { label: 'Humedad', value: data?.humidity_indoor != null ? `${data.humidity_indoor.toFixed(0)}%` : '--', color: '#2563eb', iconEl: <HumIcon /> },
             ]}
           />
           {/* Jardín (CH1) */}
@@ -347,7 +347,7 @@ export function KioskPage() {
             icon="🌿"
             values={[
               { label: 'Temperatura', value: chTemp != null ? `${u.temp(chTemp)}°` : '--', color: '#f97316', iconEl: <TempIcon /> },
-              { label: 'Humedad', value: chHum != null ? `${chHum.toFixed(0)}%` : '--', color: '#3b82f6', iconEl: <HumIcon /> },
+              { label: 'Humedad', value: chHum != null ? `${chHum.toFixed(0)}%` : '--', color: '#2563eb', iconEl: <HumIcon /> },
             ]}
           />
           {/* Remota: exterior (WN32) + interior (GW1100) */}
@@ -444,7 +444,7 @@ export function KioskPage() {
         </div>
 
         <div className="grid grid-cols-3 grid-rows-2 gap-4 flex-1">
-          <Tile label="Humedad" value={data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--'} unit="%" color="#3b82f6" />
+          <Tile label="Humedad" value={data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--'} unit="%" color="#2563eb" />
           <Tile label="Presión" value={u.press(data?.pressure_relative, 0)} unit={u.pressU} color="#8b5cf6" />
           <Tile label="Viento" value={u.wind(data?.wind_speed, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#22c55e" />
           <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily)} unit={u.rainU} color="#38bdf8" />
