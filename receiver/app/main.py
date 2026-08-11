@@ -48,6 +48,7 @@ from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
 from .services.camera import CameraStore
+from .services import sky_analyzer
 
 # Configure logging
 logging.basicConfig(
@@ -1910,13 +1911,98 @@ async def camera_upload(request: Request):
         logger.error("Error guardando la captura de cámara: %s", e)
         raise HTTPException(status_code=500, detail="Error interno")
     logger.info("Cámara: captura de %d bytes recibida", meta["bytes"])
+
+    # Análisis del cielo con visión (asíncrono, no bloquea la respuesta)
+    has_any_key = settings.anthropic_api_key or settings.gemini_api_key
+    if has_any_key and settings.camera_analysis_enabled:
+        asyncio.create_task(_analyze_sky_background(data))
+
     return {"ok": True, **meta}
+
+
+async def _analyze_sky_background(image_data: bytes) -> None:
+    """Analiza la imagen del cielo en background y guarda el resultado."""
+    try:
+        analysis = await sky_analyzer.analyze_sky(
+            image_data,
+            anthropic_api_key=settings.anthropic_api_key,
+            gemini_api_key=settings.gemini_api_key,
+            provider=settings.camera_analysis_provider,
+            anthropic_model=settings.camera_analysis_model_anthropic,
+            gemini_model=settings.camera_analysis_model_gemini,
+        )
+        _camera.save_analysis(analysis.to_dict())
+        if analysis.error:
+            logger.warning("Análisis del cielo con error (%s): %s",
+                           analysis.provider or "?", analysis.error)
+        else:
+            logger.info("Análisis del cielo (%s): %s, %d%% nubes",
+                        analysis.provider, analysis.sky_condition, analysis.cloud_coverage_pct)
+    except Exception as e:
+        logger.error("Error en análisis del cielo: %s", e)
 
 
 @app.get("/api/camera/status")
 async def camera_status():
     """¿Hay foto, de cuándo es y está vieja? Lo consulta la página del kiosco."""
-    return _camera.status()
+    return _camera.status_with_analysis()
+
+
+@app.get("/api/camera/analysis")
+async def camera_analysis():
+    """Último análisis del cielo (si está habilitado y hay uno)."""
+    analysis = _camera.get_analysis()
+    has_anthropic = bool(settings.anthropic_api_key)
+    has_gemini = bool(settings.gemini_api_key)
+    resolved = sky_analyzer.resolve_provider(
+        settings.camera_analysis_provider,
+        settings.anthropic_api_key,
+        settings.gemini_api_key,
+    )
+    if analysis is None:
+        return {
+            "available": False,
+            "enabled": settings.camera_analysis_enabled,
+            "provider": settings.camera_analysis_provider,
+            "active_provider": resolved,
+            "has_anthropic_key": has_anthropic,
+            "has_gemini_key": has_gemini,
+        }
+    return {
+        "available": True,
+        "enabled": settings.camera_analysis_enabled,
+        "provider": settings.camera_analysis_provider,
+        "active_provider": resolved,
+        "has_anthropic_key": has_anthropic,
+        "has_gemini_key": has_gemini,
+        **analysis,
+    }
+
+
+@app.get("/api/camera/analysis/providers")
+async def camera_analysis_providers():
+    """Info sobre proveedores de análisis disponibles (para el panel admin)."""
+    has_anthropic = bool(settings.anthropic_api_key)
+    has_gemini = bool(settings.gemini_api_key)
+    resolved = sky_analyzer.resolve_provider(
+        settings.camera_analysis_provider,
+        settings.anthropic_api_key,
+        settings.gemini_api_key,
+    )
+    return {
+        "enabled": settings.camera_analysis_enabled,
+        "provider_setting": settings.camera_analysis_provider,
+        "active_provider": resolved,
+        "providers": sky_analyzer.PROVIDER_INFO,
+        "keys_configured": {
+            "anthropic": has_anthropic,
+            "gemini": has_gemini,
+        },
+        "models": {
+            "anthropic": settings.camera_analysis_model_anthropic,
+            "gemini": settings.camera_analysis_model_gemini,
+        },
+    }
 
 
 @app.get("/api/camera/latest.jpg")

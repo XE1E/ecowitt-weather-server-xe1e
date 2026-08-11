@@ -54,6 +54,10 @@ class CameraStore:
     def latest_meta(self) -> str:
         return os.path.join(self.base, "latest.json")
 
+    @property
+    def latest_analysis(self) -> str:
+        return os.path.join(self.base, "latest_analysis.json")
+
     # ── escritura ────────────────────────────────────────────────────────────
     def save(self, data: bytes, taken_at: Optional[datetime] = None) -> Dict[str, Any]:
         """
@@ -185,3 +189,28 @@ class CameraStore:
         except OSError:
             pass
         return out
+
+    # ── análisis del cielo ───────────────────────────────────────────────────
+    def save_analysis(self, analysis: Dict[str, Any]) -> None:
+        """Guarda el análisis del cielo de la última captura."""
+        os.makedirs(self.base, exist_ok=True)
+        tmp = self.latest_analysis + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(analysis, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, self.latest_analysis)
+
+    def get_analysis(self) -> Optional[Dict[str, Any]]:
+        """Lee el último análisis del cielo, si existe."""
+        try:
+            with open(self.latest_analysis, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+
+    def status_with_analysis(self) -> Dict[str, Any]:
+        """Status + análisis del cielo en una sola llamada (para la web/kiosco)."""
+        result = self.status()
+        analysis = self.get_analysis()
+        if analysis:
+            result["analysis"] = analysis
+        return result

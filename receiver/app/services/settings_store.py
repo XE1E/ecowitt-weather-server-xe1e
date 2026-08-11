@@ -124,6 +124,16 @@ EDITABLE_KEYS = {
     "hass_discovery", "hass_discovery_prefix",
     # Timezone
     "timezone_offset",
+    # Cámara y análisis del cielo
+    "camera_upload_token",
+    "camera_retention_days",
+    "camera_stale_seconds",
+    "camera_analysis_enabled",
+    "camera_analysis_provider",
+    "anthropic_api_key",
+    "gemini_api_key",
+    "camera_analysis_model_anthropic",
+    "camera_analysis_model_gemini",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
@@ -140,6 +150,9 @@ SECRET_KEYS = {
     "owm_api_key",
     "cwop_passcode",
     "awekas_password",
+    "camera_upload_token",
+    "anthropic_api_key",
+    "gemini_api_key",
 }
 
 # Configuración por defecto para una estación

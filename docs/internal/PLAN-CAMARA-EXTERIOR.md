@@ -385,8 +385,85 @@ Sigue teniendo sentido **hacer primero la web** y validar el encuadre ahí, pero
 por el coste de reflashear: sólo porque conviene fijar el encuadre antes de que empiece
 la serie del timelapse.
 
+## Análisis del cielo con modelos de visión — IMPLEMENTADO (2026-08-11)
+
+Cada foto que llega al servidor se analiza automáticamente con un modelo de visión
+para extraer información meteorológica visual que los sensores no pueden dar: tipo
+de nubes, cobertura, visibilidad, precipitación visible en el horizonte, y una
+sugerencia de pronóstico a corto plazo.
+
+### Proveedores soportados
+
+| Proveedor | Tier gratuito | Costo estimado | Modelos |
+|---|---|---|---|
+| **Google Gemini** | 15 req/min, 1M tokens/día | **Gratis** | gemini-2.0-flash (default), gemini-1.5-pro |
+| **Anthropic (Claude)** | No | ~$0.50-1.00/día | claude-sonnet-4-20250514 (default), claude-haiku-4 |
+
+**Recomendación**: usar Gemini para experimentar (gratis) y Anthropic si se necesita
+máxima calidad de análisis.
+
+### Configuración
+
+| Variable | Descripción | Default |
+|---|---|---|
+| `CAMERA_ANALYSIS_ENABLED` | Habilitar/deshabilitar el análisis | `true` |
+| `CAMERA_ANALYSIS_PROVIDER` | `auto`, `anthropic`, o `gemini` | `auto` |
+| `GEMINI_API_KEY` | API key de Google (gratis en aistudio.google.com) | — |
+| `ANTHROPIC_API_KEY` | API key de Anthropic | — |
+| `CAMERA_ANALYSIS_MODEL_GEMINI` | Modelo de Gemini | `gemini-2.0-flash` |
+| `CAMERA_ANALYSIS_MODEL_ANTHROPIC` | Modelo de Anthropic | `claude-sonnet-4-20250514` |
+
+Con `provider=auto` (default), usa Gemini si tiene key, sino Anthropic. Esto
+permite empezar gratis con Gemini y escalar a Claude si se necesita.
+
+El análisis corre **en background** al recibir cada foto: no bloquea la respuesta
+al script de captura ni retrasa el guardado. Si falla (timeout, error de API), la
+foto se guarda igual y el análisis anterior se conserva.
+
+### Endpoints
+
+| Endpoint | Respuesta |
+|---|---|
+| `GET /api/camera/status` | Incluye `analysis` con el último análisis |
+| `GET /api/camera/analysis` | Análisis + estado de configuración |
+| `GET /api/camera/analysis/providers` | Info de proveedores para el admin |
+
+### Estructura del análisis
+
+```json
+{
+  "cloud_type": "cumulus",
+  "cloud_coverage_pct": 40,
+  "sky_condition": "partly_cloudy",
+  "visibility": "good",
+  "precipitation_visible": false,
+  "development": "stable",
+  "description": "Cielo parcialmente nublado con cúmulos dispersos",
+  "forecast_hint": "Sin cambios significativos en las próximas 1-2 horas",
+  "analyzed_at": "2026-08-11T15:30:00Z",
+  "provider": "gemini",
+  "model": "gemini-2.0-flash"
+}
+```
+
+### Panel de administración
+
+Todas las opciones son editables desde Admin → Configuración:
+- Activar/desactivar el análisis
+- Seleccionar proveedor (auto/anthropic/gemini)
+- Configurar API keys (enmascaradas como secretos)
+- Seleccionar modelo para cada proveedor
+
+### Código
+
+- `receiver/app/services/sky_analyzer.py` — servicio multi-proveedor
+- `receiver/app/services/camera.py` — `save_analysis()`, `get_analysis()`
+- `receiver/app/main.py` — integración y endpoints
+
 ## Decisiones abiertas
 - Retención de las fotos: cuántos días, y si se archiva a R2 como los backups.
+- Análisis solo de día (usando sunrise/sunset del almanac) para reducir llamadas.
+- UI en el dashboard para mostrar el análisis del cielo junto a la foto.
 
 ## Fuentes
 
