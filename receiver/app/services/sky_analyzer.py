@@ -79,14 +79,32 @@ class SkyAnalysis:
 
 
 def _parse_json_response(text: str) -> dict:
-    """Extrae JSON de la respuesta, manejando bloques de código."""
+    """Extrae JSON de la respuesta, manejando bloques de código y errores comunes."""
     text = text.strip()
     if text.startswith("```"):
         lines = text.split("\n")
         start = 1 if lines[0].strip() in ("```", "```json") else 1
         end = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
         text = "\n".join(lines[start:end]).strip()
-    return json.loads(text)
+
+    # Intentar parsear tal cual primero
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Limpiar problemas comunes de LLMs:
+    # 1. Comentarios estilo // (Gemini a veces los agrega)
+    import re
+    cleaned = re.sub(r'//[^\n]*', '', text)
+    # 2. Trailing commas antes de } o ]
+    cleaned = re.sub(r',(\s*[}\]])', r'\1', cleaned)
+    # 3. Comillas simples -> dobles (solo fuera de strings, aproximación)
+    # Esto es imperfecto pero ayuda en casos simples
+    if "'" in cleaned and '"' not in cleaned:
+        cleaned = cleaned.replace("'", '"')
+
+    return json.loads(cleaned)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -237,7 +255,7 @@ async def _analyze_gemini(
     try:
         result = _parse_json_response(text)
     except json.JSONDecodeError as e:
-        logger.warning("No se pudo parsear respuesta de Gemini: %s", e)
+        logger.warning("No se pudo parsear respuesta de Gemini: %s\nTexto raw: %s", e, text[:300])
         return SkyAnalysis(
             description=text[:500] if text else "Sin respuesta",
             error="Respuesta no es JSON válido",
