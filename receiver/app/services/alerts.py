@@ -728,12 +728,22 @@ class AlertService:
         # Reglas deshabilitadas
         disabled = set(getattr(s, "alert_visual_rules_disabled", []) or [])
 
+        sky_cond = analysis.get("sky_condition", "")
+        cloud_type = analysis.get("cloud_type", "")
+        development = analysis.get("development", "")
+        visibility = analysis.get("visibility", "")
+
+        # Tormenta: condición tormentosa O nubes de desarrollo vertical creciendo
+        storm_condition = (
+            sky_cond == "stormy"
+            or (cloud_type in ("cumulonimbus", "cumulus") and development == "building")
+        )
+
         checks = [
             (
                 "sky_storm",
-                analysis.get("cloud_type") == "cumulonimbus"
-                and analysis.get("development") == "building",
-                f"⛈️ Tormenta formándose: se observan cumulonimbos en desarrollo",
+                storm_condition,
+                f"⛈️ Condiciones tormentosas: {cloud_type or sky_cond}, desarrollo {development or 'activo'}",
             ),
             (
                 "sky_precipitation",
@@ -742,8 +752,8 @@ class AlertService:
             ),
             (
                 "sky_visibility",
-                analysis.get("visibility") in ("poor", "very_poor"),
-                f"🌫️ Visibilidad reducida: {analysis.get('visibility', 'baja')}",
+                visibility in ("poor", "very_poor"),
+                f"🌫️ Visibilidad reducida: {visibility}",
             ),
         ]
 
