@@ -1756,23 +1756,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
           </div>
-          {/* Lectura arriba, a la misma altura que EXT y HUMEDAD (su tinta empieza en
-              y≈17), para dejar libre la franja de abajo. Sin `ctr`: se posiciona con
-              marginTop, no con centrado automático, igual que las otras dos. */}
-          {/* `paddingRight` 48 y no 32: los 16 px de más son el sitio del triángulo de
-              aviso. Medido: la lectura acababa a 15 px de la flecha --"1023.7 mb" llega
-              hasta x=287 y la flecha empieza en 302-- y ahí no cabe un triángulo de 21.
-              Corriéndola, su borde derecho queda en 271 y su izquierdo en 64, o sea a 8 px
-              del barómetro (que acaba en 56): entra sin tocar nada. Es la única de las tres
-              celdas que necesitaba el ajuste; EXT y HUMEDAD tenían 41 y 60 px libres.
-              `paddingRight` 32, el de siempre: correrlo para hacerle hueco al triángulo dejaba
-              la lectura pegada al barómetro y descolocaba la celda.
-              `marginTop` 12 y no 6: la lectura queda CENTRADA en la banda que va del borde de
-              arriba al riel, en vez de colgada del borde. Medido sobre el contorno de la celda
-              --interior y 136..259, o sea 124 px-- el riel arranca a 86 (va en `bottom: 4` y
-              mide 34) y la tinta de la lectura mide 56, así que centrarla es empezar a 15; con
-              marginTop 6 empezaba a 9. Los 6 px de diferencia son estos. */}
-          <div className="big gp rt" style={{ marginTop: 12, fontSize: 56, paddingRight: 32 }}>
+          {/* Lectura ARRIBA, al nivel de la celda de temperatura, para dejar espacio
+              al badge de pronóstico Zambretti entre la lectura y el riel. */}
+          <div className="big gp rt" style={{ marginTop: 5, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
