@@ -1741,13 +1741,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: 5, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
-          {/* Badge de pronóstico Zambretti: icono + texto corto basado en presión y tendencia */}
+          {/* Badge de pronóstico: combina Zambretti (presión) con lluvia actual */}
           {(() => {
             if (!localForecast?.available) return null
             const t = localForecast.trend?.code
             const l = localForecast.level
+            const raining = (data?.rain_rate ?? 0) > 0
             let icon = '🌤️', text = 'Estable'
-            if (t === 'falling_fast') { icon = '🌧️'; text = 'Posible lluvia' }
+            // Prioridad 1: si está lloviendo, decirlo
+            if (raining) { icon = '🌧️'; text = 'Lloviendo' }
+            // Prioridad 2: pronóstico por presión (Zambretti)
+            else if (t === 'falling_fast') { icon = '🌧️'; text = 'Posible lluvia' }
             else if (t === 'falling' && l === 'low') { icon = '🌧️'; text = 'Inestable' }
             else if (t === 'falling') { icon = '⛅'; text = 'Nublándose' }
             else if (t === 'rising' && l === 'high') { icon = '☀️'; text = 'Buen tiempo' }
