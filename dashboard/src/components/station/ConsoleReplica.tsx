@@ -828,52 +828,32 @@ function PressureScale({ delta, endLabel, imperial }: {
   }
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
-      {/* Riel y marcas en BLANCO, no en grises: sobre el fondo negro de la consola
-          los #3f3f46 / #71717a de la primera versión casi no se veían. El interior
-          sí se queda oscuro, que es lo que hace resaltar el relleno de color. La
-          jerarquía entre marca mayor y menor la dan ahora el alto y el grosor, no
-          el color. */}
-      <rect x={x0} y={12} width={x1 - x0} height={9} rx={4.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
-      {/* Marca cada 1 hPa; más alta y gruesa en -5, 0 y +5. Las mayores sobresalen
-          por ARRIBA (hasta y=10.5, a 2 px de la tinta de los números) y ninguna baja
-          del riel: por debajo pasa el puntero y se cruzarían. */}
+      {/* Riel compacto: coordenadas ajustadas para caber en 26px */}
+      <rect x={x0} y={4} width={x1 - x0} height={8} rx={4} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
+      {/* Marcas cada 1 hPa */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const tx = xOf(v)
         const major = v % PS_R === 0
         return (
-          <line key={v} x1={tx} y1={major ? 10.5 : 13.5} x2={tx} y2={major ? 21 : 19}
+          <line key={v} x1={tx} y1={major ? 2.5 : 5.5} x2={tx} y2={major ? 12 : 10}
             stroke="#eaeaea" strokeWidth={major ? 1.6 : 1} />
         )
       })}
-      {/* Relleno del centro al valor: da la magnitud sin tener que leer la escala */}
+      {/* Relleno del centro al valor */}
       {delta != null && Math.abs(x - mid) > 0.5 && (
-        /* Sin atenuar: el 0.55 de antes dejaba el relleno a medio gas justo donde tiene
-           que verse, y sobre el interior oscuro del riel el color pleno no molesta. */
-        <rect x={Math.min(mid, x)} y={13.5} width={Math.abs(x - mid)} height={6} fill={color} />
+        <rect x={Math.min(mid, x)} y={5.5} width={Math.abs(x - mid)} height={5} fill={color} />
       )}
-      {/* Números CENTRADOS en su marca, DEBAJO del riel. */}
+      {/* Números debajo del riel */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const t = tickLabel(v)
         return t == null ? null : (
-          <text key={v} x={xOf(v)} y={32} fill="#eaeaea" fontSize={t.length > 2 ? 9 : 11}
+          <text key={v} x={xOf(v)} y={24} fill="#eaeaea" fontSize={t.length > 2 ? 8 : 10}
             fontWeight="700" textAnchor="middle">{t}</text>
         )
       })}
-      {/* "≤" y "≥" a los lados del RIEL, no pegados al -5 y al 5: el valor se PINZA
-          contra el tope --±5 hPa en 3 h ya es un cambio brusco y lo que importa
-          entonces es "está al tope"-- así que la marca del extremo representa ese
-          valor Y TODO LO QUE HAYA MÁS ALLÁ; sin los símbolos, un riel al máximo se
-          leía como "exactamente 5". Van aquí y no en la fila de números porque ahí
-          no caben: a la izquierda de la marca del -5 sólo hay 12 px, y la mitad de
-          "-5" ya ocupa 5; el símbolo se saldría del viewBox y quedaría cortado. A la
-          altura del riel, en cambio, esos 12 px están vacíos. */}
-      {/* 13 y no 11 como los números: el glifo "≤" tiene mucho aire dentro de su
-          caja y al mismo cuerpo que las cifras se veía la mitad de grande. A 13
-          mide 10 de ancho y aún deja 2 px hasta el arranque del riel. */}
-      {/* Con 2 px de sangría y no pegados a x=0 y x=PS_W: ahí tocaban el borde de la
-          celda, que con 3 px es bien visible y parecía que el símbolo se salía. */}
-      <text x={2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≤'}</text>
-      <text x={PS_W - 2} y={21} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≥'}</text>
+      {/* Símbolos ≤ y ≥ a los lados */}
+      <text x={2} y={12} fill="#eaeaea" fontSize="11" fontWeight="700" textAnchor="start">{'≤'}</text>
+      <text x={PS_W - 2} y={12} fill="#eaeaea" fontSize="11" fontWeight="700" textAnchor="end">{'≥'}</text>
     </svg>
   )
 }
