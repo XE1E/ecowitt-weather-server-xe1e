@@ -802,7 +802,7 @@ const PS_M = 18
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
 // Los 2 px de más se los come el aire de en medio de la celda, no el margen
 // inferior (que sigue en `bottom: 4`).
-const PS_H = 34
+const PS_H = 31
 
 function PressureScale({ delta, endLabel, imperial }: {
   delta: number | null; endLabel: string; imperial: boolean
