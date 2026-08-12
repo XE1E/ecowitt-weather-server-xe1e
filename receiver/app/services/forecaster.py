@@ -32,10 +32,18 @@ def classify_trend(delta_3h: Optional[float]) -> Dict[str, Any]:
 
 
 def _level(pressure: float) -> str:
-    """Nivel de presión a nivel del mar."""
-    if pressure >= 1022:
+    """Nivel de presión a nivel del mar.
+
+    Umbrales calibrados para CDMX (~2240 m) basados en histórico local de 90 días:
+    - Promedio: 1027 hPa, Rango: 999-1036 hPa
+    - P10: 1024 hPa, P90: 1030 hPa
+
+    Los umbrales estándar (high=1022, normal=1009) no aplican aquí porque la
+    presión local promedio (1027 hPa) ya supera el umbral "alto" estándar.
+    """
+    if pressure >= 1030:
         return "high"
-    if pressure >= 1009:
+    if pressure >= 1024:
         return "normal"
     return "low"
 

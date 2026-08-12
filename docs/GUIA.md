@@ -1039,6 +1039,32 @@ en las últimas 3 horas** anticipan el tiempo a corto plazo:
 | +3 a +5 | Subiendo | Tiempo mejorando |
 | > +5 | Subiendo rápido | Cielos despejando |
 
+#### Umbrales de presión calibrados para CDMX
+
+Los umbrales estándar del método Zambretti (alta ≥1022, normal ≥1009 hPa) **no aplican**
+para la Ciudad de México porque el promedio local ya supera el umbral "alto" estándar.
+
+Se calibraron umbrales locales basados en **90 días de histórico** de la estación:
+
+| Estadística | Valor (hPa) |
+|-------------|-------------|
+| Mínimo | 999.1 |
+| **Promedio** | **1027.1** |
+| Máximo | 1035.6 |
+| Percentil 10 | 1024.1 |
+| Percentil 90 | 1029.7 |
+
+**Umbrales calibrados (CDMX, ~2240 m):**
+
+| Nivel | Umbral | Criterio |
+|-------|--------|----------|
+| **Alta** | ≥ 1030 hPa | Por encima del P90 |
+| **Normal** | 1024-1029 hPa | Rango típico (P10-P90) |
+| **Baja** | < 1024 hPa | Por debajo del P10 |
+
+Estos umbrales se recalibrarán con más histórico (idealmente 1 año completo para capturar
+variación estacional). Última calibración: 2026-08-11.
+
 **Endpoint:** `GET /api/forecast/local`
 
 ### Open-Meteo (`openmeteo.py`)
