@@ -90,7 +90,8 @@ export function AdminCalibracion() {
         fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ])
       setTreatOutdoor(station?.config?.treat_indoor_as_outdoor ?? false)
-      setSettings({ ...emptyCal(), ...partial })
+      const altitudeM = station?.config?.altitude_m ?? 0
+      setSettings({ ...emptyCal(), ...partial, station_altitude_m: altitudeM })
     }
   }
 
@@ -140,11 +141,20 @@ export function AdminCalibracion() {
       } else {
         const cal: Record<string, number | boolean> = {}
         for (const k in settings) if (k.startsWith('cal_')) cal[k] = settings[k]
+        // Guardar calibración
         res = await fetchWithAuth(`/api/admin/stations/${selected}/calibration`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(cal),
         })
+        // Guardar altitud en la config de la estación
+        if (res.ok) {
+          await fetchWithAuth(`/api/stations/${selected}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: { altitude_m: settings.station_altitude_m } }),
+          })
+        }
       }
       setMessage(res.ok ? { type: 'ok', text: 'Guardado' } : { type: 'error', text: 'Error' })
       if (res.ok) setTimeout(() => setMessage(null), 2000)
@@ -250,15 +260,16 @@ export function AdminCalibracion() {
           <Item label="📊 Presion" src={isPrincipal ? 'WS2910' : 'integrado'} hint="hPa">
             <NumField value={settings.cal_pressure_offset} onChange={(v) => update('cal_pressure_offset', v)} min={-50} max={50} step={0.1} disabled={!on} />
           </Item>
+          <Item label="⛰️ Altitud" src="estación" hint="m">
+            <NumField value={settings.station_altitude_m} onChange={(v) => update('station_altitude_m', v)} min={0} max={6000} step={1} />
+          </Item>
+          <p className="sm:col-span-2 lg:col-span-3 text-xs text-slate-500 -mt-1">
+            Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
+            {!isPrincipal && ' Útil para corregir el algoritmo de compensación del GW1100 (pon altitud=0 en el dispositivo).'}
+            {isPrincipal && ' Útil si la consola no tiene ajuste de altitud (p. ej. WS2910).'}
+          </p>
           {isPrincipal && (
             <>
-              <Item label="⛰️ Altitud" src="estación" hint="m">
-                <NumField value={settings.station_altitude_m} onChange={(v) => update('station_altitude_m', v)} min={0} max={6000} step={1} />
-              </Item>
-              <p className="sm:col-span-2 lg:col-span-3 text-xs text-slate-500 -mt-1">
-                Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
-                Útil si la consola no tiene ajuste de altitud (p. ej. WS2910).
-              </p>
               <Item label="💨 Viento (factor)" src="WS69" hint="×">
                 <NumField value={settings.cal_wind_mult} onChange={(v) => update('cal_wind_mult', v)} min={0.5} max={2} step={0.01} disabled={!on} />
               </Item>
