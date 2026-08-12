@@ -802,7 +802,7 @@ const PS_M = 18
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
 // Los 2 px de más se los come el aire de en medio de la celda, no el margen
 // inferior (que sigue en `bottom: 4`).
-const PS_H = 26
+const PS_H = 20
 
 function PressureScale({ delta, endLabel, imperial }: {
   delta: number | null; endLabel: string; imperial: boolean
@@ -828,32 +828,32 @@ function PressureScale({ delta, endLabel, imperial }: {
   }
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
-      {/* Riel compacto: coordenadas ajustadas para caber en 26px */}
-      <rect x={x0} y={4} width={x1 - x0} height={8} rx={4} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
+      {/* Riel compacto: coordenadas ajustadas para caber en 20px */}
+      <rect x={x0} y={2} width={x1 - x0} height={7} rx={3.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
       {/* Marcas cada 1 hPa */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const tx = xOf(v)
         const major = v % PS_R === 0
         return (
-          <line key={v} x1={tx} y1={major ? 2.5 : 5.5} x2={tx} y2={major ? 12 : 10}
-            stroke="#eaeaea" strokeWidth={major ? 1.6 : 1} />
+          <line key={v} x1={tx} y1={major ? 1 : 3} x2={tx} y2={major ? 9 : 7.5}
+            stroke="#eaeaea" strokeWidth={major ? 1.4 : 0.8} />
         )
       })}
       {/* Relleno del centro al valor */}
       {delta != null && Math.abs(x - mid) > 0.5 && (
-        <rect x={Math.min(mid, x)} y={5.5} width={Math.abs(x - mid)} height={5} fill={color} />
+        <rect x={Math.min(mid, x)} y={3.5} width={Math.abs(x - mid)} height={4} fill={color} />
       )}
       {/* Números debajo del riel */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const t = tickLabel(v)
         return t == null ? null : (
-          <text key={v} x={xOf(v)} y={24} fill="#eaeaea" fontSize={t.length > 2 ? 8 : 10}
+          <text key={v} x={xOf(v)} y={18} fill="#eaeaea" fontSize={t.length > 2 ? 7 : 9}
             fontWeight="700" textAnchor="middle">{t}</text>
         )
       })}
       {/* Símbolos ≤ y ≥ a los lados */}
-      <text x={2} y={12} fill="#eaeaea" fontSize="11" fontWeight="700" textAnchor="start">{'≤'}</text>
-      <text x={PS_W - 2} y={12} fill="#eaeaea" fontSize="11" fontWeight="700" textAnchor="end">{'≥'}</text>
+      <text x={2} y={9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">{'≤'}</text>
+      <text x={PS_W - 2} y={9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">{'≥'}</text>
     </svg>
   )
 }
@@ -1755,11 +1755,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             else if (l === 'high') { icon = '☀️'; text = 'Buen tiempo' }
             else if (l === 'low') { icon = '⛅'; text = 'Variable' }
             return (
-              <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.08)',
-                              borderRadius: 6, padding: '2px 8px' }}>
-                  <span style={{ fontSize: 14 }}>{icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', letterSpacing: 0.3 }}>{text}</span>
+              <div style={{ position: 'absolute', bottom: 26, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.08)',
+                              borderRadius: 6, padding: '3px 10px' }}>
+                  <span style={{ fontSize: 15 }}>{icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', letterSpacing: 0.8 }}>{text}</span>
                 </div>
               </div>
             )
