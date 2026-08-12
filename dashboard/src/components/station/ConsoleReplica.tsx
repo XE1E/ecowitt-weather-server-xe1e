@@ -1634,7 +1634,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             const bf = data?.wind_speed != null ? beaufort(data.wind_speed) : null
             return (
               <div style={{ position: 'absolute', bottom: 9, left: 9, right: 9 }}>
-                <div style={{ fontSize: 9, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#fff', fontWeight: 700, marginBottom: 1, textAlign: 'center' }}>
                   {bf ? bf.label.toUpperCase() : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 2 }}>
