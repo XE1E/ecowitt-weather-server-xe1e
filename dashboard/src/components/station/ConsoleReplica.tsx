@@ -2004,7 +2004,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 igual, pero empujando todo lo de abajo. */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                           width: '100%', marginTop: -10, marginBottom: -14 }}>
-              <WeatherIcon name={cond.icon} size={62} className="weather-main-icon" />
+              <span style={{ transform: 'translateY(5px)' }}>
+                <WeatherIcon name={cond.icon} size={62} className="weather-main-icon" />
+              </span>
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
                             letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
