@@ -933,7 +933,7 @@ interface ImecaData {
 }
 
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
-  const { data, history, stats, consensus } = useStationData()
+  const { data, history, stats, consensus, localForecast } = useStationData()
   const u = useUnits()
   // Contenedor raíz: de él cuelgan las celdas con `data-nav` que se miden para el
   // mapa de zonas del display.
@@ -1761,6 +1761,29 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div className="big gp rt" style={{ marginTop: 5, fontSize: 56, paddingRight: 32 }}>
             {decNum(u.press(data?.pressure_relative, 1))}<span className="u" style={{ fontSize: 24, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
+          {/* Badge de pronóstico Zambretti: icono + texto corto basado en presión y tendencia */}
+          {(() => {
+            if (!localForecast?.available) return null
+            const t = localForecast.trend?.code
+            const l = localForecast.level
+            let icon = '🌤️', text = 'Estable'
+            if (t === 'falling_fast') { icon = '🌧️'; text = 'Posible lluvia' }
+            else if (t === 'falling' && l === 'low') { icon = '🌧️'; text = 'Inestable' }
+            else if (t === 'falling') { icon = '⛅'; text = 'Nublándose' }
+            else if (t === 'rising' && l === 'high') { icon = '☀️'; text = 'Buen tiempo' }
+            else if (t === 'rising' || t === 'rising_fast') { icon = '🌤️'; text = 'Mejorando' }
+            else if (l === 'high') { icon = '☀️'; text = 'Buen tiempo' }
+            else if (l === 'low') { icon = '⛅'; text = 'Variable' }
+            return (
+              <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.08)',
+                              borderRadius: 6, padding: '2px 8px' }}>
+                  <span style={{ fontSize: 14 }}>{icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', letterSpacing: 0.3 }}>{text}</span>
+                </div>
+              </div>
+            )
+          })()}
           {/* Riel al ANCHO COMPLETO. Contenedor SIN sangría (left/right 0) porque la de
               12 px ya la pone el dibujo por dentro, con su x0/x1: puestas las dos, se
               sumaban y el riel salía 22 px más corto que el histograma de LLUVIA. Así los
