@@ -97,12 +97,12 @@ function SensorRow({ sensor, online }: { sensor: SensorDetail; online: boolean }
   const icon = { exterior: '🌡️', interior: '🏠', canal: '📍', viento: '💨', lluvia: '🌧️', solar: '☀️' }[sensor.category] || '📡'
   const receiving = sensor.active && online
   const values = [
-    sensor.temperature !== undefined && `${sensor.temperature.toFixed(1)}°`,
-    sensor.humidity !== undefined && `${Math.round(sensor.humidity)}%`,
-    sensor.pressure !== undefined && `${sensor.pressure.toFixed(0)}hPa`,
-    sensor.wind_speed !== undefined && `${sensor.wind_speed.toFixed(0)}km/h`,
-    sensor.rain_daily !== undefined && `${sensor.rain_daily.toFixed(1)}mm`,
-    sensor.uv_index !== undefined && `UV${sensor.uv_index}`,
+    sensor.temperature != null && `${sensor.temperature.toFixed(1)}°`,
+    sensor.humidity != null && `${Math.round(sensor.humidity)}%`,
+    sensor.pressure != null && `${sensor.pressure.toFixed(0)}hPa`,
+    sensor.wind_speed != null && `${sensor.wind_speed.toFixed(0)}km/h`,
+    sensor.rain_daily != null && `${sensor.rain_daily.toFixed(1)}mm`,
+    sensor.uv_index != null && `UV${sensor.uv_index}`,
   ].filter(Boolean).join(' ')
 
   return (
