@@ -802,7 +802,7 @@ const PS_M = 18
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
 // Los 2 px de más se los come el aire de en medio de la celda, no el margen
 // inferior (que sigue en `bottom: 4`).
-const PS_H = 31
+const PS_H = 26
 
 function PressureScale({ delta, endLabel, imperial }: {
   delta: number | null; endLabel: string; imperial: boolean
@@ -1749,11 +1749,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               cifra --`vertical-align: top`-- así que a la altura de la flecha lo último que
               hay a la derecha es el decimal, y queda hueco de sobra. */}
           {celdasEnAlerta.has('pres') && (
-            <div style={{ position: 'absolute', top: '50%', right: 38, transform: 'translateY(-50%)' }}>
+            <div style={{ position: 'absolute', top: '35%', right: 38, transform: 'translateY(-50%)' }}>
               <WarnGlyph size={30} />
             </div>
           )}
-          <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
+          <div style={{ position: 'absolute', top: '35%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={pressTrend} />
           </div>
           {/* Lectura ARRIBA, al nivel de la celda de temperatura, para dejar espacio
