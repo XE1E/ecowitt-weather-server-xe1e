@@ -72,16 +72,58 @@ export function StationLayout() {
       <div className="min-h-screen p-3 md:p-6">
         <div className="max-w-[1400px] mx-auto">
           {/* Header (banner fijo con nombre y fecha/hora centrada) */}
-          <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <div className="min-w-0 flex-1 order-1">
-              <h1 className="text-base md:text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
-              <p className="text-sm md:text-base text-slate-300 truncate">{LOCATION.label}</p>
+          <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10">
+            {/* Desktop: 3 columnas con fecha/hora centrada */}
+            <div className="hidden sm:grid sm:grid-cols-3 items-center gap-3">
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
+                <p className="text-base text-slate-300 truncate">{LOCATION.label}</p>
+              </div>
+              <div className="text-center leading-tight">
+                <p className="text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
+                <p className="font-mono text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
+              </div>
+              <div className="flex items-center gap-2 justify-end text-sm text-slate-300">
+                <button
+                  onClick={units.toggle}
+                  title="Cambiar unidades (métrico / imperial)"
+                  className="text-xs rounded-lg px-2 py-1 border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 transition"
+                >
+                  {units.system === 'metric' ? '°C · km/h' : '°F · mph'}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  title="Tema claro / oscuro"
+                  className="text-xs rounded-lg px-2 py-1 border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 transition"
+                >
+                  {theme === 'dark' ? '🌙' : '☀️'}
+                </button>
+                <button
+                  onClick={toggleFx}
+                  title="Efectos de clima (lluvia/nieve/etc.)"
+                  className={`text-xs rounded-lg px-2 py-1 border transition ${
+                    fxEnabled
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                      : 'bg-white/5 border-white/10 text-slate-400'
+                  }`}
+                >
+                  FX {fxEnabled ? 'on' : 'off'}
+                </button>
+                <a href="/?clasica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+                  Vista clásica
+                </a>
+              </div>
             </div>
-            <div className="order-2 shrink-0 text-right sm:text-center sm:flex-1 leading-tight">
-              <p className="text-xs md:text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
-              <p className="font-mono text-lg md:text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
-            </div>
-            <div className="order-3 w-full sm:w-auto flex items-center gap-2 flex-wrap justify-end text-sm text-slate-300">
+            {/* Móvil: layout compacto */}
+            <div className="sm:hidden flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="text-base font-bold truncate flex-1">Estación Clima XE1E</h1>
+                <div className="text-center leading-tight">
+                  <p className="text-xs font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} {MESES[now.getMonth()].slice(0, 3)}</p>
+                  <p className="font-mono text-lg font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap justify-end text-sm text-slate-300">
               <button
                 onClick={units.toggle}
                 title="Cambiar unidades (métrico / imperial)"
@@ -110,6 +152,7 @@ export function StationLayout() {
               <a href="/?clasica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 Vista clásica
               </a>
+              </div>
             </div>
           </header>
 
