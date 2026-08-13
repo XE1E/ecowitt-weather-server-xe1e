@@ -2149,7 +2149,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               aire entre valores y pila era -4 px en vertical y -13 en horizontal, contra
               -1 y -1 de JARDÍN, que es la referencia buena. */}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -2174,7 +2174,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <HouseGlyph filled />
           </div>
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
             <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
               {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2343,7 +2343,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ella y los dos valores quedan centrados de verdad en la celda.
               mismo ajuste que INTERIOR: se salia 1 px por abajo */}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2366,7 +2366,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           )}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2491,7 +2491,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               de 89 a 253 y quedan 15 px, que ya separan. El barómetro acaba en 56, así que
               todavía le sobran 33 px por la izquierda: aquí hay sitio, al contrario que en
               PRES, porque esta cifra es de cuerpo 46 y no 56. */}
-          <div className="big gp ctr rt" style={{ marginTop: 8, fontSize: 46, paddingRight: 66 }}>
+          <div className="big gp ctr rt" style={{ marginTop: 28, fontSize: 46, paddingRight: 66 }}>
             {remote?.pressure_relative != null ? decNum(u.press(remote.pressure_relative, 1)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--p)' }}> {u.pressU}</span>
           </div>
         </div>
