@@ -5,7 +5,6 @@ import { useUnits } from '../../units'
 import { relativeTime, isStale, historicValue } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
-import { ICON } from '../../theme/icons'
 
 const REFRESH = 60000 // 1 min
 
@@ -90,7 +89,7 @@ export function RemoteStationCard() {
       <p className="text-xs text-slate-400 mb-1">Exterior</p>
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="thermometer" size={24} />
+          <WeatherIcon name="thermometer" size={36} />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-amber-300">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
             <TrendArrow trend={tOutArrow} size={20} />
@@ -98,7 +97,7 @@ export function RemoteStationCard() {
           <p className="text-xs text-slate-400">Temp</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="humidity" size={24} />
+          <WeatherIcon name="humidity" size={36} />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-cyan-300">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
             <TrendArrow trend={hOutArrow} size={20} />
@@ -106,7 +105,7 @@ export function RemoteStationCard() {
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="thermometer" size={24} />
+          <WeatherIcon name="thermometer" size={36} />
           <p className="text-xl font-bold text-emerald-300 mt-1">{dewOut != null ? `${u.temp(dewOut)}${u.tempU}` : '--'}</p>
           <p className="text-xs text-slate-400">Rocío</p>
         </div>
@@ -116,17 +115,17 @@ export function RemoteStationCard() {
       <p className="text-xs text-slate-400 mb-1">Interior</p>
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="thermometer" size={24} />
+          <WeatherIcon name="thermometer" size={36} />
           <p className="text-xl font-bold text-orange-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
           <p className="text-xs text-slate-400">Temp</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="humidity" size={24} />
+          <WeatherIcon name="humidity" size={36} />
           <p className="text-xl font-bold text-sky-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
           <p className="text-xs text-slate-400">Humedad</p>
         </div>
         <div className="rounded-lg bg-white/5 px-2 py-2 flex flex-col items-center text-center">
-          <WeatherIcon name="pressure-high" size={ICON.inline} alt="" />
+          <WeatherIcon name="pressure-high" size={36} alt="" />
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xl font-bold text-violet-300">
               {data.pressure_relative != null ? u.press(data.pressure_relative) : '--'}

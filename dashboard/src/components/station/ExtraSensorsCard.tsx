@@ -46,7 +46,7 @@ export function ExtraSensorsCard({ data, history }: { data: WeatherData; history
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
-                <WeatherIcon name="thermometer" size={32} />
+                <WeatherIcon name="thermometer" size={44} />
                 <div>
                   <div className="flex items-center gap-1">
                     <p className="text-xl font-bold text-amber-300">{c.temp !== undefined ? `${u.temp(c.temp)}${u.tempU}` : '--'}</p>
@@ -56,7 +56,7 @@ export function ExtraSensorsCard({ data, history }: { data: WeatherData; history
                 </div>
               </div>
               <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
-                <WeatherIcon name="humidity" size={32} />
+                <WeatherIcon name="humidity" size={44} />
                 <div>
                   <div className="flex items-center gap-1">
                     <p className="text-xl font-bold text-cyan-300">{c.humidity !== undefined ? `${Math.round(c.humidity)}%` : '--'}</p>

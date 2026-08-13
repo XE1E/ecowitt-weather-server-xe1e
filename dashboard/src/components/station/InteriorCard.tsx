@@ -13,14 +13,14 @@ export function InteriorCard({ data }: { data: WeatherData }) {
       <p className="card-title">Interior</p>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
-          <WeatherIcon name="thermometer" size={36} />
+          <WeatherIcon name="thermometer" size={48} />
           <div>
             <p className="text-2xl font-bold text-amber-300">{t != null ? `${u.temp(t)}${u.tempU}` : '--'}</p>
             <p className="text-xs text-slate-400">Temperatura</p>
           </div>
         </div>
         <div className="rounded-lg bg-white/5 px-3 py-2 flex items-center gap-3">
-          <WeatherIcon name="humidity" size={36} />
+          <WeatherIcon name="humidity" size={48} />
           <div>
             <p className="text-2xl font-bold text-cyan-300">{h != null ? `${Math.round(h)}%` : '--'}</p>
             <p className="text-xs text-slate-400">Humedad</p>
