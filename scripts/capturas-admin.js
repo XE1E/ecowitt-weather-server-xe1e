@@ -4,14 +4,14 @@ const fs = require('fs');
 (async () => {
   const adminPages = [
     { url: 'https://clima.xe1e.net/admin', name: 'admin-01-dashboard' },
-    { url: 'https://clima.xe1e.net/admin/stations', name: 'admin-02-estaciones' },
-    { url: 'https://clima.xe1e.net/admin/alerts', name: 'admin-03-alertas' },
-    { url: 'https://clima.xe1e.net/admin/calibration', name: 'admin-04-calibracion' },
-    { url: 'https://clima.xe1e.net/admin/publish', name: 'admin-05-publicacion' },
-    { url: 'https://clima.xe1e.net/admin/notifications', name: 'admin-06-notificaciones' },
-    { url: 'https://clima.xe1e.net/admin/integrations', name: 'admin-07-integraciones' },
-    { url: 'https://clima.xe1e.net/admin/system', name: 'admin-08-sistema' },
-    { url: 'https://clima.xe1e.net/admin/setup', name: 'admin-09-wizard' },
+    { url: 'https://clima.xe1e.net/admin/estaciones', name: 'admin-02-estaciones' },
+    { url: 'https://clima.xe1e.net/admin/alertas', name: 'admin-03-alertas' },
+    { url: 'https://clima.xe1e.net/admin/calibracion', name: 'admin-04-calibracion' },
+    { url: 'https://clima.xe1e.net/admin/publicacion', name: 'admin-05-publicacion' },
+    { url: 'https://clima.xe1e.net/admin/notificaciones', name: 'admin-06-notificaciones' },
+    { url: 'https://clima.xe1e.net/admin/integraciones', name: 'admin-07-integraciones' },
+    { url: 'https://clima.xe1e.net/admin/sistema', name: 'admin-08-sistema' },
+    { url: 'https://clima.xe1e.net/admin/wizard', name: 'admin-09-wizard' },
   ];
 
   const browser = await chromium.launch();
@@ -34,8 +34,8 @@ const fs = require('fs');
   await page.waitForTimeout(1000);
 
   // Llenar formulario - inputs sin name/id, usar tipo
-  await page.fill('input[type="text"]', process.env.ADMIN_USER || 'admin');
-  await page.fill('input[type="password"]', process.env.ADMIN_PASS || 'changeme');
+  await page.fill('input[type="text"]', 'xe1e');
+  await page.fill('input[type="password"]', 'xe1vozxe1voz11');
   await page.click('button:has-text("Ingresar")');
 
   // Esperar navegación después del login
