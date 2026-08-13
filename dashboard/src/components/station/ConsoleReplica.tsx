@@ -832,12 +832,12 @@ function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
       {/* Min/max del día en amarillo arriba del riel */}
       {minDay != null && (
-        <text x={x0} y={PS_TOP - 2} fill="#facc15" fontSize="10" fontWeight="700" textAnchor="start">
+        <text x={x0} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="start">
           {imperial ? minDay.toFixed(2) : minDay.toFixed(1)}
         </text>
       )}
       {maxDay != null && (
-        <text x={x1} y={PS_TOP - 2} fill="#facc15" fontSize="10" fontWeight="700" textAnchor="end">
+        <text x={x1} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="end">
           {imperial ? maxDay.toFixed(2) : maxDay.toFixed(1)}
         </text>
       )}
@@ -865,8 +865,8 @@ function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
         )
       })}
       {/* Símbolos ≤ y ≥ pegados al riel */}
-      <text x={x0 - 3} y={PS_TOP + 9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">{'≤'}</text>
-      <text x={x1 + 3} y={PS_TOP + 9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">{'≥'}</text>
+      <text x={x0 - 3} y={PS_TOP + 10} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="end">{'≤'}</text>
+      <text x={x1 + 3} y={PS_TOP + 10} fill="#eaeaea" fontSize="13" fontWeight="700" textAnchor="start">{'≥'}</text>
     </svg>
   )
 }
