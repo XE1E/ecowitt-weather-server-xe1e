@@ -1,5 +1,13 @@
 # Estación Clima XE1E — Ciudad de México
 
+<p align="center">
+  <img src="docs/images/estacion-principal.jpg" alt="Estación Principal" width="400"/>
+  <img src="docs/images/estacion-remota.jpg" alt="Estación Remota" width="200"/>
+</p>
+<p align="center">
+  <em>Estación Principal (WS69)</em> · <em>Estación Remota (WN32 con escudo de radiación)</em>
+</p>
+
 Estación meteorológica propia que publica en tiempo casi real las condiciones de un punto exacto de la Ciudad de México (Benito Juárez). El hardware **Ecowitt** envía sus datos por *push* a un servidor en un **VPS con HTTPS**, que los guarda en **InfluxDB** y los muestra en un sitio web propio (React), con pronóstico, radar, astronomía, climatología, calidad del aire y meteorología aeronáutica. El mismo servidor alimenta además **pantallas físicas** (kiosco táctil, e-paper y reloj de píxeles) y **Home Assistant**.
 
 **🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net)
@@ -59,7 +67,16 @@ Además del sitio web, el servidor alimenta pantallas físicas que muestran el c
 
 **Kiosco Waveshare ESP32-S3 (táctil 7")** — funciona como *display tonto*: el **servidor renderiza** cada pantalla en Chromium headless (servicio `renderer`) y la sirve como JPEG (`GET /api/display.jpg?page=<slug>`); el ESP32 solo la baja y la pinta. El firmware **no sabe qué páginas existen** — con cada imagen recibe la cabecera `X-Kiosk-Nav` con las zonas táctiles, así que añadir pantallas es sólo cambiar el servidor. Arranca en la **réplica de la consola**, que hace de índice hacia detalle histórico por variable, récords, pronóstico, sensores y cámara. La pantalla lleva además su propio **BME280**, cuyas lecturas envía de vuelta (`POST /api/kiosk/local`) y se ven en el sitio. Firmware: [ecowitt-display-kiosk-xe1e](https://github.com/XE1E/ecowitt-display-kiosk-xe1e).
 
+<p align="center">
+  <img src="docs/images/kiosk-consola.png" alt="Kiosco - Réplica de consola" width="500"/>
+</p>
+
 **E-paper LilyGo 4.7"** — cliente "gordo": dibuja él mismo la pantalla. El servidor le da el dato ya masticado en `GET /api/epaper/forecast.json`, con la forma de WeatherAPI `forecast.json` (basta apuntar ahí la URL del firmware). Ese endpoint **nunca devuelve 503**: si falta algún dato cae al pronóstico y lo marca, porque un error dejaría la pantalla vieja hasta el siguiente despertar.
+
+<p align="center">
+  <img src="docs/images/epaper-forecast.jpg" alt="E-paper - Pronóstico" width="350"/>
+  <img src="docs/images/epaper-current.jpg" alt="E-paper - Condiciones actuales" width="350"/>
+</p>
 
 **Reloj Ulanzi TC001 (SVITRIX-XE1E)** — matriz LED de 32×8 con apps rotativas de temperatura, humedad, presión, calidad del aire, UV, viento, radiación y precipitación. Consulta `GET /api/svitrix` cada 1–5 min. Firmware: [svitrix-firmware-XE1E](https://github.com/XE1E/svitrix-firmware-XE1E).
 
