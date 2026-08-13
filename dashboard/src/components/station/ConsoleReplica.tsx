@@ -802,10 +802,12 @@ const PS_M = 18
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
 // Los 2 px de más se los come el aire de en medio de la celda, no el margen
 // inferior (que sigue en `bottom: 4`).
-const PS_H = 20
+// +10 para el renglón de min/max del día arriba del riel.
+const PS_H = 30
+const PS_TOP = 10  // espacio arriba para min/max
 
-function PressureScale({ delta, endLabel, imperial }: {
-  delta: number | null; endLabel: string; imperial: boolean
+function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
+  delta: number | null; endLabel: string; imperial: boolean; minDay?: number | null; maxDay?: number | null
 }) {
   const x0 = PS_M
   const x1 = PS_W - PS_M
@@ -828,32 +830,43 @@ function PressureScale({ delta, endLabel, imperial }: {
   }
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
-      {/* Riel compacto: coordenadas ajustadas para caber en 20px */}
-      <rect x={x0} y={2} width={x1 - x0} height={7} rx={3.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
+      {/* Min/max del día en amarillo arriba del riel */}
+      {minDay != null && (
+        <text x={x0} y={PS_TOP - 2} fill="#facc15" fontSize="10" fontWeight="700" textAnchor="start">
+          {imperial ? minDay.toFixed(2) : minDay.toFixed(1)}
+        </text>
+      )}
+      {maxDay != null && (
+        <text x={x1} y={PS_TOP - 2} fill="#facc15" fontSize="10" fontWeight="700" textAnchor="end">
+          {imperial ? maxDay.toFixed(2) : maxDay.toFixed(1)}
+        </text>
+      )}
+      {/* Riel compacto: coordenadas ajustadas con offset PS_TOP */}
+      <rect x={x0} y={PS_TOP + 2} width={x1 - x0} height={7} rx={3.5} fill="#141414" stroke="#eaeaea" strokeWidth="1" />
       {/* Marcas cada 1 hPa */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const tx = xOf(v)
         const major = v % PS_R === 0
         return (
-          <line key={v} x1={tx} y1={major ? 1 : 3} x2={tx} y2={major ? 9 : 7.5}
+          <line key={v} x1={tx} y1={PS_TOP + (major ? 1 : 3)} x2={tx} y2={PS_TOP + (major ? 9 : 7.5)}
             stroke="#eaeaea" strokeWidth={major ? 1.4 : 0.8} />
         )
       })}
       {/* Relleno del centro al valor */}
       {delta != null && Math.abs(x - mid) > 0.5 && (
-        <rect x={Math.min(mid, x)} y={3.5} width={Math.abs(x - mid)} height={4} fill={color} />
+        <rect x={Math.min(mid, x)} y={PS_TOP + 3.5} width={Math.abs(x - mid)} height={4} fill={color} />
       )}
       {/* Números debajo del riel */}
       {Array.from({ length: 2 * PS_R + 1 }, (_, i) => i - PS_R).map((v) => {
         const t = tickLabel(v)
         return t == null ? null : (
-          <text key={v} x={xOf(v)} y={18} fill="#eaeaea" fontSize={t.length > 2 ? 7 : 9}
+          <text key={v} x={xOf(v)} y={PS_TOP + 18} fill="#eaeaea" fontSize={t.length > 2 ? 7 : 9}
             fontWeight="700" textAnchor="middle">{t}</text>
         )
       })}
-      {/* Símbolos ≤ y ≥ a los lados */}
-      <text x={2} y={9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">{'≤'}</text>
-      <text x={PS_W - 2} y={9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">{'≥'}</text>
+      {/* Símbolos ≤ y ≥ pegados al riel */}
+      <text x={x0 - 3} y={PS_TOP + 9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="end">{'≤'}</text>
+      <text x={x1 + 3} y={PS_TOP + 9} fill="#eaeaea" fontSize="10" fontWeight="700" textAnchor="start">{'≥'}</text>
     </svg>
   )
 }
@@ -1124,6 +1137,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const gustMaxTime = hhmm(stats?.wind_gust?.max_time)
   const tDay = stats?.temperature_outdoor   // mín/máx del día para la celda EXT
   const hDay = stats?.humidity_outdoor      // …y para HUMEDAD, que los muestra igual
+  const pDay = stats?.pressure_relative     // …y para PRES, min/max en el riel
 
   const getTrend = (current: number | undefined | null, previous: number | null, threshold: number): Trend => {
     if (current == null || previous == null) return 'stable'
@@ -1780,7 +1794,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               `preserveAspectRatio` por defecto y con un viewBox más estrecho que su caja
               se quedaría centrado sin estirarse. */}
           <div style={{ position: 'absolute', bottom: 4, left: 0, right: 0 }}>
-            <PressureScale delta={pressDelta} endLabel={pressEndLabel} imperial={u.pressU === 'inHg'} />
+            <PressureScale delta={pressDelta} endLabel={pressEndLabel} imperial={u.pressU === 'inHg'} minDay={pDay?.min} maxDay={pDay?.max} />
           </div>
         </div>
 
