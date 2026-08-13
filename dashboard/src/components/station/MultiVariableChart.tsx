@@ -253,20 +253,20 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tickLine={{ stroke: 'rgba(148,163,184,0.3)' }}
           />
 
-          {/* Eje izquierdo 1: Presión hPa (morado) */}
+          {/* Eje izquierdo 1: Temperatura °C (naranja) - más cerca del gráfico */}
           <YAxis
-            yAxisId="press"
+            yAxisId="temp"
             orientation="left"
-            domain={domains.press}
-            ticks={genTicks(domains.press, 5)}
-            tick={{ fill: COL.press, fontSize: fsY }}
-            axisLine={{ stroke: COL.press }}
-            tickLine={{ stroke: COL.press }}
-            label={{ value: u.pressU, position: 'top', offset: 12, fill: COL.press, fontSize: fsL }}
-            width={w(32, 46)}
+            domain={domains.temp}
+            ticks={genTicks(domains.temp, 6)}
+            tick={{ fill: COL.temp, fontSize: fsY }}
+            axisLine={{ stroke: COL.temp }}
+            tickLine={{ stroke: COL.temp }}
+            label={{ value: u.tempU, position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
+            width={w(25, 34)}
           />
 
-          {/* Eje izquierdo 2: Precipitación mm (azul claro) */}
+          {/* Eje izquierdo 2: Precipitación mm (azul claro) - en medio */}
           <YAxis
             yAxisId="rain"
             orientation="left"
@@ -279,17 +279,17 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             width={w(20, 28)}
           />
 
-          {/* Eje izquierdo 3: Temperatura °C (naranja) */}
+          {/* Eje izquierdo 3: Presión hPa (morado) - más a la izquierda */}
           <YAxis
-            yAxisId="temp"
+            yAxisId="press"
             orientation="left"
-            domain={domains.temp}
-            ticks={genTicks(domains.temp, 6)}
-            tick={{ fill: COL.temp, fontSize: fsY }}
-            axisLine={{ stroke: COL.temp }}
-            tickLine={{ stroke: COL.temp }}
-            label={{ value: u.tempU, position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
-            width={w(25, 34)}
+            domain={domains.press}
+            ticks={genTicks(domains.press, 5)}
+            tick={{ fill: COL.press, fontSize: fsY }}
+            axisLine={{ stroke: COL.press }}
+            tickLine={{ stroke: COL.press }}
+            label={{ value: u.pressU, position: 'top', offset: 12, fill: COL.press, fontSize: fsL }}
+            width={w(32, 46)}
           />
 
           {/* Eje derecho 1: Viento km/h (verde) */}
