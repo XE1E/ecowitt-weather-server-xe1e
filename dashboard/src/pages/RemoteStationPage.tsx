@@ -199,23 +199,23 @@ export function RemoteStationPage() {
               {hasOutdoor ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                    <WeatherIcon name="thermometer" size={28} />
+                    <WeatherIcon name="thermometer" size={44} />
                     <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Temp</p>
                     {tempOutTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempOutTrend)} unit={u.tempU} threshold={0.5} />}
                   </div>
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                    <WeatherIcon name="thermometer" size={28} />
+                    <WeatherIcon name="thermometer" size={44} />
                     <p className="text-xl font-bold text-orange-300 mt-1">{data?.feels_like != null ? `${u.temp(data.feels_like)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Sensación</p>
                   </div>
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                    <WeatherIcon name="humidity" size={28} />
+                    <WeatherIcon name="humidity" size={44} />
                     <p className="text-xl font-bold text-cyan-300 mt-1">{hOut != null ? `${Math.round(hOut)}%` : '--'}</p>
                     <p className="text-xs text-slate-400">Humedad</p>
                   </div>
                   <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                    <WeatherIcon name="thermometer" size={28} />
+                    <WeatherIcon name="thermometer" size={44} />
                     <p className="text-xl font-bold text-emerald-300 mt-1">{dewOut != null ? `${u.temp(dewOut)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Rocío</p>
                   </div>
@@ -236,13 +236,13 @@ export function RemoteStationPage() {
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="thermometer" size={28} />
+                  <WeatherIcon name="thermometer" size={44} />
                   <p className="text-xl font-bold text-amber-300 mt-1">{tIn != null ? `${u.temp(tIn)}${u.tempU}` : '--'}</p>
                   <p className="text-xs text-slate-400">Temp</p>
                   {tempInTrend != null && <TrendBadge delta={tempDeltaDisp(u.system, tempInTrend)} unit={u.tempU} threshold={0.5} />}
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
-                  <WeatherIcon name="humidity" size={28} />
+                  <WeatherIcon name="humidity" size={44} />
                   <p className="text-xl font-bold text-cyan-300 mt-1">{hIn != null ? `${Math.round(hIn)}%` : '--'}</p>
                   <p className="text-xs text-slate-400">Humedad</p>
                 </div>
@@ -252,8 +252,9 @@ export function RemoteStationPage() {
             {/* Presión */}
             <div className="card">
               <p className="card-title">Presión</p>
-              <div className="rounded-lg bg-white/5 px-3 py-3 flex items-center justify-between">
-                <div>
+              <div className="rounded-lg bg-white/5 px-3 py-3 flex items-center gap-3">
+                <WeatherIcon name="barometer" size={48} />
+                <div className="flex-1">
                   <p className="text-3xl font-bold text-violet-300">
                     {data?.pressure_relative != null ? `${u.press(data.pressure_relative)}` : '--'}
                     <span className="text-base font-normal text-slate-400"> {u.pressU}</span>
