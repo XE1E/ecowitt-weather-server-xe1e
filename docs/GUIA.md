@@ -240,6 +240,58 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 ## 5. La página web (`/pro`)
 
+### Capturas de pantalla
+
+<details>
+<summary><strong>Ver las 15 páginas del sitio</strong></summary>
+
+#### Inicio
+![Inicio](capturas/01-inicio.png)
+
+#### Mi tablero
+![Tablero](capturas/02-tablero.png)
+
+#### Pronóstico
+![Pronóstico](capturas/03-pronostico.png)
+
+#### Historia
+![Historia](capturas/04-historia.png)
+
+#### Estadísticas
+![Estadísticas](capturas/05-estadisticas.png)
+
+#### Tablas
+![Tablas](capturas/06-tablas.png)
+
+#### Climatología
+![Climatología](capturas/07-climatologia.png)
+
+#### Radar
+![Radar](capturas/08-radar.png)
+
+#### Cámara
+![Cámara](capturas/09-camara.png)
+
+#### Astronomía
+![Astronomía](capturas/10-astronomia.png)
+
+#### Calidad del aire
+![Calidad del aire](capturas/11-calidad-aire.png)
+
+#### Aeronáutica
+![Aeronáutica](capturas/12-aeronautica.png)
+
+#### Estación remota
+![Estación remota](capturas/13-remota.png)
+
+#### Widget
+![Widget](capturas/14-widget.png)
+
+#### Consola
+![Consola](capturas/15-consola.png)
+
+</details>
+
 > **El recorrido página por página vive en el manual de usuario**, no aquí:
 > [`dashboard/public/guia.html`](../dashboard/public/guia.html) — publicado en
 > <https://clima.xe1e.net/guia.html>. Ahí está qué es cada pestaña, qué muestra
@@ -880,6 +932,40 @@ repositorio.
 ---
 
 ## 9. Panel de administración (`/admin`)
+
+### Capturas de pantalla
+
+<details>
+<summary><strong>Ver las 9 páginas del panel de admin</strong></summary>
+
+#### Dashboard
+![Dashboard](capturas/admin-01-dashboard.png)
+
+#### Estaciones
+![Estaciones](capturas/admin-02-estaciones.png)
+
+#### Alertas
+![Alertas](capturas/admin-03-alertas.png)
+
+#### Calibración
+![Calibración](capturas/admin-04-calibracion.png)
+
+#### Publicación
+![Publicación](capturas/admin-05-publicacion.png)
+
+#### Notificaciones
+![Notificaciones](capturas/admin-06-notificaciones.png)
+
+#### Integraciones
+![Integraciones](capturas/admin-07-integraciones.png)
+
+#### Sistema
+![Sistema](capturas/admin-08-sistema.png)
+
+#### Wizard de configuración
+![Wizard](capturas/admin-09-wizard.png)
+
+</details>
 
 Acceso **usuario/contraseña** (sesión de 12 h). Diseño compacto en columnas.
 Permite **editar en caliente** (sin reiniciar) todo lo configurable.
