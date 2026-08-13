@@ -1697,6 +1697,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             (`bottom: 4`) y la lectura al de arriba, de modo que los píxeles de sobra
             caen en el aire de en medio, que es justo donde había menos. */}
         <div className="cell col main" data-nav={CONSOLA_NAV.presion}>
+          {/* Casa hueca = sensor exterior, igual que en EXT y HUMEDAD */}
+          <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
+            <HouseGlyph />
+          </div>
           {/* Sin rótulo "PRES": el barómetro de abajo a la izquierda lo dice. De paso
               se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
               llega hasta x≈82 y la palabra entera se le echaba encima--.
