@@ -68,13 +68,6 @@ const RX = 49       // óvalo exterior (aro con las marcas de grados)
 const RY = 38
 const RX_IN = 42    // óvalo interior
 const RY_IN = 31
-// Punta de la flecha de dirección: pegada al aro exterior. Más adentro se vería
-// igual de bien pero taparía la lectura del centro en los rumbos E/O (la
-// velocidad con su unidad, "24.3 km/h", llega casi al óvalo interior), y ese es
-// el dato que no se puede perder; aquí sólo roza la letra cardinal en N/E/S/O
-// exactos.
-const ARX = RX - 1.5
-const ARY = RY - 1.5
 
 // La fase lunar sale de `moonIllumination` (weather.ts), la misma que usa el
 // pronóstico: antes había aquí una copia de la fórmula, y tener dos podía
