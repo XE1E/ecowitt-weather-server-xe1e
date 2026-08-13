@@ -269,7 +269,7 @@ export function StatisticsPage() {
             const s = stats![m.key]
             return (
               <div key={m.key} className="card">
-                <p className="card-title"><WeatherIcon name={m.icon} size={32} /> {m.label}</p>
+                <p className="card-title"><WeatherIcon name={m.icon} size={48} /> {m.label}</p>
                 {m.onlyMax ? (
                   <div>
                     <p className={`text-3xl font-bold ${m.color}`}>{s.max != null ? m.fmt(s.max) : '--'}</p>
