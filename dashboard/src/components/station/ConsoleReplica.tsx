@@ -833,12 +833,12 @@ function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
       {/* Min/max del día en amarillo arriba del riel */}
       {minDay != null && (
         <text x={x0} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="start">
-          {imperial ? minDay.toFixed(2) : minDay.toFixed(1)}
+          {imperial ? (minDay * 0.0295299830714).toFixed(2) : minDay.toFixed(1)}
         </text>
       )}
       {maxDay != null && (
         <text x={x1} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="end">
-          {imperial ? maxDay.toFixed(2) : maxDay.toFixed(1)}
+          {imperial ? (maxDay * 0.0295299830714).toFixed(2) : maxDay.toFixed(1)}
         </text>
       )}
       {/* Riel compacto: coordenadas ajustadas con offset PS_TOP */}
@@ -1221,19 +1221,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
   // Marcador de dirección del viento. Recorre la ELIPSE: antes giraba sobre un
   // CÍRCULO, así que en el N sobresalía del óvalo y en el E quedaba flotando muy
-  // adentro. Ahora la punta va sobre el óvalo (posición paramétrica) y el giro
+  // adentro. Ahora la punta va sobre el óvalo INTERIOR (posición paramétrica) y el giro
   // sigue la NORMAL al borde, para que apunte perpendicular al óvalo en
-  // cualquier rumbo. El tamaño de la flecha es constante (~1.8× la anterior):
-  // RX/RY sólo definen dónde se coloca y cuánto gira.
+  // cualquier rumbo. El puntero es corto y chato, apuntando hacia el centro.
   const windMarker = (() => {
     if (dir == null) return null
     const t = (dir * Math.PI) / 180
-    const x = 50 + ARX * Math.sin(t)
-    const y = 40 - ARY * Math.cos(t)
+    const x = 50 + RX_IN * Math.sin(t)
+    const y = 40 - RY_IN * Math.cos(t)
     const rot = (Math.atan2(RY * Math.sin(t), RX * Math.cos(t)) * 180) / Math.PI
     return (
       <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)})`}>
-        <polygon points="0,0 -4.8,12.5 0,9 4.8,12.5" fill="#22c55e" />
+        <polygon points="0,0 -4.8,7 0,5 4.8,7" fill="#22c55e" />
       </g>
     )
   })()
@@ -1537,8 +1536,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 const rad = ((rumboDominante - 90) * Math.PI) / 180
                 return (
                   <circle
-                    cx={50 + 45.5 * Math.cos(rad)} cy={40 + 34.5 * Math.sin(rad)}
-                    r={3.2} fill="var(--v)" fillOpacity="0.85"
+                    cx={50 + RX * Math.cos(rad)} cy={40 + RY * Math.sin(rad)}
+                    r={2.2} fill="#ef4444" fillOpacity="0.95"
                   />
                 )
               })()}
