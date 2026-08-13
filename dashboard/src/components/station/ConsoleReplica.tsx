@@ -2149,18 +2149,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               aire entre valores y pila era -4 px en vertical y -13 en horizontal, contra
               -1 y -1 de JARDÍN, que es la referencia buena. */}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 20 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
               </span>
-              <TrendGlyph trend={remoteOutTempTrend} width={20} height={24} style={{ position: 'absolute', top: 10, right: -4 }} />
+              <TrendGlyph trend={remoteOutTempTrend} width={20} height={24} style={{ position: 'absolute', top: 18, right: -4 }} />
             </span>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gh seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutH != null ? remoteOutH.toFixed(0) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--h)' }}>%</span>
               </span>
-              <TrendGlyph trend={remoteOutHumTrend} width={20} height={24} style={{ position: 'absolute', top: 10, right: -4 }} />
+              <TrendGlyph trend={remoteOutHumTrend} width={20} height={24} style={{ position: 'absolute', top: 18, right: -4 }} />
             </span>
           </div>
         </div>
@@ -2174,7 +2174,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <HouseGlyph filled />
           </div>
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 20 }}>
             <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
               {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2343,7 +2343,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ella y los dos valores quedan centrados de verdad en la celda.
               mismo ajuste que INTERIOR: se salia 1 px por abajo */}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 20 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2366,7 +2366,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
           )}
           {/* Lecturas centradas verticalmente */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 20 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
