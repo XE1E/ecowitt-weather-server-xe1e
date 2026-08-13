@@ -1640,6 +1640,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             así que todas las medidas de esta celda --cuerpo 66, unidad 24, el mín/máx
             anclado abajo-- siguen valiendo tal cual; sólo cambia de vecinos. */}
         <div className="cell col main" data-nav={CONSOLA_NAV.humedad}>
+          {/* Casa hueca = sensor exterior, igual que en EXT */}
+          <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
+            <HouseGlyph />
+          </div>
           {/* Sin rótulo "HUMEDAD": la gota lo dice. Mismo apaño que en EXT para que el
               número no se mueva --marginTop de -13 a +5-- y misma subida de la gota al
               borde de arriba, para dejarle la franja de abajo a las horas. */}
@@ -1697,10 +1701,6 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             (`bottom: 4`) y la lectura al de arriba, de modo que los píxeles de sobra
             caen en el aire de en medio, que es justo donde había menos. */}
         <div className="cell col main" data-nav={CONSOLA_NAV.presion}>
-          {/* Casa hueca = sensor exterior, igual que en EXT y HUMEDAD */}
-          <div style={{ position: 'absolute', top: 6, right: 6 }} title="sensor exterior">
-            <HouseGlyph />
-          </div>
           {/* Sin rótulo "PRES": el barómetro de abajo a la izquierda lo dice. De paso
               se acaba el apretón que obligó a abreviar "PRESIÓN" a "PRES" --la lectura
               llega hasta x≈82 y la palabra entera se le echaba encima--.
@@ -2090,7 +2090,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               mismo criterio con el que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin rótulo.
               Además el reparto de color anterior (procedencia en blanco, aparato en
               morado) gastaba el morado de la PRESIÓN en un nombre de equipo. */}
-          <div style={{ color: celdasEnAlerta.has('remotaExtT') || celdasEnAlerta.has('remotaExtH') ? 'var(--alarma)' : 'var(--w)',
+          <div style={{ position: 'absolute', top: 6, left: 12, color: celdasEnAlerta.has('remotaExtT') || celdasEnAlerta.has('remotaExtH') ? 'var(--alarma)' : 'var(--w)',
                         fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa HUECA = a la intemperie. Es la única celda de la estación remota que
               mide afuera, y el hueco frente al relleno de la de abajo es lo que lo dice.
@@ -2148,7 +2148,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               metía el rótulo "WN32" de la pila debajo del pie de las cifras de humedad: el
               aire entre valores y pila era -4 px en vertical y -13 en horizontal, contra
               -1 y -1 de JARDÍN, que es la referencia buena. */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
+          {/* Lecturas centradas verticalmente */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
             <span style={{ position: 'relative', paddingRight: 16 }}>
               <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
                 {remoteOutT != null ? decNum(u.temp(remoteOutT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
@@ -2166,14 +2167,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
         {/* Fila 4 */}
         <div className="cell col main" data-nav={CONSOLA_NAV.interior}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: alertaCol('interior', '#fbbf24'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</span>
-            {/* Casa RELLENA = bajo techo. Este es el tamaño (30) que ahora usan las
-                cuatro celdas con glifo de ubicación. */}
+          <div style={{ position: 'absolute', top: 6, left: 12, color: alertaCol('interior', '#fbbf24'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>INTERIOR</div>
+          {/* Casa RELLENA = bajo techo. Este es el tamaño (30) que ahora usan las
+              cuatro celdas con glifo de ubicación. */}
+          <div style={{ position: 'absolute', top: 6, right: 8 }}>
             <HouseGlyph filled />
           </div>
-          {/* marginTop: la fila se salia 1 px por abajo y los dígitos rozaban el borde */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
+          {/* Lecturas centradas verticalmente */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
             <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
               {decNum(u.temp(data?.temperature_indoor))}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2325,7 +2326,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             Cuál de las dos es cada una lo dice el RELLENO de la casa, no el rótulo: las
             tres celdas remotas se llaman igual (ver la nota de la primera). */}
         <div className="cell col remota" data-nav={CONSOLA_NAV.remota}>
-          <div style={{ color: alertaCol('remotaInt', 'var(--w)'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
+          <div style={{ position: 'absolute', top: 6, left: 12, color: alertaCol('remotaInt', 'var(--w)'), fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* Casa RELLENA = bajo techo, al mismo tamaño que la hueca de la celda de
               arriba: puestas una encima de la otra, el relleno es lo único que cambia y
               se lee de un vistazo cuál de los dos sensores remotos es cada una.
@@ -2341,9 +2342,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Al no haber flecha, el `paddingRight: 16` que le hacía sitio se va con
               ella y los dos valores quedan centrados de verdad en la celda.
               mismo ajuste que INTERIOR: se salia 1 px por abajo */}
-          {/* gap 16 / marginTop -10, los de INTERIOR y JARDÍN: esta celda y la del WN32
-              son pareja y las cuatro celdas de temperatura+humedad se maquetan igual. */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
+          {/* Lecturas centradas verticalmente */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {remoteInT != null ? decNum(u.temp(remoteInT)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2355,10 +2355,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
 
         {/* Fila 5 */}
         <div className="cell col jardin" data-nav={CONSOLA_NAV.jardin}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</span>
-            <span style={{ color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</span>
-          </div>
+          <div style={{ position: 'absolute', top: 6, left: 12, color: 'var(--v)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>JARDÍN</div>
+          <div style={{ position: 'absolute', top: 8, right: 12, color: 'var(--lbl)', fontSize: 12, fontWeight: 600 }}>CH1</div>
           {/* Batería del WN31 de este canal. Aquí SÍ lleva el nombre al lado: la franja
               de abajo está libre --los dos valores van centrados con `ctr`-- así que
               cabe sin apretar nada. */}
@@ -2367,8 +2365,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <BatteryGlyph level={data.battery_ch1 ? 1 : 0.08} name="WN31" />
             </div>
           )}
-          {/* marginTop -10 = misma altura que INTERIOR */}
-          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: -10 }}>
+          {/* Lecturas centradas verticalmente */}
+          <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16 }}>
             <span className="gt seg" style={{ fontSize: 46, fontWeight: 800 }}>
               {sTemp != null ? decNum(u.temp(sTemp)) : '--'}<span className="u" style={{ fontSize: 20, color: 'var(--t)' }}>{u.tempU}</span>
             </span>
@@ -2464,7 +2462,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               y los hPa, igual que arriba lo dicen el termómetro y los °C. Es como funciona
               el resto de la consola desde que EXT, HUMEDAD, PRES y LLUVIA se quedaron sin
               rótulo, y lo que hace que las tres celdas de allá se lean como un bloque. */}
-          <div style={{ color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
+          <div style={{ position: 'absolute', top: 6, left: 12, color: 'var(--w)', fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>REMOTA</div>
           {/* El mismo barómetro redondo que la celda PRES, en el mismo sitio y tamaño:
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
