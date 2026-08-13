@@ -3,7 +3,7 @@ import { WeatherData, DailyStats, HistoryData } from '../../types'
 import { useUnits } from '../../units'
 import { historicValue } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
-import { ICON, iconTendenciaPresion } from '../../theme/icons'
+import { ICON } from '../../theme/icons'
 
 const hourFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit' })
 const stampFmt = (t: number) => new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -85,7 +85,7 @@ export function PressureCard({ data, stats, history }: Props) {
       <div className="grid grid-cols-3 gap-2 mt-3">
         {box('Mín', s?.min != null ? u.press(s.min) : '--', 'text-sky-300')}
         {box('Máx', s?.max != null ? u.press(s.max) : '--', 'text-orange-300')}
-        {box('Tendencia', trend, trendColor, iconTendenciaPresion(p != null && prev != null ? p - prev : null))}
+        {box('Tendencia', trend, trendColor)}
       </div>
 
       {series.length > 1 && (
