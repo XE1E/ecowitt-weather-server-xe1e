@@ -197,8 +197,8 @@ export function RemoteStationPage() {
                 Exterior (WN32)
               </p>
               {hasOutdoor ? (
-                <div className="grid grid-cols-5 gap-2">
-                  <div className="col-span-2 rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="rounded-lg bg-white/5 px-3 py-2 flex flex-col items-center text-center">
                     <WeatherIcon name="thermometer" size={28} />
                     <p className="text-xl font-bold text-amber-300 mt-1">{tOut != null ? `${u.temp(tOut)}${u.tempU}` : '--'}</p>
                     <p className="text-xs text-slate-400">Temp</p>
