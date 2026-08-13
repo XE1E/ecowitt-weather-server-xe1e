@@ -253,20 +253,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tickLine={{ stroke: 'rgba(148,163,184,0.3)' }}
           />
 
-          {/* Eje izquierdo 1: Temperatura °C (naranja) */}
-          <YAxis
-            yAxisId="temp"
-            orientation="left"
-            domain={domains.temp}
-            ticks={genTicks(domains.temp, 6)}
-            tick={{ fill: COL.temp, fontSize: fsY }}
-            axisLine={{ stroke: COL.temp }}
-            tickLine={{ stroke: COL.temp }}
-            label={{ value: u.tempU, position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
-            width={w(25, 34)}
-          />
-
-          {/* Eje izquierdo 2: Presión hPa (morado) */}
+          {/* Eje izquierdo 1: Presión hPa (morado) */}
           <YAxis
             yAxisId="press"
             orientation="left"
@@ -279,7 +266,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             width={w(32, 46)}
           />
 
-          {/* Eje izquierdo 3: Precipitación mm (azul claro) */}
+          {/* Eje izquierdo 2: Precipitación mm (azul claro) */}
           <YAxis
             yAxisId="rain"
             orientation="left"
@@ -290,6 +277,19 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             tickLine={{ stroke: COL.rain }}
             label={{ value: rainUnit, position: 'top', offset: 12, fill: COL.rain, fontSize: fsL }}
             width={w(20, 28)}
+          />
+
+          {/* Eje izquierdo 3: Temperatura °C (naranja) */}
+          <YAxis
+            yAxisId="temp"
+            orientation="left"
+            domain={domains.temp}
+            ticks={genTicks(domains.temp, 6)}
+            tick={{ fill: COL.temp, fontSize: fsY }}
+            axisLine={{ stroke: COL.temp }}
+            tickLine={{ stroke: COL.temp }}
+            label={{ value: u.tempU, position: 'top', offset: 12, fill: COL.temp, fontSize: fsL }}
+            width={w(25, 34)}
           />
 
           {/* Eje derecho 1: Viento km/h (verde) */}
