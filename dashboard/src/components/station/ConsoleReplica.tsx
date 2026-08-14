@@ -1064,9 +1064,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       }
     }
 
-    // Fallback: código WMO de la hora actual del pronóstico para deriveCondition
-    const currentForecastCode = (() => {
-      if (!horas.length) return undefined
+    // Fallback: código WMO y precipProb de la hora actual del pronóstico
+    const currentForecast = (() => {
+      if (!horas.length) return { code: undefined, precipProb: undefined }
       const nowMs = now.getTime()
       let best = horas[0]
       let bestDiff = Infinity
@@ -1074,10 +1074,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
         const diff = Math.abs(new Date(h.time).getTime() - nowMs)
         if (diff < bestDiff) { bestDiff = diff; best = h }
       }
-      return bestDiff < 90 * 60 * 1000 ? best.code : undefined
+      if (bestDiff >= 90 * 60 * 1000) return { code: undefined, precipProb: undefined }
+      return { code: best.code, precipProb: best.precipProb }
     })()
 
-    return data ? { ...deriveCondition(data, currentForecastCode), stormApproaching: false, source: 'local' } : { icon: '', label: '', stormApproaching: false, source: 'none' }
+    // Contexto extendido para deriveCondition: pronóstico + tendencia de presión
+    const condCtx = {
+      forecastCode: currentForecast.code,
+      precipProb: currentForecast.precipProb,
+      pressureDelta3h: localForecast?.delta_3h,
+    }
+
+    return data ? { ...deriveCondition(data, condCtx), stormApproaching: false, source: 'local' } : { icon: '', label: '', stormApproaching: false, source: 'none' }
   })()
   const dir = data?.wind_direction
 

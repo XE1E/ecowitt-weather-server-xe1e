@@ -31,7 +31,7 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 const pad = (n: number) => String(n).padStart(2, '0')
 
 export function StationLayout() {
-  const { data } = useStationData()
+  const { data, forecast, localForecast } = useStationData()
   const units = useUnits()
   const [now, setNow] = useState(() => new Date())
   const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
@@ -59,7 +59,13 @@ export function StationLayout() {
       return next
     })
 
-  const cond = data ? deriveCondition(data) : { fx: 'none' as const, intensity: 0, icon: '', label: '' }
+  // Contexto extendido para deriveCondition
+  const currentHour = forecast?.hours?.[0]
+  const cond = data ? deriveCondition(data, {
+    forecastCode: currentHour?.code,
+    precipProb: currentHour?.precipProb,
+    pressureDelta3h: localForecast?.delta_3h,
+  }) : { fx: 'none' as const, intensity: 0, icon: '', label: '' }
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition ${

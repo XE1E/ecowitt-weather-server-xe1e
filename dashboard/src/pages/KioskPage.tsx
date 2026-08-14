@@ -404,10 +404,10 @@ export function KioskPage() {
   }
 
   // ── Página 1: estación ──
-  // Código WMO de la hora actual del pronóstico para deriveCondition (de noche)
-  const currentForecastCode = (() => {
+  // Código WMO y precipProb de la hora actual del pronóstico
+  const currentForecast = (() => {
     const hrs = forecast?.hours
-    if (!hrs?.length) return undefined
+    if (!hrs?.length) return { code: undefined, precipProb: undefined }
     const nowMs = now.getTime()
     let best = hrs[0]
     let bestDiff = Infinity
@@ -415,10 +415,14 @@ export function KioskPage() {
       const diff = Math.abs(new Date(h.time).getTime() - nowMs)
       if (diff < bestDiff) { bestDiff = diff; best = h }
     }
-    return bestDiff < 90 * 60 * 1000 ? best.code : undefined
+    if (bestDiff >= 90 * 60 * 1000) return { code: undefined, precipProb: undefined }
+    return { code: best.code, precipProb: best.precipProb }
   })()
 
-  const cond = data ? deriveCondition(data, currentForecastCode) : { icon: '', label: '' }
+  const cond = data ? deriveCondition(data, {
+    forecastCode: currentForecast.code,
+    precipProb: currentForecast.precipProb,
+  }) : { icon: '', label: '' }
   const t = stats?.temperature_outdoor
   // `?? null`, NO `?? 0`: si el sensor no reporta hay que mostrar "--". Un 0 en
   // el display se lee como medición real (y una presión de 0 mb, como avería).
