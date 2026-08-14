@@ -78,14 +78,17 @@ export function wmoToCondition(code: number, isDay: boolean): Condition {
 
 /**
  * Ecowitt stations don't send a "weather condition" code, so we derive one from
- * the available measurements (rain rate, solar radiation, UV, temperature,
- * humidity, wind, dew point) plus day/night and optional forecast/pressure data.
+ * the available measurements. LOS SENSORES MANDAN: el pronóstico nunca anula lo
+ * que dicen la radiación solar, el pluviómetro o la humedad.
  *
- * Mejoras sobre la versión original:
- * 1. Usa el punto de rocío para mejor detección de niebla (spread < 2°C)
- * 2. Considera la tendencia de presión (bajando = peor tiempo)
- * 3. Usa el pronóstico también de día como desempate en casos ambiguos
- * 4. De noche, si se pasa `forecastCode`, se usa en lugar de la heurística de humedad
+ * Prioridades:
+ * 1. Precipitación (rain_rate > 0) → lluvia/nieve según temperatura
+ * 2. Niebla/neblina: punto de rocío (spread < 2-3°C) o humedad alta + viento bajo
+ * 3. Día: índice de claridad (solar ÷ cielo despejado teórico)
+ * 4. Noche: humedad + punto de rocío como proxy de nubosidad
+ *
+ * La tendencia de presión solo AJUSTA ligeramente los umbrales y puede añadir
+ * "(cambiando)" al texto, pero nunca cambia el icono por sí sola.
  *
  * @param d Datos actuales de la estación
  * @param ctxOrCode Contexto extendido, o solo el código WMO (compatibilidad)
@@ -147,76 +150,70 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
     return { icon: 'mist', label: 'Neblina', fx: 'fog', intensity: 0.4 }
   }
 
-  // ─── DÍA: nubosidad por índice de claridad + factores adicionales ───
+  // ─── DÍA: nubosidad por índice de claridad (SENSOR MANDA) ───
   if (isDay) {
     const elev = solarElevation(new Date(), LOCATION.latitude, LOCATION.longitude)
     const kt = clearnessIndex(solar, elev)
 
-    // Sol bajo: usar pronóstico si está disponible, sino parcialmente nublado
+    // Sol bajo (<5°): el índice de claridad no es confiable
     if (kt === null) {
-      if (ctx.forecastCode != null) {
-        return wmoToCondition(ctx.forecastCode, true)
-      }
-      return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+      // Con sol bajo, usar humedad como proxy de nubosidad (no pronóstico)
+      if (humidity >= 85) return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
+      if (humidity >= 70) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+      return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
     }
 
     // Ajuste por tendencia de presión: si baja rápido, sesgar hacia más nublado
-    const ktAdjusted = pressureFallingFast ? kt - 0.15 : pressureFalling ? kt - 0.08 : kt
+    // (pero solo un ajuste menor, el sensor sigue mandando)
+    const ktAdjusted = pressureFallingFast ? kt - 0.10 : pressureFalling ? kt - 0.05 : kt
 
-    // Determinar nubosidad base por kt ajustado
-    let baseCondition: Condition
+    // Nubosidad basada en el SENSOR (índice de claridad)
+    // El pronóstico NO cambia el icono, solo puede añadir contexto al texto
     if (ktAdjusted > 0.65) {
-      baseCondition = { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
-    } else if (ktAdjusted > 0.35) {
-      baseCondition = { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
-    } else {
-      baseCondition = { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
+      return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
     }
-
-    // Si hay pronóstico de lluvia con alta probabilidad y presión bajando,
-    // considerar mostrar "nubes amenazantes" aunque aún no llueva
-    if (ctx.forecastCode != null && ctx.precipProb != null && ctx.precipProb >= 60 && pressureFalling) {
-      const fxCond = wmoToCondition(ctx.forecastCode, true)
-      // Solo si el pronóstico indica lluvia/tormenta, usar su icono
-      if (fxCond.fx === 'rain' || fxCond.fx === 'storm') {
-        return { ...fxCond, label: fxCond.label + ' (próx.)', intensity: fxCond.intensity * 0.7 }
+    if (ktAdjusted > 0.35) {
+      // Zona intermedia: el sensor dice parcialmente nublado
+      // Si presión baja y humedad alta, añadir "(cambiando)" pero NO cambiar icono
+      const changing = pressureFalling && humidity > 70
+      return {
+        icon: 'partly-cloudy-day',
+        label: changing ? 'Parcialmente nublado (cambiando)' : 'Parcialmente nublado',
+        fx: 'partly-cloudy',
+        intensity: 0.5,
       }
     }
+    // kt <= 0.35: nublado según el sensor
+    return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
+  }
 
-    // En zona ambigua (kt entre 0.30-0.70), el pronóstico ayuda a desempatar
-    if (kt > 0.30 && kt < 0.70 && ctx.forecastCode != null) {
-      const fxCond = wmoToCondition(ctx.forecastCode, true)
-      // Si pronóstico dice claro y estamos en zona parcialmente nublada, confiar más en pronóstico
-      if (fxCond.fx === 'clear' && baseCondition.fx === 'partly-cloudy') {
-        return { ...baseCondition, label: 'Mayormente despejado' }
-      }
-      // Si pronóstico dice nublado y estamos en zona parcialmente nublada, también
-      if (fxCond.fx === 'cloudy' && baseCondition.fx === 'partly-cloudy') {
-        return { ...baseCondition, label: 'Mayormente nublado', icon: 'overcast-day' }
-      }
+  // ─── NOCHE: heurística de humedad + punto de rocío + presión ───
+  // De noche no hay sensor de radiación, usamos humedad y dew spread como proxy
+  // El pronóstico solo se usa para precipitación activa (que ya se detectó arriba)
+
+  const nightCloudy = humidity >= 80 || (dewSpread != null && dewSpread < 5)
+  const nightClear = humidity < 65 && (dewSpread == null || dewSpread > 8)
+
+  if (nightClear) {
+    const changing = pressureFalling
+    return {
+      icon: 'clear-night',
+      label: changing ? 'Noche despejada (cambiando)' : 'Noche despejada',
+      fx: 'clear',
+      intensity: 0.5,
     }
-
-    return baseCondition
   }
-
-  // ─── NOCHE: pronóstico + heurísticas ───
-  if (ctx.forecastCode != null) {
-    const cond = wmoToCondition(ctx.forecastCode, false)
-    // Si presión baja rápido, añadir contexto
-    if (pressureFallingFast && cond.fx !== 'rain' && cond.fx !== 'storm') {
-      return { ...cond, label: cond.label + ' (cambiando)' }
-    }
-    return cond
+  if (nightCloudy) {
+    return { icon: 'overcast-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.5 }
   }
-
-  // Fallback nocturno: heurística de humedad + presión
-  if (pressureFalling && humidity > 75) {
-    return { icon: 'partly-cloudy-night', label: 'Noche nublada (cambiando)', fx: 'cloudy', intensity: 0.5 }
+  // Zona intermedia
+  const changing = pressureFalling && humidity > 70
+  return {
+    icon: 'partly-cloudy-night',
+    label: changing ? 'Noche parcialmente nublada (cambiando)' : 'Noche parcialmente nublada',
+    fx: 'partly-cloudy',
+    intensity: 0.4,
   }
-  if (humidity < 70) {
-    return { icon: 'clear-night', label: 'Noche despejada', fx: 'clear', intensity: 0.5 }
-  }
-  return { icon: 'partly-cloudy-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.4 }
 }
 
 /**
