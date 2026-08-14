@@ -1974,18 +1974,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 Con la sangría en 7 y el icono en 52 la fila de probabilidades ya salió
                 CORTADA una vez --tinta hasta y=109 de 110--, así que esto se mide en la
                 captura cada vez que se toca.
-                La descripción va a su derecha, alineada a la izquierda y en dos o tres
-                renglones si hace falta --"NOCHE PARCIALMENTE NUBLADA" son 25 caracteres--:
-                aquí partir el texto no estorba a nadie, porque el bloque tiene la altura del
-                icono de al lado. Antes iba centrada arriba y una condición larga se partía
-                igual, pero empujando todo lo de abajo. */}
+                La descripción va a su derecha, alineada a la izquierda y en hasta tres
+                renglones --"NOCHE PARCIALMENTE NUBLADA (CAMBIANDO)" cabe--. El icono a 56 px
+                y el texto a 12 px con lineHeight 1.15 dejan espacio para las 3 filas sin
+                salirse de la celda. */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                          width: '100%', marginTop: -10, marginBottom: -14 }}>
-              <span style={{ transform: 'translateY(5px)' }}>
-                <WeatherIcon name={cond.icon} size={62} className="weather-main-icon" />
+                          width: '100%', marginTop: 2, marginBottom: -8 }}>
+              <span style={{ flexShrink: 0 }}>
+                <WeatherIcon name={cond.icon} size={56} className="weather-main-icon" />
               </span>
-              <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
-                            letterSpacing: 0.5, lineHeight: 1.08, textAlign: 'left', minWidth: 0 }}>
+              <div style={{ color: '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                            letterSpacing: 0.4, lineHeight: 1.15, textAlign: 'left', minWidth: 0 }}>
                 {cond.label || 'CLIMA'}
               </div>
             </div>
