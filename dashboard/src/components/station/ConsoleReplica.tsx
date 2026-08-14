@@ -1039,53 +1039,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     return () => clearInterval(i)
   }, [])
 
-  // Condición actual: preferir el consenso si está disponible (combina estación +
-  // presión + Open-Meteo + WeatherAPI). Si no, fallback a deriveCondition local.
+  // Condición actual: SIEMPRE usar deriveCondition (basado en sensores).
+  // El consenso del backend solo aporta storm_approaching, no anula los sensores.
   const cond = (() => {
-    // Si el consenso tiene condición actual, usarla
-    if (consensus?.current) {
-      const c = consensus.current
-      const isDay = (data?.solar_radiation ?? 0) > 5 || (now.getHours() >= 7 && now.getHours() < 19)
-      const suffix = isDay ? 'day' : 'night'
-      // Mapear código WMO a icono (simplificado)
-      const iconMap: Record<number, string> = {
-        0: `clear-${suffix}`, 1: `clear-${suffix}`, 2: `partly-cloudy-${suffix}`,
-        3: `overcast-${suffix}`, 45: `fog-${suffix}`, 48: `fog-${suffix}`,
-        51: 'drizzle', 53: 'drizzle', 55: 'drizzle',
-        61: `overcast-${suffix}-rain`, 63: `overcast-${suffix}-rain`, 65: `overcast-${suffix}-rain`,
-        80: `partly-cloudy-${suffix}-rain`, 81: `partly-cloudy-${suffix}-rain`, 82: `overcast-${suffix}-rain`,
-        95: 'thunderstorms-rain', 96: 'thunderstorms-rain', 99: 'thunderstorms-rain',
-      }
-      return {
-        icon: iconMap[c.code] ?? `partly-cloudy-${suffix}`,
-        label: c.label,
-        stormApproaching: c.storm_approaching,
-        source: c.source,
-      }
-    }
+    if (!data) return { icon: '', label: '', stormApproaching: false, source: 'none' }
 
-    // Fallback: código WMO y precipProb de la hora actual del pronóstico
-    const currentForecast = (() => {
-      if (!horas.length) return { code: undefined, precipProb: undefined }
-      const nowMs = now.getTime()
-      let best = horas[0]
-      let bestDiff = Infinity
-      for (const h of horas) {
-        const diff = Math.abs(new Date(h.time).getTime() - nowMs)
-        if (diff < bestDiff) { bestDiff = diff; best = h }
-      }
-      if (bestDiff >= 90 * 60 * 1000) return { code: undefined, precipProb: undefined }
-      return { code: best.code, precipProb: best.precipProb }
-    })()
+    // Contexto extendido para deriveCondition: tendencia de presión
+    const condCtx = { pressureDelta3h: localForecast?.delta_3h }
+    const derived = deriveCondition(data, condCtx)
 
-    // Contexto extendido para deriveCondition: pronóstico + tendencia de presión
-    const condCtx = {
-      forecastCode: currentForecast.code,
-      precipProb: currentForecast.precipProb,
-      pressureDelta3h: localForecast?.delta_3h,
-    }
+    // Solo tomar storm_approaching del consenso (útil para avisar de tormentas)
+    const stormApproaching = consensus?.current?.storm_approaching ?? false
 
-    return data ? { ...deriveCondition(data, condCtx), stormApproaching: false, source: 'local' } : { icon: '', label: '', stormApproaching: false, source: 'none' }
+    return { ...derived, stormApproaching, source: 'sensor' }
   })()
   const dir = data?.wind_direction
 
