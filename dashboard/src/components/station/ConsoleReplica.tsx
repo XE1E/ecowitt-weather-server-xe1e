@@ -2025,24 +2025,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 aunque una diga "100%" y otra "9%".
                 CUERPOS, con el ancho que hay (169/4 = 42 px por columna): temperatura a 19 px
                 --el caso peor, "-10", mide 27-- hora a 12 y probabilidad a 13. La
-                temperatura va en blanco y la probabilidad en el AZUL DE LA LLUVIA (`--r`),
-                el mismo de la celda de LLUVIA y de su histograma, que es lo que dice qué es
-                cada cifra sin gastar rótulos. */}
+                temperatura va en NARANJA (convención del proyecto para temperaturas), la
+                hora en blanco y la probabilidad en el AZUL DE LA LLUVIA (`--r`), el mismo
+                de la celda de LLUVIA y de su histograma. */}
             {proximas.length > 0 && (
               <div style={{ marginTop: 'auto', marginBottom: 4, display: 'flex', width: '100%' }}>
                 {proximas.map((h) => (
                   <div key={h.time} style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                     {/* La hora, sin minutos: son horas en punto del pronóstico.
-                        En un gris CLARO (#bdbdbd) y no en el `--lbl` (#8a8a8a) del resto de los
-                        rótulos: aquí la hora no es una etiqueta que se pueda ignorar --sin ella
-                        las tres cifras de su columna no significan nada-- y a 11 px sobre negro
-                        el gris de rótulo se apagaba, más aún en el panel del kiosco, que aplasta
-                        los tonos bajos. Sigue por debajo del blanco de la temperatura, que es lo
-                        que manda en la columna. */}
-                    <div style={{ color: '#bdbdbd', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                        En BLANCO porque es información esencial --sin ella las tres cifras de su
+                        columna no significan nada--. La temperatura va en naranja (convención del
+                        proyecto) para distinguirla visualmente. */}
+                    <div style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
                       {new Date(h.time).getHours()}
                     </div>
-                    <div style={{ color: 'var(--w)', fontSize: 19, fontWeight: 800, lineHeight: 1.02 }}>
+                    <div style={{ color: '#f97316', fontSize: 19, fontWeight: 800, lineHeight: 1.02 }}>
                       {u.temp(h.temp, 0)}
                     </div>
                     <div style={{ color: 'var(--r)', fontSize: 13, fontWeight: 700, lineHeight: 1 }}>

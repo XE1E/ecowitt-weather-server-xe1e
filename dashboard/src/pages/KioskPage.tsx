@@ -460,9 +460,9 @@ export function KioskPage() {
           const d = new Date(h.time)
           return (
             <div key={i} className="flex-1 flex flex-col items-center justify-between">
-              <span className="text-[15px] text-slate-400">{pad(d.getHours())}:00</span>
+              <span className="text-[15px] text-white">{pad(d.getHours())}:00</span>
               <WeatherIcon name={h.icon} size={36} />
-              <span className="text-[21px] font-bold leading-none">{u.temp(h.temp)}°</span>
+              <span className="text-[21px] font-bold leading-none" style={{ color: '#f97316' }}>{u.temp(h.temp)}°</span>
               <span className="text-[13px] text-sky-300 leading-none">💧 {h.precipProb ?? 0}%</span>
             </div>
           )
