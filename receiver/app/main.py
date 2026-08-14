@@ -8,7 +8,7 @@ and stores it in InfluxDB.
 from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 from collections import deque
 import asyncio
@@ -2181,21 +2181,98 @@ async def get_almanac_data():
         return {"available": False, "reason": "error"}
 
 
+def _apply_temperature_bias(forecast: dict, current_temp: Optional[float]) -> dict:
+    """
+    Corrige las temperaturas del pronóstico usando el bias actual.
+
+    El pronóstico de Open-Meteo puede estar varios grados desfasado del microclima
+    local. Esta función calcula la diferencia entre la temperatura medida y la del
+    pronóstico para "ahora", y aplica esa corrección con decay a las próximas horas.
+
+    Decay: la corrección disminuye conforme se aleja en el tiempo porque el bias
+    actual puede no aplicar a horas futuras (cambios de condición, etc.).
+    """
+    if current_temp is None:
+        return forecast
+
+    hourly = forecast.get("hourly")
+    if not hourly or "time" not in hourly or "temperature_2m" not in hourly:
+        return forecast
+
+    times = hourly["time"]
+    temps = hourly["temperature_2m"]
+    if not times or not temps:
+        return forecast
+
+    now_ts = datetime.now(timezone.utc).timestamp()
+
+    closest_idx = 0
+    closest_diff = float("inf")
+    for i, t in enumerate(times):
+        try:
+            t_ts = datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
+            diff = abs(t_ts - now_ts)
+            if diff < closest_diff:
+                closest_diff = diff
+                closest_idx = i
+        except (ValueError, AttributeError):
+            continue
+
+    if closest_diff > 7200:
+        return forecast
+
+    forecast_now_temp = temps[closest_idx]
+    if forecast_now_temp is None:
+        return forecast
+
+    bias = current_temp - forecast_now_temp
+
+    if abs(bias) < 0.5:
+        return forecast
+
+    corrected_temps = list(temps)
+    for i in range(len(corrected_temps)):
+        if corrected_temps[i] is None:
+            continue
+        hours_ahead = i - closest_idx
+        if hours_ahead < 0:
+            continue
+        decay = max(0.0, 1.0 - hours_ahead * 0.10)
+        corrected_temps[i] = round(corrected_temps[i] + bias * decay, 1)
+
+    result = dict(forecast)
+    result["hourly"] = dict(hourly)
+    result["hourly"]["temperature_2m"] = corrected_temps
+    result["bias_correction"] = {
+        "applied": True,
+        "measured_temp": round(current_temp, 1),
+        "forecast_temp": round(forecast_now_temp, 1),
+        "bias": round(bias, 1),
+    }
+    return result
+
+
 @app.get("/api/forecast")
 async def get_forecast(lat: Optional[float] = None, lon: Optional[float] = None):
     """
-    Pronóstico de Open-Meteo con caché en el servidor.
+    Pronóstico de Open-Meteo con caché en el servidor y corrección por bias.
 
     Lo pedía el navegador directamente al origen, así que una caída dejaba la
     página sin pronóstico y cada visitante gastaba cuota por su cuenta. Aquí se
     cachea y, si el origen no responde, se sirve la última copia buena marcada
     como `stale` (mismo criterio que /api/smn).
+
+    Además, corrige las temperaturas horarias usando la diferencia entre la
+    lectura actual de la estación y el pronóstico para "ahora". La corrección
+    se aplica con decay (disminuye conforme se aleja en el tiempo).
     """
     try:
-        return await openmeteo.get_forecast(
+        forecast = await openmeteo.get_forecast(
             lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
             lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
         )
+        current_temp = latest_by_station.get(None, {}).get("temperature_outdoor")
+        return _apply_temperature_bias(forecast, current_temp)
     except Exception as e:
         logger.error(f"Error obteniendo pronóstico Open-Meteo: {e}")
         raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico")
