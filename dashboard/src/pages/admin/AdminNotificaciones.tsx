@@ -36,6 +36,7 @@ const CATEGORIES = [
   { key: 'sensor', icon: '📶', label: 'Sensor perdido' },
   { key: 'air', icon: '🌫️', label: 'Calidad aire' },
   { key: 'visual', icon: '📷', label: 'Visual (cielo)' },
+  { key: 'earthquake', icon: '🌋', label: 'Sismos' },
 ] as const
 
 const ALL_KEYS = CATEGORIES.map((c) => c.key)

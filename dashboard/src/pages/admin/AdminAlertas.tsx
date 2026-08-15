@@ -39,6 +39,8 @@ interface AlertSettings {
   alert_air_enabled: boolean
   alert_aqi_threshold: number
   alert_imeca_threshold: number
+  alert_earthquake_enabled: boolean
+  alert_earthquake_magnitude: number
   telegram_enabled: boolean
   telegram_chat_id: string | null
   email_enabled: boolean
@@ -632,6 +634,23 @@ export function AdminAlertas() {
                     <span className="text-slate-400">IMECA ≥</span>
                     <NumField value={settings.alert_imeca_threshold} onChange={(v) => update('alert_imeca_threshold', v)} min={0} max={500} step={10} />
                   </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Sismos */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Toggle enabled={settings.alert_earthquake_enabled} onChange={(v) => update('alert_earthquake_enabled', v)} label="🌋 Alertas sismos" />
+              {settings.alert_earthquake_enabled && (
+                <>
+                  <div className="h-4 w-px bg-white/10" />
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-slate-400">Magnitud ≥</span>
+                    <NumField value={settings.alert_earthquake_magnitude} onChange={(v) => update('alert_earthquake_magnitude', v)} min={3} max={9} step={0.5} />
+                  </div>
+                  <span className="text-xs text-slate-500">Notifica sismos del SSN/USGS que superen esta magnitud</span>
                 </>
               )}
             </div>

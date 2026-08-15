@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air", "visual"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air", "visual", "earthquake"]
 
 
 def _category_for(rule_key: str) -> str:
@@ -794,6 +794,57 @@ class AlertService:
                     self._add_to_history(key, self.active[key], resolved=True)
                     self.active.pop(key, None)
                     await self._safe_notify(f"✅ Normalizado — {message}", category="visual")
+
+    # --- Alertas de sismos ---
+    # Set de sismos ya notificados (por ID o combinación mag+time+place) para no repetir.
+    _notified_quakes: Set[str] = set()
+
+    async def check_earthquake(self, quakes: List[Dict[str, Any]]) -> None:
+        """
+        Evalúa sismos y notifica los que superen el umbral configurado.
+
+        A diferencia de las alertas meteorológicas que se normalizan, los sismos
+        son eventos puntuales: se notifica una vez y no se "resuelve". Para no
+        repetir, se guarda un identificador de cada sismo notificado.
+        """
+        s = self._settings
+        if not self.enabled:
+            return
+        if not getattr(s, "alert_earthquake_enabled", True):
+            return
+
+        mag_threshold = float(getattr(s, "alert_earthquake_magnitude", 6.0))
+
+        for q in quakes:
+            mag = q.get("mag")
+            if mag is None or mag < mag_threshold:
+                continue
+
+            place = q.get("place", "ubicación desconocida")
+            depth = q.get("depth_km")
+            distance = q.get("distance_km")
+            url = q.get("url", "").strip()
+            t = q.get("time")
+
+            quake_id = f"{mag}_{t}_{place[:30]}"
+            if quake_id in self._notified_quakes:
+                continue
+
+            self._notified_quakes.add(quake_id)
+            if len(self._notified_quakes) > 100:
+                self._notified_quakes = set(list(self._notified_quakes)[-50:])
+
+            depth_str = f", profundidad {depth:.0f} km" if depth else ""
+            dist_str = f", a {distance} km" if distance else ""
+            message = f"🌋 SISMO M{mag} — {place}{depth_str}{dist_str}"
+
+            key = f"earthquake_{quake_id}"
+            self.active[key] = message
+            self._add_to_history(key, message, resolved=False)
+            await self._safe_notify(f"⚠️ {message}", category="earthquake")
+
+            if url:
+                await self._safe_notify(f"📍 Más info: {url}", category="earthquake")
 
     # --- Pruebas desde el panel (fuerzan el envío por un canal concreto) ---
     async def send_test_telegram(self) -> None:

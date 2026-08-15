@@ -2402,11 +2402,13 @@ async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
 
 @app.get("/api/earthquakes")
 async def get_earthquakes_data():
-    """Sismos recientes cerca de la estación (USGS)."""
+    """Sismos recientes cerca de la estación (SSN/USGS). Evalúa alertas de sismos grandes."""
     try:
         lat = getattr(settings, "cwop_latitude", 19.380359)
         lon = getattr(settings, "cwop_longitude", -99.174564)
-        return await get_earthquakes(lat, lon)
+        result = await get_earthquakes(lat, lon)
+        await alert_service.check_earthquake(result.get("quakes", []))
+        return result
     except Exception as e:
         logger.error(f"Error getting earthquakes: {e}")
         return {"quakes": []}
