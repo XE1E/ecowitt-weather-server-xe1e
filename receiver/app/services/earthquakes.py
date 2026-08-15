@@ -195,7 +195,7 @@ async def _from_usgs(lat, lon, radius_km, min_mag, limit) -> List[Dict[str, Any]
 
 async def get_earthquakes(
     lat: float = 19.380359, lon: float = -99.174564,
-    radius_km: float = 800.0, min_mag: float = 4.0, limit: int = 6,
+    radius_km: float = 800.0, min_mag: float = 3.0, limit: int = 6,
 ) -> Dict[str, Any]:
     now = time.time()
     if _CACHE["data"] and (now - _CACHE["ts"]) < _TTL:
