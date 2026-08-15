@@ -1805,27 +1805,24 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Las tres cifras arrancan pegadas al borde de arriba (sin marginTop
               negativo, que era para compensar el rótulo que ya no está) y sangradas por
               la izquierda para dejarle su hueco a la gota. */}
-          {/* Flex con flex:1 en cada columna para que se repartan el espacio
-              equitativamente. fontSize 26 cabe con valores de hasta 3 dígitos + decimal
-              (ej. "188.8 mm"). La unidad va inline con fontSize menor. */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-                        paddingLeft: 48, paddingRight: 4 }}>
-            <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-              <div style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>2 HORAS</div>
-              <div className="gr seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, marginTop: 6 }}>
-                {decNum(u.rain(data?.rain_2h))}<span className="u" style={{ fontSize: 12, color: 'var(--r)' }}>{u.rainU}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
+                        gap: 2, paddingLeft: 48, paddingRight: 4 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>2 HORAS</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
+                {decNum(u.rain(data?.rain_2h))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
-            <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-              <div style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>TASA</div>
-              <div className="gr seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, marginTop: 6 }}>
-                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 12, color: 'var(--r)' }}>/h</span>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>TASA</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
+                {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
               </div>
             </div>
-            <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-              <div style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>MES</div>
-              <div className="gr seg" style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, marginTop: 6 }}>
-                {decNum(u.rain(data?.rain_monthly))}<span className="u" style={{ fontSize: 12, color: 'var(--r)' }}>{u.rainU}</span>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>MES</div>
+              <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
+                {decNum(u.rain(data?.rain_monthly))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
           </div>
