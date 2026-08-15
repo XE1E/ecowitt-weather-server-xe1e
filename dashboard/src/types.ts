@@ -71,6 +71,7 @@ export interface WeatherData {
   rain_monthly: number
   rain_yearly: number
   rain_event?: number
+  rain_2h?: number
 
   // Solar
   solar_radiation: number
