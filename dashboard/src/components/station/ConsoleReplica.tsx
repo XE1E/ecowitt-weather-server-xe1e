@@ -1805,8 +1805,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           {/* Las tres cifras arrancan pegadas al borde de arriba (sin marginTop
               negativo, que era para compensar el rótulo que ya no está) y sangradas por
               la izquierda para dejarle su hueco a la gota. */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
-                        gap: 2, paddingLeft: 48, paddingRight: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 8, paddingLeft: 48, paddingRight: 4 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>2 HORAS</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
