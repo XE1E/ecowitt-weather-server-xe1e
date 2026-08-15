@@ -1781,19 +1781,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')} title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
-              viento: EVENTO es lo caído en el chubasco (`rain_event`), TASA la
-              intensidad de ahora en mm/h (`rain_rate`) y DÍA el acumulado del día
-              (`rain_daily`). Sin etiqueta, tres cifras de lluvia son indistinguibles
-              entre sí.
+              viento: 2 HORAS es lo caído en las últimas 2h (`rain_2h`), TASA la
+              intensidad de ahora en mm/h (`rain_rate`) y MES el acumulado mensual.
+              Sin etiqueta, tres cifras de lluvia son indistinguibles entre sí.
 
-              EVENTO y no "AHORA", que es lo que decía antes: `rain_event` SOBREVIVE al
-              cambio de día. Verificado en el histórico de producción --el 4 ago 2026 la
-              consola mostraba evento 6.8 mm con tasa 0.0 y día 0.0, porque esos 6.8 mm
-              cayeron la noche anterior y el contador del día se reinició a medianoche
-              mientras el del evento no--. Rotularlo "AHORA" leía como que estaba
-              lloviendo cuando no. Lo reinicia la estación, no el servidor: medido sobre
-              14 días, casi siempre ~24 h después de que deja de llover. La tarjeta web
-              (`PrecipitationCard`) ya lo llamaba "Evento". */}
+              Se usaba EVENTO (`rain_event`), pero su reset depende de la consola Ecowitt
+              (~24h sin lluvia) y en la práctica confundía más de lo que ayudaba. El
+              campo `rain_2h` se calcula en el servidor integrando `rain_rate` y responde
+              a "¿cuánto ha llovido recientemente?" de forma predecible. */}
           {/* HISTOGRAMA de los últimos 7 días, a la derecha de la gota y al pie de la
               celda. Las tres cifras de arriba dicen "llueve ahora", "cuánto en este
               chubasco" y "cuánto va del mes"; ninguna dice cómo se repartió, que es la
@@ -1813,9 +1808,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-evenly',
                         gap: 2, paddingLeft: 48, paddingRight: 4 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>EVENTO</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>2 HORAS</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
-                {decNum(u.rain(data?.rain_event))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
+                {decNum(u.rain(data?.rain_2h))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -1824,11 +1819,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 {decNum(u.rain(data?.rain_rate))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>/h</span>
               </div>
             </div>
-            {/* La tercera cifra pasa del acumulado del DÍA al del MES. Las tres
-                responden ahora a tres preguntas distintas: TASA dice si está lloviendo
-                ahora, EVENTO cuánto ha caído en este chubasco, y MES cuánto llevamos.
-                Con DÍA, en seca las tres marcaban 0.0 casi siempre y la celda no decía
-                nada; el mensual está vivo todo el año. Lo calcula el receiver
+            {/* Las tres responden a preguntas distintas: TASA dice si está lloviendo
+                ahora, 2 HORAS cuánto ha caído recientemente, y MES cuánto llevamos.
+                El mensual está vivo todo el año; lo calcula el receiver
                 (`get_rain_accumulations`) si el aparato no lo manda. */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>MES</div>
