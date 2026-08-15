@@ -69,10 +69,19 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def _ssn_latlon(desc: str) -> Optional[tuple]:
     """
-    Lat/lon de la descripción del SSN, si vienen. El formato varía entre
-    "Latitud: 16.31 Longitud: -98.42" y variantes con grados, así que se acepta
-    cualquiera de las dos etiquetas seguidas de un número con signo.
+    Lat/lon de la descripción del SSN, si vienen. El formato ha variado:
+    - Antiguo: "Latitud: 16.31 Longitud: -98.42"
+    - Nuevo (2026+): "Lat/Lon: 15.27/-93.87"
+    Se aceptan ambos formatos.
     """
+    # Formato nuevo: "Lat/Lon: 15.27/-93.87"
+    m = re.search(r"Lat/Lon[:\s]*(-?\d+(?:\.\d+)?)\s*/\s*(-?\d+(?:\.\d+)?)", desc)
+    if m:
+        try:
+            return float(m.group(1)), float(m.group(2))
+        except ValueError:
+            pass
+    # Formato antiguo: "Latitud: X Longitud: Y"
     la = re.search(r"[Ll]atitud[:\s]*(-?\d+(?:\.\d+)?)", desc)
     lo = re.search(r"[Ll]ongitud[:\s]*(-?\d+(?:\.\d+)?)", desc)
     if la and lo:
@@ -102,6 +111,9 @@ async def _from_ssn(limit: int, lat: float, lon: float,
         r.raise_for_status()
         root = ET.fromstring(r.text)
 
+    # Namespace para geo:lat y geo:long
+    ns = {"geo": "http://www.w3.org/2003/01/geo/wgs84_pos#"}
+
     quakes: List[Dict[str, Any]] = []
     for item in root.iter("item"):
         title = (item.findtext("title") or "").strip()
@@ -109,7 +121,9 @@ async def _from_ssn(limit: int, lat: float, lon: float,
         link = item.findtext("link")
 
         # Título: "4.1, 15 km al SUROESTE de PINOTEPA NACIONAL, OAX"
-        mm = re.match(r"\s*([\d.]+)\s*,\s*(.+)", title)
+        # o "Preliminar: M 4.6, 85 km al SUROESTE de PIJIJIAPAN, CHIS"
+        title_clean = re.sub(r"^Preliminar:\s*M?\s*", "", title)
+        mm = re.match(r"\s*([\d.]+)\s*,\s*(.+)", title_clean)
         mag = float(mm.group(1)) if mm else None
         place = mm.group(2).strip() if mm else (title or "Sismo")
 
@@ -127,7 +141,20 @@ async def _from_ssn(limit: int, lat: float, lon: float,
 
         if mag is None or mag < min_mag:
             continue
-        coords = _ssn_latlon(desc)
+
+        # Coordenadas: primero de las etiquetas geo:lat/geo:long (más confiable),
+        # luego de la descripción como fallback
+        coords = None
+        geo_lat = item.findtext("geo:lat", namespaces=ns)
+        geo_lon = item.findtext("geo:long", namespaces=ns)
+        if geo_lat and geo_lon:
+            try:
+                coords = (float(geo_lat), float(geo_lon))
+            except ValueError:
+                pass
+        if coords is None:
+            coords = _ssn_latlon(desc)
+
         dist = _haversine_km(lat, lon, coords[0], coords[1]) if coords else None
         if dist is not None and dist > radius_km:
             continue
