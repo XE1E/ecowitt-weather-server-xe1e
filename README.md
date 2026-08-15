@@ -40,7 +40,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 
 Además: **panel de administración** (`/admin`, usuario/contraseña) con **wizard de configuración inicial** (5 pasos: bienvenida, estación, alertas, publicación, resumen) y 8 páginas: Dashboard (indicador en tiempo real, historial de alertas, acciones rápidas), Estaciones (agregar/eliminar secundarias, configuración individual con servicios por estación), Alertas (umbrales), Calibración (offsets/multiplicadores), Publicación (redes públicas), Notificaciones (Telegram y correo SMTP, con envío de prueba y selector de categorías por canal), Integraciones (MQTT/HA con estado de conexión, test y reconexión en caliente; WAQI), y Sistema (QC, visor de logs). Todo editable en caliente sin reiniciar. **Tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
 
-**Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, estación caída, calidad del aire, y **visuales** —tormentas, precipitación, visibilidad—) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos.
+**Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, estación caída, calidad del aire, **sismos** y **visuales** —tormentas, precipitación, visibilidad—) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos.
 
 **Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap y CWOP/APRS.
 

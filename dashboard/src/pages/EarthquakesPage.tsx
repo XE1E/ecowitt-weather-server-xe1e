@@ -55,7 +55,7 @@ export function EarthquakesPage() {
                 </div>
                 {q.url && (
                   <a href={q.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 shrink-0">
-                    USGS ↗
+                    {source === 'SSN' ? 'SSN' : 'USGS'} ↗
                   </a>
                 )}
               </li>
@@ -73,11 +73,19 @@ export function EarthquakesPage() {
 
       <PageInfo>
         <p>
-          Lista los sismos recientes cerca de la estación, del más nuevo al más antiguo. Se usa un esquema
+          Lista los sismos recientes cerca de la estación (≤ 800 km), del más nuevo al más antiguo. Se usa un esquema
           {' '}<span className="font-semibold">híbrido</span>: primero el <span className="font-semibold">SSN</span> (Servicio
-          Sismológico Nacional, UNAM) —la fuente oficial de México— y, si no está disponible, el <span className="font-semibold">USGS</span>
-          {' '}de EE. UU. (magnitud ≥ 4 en ~800 km). El color indica la magnitud. Es información sísmica externa, ajena a los
-          sensores meteorológicos de la estación; las magnitudes y profundidades iniciales pueden revisarse después.
+          Sismológico Nacional, UNAM) —la fuente oficial de México, magnitud ≥ 3— y, si no está disponible, el{' '}
+          <span className="font-semibold">USGS</span> de EE. UU. como respaldo. El color indica la magnitud.
+        </p>
+        <p>
+          <span className="font-semibold">Alertas:</span> Puedes configurar notificaciones por Telegram y correo para sismos
+          que superen cierta magnitud (por defecto 6.0) en <span className="font-semibold">Admin → Alertas</span>. Las alertas
+          se evalúan cada vez que se consulta esta página o el endpoint de sismos.
+        </p>
+        <p>
+          Es información sísmica externa, ajena a los sensores meteorológicos de la estación; las magnitudes y profundidades
+          iniciales pueden revisarse después por el SSN o USGS.
         </p>
       </PageInfo>
     </div>

@@ -1034,6 +1034,7 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
+| **Sismos** | magnitud ≥ umbral (default 6.0), cercanos a la estación (≤ 800 km); fuente SSN/USGS |
 
 ### Estación remota (GW1100)
 
