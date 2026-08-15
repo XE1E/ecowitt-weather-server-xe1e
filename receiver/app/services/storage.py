@@ -497,6 +497,34 @@ class InfluxDBStorage:
             logger.error(f"Error calculating rain accumulations: {e}")
             return {"rain_weekly": None, "rain_monthly": None, "rain_yearly": None}
 
+    async def get_rain_hours(
+        self, hours: int = 2, station: Optional[str] = None
+    ) -> Optional[float]:
+        """
+        Lluvia acumulada en las últimas N horas, integrando rain_rate.
+
+        rain_rate es mm/h; con lecturas cada ~1 min, cada muestra representa
+        ~1/60 de hora. Flux hace el integral con la función `integral(unit: 1h)`.
+        """
+        try:
+            station_filter = _station_filter(station)
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: -{hours}h)
+                |> filter(fn: (r) => r["_measurement"] == "weather")
+                {station_filter}
+                |> filter(fn: (r) => r["_field"] == "rain_rate")
+                |> integral(unit: 1h)
+            '''
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    val = record.get_value()
+                    return round(val, 1) if val is not None else None
+            return 0.0
+        except Exception as e:
+            logger.error(f"Error calculating rain for last {hours}h: {e}")
+            return None
+
     async def get_wind_avg10m(
         self, station: Optional[str] = None, minutes: int = 10
     ) -> Optional[float]:

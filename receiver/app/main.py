@@ -521,6 +521,14 @@ async def get_current_data(station: Optional[str] = None):
     except Exception as e:
         logger.error(f"Rain accumulation error: {e}")
 
+    # Lluvia de las últimas 2 horas, calculada integrando rain_rate.
+    try:
+        rain_2h = await storage.get_rain_hours(hours=2, station=station)
+        if rain_2h is not None:
+            result["rain_2h"] = rain_2h
+    except Exception as e:
+        logger.error(f"Rain 2h calculation error: {e}")
+
     # Promedio de viento de 10 min, calculado desde las muestras guardadas: la
     # estación no manda ninguno (ver get_wind_avg10m). Si algún día un dispositivo
     # SÍ reporta `windspdmph_avg10m`, ese valor ya viene en `data` y manda sobre el
@@ -1810,6 +1818,18 @@ async def get_last_rain(station: Optional[str] = None):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"date": await storage.get_last_rain(station=station)}
+
+
+@app.get("/api/rain/hours")
+async def get_rain_hours(hours: int = 2, station: Optional[str] = None):
+    """Lluvia acumulada en las últimas N horas (máx 24)."""
+    try:
+        secsvc.validate_station(station)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    hours = max(1, min(hours, 24))
+    rain = await storage.get_rain_hours(hours=hours, station=station)
+    return {"hours": hours, "rain_mm": rain}
 
 
 @app.get("/api/rain/daily")
