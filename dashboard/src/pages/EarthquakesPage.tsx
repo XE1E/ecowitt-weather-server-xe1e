@@ -55,7 +55,7 @@ export function EarthquakesPage() {
                 </div>
                 {q.url && (
                   <a href={q.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 shrink-0">
-                    {source === 'SSN' ? 'SSN' : 'USGS'} ↗
+                    {q.url.includes('ssn') ? 'SSN' : 'USGS'} ↗
                   </a>
                 )}
               </li>
