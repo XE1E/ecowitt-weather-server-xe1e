@@ -69,8 +69,8 @@ export function PrecipitationCard({ data, forecast }: Props) {
         {/* La unidad va en las cuatro columnas: sin ella, tres cifras de lluvia
             juntas no dicen si son mm o pulgadas (y cambian con el sistema). */}
         <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_event)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Evento · {u.rainU}</p>
+          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_2h)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">2 horas · {u.rainU}</p>
         </div>
         <div>
           <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_daily)}</p>
