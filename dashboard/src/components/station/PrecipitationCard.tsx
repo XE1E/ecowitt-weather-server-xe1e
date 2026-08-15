@@ -61,23 +61,25 @@ export function PrecipitationCard({ data, forecast }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-3 text-center">
+      <div className="grid grid-cols-5 gap-2 text-center">
         <div>
-          <p className="text-2xl font-bold text-sky-400 tabular-nums">{u.rate(data.rain_rate)}</p>
+          <p className="text-xl font-bold text-sky-400 tabular-nums">{u.rate(data.rain_rate)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">{u.rateU}</p>
         </div>
-        {/* La unidad va en las cuatro columnas: sin ella, tres cifras de lluvia
-            juntas no dicen si son mm o pulgadas (y cambian con el sistema). */}
         <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_2h)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">2 horas · {u.rainU}</p>
+          <p className="text-xl font-bold tabular-nums">{u.rain(data.rain_2h)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">2h · {u.rainU}</p>
         </div>
         <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_daily)}</p>
+          <p className="text-xl font-bold tabular-nums">{u.rain(data.rain_event)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Evento · {u.rainU}</p>
+        </div>
+        <div>
+          <p className="text-xl font-bold tabular-nums">{u.rain(data.rain_daily)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">Hoy · {u.rainU}</p>
         </div>
         <div>
-          <p className="text-2xl font-bold tabular-nums">{u.rain(data.rain_monthly)}</p>
+          <p className="text-xl font-bold tabular-nums">{u.rain(data.rain_monthly)}</p>
           <p className="text-[10px] text-slate-500 mt-0.5">Mes · {u.rainU}</p>
         </div>
       </div>
