@@ -2032,7 +2032,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 palabras-- para que el rótulo no salte de sitio al conmutar. */}
             {(data?.humidex != null || humidexDeAyer) && (
               <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 5, whiteSpace: 'nowrap',
-                                          fontWeight: humidexDeAyer ? 800 : undefined,
+                                          fontWeight: 800,
                                           color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
                 {humidexDeAyer ? 'MÁXIMO' : humidexLabel(data!.humidex as number).toUpperCase()}
               </div>
@@ -2320,9 +2320,15 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 Se probó en rojo, primero `--red` (#ff4128) y luego el rojo puro (#ff1414),
                 y se descartó: el anaranjado se confundía con el ámbar de la propia celda, y
                 el puro desentonaba con el resto de la consola. El blanco ya cumple su
-                trabajo; lo que le faltaba al rótulo era peso, no color. */}
+                trabajo; lo que le faltaba al rótulo era peso, no color.
+
+                PESO 800 SIEMPRE, no sólo cuando dice MÁXIMO. La clase `.u` trae 700, así
+                que un 800 suelto en un estado hacía que el rótulo cambiara de grosor al
+                conmutar, y dejaba a MÁXIMO más gordo que el REGULAR de IMECA de al lado.
+                Los cuatro rótulos de lectura --W/m² y MÁXIMO en SOLAR, el nivel de UV, la
+                categoría de IMECA y el de HUMIDEX-- van al mismo peso pase lo que pase. */}
             <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 4,
-                                        fontWeight: solarDeNoche ? 800 : undefined,
+                                        fontWeight: 800,
                                         color: solarDeNoche ? '#fff' : 'var(--w)' }}>
               {solarDeNoche ? 'MÁXIMO' : 'W/m²'}
             </div>
@@ -2365,7 +2371,11 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 CUERPO 13 y no los 14 del "W/m²" de SOLAR, y es una medida, no un gusto: el
                 interior de esta celda son 68.0 px y "MODERADO" --que es el caso de casi
                 cualquier mañana, no un extremo raro-- mide 68.2 a cuerpo 14. A 13 baja a
-                63.4 y quedan 4.6 px de holgura. La diferencia de un píxel entre celdas
+                63.4 y quedan 4.6 px de holgura. OJO: esa medida es a peso 700; los
+                rótulos pasaron a 800 y Roboto Condensed ensancha un 1-2 % al subir de
+                grosor, o sea ~1 px sobre "MODERADO". Sigue entrando, pero la holgura baja
+                a ~3.5 px y ya no hay sitio para otro aumento. Comprobar de día, que es
+                cuando la celda muestra el nivel en vez de MÁXIMO. La diferencia de un píxel entre celdas
                 vecinas no se ve; una palabra recortada sí, que es el mismo criterio con el
                 que las cifras de esta fila se quedaron en 38 en vez de 40. IMECA lleva el
                 13 también, aunque le sobre sitio, para que las dos CATEGORÍAS pesen igual
@@ -2379,7 +2389,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 MÁXIMO
               </div>
             ) : data?.uv_index != null && (
-              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4,
+                                          fontWeight: 800, whiteSpace: 'nowrap' }}>
                 {uvLabel(data.uv_index).toUpperCase()}
               </div>
             )}
@@ -2407,7 +2418,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 donde sale también el color del dígito: derivarla aquí de los cortes sería
                 una segunda tabla que puede desincronizarse de la que colorea. */}
             {imeca?.available && imeca.category && (
-              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4,
+                                          fontWeight: 800, whiteSpace: 'nowrap' }}>
                 {imecaLabel(imeca.category)}
               </div>
             )}
