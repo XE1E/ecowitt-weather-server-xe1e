@@ -133,6 +133,12 @@ function decNum(s: string): ReactNode {
   )
 }
 
+// Opacidad de las manchas, LA MISMA en la cara iluminada y en la de sombra: es la misma
+// luna y el mismo terreno, así que la única diferencia entre las dos caras tiene que ser
+// la luz que reciben, no lo manchadas que están. Ver la nota larga junto a la capa de la
+// sombra, en `MoonGlyph`, para por qué compensar una respecto a la otra salía mal.
+const OP_MARES = 0.52
+
 // Mapa de manchas, en coordenadas normalizadas (-1..1 sobre el radio) y con su radio
 // en la misma escala. Pretenden evocar los mares lunares: Mare Imbrium arriba a la
 // izquierda, Oceanus Procellarum a la izquierda, Mare Serenitatis y Tranquillitatis
@@ -315,24 +321,25 @@ function MoonGlyph({ size = 42, illum, waxing }:
       {/* Manchas de la CARA EN SOMBRA. Antes iban recortadas a la parte iluminada y la
           sombra quedaba lisa; ahora las llevan las dos, que es lo que se ve en el cielo
           --el disco entero está manchado, no sólo lo que le da el sol--.
-          Se marcan MÁS que las de la luz (0.52 contra 0.44) por dos razones: el gris de la
-          sombra tiene menos recorrido hasta el negro que el amarillo de la luz, y el panel
-          del kiosco aplasta los tonos oscuros (ver la nota del fondo de las celdas en
-          `console-css.ts`), así que una diferencia fina ahí no llega a verse. Van sobre el
-          disco COMPLETO, no sobre la sombra recortada: la cara iluminada las tapa después
-          con su propio relleno, y así no hay que construir un segundo recorte.
+          Van sobre el disco COMPLETO, no sobre la sombra recortada: la cara iluminada las
+          tapa después con su propio relleno, y así no hay que construir un segundo recorte.
 
-          Las opacidades subieron desde 0.35/0.28: con el desenfoque encima y el aplastado
-          de tonos del panel, a esos valores las manchas apenas se distinguían del disco
-          liso. Se mantiene la diferencia relativa entre las dos caras, que es lo que hace
-          que el relieve case a los lados del terminador. */}
-      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.52)}</g>
+          LA MISMA OPACIDAD EN LAS DOS CARAS (`OP_MARES`). Antes la sombra iba más marcada
+          que la luz --0.35 contra 0.28, luego 0.52 contra 0.44-- para compensar que el gris
+          tiene menos recorrido hasta el negro. Medido sobre el render, esa compensación
+          hacía justo lo contrario: la cara oscura salía con un recorrido del 65 % de su
+          media y la iluminada del 23 %, o sea que la sombra se veía llena de manchas y el
+          creciente casi liso, como si fueran dos superficies distintas.
+          El motivo es que la textura se percibe en RELATIVO, no en absoluto: un mismo
+          α oscurece a B(1-α) en las dos caras, así que la misma opacidad ya da el mismo
+          contraste relativo, y cualquier "compensación" lo desequilibra. */}
+      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(OP_MARES)}</g>
       {!oscura && <path d={litPath} fill={`url(#luz-${uid})`} />}
       {/* Manchas de la CARA ILUMINADA, recortadas a ella. Al usar la misma lista que la
           capa de la sombra, cada mancha continúa al otro lado del terminador: es la misma
           luna, con una parte alumbrada y otra no. */}
       {!oscura && (
-        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.28)}</g>
+        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(OP_MARES)}</g>
       )}
       {!oscura && <path d={litPath} fill={`url(#term-${uid})`} />}
       <circle r={R} fill={`url(#limbo-${uid})`} />
@@ -1145,6 +1152,17 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
    * El corte es "menor que 1" y no "igual a 0" porque el UV llega entero pero la radiación
    * puede quedarse en decimales de crepúsculo (0.4 W/m²) y entonces nunca conmutaría.
    */
+  /**
+   * ¿Está lloviendo AHORA? Lo usan la gota de la celda de LLUVIA --hueca o maciza-- y
+   * el badge de pronóstico de PRES, que antes lo calculaba por su cuenta. Un solo sitio
+   * para que el icono y el texto no puedan decir cosas distintas.
+   *
+   * PROVISIONAL: `rain_rate > 0` es lo que se puede saber hoy, y falla justo en el caso
+   * que motiva el detector de lluvia --la llovizna que no llega a voltear el balancín--.
+   * Cuando el detector exista, se cambia aquí y lo heredan los dos sitios.
+   */
+  const lloviendo = (data?.rain_rate ?? 0) > 0
+
   const uvMaxDia = stats?.uv_index?.max ?? null
   const solarMaxDia = stats?.solar_radiation?.max ?? null
   const uvDeNoche = data?.uv_index != null && data.uv_index < 1 && uvMaxDia != null && uvMaxDia > 0
@@ -1791,10 +1809,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             if (!localForecast?.available) return null
             const t = localForecast.trend?.code
             const l = localForecast.level
-            const raining = (data?.rain_rate ?? 0) > 0
             let icon = '🌤️', text = 'Estable'
-            // Prioridad 1: si está lloviendo, decirlo
-            if (raining) { icon = '🌧️'; text = 'Lloviendo' }
+            // Prioridad 1: si está lloviendo, decirlo. Misma fuente que la gota de la
+            // celda de LLUVIA (`lloviendo`), para que no puedan contradecirse.
+            if (lloviendo) { icon = '🌧️'; text = 'Lloviendo' }
             // Prioridad 2: pronóstico por presión (Zambretti)
             else if (t === 'falling_fast') { icon = '🌧️'; text = 'Posible lluvia' }
             else if (t === 'falling' && l === 'low') { icon = '🌧️'; text = 'Inestable' }
@@ -1838,8 +1856,20 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               y es el mismo papel que hacen el termómetro en EXT o el barómetro en PRES.
               44 y no 46: el hueco a la izquierda de las cifras es ese. */}
           {/* overflow: visible evita que la animación de escala recorte el glifo */}
+          {/* La gota dice SI LLUEVE AHORA, no cuánto: hueca cuando no cae nada, maciza
+              mientras llueve. Es el único sitio de la celda que responde a esa pregunta
+              --las tres cifras son acumulados y una tasa-- y se lee de un vistazo desde
+              lejos, que es para lo que está el kiosco.
+
+              De momento lo decide `rain_rate > 0`, que es lo que hay. Su límite conocido
+              es el mismo que motiva el detector de lluvia: con llovizna fina el balancín
+              no bascula, la tasa se queda en 0 y la gota seguirá hueca aunque esté
+              cayendo agua. Cuando el detector esté en marcha, esta condición pasa a ser
+              él --con el `precipitation_visible` de la cámara como apoyo-- y este es el
+              único punto que hay que tocar. Ver docs/internal/PLAN-DETECTOR-LLUVIA.md. */}
           <div style={{ position: 'absolute', top: 16, left: 12, overflow: 'visible' }}>
-            <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')} title="lluvia" />
+            <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')}
+              title={lloviendo ? 'lluvia' : 'sin lluvia'} outline={!lloviendo} />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
               viento: 24 H es lo caído en las últimas 24h (`rain_24h`), TASA la

@@ -119,6 +119,26 @@ if (typeof document !== 'undefined' && !document.getElementById('meteo-glyph-ani
   document.head.appendChild(style)
 }
 
+/**
+ * Convierte un glifo macizo en su versión de CONTORNO.
+ *
+ * No vale un `fill="black"` → `fill="none"` a lo bruto: en `raindrops` la gota de
+ * atrás va recortada por una `<mask>`, y esa máscara define su alfa con un path que
+ * TAMBIÉN lleva `fill="black"`. Vaciarlo dejaría la máscara en nada y la gota
+ * trasera desaparecería del todo. Por eso se apunta sólo a los dos paths de las
+ * gotas por su `id`, que en el SVG del paquete son `Vector` y `Vector_2`.
+ *
+ * El `stroke="black"` se pone a propósito en negro y no en `currentColor`: la
+ * sustitución de más abajo lo tiñe junto con el resto, y así hay un solo sitio que
+ * decida el color.
+ */
+const CONTORNO: Record<string, (svg: string) => string> = {
+  raindrops: (svg) => svg.replace(
+    /(id="Vector(?:_2)?"[^>]*?)fill="black"/g,
+    '$1fill="none" stroke="black" stroke-width="6" stroke-linejoin="round"',
+  ),
+}
+
 interface Props {
   name: GlyphName | string
   /** ALTO del glifo en px. El ancho sale de la proporción real de la tinta. */
@@ -126,9 +146,16 @@ interface Props {
   /** Color del glifo. Se aplica por `color`, que el SVG hereda. */
   color: string
   title?: string
+  /**
+   * Dibuja sólo el contorno en vez del glifo macizo. Sirve para que un mismo icono
+   * diga dos estados sin cambiar de dibujo: en la celda de LLUVIA, hueco = no llueve
+   * y relleno = está lloviendo. Sólo lo soportan los glifos listados en `CONTORNO`;
+   * en el resto se ignora y se dibuja macizo.
+   */
+  outline?: boolean
 }
 
-export function MeteoGlyph({ name, size, color, title }: Props) {
+export function MeteoGlyph({ name, size, color, title, outline = false }: Props) {
   // Los `id` de los SVG del paquete son fijos ("clip0_2038_25542"), y la consola
   // pinta el mismo glifo más de una vez: dos barómetros (PRES y REMOTA GW1100) y
   // varios termómetros. Con ids repetidos en el documento, el `clip-path` de todas
@@ -143,7 +170,10 @@ export function MeteoGlyph({ name, size, color, title }: Props) {
     const caja = TINTA[name] ?? [0, 0, 128, 128]
     const [, , w, h] = caja
     const retoque = RETOQUES[name]
-    const svg = (retoque ? retoque(crudo) : crudo)
+    const hueco = outline ? CONTORNO[name] : undefined
+    let base = retoque ? retoque(crudo) : crudo
+    if (hueco) base = hueco(base)
+    const svg = base
       // el negro fijo del paquete pasa a heredar el color del contenedor
       .replace(/fill="black"/g, 'fill="currentColor"')
       .replace(/stroke="black"/g, 'stroke="currentColor"')
@@ -153,7 +183,9 @@ export function MeteoGlyph({ name, size, color, title }: Props) {
       // viewBox recortado a la tinta + el tamaño lo manda el contenedor
       .replace(/<svg[^>]*?viewBox="[^"]*"/, `<svg width="100%" height="100%" viewBox="${caja.join(' ')}"`)
     return { svg, ratio: w / h }
-  }, [name, uid])
+    // `outline` va en las dependencias: sin él el memo se quedaría con la primera
+    // versión y el icono no cambiaría nunca al empezar o parar de llover.
+  }, [name, uid, outline])
 
   if (!prep) return null
   const anim = ANIMACIONES[name]
