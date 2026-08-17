@@ -18,7 +18,7 @@
  * la lista que acaba de recibir.
  */
 import { useEffect, useState, type CSSProperties, type RefObject } from 'react'
-import { parentOf, ttlOf } from '../../kiosk-nav'
+import { parentOf, ttlOf, holdOf } from '../../kiosk-nav'
 
 /**
  * Tope de zonas por página. La cabecera HTTP tiene que caber holgada: 20 zonas con
@@ -58,10 +58,15 @@ export function medirZonas(root: HTMLElement): Zona[] {
  * `strtok`, y meter un parser de JSON en el firmware para esto sería desproporcionado.
  *
  *   v=1;back=consola;ttl=1800;z=0,536,120,64,consola;z=120,536,150,64,det-rain-24h
+ *
+ * `hold=1` (sólo cuando lo pide la página, ver `holdOf`) le dice al firmware que NO
+ * aplique aquí su vuelta automática a la consola por inactividad: es una vista viva
+ * --la cámara-- que se queda hasta que la toquen. Va antes de las zonas; un firmware
+ * que no lo conozca lo ignora, como ya hace con `v=` y `ttl=`.
  */
-export function serializarNav(zonas: Zona[], back: string, ttl: number): string {
+export function serializarNav(zonas: Zona[], back: string, ttl: number, hold = false): string {
   const z = zonas.map((s) => `z=${s.x},${s.y},${s.w},${s.h},${s.to}`).join(';')
-  return `v=1;back=${back};ttl=${ttl}${z ? ';' + z : ''}`
+  return `v=1;back=${back};ttl=${ttl}${hold ? ';hold=1' : ''}${z ? ';' + z : ''}`
 }
 
 /**
@@ -82,7 +87,7 @@ export function useNavZones(ref: RefObject<HTMLElement | null>, slug: string, en
   useEffect(() => {
     const root = ref.current
     if (!enabled || !root) return
-    root.setAttribute('data-kiosk-nav', serializarNav(medirZonas(root), parentOf(slug), ttlOf(slug)))
+    root.setAttribute('data-kiosk-nav', serializarNav(medirZonas(root), parentOf(slug), ttlOf(slug), holdOf(slug)))
     root.setAttribute('data-kiosk-ttl', String(ttlOf(slug)))
   })
 }

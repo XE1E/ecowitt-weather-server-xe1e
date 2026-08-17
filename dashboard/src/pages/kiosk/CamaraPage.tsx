@@ -20,7 +20,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CONSOLE_CSS } from '../../components/station/console-css'
 import { useNavZones, NavDebugOverlay } from './nav-zones'
-import { KioskBar, KioskHead, type Boton } from './chrome'
 
 interface Analysis {
   cloud_type?: string
@@ -83,12 +82,6 @@ export function CamaraPage({ slug }: { slug: string }) {
 
   const hayFoto = !!st?.available && !falloImagen
   const vieja = (st?.age_seconds ?? 0) > VIEJA_S
-  // 24 h: el resto de la consola va así (su reloj marca 17:36) y un "05:36 p. m."
-  // en la cabecera cantaba al lado.
-  const cuando = st?.captured_at
-    ? new Date(st.captured_at).toLocaleTimeString('es-MX',
-        { hour: '2-digit', minute: '2-digit', hour12: false })
-    : null
 
   // El análisis sólo se pinta si vino sin error y trae al menos una descripción. Con
   // el fix del servidor, un fallo pasajero de Gemini ya no borra el último bueno.
@@ -100,8 +93,6 @@ export function CamaraPage({ slug }: { slug: string }) {
 
   useNavZones(rootRef, slug)
 
-  const botones: Boton[] = [{ label: '‹ CONSOLA', to: 'consola', tipo: 'back' }]
-
   return (
     <div
       ref={rootRef}
@@ -109,87 +100,96 @@ export function CamaraPage({ slug }: { slug: string }) {
       // Lista cuando se sabe que NO hay foto (se pinta el aviso) o cuando la que hay
       // ya está descargada y pintada.
       data-kiosk-ready={pedido && (!hayFoto || imagenLista) ? 'true' : 'false'}
+      // Toda la pantalla es una sola zona táctil: tocarla vuelve a la consola. Es lo
+      // pedido --tocar la imagen regresa a inicio-- y no depende de la pila del firmware.
+      data-nav="consola"
       style={{
         width: 1024, height: 600, background: '#000', overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
+        position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
         ['--acc' as string]: '#eaeaea',
       }}
     >
       <style>{CONSOLE_CSS}</style>
       <NavDebugOverlay nodo={rootRef} />
 
-      <KioskHead
-        titulo="EXTERIOR"
-        sub={hayFoto && cuando ? `${vieja ? 'ÚLTIMA A LAS ' : ''}${cuando}` : undefined}
-      />
+      {hayFoto ? (
+        <>
+          {/* La foto a pantalla completa: sin cabecera ni barra propias --van
+              sobrepuestas-- para que la imagen ocupe todo lo que la proporción permite. */}
+          <img
+            src="/api/camera/latest.jpg"
+            alt="Exterior de la estación"
+            onLoad={() => setImagenLista(true)}
+            onError={() => setFalloImagen(true)}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+          />
 
-      {/* Toda la zona de la foto es una sola zona táctil: tocarla vuelve a la consola.
-          Es lo pedido --tocar la imagen regresa a inicio-- y no depende de la pila de
-          navegación del firmware. */}
-      <div
-        data-nav="consola"
-        style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center',
-          justifyContent: 'center', padding: 8, position: 'relative' }}
-      >
-        {hayFoto ? (
-          <>
-            <img
-              src="/api/camera/latest.jpg"
-              alt="Exterior de la estación"
-              onLoad={() => setImagenLista(true)}
-              onError={() => setFalloImagen(true)}
-              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
-            />
-            {/* Aviso sobre la propia foto, no debajo: si la imagen es de hace horas hay
-                que verlo al mirarla, no al buscar el pie. */}
-            {vieja && (
-              <div style={{ position: 'absolute', top: 14, left: 14, background: 'rgba(255,65,40,0.9)',
-                color: '#000', fontSize: 17, fontWeight: 800, letterSpacing: 2, padding: '4px 10px',
-                borderRadius: 6 }}>
-                FOTO ANTIGUA
-              </div>
-            )}
-            {/* Banda de análisis del cielo, pegada al pie de la foto. Fondo en degradado
-                para que el texto se lea sobre cualquier cielo, claro u oscuro. */}
-            {hayAnalisis && (
-              <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8,
-                padding: '14px 18px 12px', borderRadius: '0 0 8px 8px',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0) 100%)' }}>
-                {/* Frase protagonista: lo que se ve, en grande. */}
-                {an?.description && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ fontSize: 30, lineHeight: 1, flexShrink: 0 }}>{emoji}</span>
-                    <div style={{ color: '#fff', fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>
-                      {an.description}
-                    </div>
-                  </div>
-                )}
-                {/* Renglón de apoyo: condición, cobertura y visibilidad, en cifras. */}
-                <div style={{ marginTop: an?.description ? 8 : 0, display: 'flex',
-                  flexWrap: 'wrap', gap: '4px 18px', fontSize: 17, fontWeight: 700, letterSpacing: 0.5 }}>
-                  {condicion && <span style={{ color: '#eaeaea' }}>{condicion}</span>}
-                  {an?.cloud_coverage_pct != null && (
-                    <span style={{ color: '#8ab4ff' }}>{an.cloud_coverage_pct}% NUBES</span>
-                  )}
-                  {visibilidad && <span style={{ color: '#9a9a9a' }}>VIS. {visibilidad}</span>}
-                  {an?.precipitation_visible && (
-                    <span style={{ color: '#ffb020' }}>LLUVIA EN EL HORIZONTE</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', color: '#8a8a8a' }}>
-            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 3 }}>SIN IMAGEN</div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 10, color: '#5a5a5a' }}>
-              {st == null ? 'LA CÁMARA AÚN NO ESTÁ CONFIGURADA' : 'NO HA LLEGADO NINGUNA CAPTURA'}
-            </div>
+          {/* Cabecera SOBREPUESTA: sólo el rótulo. NO lleva hora --la cámara ya quema
+              su propia marca de tiempo en la esquina de la foto, así que un reloj aquí
+              la repetiría--. La antigüedad la dice esa marca más el aviso FOTO ANTIGUA. */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 20px 22px',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 100%)' }}>
+            <span style={{ color: '#fff', fontSize: 26, fontWeight: 800, letterSpacing: 3 }}>EXTERIOR</span>
           </div>
-        )}
-      </div>
 
-      <KioskBar botones={botones} />
+          {/* Aviso sobre la propia foto: si es de hace horas hay que verlo al mirarla. */}
+          {vieja && (
+            <div style={{ position: 'absolute', top: 48, left: 20, background: 'rgba(255,65,40,0.92)',
+              color: '#000', fontSize: 17, fontWeight: 800, letterSpacing: 2, padding: '4px 10px',
+              borderRadius: 6 }}>
+              FOTO ANTIGUA
+            </div>
+          )}
+
+          {/* Banda de análisis del cielo, pegada al pie. Degradado para leerse sobre
+              cualquier cielo, claro u oscuro. */}
+          {hayAnalisis && (
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
+              padding: '20px 22px 14px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0) 100%)' }}>
+              {/* Frase protagonista: lo que se ve, en grande. */}
+              {an?.description && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                  <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{emoji}</span>
+                  <div style={{ color: '#fff', fontSize: 25, fontWeight: 700, lineHeight: 1.2 }}>
+                    {an.description}
+                  </div>
+                </div>
+              )}
+              {/* Renglón de apoyo: condición, cobertura y visibilidad. Más grande a
+                  petición: se lee de lejos, que es desde donde se mira la pantalla. */}
+              <div style={{ marginTop: an?.description ? 10 : 0, display: 'flex',
+                flexWrap: 'wrap', gap: '4px 22px', fontSize: 21, fontWeight: 800, letterSpacing: 0.6 }}>
+                {condicion && <span style={{ color: '#f0f0f0' }}>{condicion}</span>}
+                {an?.cloud_coverage_pct != null && (
+                  <span style={{ color: '#8ab4ff' }}>{an.cloud_coverage_pct}% NUBES</span>
+                )}
+                {visibilidad && <span style={{ color: '#b0b0b0' }}>VIS. {visibilidad}</span>}
+                {an?.precipitation_visible && (
+                  <span style={{ color: '#ffb020' }}>LLUVIA EN EL HORIZONTE</span>
+                )}
+              </div>
+              {/* Pronóstico a corto plazo del análisis --lo que se espera en 1-2 h--,
+                  para completar la narrativa: qué se ve ARRIBA y qué viene AQUÍ. En azul
+                  cielo para distinguirlo de la descripción. */}
+              {an?.forecast_hint && (
+                <div style={{ marginTop: 9, display: 'flex', alignItems: 'flex-start', gap: 9,
+                  color: '#9ec5ff', fontSize: 20, fontWeight: 600, lineHeight: 1.25 }}>
+                  <span style={{ flexShrink: 0, fontSize: 18 }}>↗</span>
+                  <span>{an.forecast_hint}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ textAlign: 'center', color: '#8a8a8a' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 3 }}>SIN IMAGEN</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginTop: 10, color: '#5a5a5a' }}>
+            {st == null ? 'LA CÁMARA AÚN NO ESTÁ CONFIGURADA' : 'NO HA LLEGADO NINGUNA CAPTURA'}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

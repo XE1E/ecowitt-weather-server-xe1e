@@ -223,6 +223,24 @@ export function ttlOf(slug: string): number {
 }
 
 /**
+ * ¿Esta página se queda puesta hasta que la toquen, en vez de volver sola a la
+ * consola por inactividad?
+ *
+ * La cámara es una vista VIVA: se refresca cada 5 min con la foto nueva, así que no
+ * tiene sentido que el temporizador de inactividad del firmware la saque --quien la
+ * deja puesta quiere seguir viendo el exterior--. Las gráficas y los históricos, en
+ * cambio, SÍ deben volver: un resumen de hace tres meses puesto toda la tarde deja de
+ * decir el clima de ahora, que es justo para lo que existe esa vuelta automática.
+ *
+ * El firmware lee esta marca (`hold=1`) de la cabecera `X-Kiosk-Nav` y se salta su
+ * vuelta automática a la consola SÓLO en las páginas que la traen. Sin la marca, se
+ * comporta como siempre, así que añadirla no cambia ninguna otra pantalla.
+ */
+export function holdOf(slug: string): boolean {
+  return parseSlug(slug).kind === 'camara'
+}
+
+/**
  * Zonas táctiles de la CONSOLA: qué celda lleva a qué pantalla.
  *
  * No hay coordenadas aquí a propósito. La clave se pone como `data-nav` en la celda
