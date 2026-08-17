@@ -12,8 +12,12 @@ if (!ADMIN_USER || !ADMIN_PASSWORD) {
   process.exit(1);
 }
 
+// Filtro opcional: "node scripts/capturas-admin.js sistema" regenera solo esa.
+// Sin argumentos las hace todas. Evita rehacer 9 PNG cuando solo cambio una.
+const filtros = process.argv.slice(2);
+
 (async () => {
-  const adminPages = [
+  const todasLasPaginas = [
     { url: 'https://clima.xe1e.net/admin', name: 'admin-01-dashboard' },
     { url: 'https://clima.xe1e.net/admin/estaciones', name: 'admin-02-estaciones' },
     { url: 'https://clima.xe1e.net/admin/alertas', name: 'admin-03-alertas' },
@@ -24,6 +28,16 @@ if (!ADMIN_USER || !ADMIN_PASSWORD) {
     { url: 'https://clima.xe1e.net/admin/sistema', name: 'admin-08-sistema' },
     { url: 'https://clima.xe1e.net/admin/wizard', name: 'admin-09-wizard' },
   ];
+
+  const adminPages = filtros.length
+    ? todasLasPaginas.filter(p => filtros.some(f => p.name.includes(f)))
+    : todasLasPaginas;
+
+  if (!adminPages.length) {
+    console.error(`Ningun nombre coincide con: ${filtros.join(', ')}`);
+    console.error('Disponibles: ' + todasLasPaginas.map(p => p.name).join(', '));
+    process.exit(1);
+  }
 
   const browser = await chromium.launch();
 

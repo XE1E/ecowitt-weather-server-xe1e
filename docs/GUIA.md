@@ -960,12 +960,7 @@ repositorio.
 ![Integraciones](capturas/admin-07-integraciones.png)
 
 #### Sistema
-
-<!-- Captura retirada: el panel de logs mostraba credenciales en claro dentro de
-     las URLs. Ya se redactan en el origen; regenerar con scripts/capturas-admin.js
-     y restaurar la línea: ![Sistema](capturas/admin-08-sistema.png) -->
-
-_(captura pendiente de regenerar)_
+![Sistema](capturas/admin-08-sistema.png)
 
 #### Wizard de configuración
 ![Wizard](capturas/admin-09-wizard.png)
