@@ -140,10 +140,24 @@ if (typeof document !== 'undefined' && !document.getElementById('meteo-glyph-ani
  * decida el color.
  */
 const CONTORNO: Record<string, (svg: string) => string> = {
-  raindrops: (svg) => svg.replace(
-    /(id="Vector(?:_2)?"[^>]*?)fill="black"/g,
-    '$1fill="none" stroke="black" stroke-width="6" stroke-linejoin="round"',
-  ),
+  raindrops: (svg) => svg
+    .replace(
+      /(id="Vector(?:_2)?"[^>]*?)fill="black"/g,
+      '$1fill="none" stroke="black" stroke-width="6" stroke-linejoin="round"',
+    )
+    // La MÁSCARA también hay que agrandarla, y es lo que costó ver: recorta la gota
+    // de atrás y su región declarada empieza justo en `x="35"`, que es exactamente
+    // donde arranca la geometría. Al gotear el trazo 3 unidades hacia fuera, esas 3
+    // caían fuera de la máscara y se perdían: el resultado no era una curva comida
+    // sino un CORTE RECTO vertical --medido sobre el render, 25 píxeles azules de
+    // golpe en una sola columna donde una curva habría dado 2 o 3--.
+    // Se abren los cuatro lados: la región (x/y/width/height) y el path que la
+    // dibuja, cuyos bordes rectos están en H35, V94 y el arranque en y=34.
+    .replace(
+      /x="35" y="34" width="35" height="60"/,
+      'x="31" y="30" width="43" height="68"',
+    )
+    .replace(/M69\.6509 34H35V94H61\.466/, 'M69.6509 30H31V98H61.466'),
 }
 
 interface Props {

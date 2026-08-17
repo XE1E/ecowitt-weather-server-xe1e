@@ -137,7 +137,7 @@ function decNum(s: string): ReactNode {
 // luna y el mismo terreno, así que la única diferencia entre las dos caras tiene que ser
 // la luz que reciben, no lo manchadas que están. Ver la nota larga junto a la capa de la
 // sombra, en `MoonGlyph`, para por qué compensar una respecto a la otra salía mal.
-const OP_MARES = 0.52
+const OP_MARES = 0.78
 
 // Mapa de manchas, en coordenadas normalizadas (-1..1 sobre el radio) y con su radio
 // en la misma escala. Pretenden evocar los mares lunares: Mare Imbrium arriba a la
@@ -146,52 +146,61 @@ const OP_MARES = 0.52
 // densidad dan la impresión correcta. Vive fuera del componente porque ahora la
 // dibujan DOS capas, la de la cara iluminada y la de la sombra, y las dos tienen que
 // usar la misma lista o el relieve no coincidiría a los lados del terminador.
-const MARES = [
-  // Manchas principales (mares grandes)
-  [-0.32, -0.30, 0.24],   // Mare Imbrium (arriba izq)
-  [0.08, -0.42, 0.16],    // Mare Serenitatis (arriba centro)
-  [0.30, -0.12, 0.20],    // Mare Crisium (derecha)
-  [-0.18, 0.22, 0.17],    // Mare Nubium (abajo izq)
-  [0.04, 0.04, 0.13],     // Mare Vaporum (centro)
-  [-0.38, 0.00, 0.14],    // Oceanus Procellarum parte (izquierda)
-  // Manchas secundarias (mares menores y cráteres)
-  [0.22, -0.38, 0.10],    // Lacus Somniorum
-  [-0.10, -0.52, 0.09],   // Mare Frigoris borde
-  [0.38, 0.18, 0.11],     // Mare Fecunditatis
-  [-0.44, -0.22, 0.10],   // borde oeste
-  [0.14, 0.32, 0.12],     // Mare Nectaris
-  [-0.26, 0.44, 0.09],    // borde sur
-  [0.32, 0.38, 0.08],     // cráter sur-este
-  [-0.50, 0.24, 0.07],    // borde oeste bajo
-  // Segunda tanda: la luna se veía demasiado limpia entre mancha y mancha. Estas
-  // rellenan los huecos --sobre todo el limbo este y el sur, que estaban vacíos-- y
-  // suben la densidad sin tocar las grandes, que son las que dan la silueta
-  // reconocible. Todas caben dentro del disco: |centro| + radio se queda por debajo
-  // de 0.7, así que ninguna se recorta contra el borde.
-  [0.50, -0.34, 0.09],    // Mare Marginis (limbo noreste)
-  [0.52, 0.02, 0.08],     // Mare Smythii (limbo este)
-  [-0.06, 0.52, 0.10],    // entorno de Tycho (sur)
-  [0.20, 0.54, 0.07],     // cráter sur-este bajo
-  [-0.56, -0.04, 0.07],   // limbo oeste
-  [0.46, -0.48, 0.06],    // Mare Humboldtianum (noreste alto)
-  [-0.20, -0.06, 0.09],   // Mare Insularum (centro-oeste)
-  [0.18, -0.16, 0.08],    // Sinus Medii
-  [-0.44, 0.38, 0.07],    // Mare Humorum (suroeste)
-  [0.06, -0.62, 0.06],    // Mare Frigoris (norte)
-  // Tercera tanda: el LIMBO, dando la vuelta completa. Sin nada aquí el disco se leía
-  // como una moneda manchada en el centro y limpia en el canto; con manchas hasta el
-  // borde --y con el escorzo que les aplica `mares`-- se lee como una bola.
-  // A radio ~0.82 y no ~0.70: a 0.70 quedaba un anillo liso de casi un cuarto del radio
-  // en todo el canto y el efecto se perdía. Con el escorzo aplicado llegan a 0.86, así
-  // que siguen dentro del disco sin tocar el degradado del limbo.
-  [0.00, -0.82, 0.095],   // norte
-  [0.60, -0.56, 0.095],   // noreste
-  [0.82, 0.06, 0.095],    // este
-  [0.58, 0.58, 0.095],    // sureste
-  [0.02, 0.82, 0.095],    // sur
-  [-0.56, 0.60, 0.095],   // suroeste
-  [-0.82, 0.04, 0.095],   // oeste
-  [-0.60, -0.56, 0.095],  // noroeste
+const MARES: readonly (readonly [number, number, number, number])[] = [
+  // MARES GRANDES, a peso 1: son los que tienen que salir CASI NEGROS. Cada uno es un
+  // RACIMO de dos o tres círculos solapados en vez de uno solo. Con el desenfoque
+  // encima, los círculos se funden y el borde queda irregular; un círculo suelto, por
+  // grande que sea, se lee como un lunar y no como un mar.
+  // -- Mare Imbrium (noroeste), el más reconocible de la cara visible
+  [-0.34, -0.32, 0.24, 1.00],
+  [-0.20, -0.40, 0.16, 1.00],
+  [-0.44, -0.18, 0.15, 1.00],
+  // -- Oceanus Procellarum (oeste), alargado de norte a sur
+  [-0.50, 0.04, 0.19, 0.95],
+  [-0.44, -0.06, 0.16, 0.95],
+  [-0.46, 0.20, 0.15, 0.95],
+  // -- Mare Serenitatis (norte centro)
+  [0.06, -0.42, 0.17, 1.00],
+  [0.15, -0.34, 0.12, 1.00],
+  // -- Mare Tranquillitatis (centro este)
+  [0.22, -0.16, 0.18, 1.00],
+  [0.30, -0.06, 0.13, 1.00],
+  // -- Mare Crisium. MOVIDO AL ESTE a propósito: los mares grandes caían todos en la
+  //    mitad oeste y en cuarto creciente la cara iluminada se quedaba sin un solo
+  //    rasgo gordo, sólo motas. Con Crisium aquí, cualquier fase enseña algo con peso.
+  [0.54, -0.24, 0.17, 1.00],
+  [0.60, -0.15, 0.11, 0.90],
+  // -- Mare Nubium / Humorum (suroeste)
+  [-0.24, 0.32, 0.16, 0.90],
+  [-0.36, 0.38, 0.12, 0.85],
+  // -- Mare Fecunditatis (este) y Nectaris (sureste)
+  [0.42, 0.14, 0.15, 0.90],
+  [0.22, 0.32, 0.12, 0.85],
+  // -- Mare Frigoris (norte), que en la Luna es un arco largo y estrecho
+  [-0.08, -0.56, 0.10, 0.70],
+  [0.14, -0.52, 0.09, 0.70],
+
+  // TIERRAS ALTAS: manchas amplias y FLOJAS (peso 0.3-0.45). No son cráteres, son la
+  // variación suave del terreno. Van grandes a propósito: a radio pequeño y peso alto
+  // es cuando el disco parece picado de viruelas, que es justo lo que hay que evitar.
+  [0.02, 0.02, 0.11, 0.40],
+  [-0.14, 0.08, 0.09, 0.35],
+  [0.36, -0.36, 0.10, 0.45],
+  [-0.06, 0.50, 0.12, 0.45],
+  [0.30, 0.44, 0.10, 0.40],
+  [-0.30, 0.10, 0.08, 0.30],
+
+  // LIMBO, dando la vuelta completa. Anchas y muy flojas: aquí sólo hacen falta para
+  // que el canto no se vea liso y el disco se lea como bola. Con el escorzo quedan
+  // comprimidas contra el borde, que es lo que hace el efecto.
+  [0.00, -0.80, 0.12, 0.30],
+  [0.62, -0.52, 0.11, 0.30],
+  [0.80, 0.10, 0.11, 0.30],
+  [0.56, 0.58, 0.11, 0.30],
+  [0.04, 0.80, 0.12, 0.30],
+  [-0.58, 0.58, 0.11, 0.30],
+  [-0.80, 0.06, 0.11, 0.30],
+  [-0.62, -0.54, 0.11, 0.30],
 ] as const
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
@@ -237,14 +246,18 @@ function MoonGlyph({ size = 42, illum, waxing }:
   //
   // Suelo de 0.25: en el borde el factor tiende a cero y la mancha se volvería una
   // raya invisible. Con el suelo se sigue notando que hay algo, que es lo que se quiere.
-  const mares = (op: number) => MARES.map(([cx, cy, r], i) => {
+  const mares = (op: number) => MARES.map(([cx, cy, r, peso], i) => {
     const d = Math.min(1, Math.hypot(cx, cy))
     const k = Math.max(0.25, Math.sqrt(1 - d * d))
     const ang = (Math.atan2(cy, cx) * 180) / Math.PI
+    // El peso propio de cada mancha sobre la opacidad base. Tope en 0.9: a 1 la mancha
+    // sería negro puro y perdería el color de la luna por debajo, que es lo que hace
+    // que un mar siga pareciendo terreno y no un agujero.
+    const alfa = Math.min(0.9, op * peso)
     return (
       <ellipse key={i} cx={cx * R} cy={cy * R} rx={k * r * R} ry={r * R}
         transform={`rotate(${ang} ${cx * R} ${cy * R})`}
-        fill={`rgba(0,0,0,${op})`} />
+        fill={`rgba(0,0,0,${alfa})`} />
     )
   })
   return (
@@ -2304,7 +2317,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 el propio color de la celda. Se pasa al rojo puro (#ff1414). Comparte tono
                 con `--alarma`, pero el aviso se señala con el triángulo y aquí lo que hay
                 es una palabra, así que no se pisan. */}
-            <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 2,
+            <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 4,
+                                        fontWeight: solarDeNoche ? 800 : undefined,
                                         color: solarDeNoche ? 'var(--alarma)' : 'var(--w)' }}>
               {solarDeNoche ? 'MÁXIMO' : 'W/m²'}
             </div>
@@ -2356,11 +2370,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 la cifra. "MÁXIMO" mide ~55 px a cuerpo 13 y el interior de esta celda son 68,
                 así que entra igual que "MODERADO", que es el caso peor de los niveles. */}
             {uvDeNoche ? (
-              <div className="u" style={{ fontSize: 13, color: 'var(--alarma)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--alarma)', lineHeight: 1, marginTop: 4,
+                                          fontWeight: 800, whiteSpace: 'nowrap' }}>
                 MÁXIMO
               </div>
             ) : data?.uv_index != null && (
-              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4, whiteSpace: 'nowrap' }}>
                 {uvLabel(data.uv_index).toUpperCase()}
               </div>
             )}
@@ -2388,7 +2403,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 donde sale también el color del dígito: derivarla aquí de los cortes sería
                 una segunda tabla que puede desincronizarse de la que colorea. */}
             {imeca?.available && imeca.category && (
-              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--w)', lineHeight: 1, marginTop: 4, whiteSpace: 'nowrap' }}>
                 {imecaLabel(imeca.category)}
               </div>
             )}
