@@ -2065,7 +2065,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ~100 a 169 px de ancho y su temperatura de 13 a 19 px.
               Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
               hacen falta porque el icono ya trae aire por dentro. */}
-          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo}
+          <div className="cell derivada" data-nav={CONSOLA_NAV.condiciones}
             style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.

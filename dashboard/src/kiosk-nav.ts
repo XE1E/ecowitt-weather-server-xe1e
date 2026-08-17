@@ -196,7 +196,10 @@ export function parentOf(slug: string): string {
   switch (p.kind) {
     case 'consola': return 'consola'
     case 'menu':    return 'consola'
-    case 'camara':  return 'menu'
+    // La cámara se abre desde la celda de condición de la CONSOLA, así que el toque
+    // fuera (y el respaldo si la pila del firmware está vacía) devuelve a la consola,
+    // no al menú. Es lo pedido: tocar la foto vuelve a la pantalla de inicio.
+    case 'camara':  return 'consola'
     case 'clasica': return 'menu'
     case 'stats':   return 'consola'
     case 'det':     return 'consola'
@@ -243,6 +246,10 @@ export const CONSOLA_NAV = {
   jardin:   '3',
   remota:   '3',
   remotaP:  '3',
-  cielo:    '4',                        // condición y luna → pronóstico de 7 días
+  // La celda de CONDICIÓN ACTUAL (icono + descripción + próximas horas) abre la
+  // página de la cámara del exterior, que además muestra el análisis del cielo de
+  // la última foto. La LUNA, a su lado, sigue llevando al pronóstico.
+  condiciones: 'camara',
+  cielo:    '4',                        // la luna → pronóstico de 7 días
   reloj:    'menu',                     // el reloj abre el menú de las clásicas
 } as const
