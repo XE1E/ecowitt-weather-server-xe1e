@@ -246,7 +246,7 @@ cuatro cosas y sentarse una tarde.
 
 | Pieza | Cant. | Nota |
 |---|---|---|
-| Disco piezo (~27–35 mm, con cables) | 3–5 | Cuestan céntimos. Compra varios: se despegan y se rompen los cables. |
+| Disco piezo, **dos tamaños**: ~27–35 mm y ~50 mm | 3–5 de cada | Cuestan céntimos. Compra varios: se despegan y se rompen los cables. Ver *Qué tamaño de piezo*. |
 | Resistencia 100 kΩ | 2 | Divisor de polarización |
 | Resistencia 1 MΩ | 1 | Descarga del piezo |
 | Resistencia 1 kΩ | 1 | Limita la corriente por los diodos |
@@ -255,6 +255,29 @@ cuatro cosas y sentarse una tarde.
 | Protoboard, cables, cianoacrilato | — | |
 | Cuentagotas o jeringa | 1 | Para dosificar gotas repetibles |
 | Retal rígido (acrílico, PCB, chapa) | 1 | Donde pegar el piezo |
+
+### Qué tamaño de piezo — lo decide la fase 1
+
+**El diámetro del piezo no fija el área de captación.** El disco va pegado *debajo* de
+una placa rígida, así que lo que recoge las gotas es la placa. Un piezo mayor no capta
+más gotas: capta mejor la vibración de la placa.
+
+Lo que sí cambia con el diámetro es la **frecuencia de resonancia**, que en un disco de
+este tipo cae aproximadamente con el cuadrado del diámetro — de 27 a 50 mm baja del
+orden de tres veces. Y eso corta por los dos lados:
+
+- **A favor:** campaneo más lento, más fácil de muestrear y de medir.
+- **En contra:** se acerca a donde vive el ruido ambiental —viento, vibración de la
+  estructura, pasos—, que es de baja frecuencia. Justo de lo que hay que separarse.
+
+En lo práctico, el de 50 mm es más frágil y bastante más difícil de pegar sin dejar
+huecos bajo la cerámica; un hueco te quita la sensibilidad que creías ganar por tamaño.
+
+*(Lo anterior es razonamiento, no medida. La fase 1 lo resuelve empíricamente.)*
+
+Por eso la lista pide **los dos tamaños**: cuestan céntimos y el sketch ya mide justo lo
+que hace falta para elegir. El criterio no es cuál da el pico más alto, sino **cuál
+separa mejor la gota del golpe**. Puede ganar el pequeño.
 
 ### Circuito
 
@@ -316,6 +339,8 @@ Comandos, una tecla por el monitor serie:
 3. **20 gotas** con el cuentagotas desde ~30 cm. Anota pico y campaneo de cada una.
 4. **20 golpes suaves** en la mesa. Anota lo mismo.
 5. Con `w`, saca la onda de una gota y la de un golpe.
+6. **Repite del 1 al 5 con el otro tamaño de piezo** y compara la separación entre las
+   dos nubes, no los picos absolutos.
 
 ### Criterio de aceptación
 
@@ -331,9 +356,10 @@ capacitivo en solitario con lógica de secado, o rendirse y comprar el RG-11.
 
 ### Qué anotar para la fase siguiente
 
-El suelo de ruido y el umbral que acabe funcionando, el rango de picos de una gota, y
-el campaneo típico de gota frente a golpe. Esos cuatro números son los que fijan los
-umbrales de la máquina de estados y evitan tener que repetir la caracterización.
+El tamaño de piezo elegido, el suelo de ruido y el umbral que acabe funcionando, el
+rango de picos de una gota, y el campaneo típico de gota frente a golpe. Esos números
+son los que fijan los umbrales de la máquina de estados y evitan tener que repetir la
+caracterización más adelante.
 
 ## Coste
 
