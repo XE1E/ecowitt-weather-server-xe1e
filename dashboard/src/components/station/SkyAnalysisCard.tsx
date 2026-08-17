@@ -142,9 +142,9 @@ export function SkyAnalysisCard() {
         <span className="text-lg ml-1">{icon}</span>
       </p>
 
-      {/* Descripción principal */}
+      {/* Descripción principal: es el texto protagonista de la tarjeta */}
       {analysis.description && (
-        <p className="text-base text-slate-200 mb-3 leading-relaxed">
+        <p className="text-lg text-slate-100 mb-3 leading-relaxed">
           {analysis.description}
         </p>
       )}

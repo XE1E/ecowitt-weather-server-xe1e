@@ -139,7 +139,7 @@ export function CameraCard({ ocultarSiVacia = false }: {
           )}
           <button
             onClick={consultar}
-            title="Buscar una captura más reciente"
+            title="Comprobar si ya hay una foto más reciente (no dispara la cámara)"
             className="text-slate-400 hover:text-slate-200 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
