@@ -2033,7 +2033,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             {(data?.humidex != null || humidexDeAyer) && (
               <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 5, whiteSpace: 'nowrap',
                                           fontWeight: humidexDeAyer ? 800 : undefined,
-                                          color: humidexDeAyer ? 'var(--alarma)' : 'var(--w)' }}>
+                                          color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
                 {humidexDeAyer ? 'MÁXIMO' : humidexLabel(data!.humidex as number).toUpperCase()}
               </div>
             )}
@@ -2311,20 +2311,19 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
                 necesitan las cuatro cifras del caso peor. De noche este renglón es el que
                 dice "MÁXIMO", también en blanco: rótulo y cifra van juntos. */}
-            {/* El rótulo MÁXIMO va en ROJO mientras la cifra sigue en blanco. Son dos
-                trabajos distintos: el blanco de la cifra dice "esto no es una lectura viva"
-                quedándose fuera de la rampa de la celda, y el rojo del rótulo llama la
-                atención sobre por qué. Mismo criterio en UV y HUMIDEX.
+            {/* El rótulo MÁXIMO en BLANCO PURO, igual que la cifra que acompaña, y en
+                negrita. El blanco es lo que dice "esto no es una lectura viva": no está en
+                la rampa de colores de la celda, así que de un vistazo se sabe que ese
+                número es de antes. Rótulo y cifra van juntos. Mismo criterio en UV y
+                HUMIDEX.
 
-                Se probó primero con `--red` (#ff4128), que es el rojo ANARANJADO del
-                contorno del reloj, para no tocar el rojo de aviso. No se leía como rojo:
-                contra el ámbar de SOLAR y el naranja de HUMIDEX ese matiz se confunde con
-                el propio color de la celda. Se pasa al rojo puro (#ff1414). Comparte tono
-                con `--alarma`, pero el aviso se señala con el triángulo y aquí lo que hay
-                es una palabra, así que no se pisan. */}
+                Se probó en rojo, primero `--red` (#ff4128) y luego el rojo puro (#ff1414),
+                y se descartó: el anaranjado se confundía con el ámbar de la propia celda, y
+                el puro desentonaba con el resto de la consola. El blanco ya cumple su
+                trabajo; lo que le faltaba al rótulo era peso, no color. */}
             <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 4,
                                         fontWeight: solarDeNoche ? 800 : undefined,
-                                        color: solarDeNoche ? 'var(--alarma)' : 'var(--w)' }}>
+                                        color: solarDeNoche ? '#fff' : 'var(--w)' }}>
               {solarDeNoche ? 'MÁXIMO' : 'W/m²'}
             </div>
             {/* Barra al pie con `marginTop: auto`, que se come el aire sobrante y la pega
@@ -2375,7 +2374,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 la cifra. "MÁXIMO" mide ~55 px a cuerpo 13 y el interior de esta celda son 68,
                 así que entra igual que "MODERADO", que es el caso peor de los niveles. */}
             {uvDeNoche ? (
-              <div className="u" style={{ fontSize: 13, color: 'var(--alarma)', lineHeight: 1, marginTop: 4,
+              <div className="u" style={{ fontSize: 13, color: '#fff', lineHeight: 1, marginTop: 4,
                                           fontWeight: 800, whiteSpace: 'nowrap' }}>
                 MÁXIMO
               </div>
