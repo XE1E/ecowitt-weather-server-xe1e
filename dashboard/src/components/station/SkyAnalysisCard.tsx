@@ -144,52 +144,52 @@ export function SkyAnalysisCard() {
 
       {/* Descripción principal */}
       {analysis.description && (
-        <p className="text-sm text-slate-300 mb-3 leading-relaxed">
+        <p className="text-base text-slate-200 mb-3 leading-relaxed">
           {analysis.description}
         </p>
       )}
 
       {/* Grid de datos */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-white/[0.03] rounded-lg p-2">
-          <p className="text-xs text-slate-500">Condición</p>
-          <p className="text-sm font-medium text-slate-200">{condicion}</p>
+        <div className="bg-white/[0.03] rounded-lg p-2.5">
+          <p className="text-sm text-slate-500">Condición</p>
+          <p className="text-base font-semibold text-slate-100">{condicion}</p>
         </div>
-        <div className="bg-white/[0.03] rounded-lg p-2">
-          <p className="text-xs text-slate-500">Cobertura</p>
-          <p className="text-sm font-medium text-slate-200">{analysis.cloud_coverage_pct ?? '—'}%</p>
+        <div className="bg-white/[0.03] rounded-lg p-2.5">
+          <p className="text-sm text-slate-500">Cobertura</p>
+          <p className="text-base font-semibold text-slate-100">{analysis.cloud_coverage_pct ?? '—'}%</p>
         </div>
-        <div className="bg-white/[0.03] rounded-lg p-2">
-          <p className="text-xs text-slate-500">Nubes</p>
-          <p className="text-sm font-medium text-slate-200">{nubes}</p>
+        <div className="bg-white/[0.03] rounded-lg p-2.5">
+          <p className="text-sm text-slate-500">Nubes</p>
+          <p className="text-base font-semibold text-slate-100">{nubes}</p>
         </div>
-        <div className="bg-white/[0.03] rounded-lg p-2">
-          <p className="text-xs text-slate-500">Visibilidad</p>
-          <p className="text-sm font-medium text-slate-200">{visibilidad}</p>
+        <div className="bg-white/[0.03] rounded-lg p-2.5">
+          <p className="text-sm text-slate-500">Visibilidad</p>
+          <p className="text-base font-semibold text-slate-100">{visibilidad}</p>
         </div>
       </div>
 
       {/* Desarrollo de nubes si aplica */}
       {desarrollo && analysis.development !== 'unknown' && (
-        <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
-          <Cloud className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
+          <Cloud className="w-4 h-4" />
           Nubes: {desarrollo.toLowerCase()}
         </div>
       )}
 
       {/* Precipitación visible */}
       {analysis.precipitation_visible && (
-        <div className="flex items-center gap-2 text-sm text-amber-400 mb-2">
-          <CloudRain className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-base text-amber-400 mb-2">
+          <CloudRain className="w-5 h-5" />
           Precipitación visible en el horizonte
         </div>
       )}
 
       {/* Pronóstico a corto plazo */}
       {analysis.forecast_hint && (
-        <div className="flex items-start gap-2 p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
-          <TrendingUp className="w-4 h-4 text-sky-400 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-sky-200">{analysis.forecast_hint}</p>
+        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20">
+          <TrendingUp className="w-5 h-5 text-sky-400 mt-0.5 flex-shrink-0" />
+          <p className="text-base text-sky-200 leading-relaxed">{analysis.forecast_hint}</p>
         </div>
       )}
 
@@ -197,10 +197,10 @@ export function SkyAnalysisCard() {
       {analysis.trend && (
         <div className="mt-3 p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{analysis.trend.icon}</span>
-            <span className="text-sm font-medium text-violet-200">{analysis.trend.summary}</span>
+            <span className="text-xl">{analysis.trend.icon}</span>
+            <span className="text-base font-medium text-violet-200">{analysis.trend.summary}</span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-3 text-sm text-slate-400">
             <span>Cobertura: {analysis.trend.coverage_icon} {analysis.trend.coverage_delta > 0 ? '+' : ''}{analysis.trend.coverage_delta}%</span>
             {analysis.trend.span_minutes > 0 && (
               <span>· últimos {analysis.trend.span_minutes} min</span>
@@ -226,8 +226,8 @@ export function SkyAnalysisCard() {
               : 'text-slate-400'
           }`} />
           <div>
-            <p className="text-sm">{validation.summary}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-base">{validation.summary}</p>
+            <p className="text-sm text-slate-500">
               Confianza: {Math.round((validation.confidence || 0) * 100)}%
             </p>
           </div>
@@ -235,8 +235,8 @@ export function SkyAnalysisCard() {
       )}
 
       {/* Pie */}
-      <p className="text-xs text-slate-600 mt-3 flex items-center gap-1">
-        <Eye className="w-3 h-3" />
+      <p className="text-sm text-slate-600 mt-3 flex items-center gap-1">
+        <Eye className="w-3.5 h-3.5" />
         Analizado por {analysis.provider === 'gemini' ? 'Gemini' : 'Claude'}
         {analysis.analyzed_at && ` · ${relativeTime(analysis.analyzed_at)}`}
       </p>

@@ -2019,11 +2019,16 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             gemini_model=settings.camera_analysis_model_gemini,
         )
         analysis_dict = analysis.to_dict()
-        _camera.save_analysis(analysis_dict)
         if analysis.error:
-            logger.warning("Análisis del cielo con error (%s): %s",
+            # NO se guarda: un fallo pasajero de la API (timeout, 503 del tier
+            # gratuito de Gemini) NO debe borrar el último análisis bueno. Si lo
+            # guardáramos, la tarjeta del dashboard se ocultaría hasta la próxima
+            # captura con éxito. Mejor dejar el anterior, que ya envejece solo con
+            # su marca de tiempo.
+            logger.warning("Análisis del cielo con error (%s): %s -- se conserva el anterior",
                            analysis.provider or "?", analysis.error)
         else:
+            _camera.save_analysis(analysis_dict)
             logger.info("Análisis del cielo (%s): %s, %d%% nubes",
                         analysis.provider, analysis.sky_condition, analysis.cloud_coverage_pct)
             # Evaluar alertas visuales (tormenta, precipitación visible, visibilidad)
