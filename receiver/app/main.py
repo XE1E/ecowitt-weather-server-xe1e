@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import platform
+import re
 import secrets
 import shutil
 from zoneinfo import ZoneInfo
@@ -59,6 +60,56 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# Redacción de credenciales en el log. httpx registra la URL completa de cada
+# petición saliente, así que el token de WAQI o el hash de AWEKAS acababan en
+# claro en el panel de Sistema --y de ahí a una captura o a un pegado de logs.
+_REDACT_PARAMS = (
+    "token", "key", "api_key", "apikey", "password", "passwd", "pwd",
+    "secret", "access_token", "auth", "passcode", "passkey", "id",
+)
+_REDACT_QUERY_RE = re.compile(
+    r"(?i)\b(" + "|".join(_REDACT_PARAMS) + r")=([^&\s;\"']+)"
+)
+# AWEKAS no usa un parámetro con nombre: manda "val=usuario;hash;fecha;..." y el
+# segundo campo ES la credencial.
+_REDACT_AWEKAS_RE = re.compile(r"(?i)(val=[^;&\s]*;)([^;&\s]+)")
+
+
+def _redact(text: str) -> str:
+    text = _REDACT_AWEKAS_RE.sub(r"\1<redacted>", text)
+    return _REDACT_QUERY_RE.sub(r"\1=<redacted>", text)
+
+
+class RedactingFilter(logging.Filter):
+    """Reescribe el mensaje ya formateado para que ningún handler vea el secreto.
+
+    Va en los handlers y no en el logger raíz: los registros que suben por
+    propagación desde un logger hijo (httpx, por ejemplo) no vuelven a pasar
+    por los filtros de los loggers ancestros, pero sí por los de cada handler.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:
+            return True
+        redacted = _redact(message)
+        if redacted != message:
+            record.msg = redacted
+            record.args = ()
+        return True
+
+
+def _install_redaction() -> None:
+    """Aplica el filtro a todos los handlers del raíz que aún no lo tengan."""
+    for handler in logging.getLogger().handlers:
+        if not any(isinstance(f, RedactingFilter) for f in handler.filters):
+            handler.addFilter(RedactingFilter())
+
+
+_install_redaction()
+
+
 # In-memory log buffer for admin panel
 class MemoryLogHandler(logging.Handler):
     def __init__(self, maxlen: int = 500):
@@ -97,6 +148,10 @@ try:
     logger.info("Log a archivo activo en %s/receiver.log", _log_dir)
 except Exception as _e:
     logger.warning("No se pudo iniciar el log a archivo: %s", _e)
+
+# Los handlers de memoria y de archivo se añadieron después de la primera
+# llamada, así que hay que volver a barrer para que también filtren.
+_install_redaction()
 
 # Initialize FastAPI app
 app = FastAPI(

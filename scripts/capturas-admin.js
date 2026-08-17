@@ -1,6 +1,17 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 
+// Credenciales por variable de entorno: este script vive en un repo publico.
+//   ADMIN_USER=xe1e ADMIN_PASSWORD=... node scripts/capturas-admin.js
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_USER || !ADMIN_PASSWORD) {
+  console.error('Falta ADMIN_USER o ADMIN_PASSWORD en el entorno.');
+  console.error('Uso: ADMIN_USER=xxx ADMIN_PASSWORD=yyy node scripts/capturas-admin.js');
+  process.exit(1);
+}
+
 (async () => {
   const adminPages = [
     { url: 'https://clima.xe1e.net/admin', name: 'admin-01-dashboard' },
@@ -34,8 +45,8 @@ const fs = require('fs');
   await page.waitForTimeout(1000);
 
   // Llenar formulario - inputs sin name/id, usar tipo
-  await page.fill('input[type="text"]', 'xe1e');
-  await page.fill('input[type="password"]', 'xe1vozxe1voz11');
+  await page.fill('input[type="text"]', ADMIN_USER);
+  await page.fill('input[type="password"]', ADMIN_PASSWORD);
   await page.click('button:has-text("Ingresar")');
 
   // Esperar navegación después del login
