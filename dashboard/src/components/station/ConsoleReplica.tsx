@@ -157,6 +157,35 @@ const MARES = [
   [-0.26, 0.44, 0.09],    // borde sur
   [0.32, 0.38, 0.08],     // cráter sur-este
   [-0.50, 0.24, 0.07],    // borde oeste bajo
+  // Segunda tanda: la luna se veía demasiado limpia entre mancha y mancha. Estas
+  // rellenan los huecos --sobre todo el limbo este y el sur, que estaban vacíos-- y
+  // suben la densidad sin tocar las grandes, que son las que dan la silueta
+  // reconocible. Todas caben dentro del disco: |centro| + radio se queda por debajo
+  // de 0.7, así que ninguna se recorta contra el borde.
+  [0.50, -0.34, 0.09],    // Mare Marginis (limbo noreste)
+  [0.52, 0.02, 0.08],     // Mare Smythii (limbo este)
+  [-0.06, 0.52, 0.10],    // entorno de Tycho (sur)
+  [0.20, 0.54, 0.07],     // cráter sur-este bajo
+  [-0.56, -0.04, 0.07],   // limbo oeste
+  [0.46, -0.48, 0.06],    // Mare Humboldtianum (noreste alto)
+  [-0.20, -0.06, 0.09],   // Mare Insularum (centro-oeste)
+  [0.18, -0.16, 0.08],    // Sinus Medii
+  [-0.44, 0.38, 0.07],    // Mare Humorum (suroeste)
+  [0.06, -0.62, 0.06],    // Mare Frigoris (norte)
+  // Tercera tanda: el LIMBO, dando la vuelta completa. Sin nada aquí el disco se leía
+  // como una moneda manchada en el centro y limpia en el canto; con manchas hasta el
+  // borde --y con el escorzo que les aplica `mares`-- se lee como una bola.
+  // A radio ~0.82 y no ~0.70: a 0.70 quedaba un anillo liso de casi un cuarto del radio
+  // en todo el canto y el efecto se perdía. Con el escorzo aplicado llegan a 0.86, así
+  // que siguen dentro del disco sin tocar el degradado del limbo.
+  [0.00, -0.82, 0.07],    // norte
+  [0.60, -0.56, 0.07],    // noreste
+  [0.82, 0.06, 0.07],     // este
+  [0.58, 0.58, 0.07],     // sureste
+  [0.02, 0.82, 0.07],     // sur
+  [-0.56, 0.60, 0.07],    // suroeste
+  [-0.82, 0.04, 0.07],    // oeste
+  [-0.60, -0.56, 0.07],   // noroeste
 ] as const
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
@@ -190,9 +219,28 @@ function MoonGlyph({ size = 42, illum, waxing }:
   const oscura = ilum < 1
   // Las manchas, a la opacidad que se le pida. La misma función para las dos caras: lo
   // ÚNICO que cambia entre ellas es cuánto se marcan.
-  const mares = (op: number) => MARES.map(([cx, cy, r], i) => (
-    <circle key={i} cx={cx * R} cy={cy * R} r={r * R} fill={`rgba(0,0,0,${op})`} />
-  ))
+  // ESCORZO ESFÉRICO. Una mancha cerca del limbo no se ve más pequeña: se ve aplastada
+  // EN LA DIRECCIÓN RADIAL, porque ahí la superficie se aleja girando. Dibujarlas como
+  // círculos las convertía en pegatinas sobre un disco plano, y es justo lo que delata
+  // que no es una esfera.
+  //
+  // Para cada mancha: `d` es su distancia al centro (0 en medio, 1 en el limbo) y el
+  // factor de compresión es sqrt(1 - d²), que es la proyección de una esfera sobre el
+  // plano. Se aplica al semieje RADIAL (rx) y se deja intacto el tangencial (ry), con
+  // la elipse girada para que su eje x apunte al centro.
+  //
+  // Suelo de 0.25: en el borde el factor tiende a cero y la mancha se volvería una
+  // raya invisible. Con el suelo se sigue notando que hay algo, que es lo que se quiere.
+  const mares = (op: number) => MARES.map(([cx, cy, r], i) => {
+    const d = Math.min(1, Math.hypot(cx, cy))
+    const k = Math.max(0.25, Math.sqrt(1 - d * d))
+    const ang = (Math.atan2(cy, cx) * 180) / Math.PI
+    return (
+      <ellipse key={i} cx={cx * R} cy={cy * R} rx={k * r * R} ry={r * R}
+        transform={`rotate(${ang} ${cx * R} ${cy * R})`}
+        fill={`rgba(0,0,0,${op})`} />
+    )
+  })
   return (
     // flexShrink 0: sin él, en una fila que se pasa de ancho flex encoge el disco en vez
     // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
@@ -267,13 +315,18 @@ function MoonGlyph({ size = 42, illum, waxing }:
       {/* Manchas de la CARA EN SOMBRA. Antes iban recortadas a la parte iluminada y la
           sombra quedaba lisa; ahora las llevan las dos, que es lo que se ve en el cielo
           --el disco entero está manchado, no sólo lo que le da el sol--.
-          Se marcan MÁS que las de la luz (0.35 contra 0.28) por dos razones: el gris de la
+          Se marcan MÁS que las de la luz (0.52 contra 0.44) por dos razones: el gris de la
           sombra tiene menos recorrido hasta el negro que el amarillo de la luz, y el panel
           del kiosco aplasta los tonos oscuros (ver la nota del fondo de las celdas en
           `console-css.ts`), así que una diferencia fina ahí no llega a verse. Van sobre el
           disco COMPLETO, no sobre la sombra recortada: la cara iluminada las tapa después
-          con su propio relleno, y así no hay que construir un segundo recorte. */}
-      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.35)}</g>
+          con su propio relleno, y así no hay que construir un segundo recorte.
+
+          Las opacidades subieron desde 0.35/0.28: con el desenfoque encima y el aplastado
+          de tonos del panel, a esos valores las manchas apenas se distinguían del disco
+          liso. Se mantiene la diferencia relativa entre las dos caras, que es lo que hace
+          que el relieve case a los lados del terminador. */}
+      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(0.52)}</g>
       {!oscura && <path d={litPath} fill={`url(#luz-${uid})`} />}
       {/* Manchas de la CARA ILUMINADA, recortadas a ella. Al usar la misma lista que la
           capa de la sombra, cada mancha continúa al otro lado del terminador: es la misma
