@@ -2,12 +2,17 @@
 
 > Escrito el 2026-08-16. Vive en git.
 >
-> **Estado:** propuesta. No hay nada construido ni comprado. El lado del servidor
-> tampoco está hecho: el parser sólo conoce los campos de lluvia estándar de Ecowitt
-> (`receiver/app/services/parser.py:46-54`) y no maneja ningún sensor propio.
+> **Estado:** fase 1 lista para ejecutar en cuanto llegue el piezo. El firmware de
+> caracterización está escrito y **compilado** (`firmware/piezo-test/`); falta el
+> hardware. El lado del servidor no está hecho: el parser sólo conoce los campos de
+> lluvia estándar de Ecowitt (`receiver/app/services/parser.py:46-54`) y no maneja
+> ningún sensor propio.
 >
 > **Decidido:** desarrollo propio, alimentado de la red, con **fusión de dos sensores**
 > (piezo + capacitivo). Ver *Decisión final*.
+>
+> **Siguiente paso concreto:** comprar la lista de *Fase 1 — banco de pruebas* y correr
+> el sketch. Todo lo que hace falta para eso está en este documento.
 
 ## Objetivo
 
@@ -212,10 +217,13 @@ oscuras y balancín a cero— para saber si la discriminación del rocío funcio
 
 Ordenadas para que lo más incierto y barato vaya primero.
 
-- [ ] **1. Piezo en el escritorio.** ESP32 y un cuentagotas, a ver qué señal da una gota
-      y si se distingue de un golpe en la mesa. Es la parte con más incertidumbre de
-      todo el plan y la más barata de descartar; si el piezo no discrimina, el diseño
-      cambia y mejor saberlo antes de pedir PCBs.
+- [x] **1a. Firmware de caracterización escrito** (2026-08-16). `firmware/piezo-test/`,
+      compilado sin warnings para `esp32dev` y `esp32-s3-devkitc-1` con arduino-esp32
+      3.3.9 (RAM 7.2 %, flash 23.1 %). Detalle en *Fase 1 — banco de pruebas*.
+- [ ] **1b. Piezo en el escritorio.** ESP32 y un cuentagotas, a ver qué señal da una
+      gota y si se distingue de un golpe en la mesa. Es la parte con más incertidumbre
+      de todo el plan y la más barata de descartar; si el piezo no discrimina, el
+      diseño cambia y mejor saberlo antes de pedir PCBs. **Bloqueado: falta el piezo.**
 - [ ] **2. Prueba de POST.** Un ESP32 mandando un JSON fijo al VPS, para descartar lo de
       Cloudflare antes de invertir en hardware.
 - [ ] **3. Placa capacitiva.** Empezar con el periférico táctil del ESP32-S3, que ya se
@@ -228,6 +236,104 @@ Ordenadas para que lo más incierto y barato vaya primero.
 - [ ] **7. Alerta de "empezó a llover"**, sólo cuando haya semanas de datos que digan
       que no da falsos positivos. Una alerta que se equivoca se silencia y ya no vuelve
       a servir para nada.
+
+## Fase 1 — banco de pruebas del piezo
+
+Todo lo necesario para ejecutarla está aquí. El firmware ya existe; falta comprar
+cuatro cosas y sentarse una tarde.
+
+### Qué comprar
+
+| Pieza | Cant. | Nota |
+|---|---|---|
+| Disco piezo (~27–35 mm, con cables) | 3–5 | Cuestan céntimos. Compra varios: se despegan y se rompen los cables. |
+| Resistencia 100 kΩ | 2 | Divisor de polarización |
+| Resistencia 1 MΩ | 1 | Descarga del piezo |
+| Resistencia 1 kΩ | 1 | Limita la corriente por los diodos |
+| Diodo **Schottky** (BAT85, BAT43, 1N5819) | 2 | **No 1N4148** — ver abajo |
+| Placa de ESP32 | 1 | Cualquiera sirve; probablemente ya haya una |
+| Protoboard, cables, cianoacrilato | — | |
+| Cuentagotas o jeringa | 1 | Para dosificar gotas repetibles |
+| Retal rígido (acrílico, PCB, chapa) | 1 | Donde pegar el piezo |
+
+### Circuito
+
+El piezo se polariza a **media alimentación** para ver los dos semiciclos. Colgado
+directo a masa se recortan los negativos, que es justo donde vive el campaneo — la
+señal que sirve para discriminar.
+
+```
+                     3V3
+                      |
+                    [100k]
+                      |
+  piezo(+) --[1k]--+--+--+------> pin ADC
+                   |     |
+                 [1M]  [100k]
+                   |     |
+  piezo(-) --------+-----+------> GND
+
+  Ademas, dos SCHOTTKY de proteccion en el pin ADC:
+    - anodo al pin,  catodo a 3V3
+    - anodo a GND,   catodo al pin
+```
+
+**Los diodos no son opcionales.** Un piezo golpeado con fuerza genera picos de decenas
+de voltios y el ADC del ESP32 aguanta 3.3. Y que sean Schottky y no 1N4148: los
+0.2–0.3 V de caída dejan el pin dentro de rango, mientras que los 0.7 V del 1N4148 lo
+meten en negativo, fuera de especificación.
+
+Pega el piezo con cianoacrilato a la cara de **abajo** del retal rígido. Si lo montas
+sobre algo blando, el material absorbe el impacto y no se ve nada.
+
+Pin por defecto: **GPIO34** en ESP32 clásico, **GPIO4** en ESP32-S3. Tiene que ser de
+ADC1; el ADC2 se pelea con el WiFi, que aquí no se usa pero conviene coger la costumbre.
+
+### El sketch
+
+`firmware/piezo-test/piezo-test.ino`, salida por serie a **115200**.
+
+No es el detector: no decide nada, sólo mide y enseña. De cada impacto saca la
+**amplitud de pico** y la **duración del campaneo**, y sabe volcar la forma de onda
+completa en CSV.
+
+Comandos, una tecla por el monitor serie:
+
+| | |
+|---|---|
+| `c` | recalibrar línea base y suelo de ruido (en silencio) |
+| `w` | volcar en CSV la onda del **próximo** impacto, con contexto previo |
+| `r` | reiniciar estadísticas |
+| `+` / `-` | subir o bajar el umbral |
+| `?` | ayuda y estado |
+
+### Protocolo de la prueba
+
+1. Enciende **en silencio** y deja que calibre. Anota el suelo de ruido: si sale muy
+   alto, hay algo mal en el montaje antes de seguir.
+2. Comprueba que la línea base ronda las **2048 cuentas** (~1.65 V). Si está pegada a
+   un extremo, el divisor de 100 k no está bien; el sketch te lo avisa solo.
+3. **20 gotas** con el cuentagotas desde ~30 cm. Anota pico y campaneo de cada una.
+4. **20 golpes suaves** en la mesa. Anota lo mismo.
+5. Con `w`, saca la onda de una gota y la de un golpe.
+
+### Criterio de aceptación
+
+**Si las dos nubes de valores no se solapan, el diseño sale adelante.**
+
+Si se solapan en amplitud, mira el campaneo antes de dar nada por perdido: lo normal es
+que una gota dé un impulso corto y seco y un golpe resuene bastante más, así que separan
+aunque los picos se parezcan. Y si tampoco separa, compara las ondas de `w` — puede que
+la diferencia esté en la forma y baste con un filtro.
+
+Sólo si nada de eso discrimina hay que replantear, y entonces el camino sería el
+capacitivo en solitario con lógica de secado, o rendirse y comprar el RG-11.
+
+### Qué anotar para la fase siguiente
+
+El suelo de ruido y el umbral que acabe funcionando, el rango de picos de una gota, y
+el campaneo típico de gota frente a golpe. Esos cuatro números son los que fijan los
+umbrales de la máquina de estados y evitan tener que repetir la caracterización.
 
 ## Coste
 
