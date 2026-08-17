@@ -147,60 +147,59 @@ const OP_MARES = 0.78
 // dibujan DOS capas, la de la cara iluminada y la de la sombra, y las dos tienen que
 // usar la misma lista o el relieve no coincidiría a los lados del terminador.
 const MARES: readonly (readonly [number, number, number, number])[] = [
-  // MARES GRANDES, a peso 1: son los que tienen que salir CASI NEGROS. Cada uno es un
-  // RACIMO de dos o tres círculos solapados en vez de uno solo. Con el desenfoque
-  // encima, los círculos se funden y el borde queda irregular; un círculo suelto, por
-  // grande que sea, se lee como un lunar y no como un mar.
-  // -- Mare Imbrium (noroeste), el más reconocible de la cara visible
-  [-0.34, -0.32, 0.24, 1.00],
-  [-0.20, -0.40, 0.16, 1.00],
-  [-0.44, -0.18, 0.15, 1.00],
-  // -- Oceanus Procellarum (oeste), alargado de norte a sur
-  [-0.50, 0.04, 0.19, 0.95],
-  [-0.44, -0.06, 0.16, 0.95],
-  [-0.46, 0.20, 0.15, 0.95],
-  // -- Mare Serenitatis (norte centro)
-  [0.06, -0.42, 0.17, 1.00],
-  [0.15, -0.34, 0.12, 1.00],
-  // -- Mare Tranquillitatis (centro este)
-  [0.22, -0.16, 0.18, 1.00],
-  [0.30, -0.06, 0.13, 1.00],
-  // -- Mare Crisium. MOVIDO AL ESTE a propósito: los mares grandes caían todos en la
-  //    mitad oeste y en cuarto creciente la cara iluminada se quedaba sin un solo
-  //    rasgo gordo, sólo motas. Con Crisium aquí, cualquier fase enseña algo con peso.
-  [0.54, -0.24, 0.17, 1.00],
-  [0.60, -0.15, 0.11, 0.90],
-  // -- Mare Nubium / Humorum (suroeste)
-  [-0.24, 0.32, 0.16, 0.90],
-  [-0.36, 0.38, 0.12, 0.85],
-  // -- Mare Fecunditatis (este) y Nectaris (sureste)
-  [0.42, 0.14, 0.15, 0.90],
-  [0.22, 0.32, 0.12, 0.85],
-  // -- Mare Frigoris (norte), que en la Luna es un arco largo y estrecho
-  [-0.08, -0.56, 0.10, 0.70],
-  [0.14, -0.52, 0.09, 0.70],
+  // UNA SOLA MASA CONECTADA del noroeste al centro, no un anillo. En la Luna real los
+  // mares no rodean el disco: se apinan arriba y a la izquierda, y todo el sur es
+  // tierra alta clara. El primer intento los repartio en corro alrededor del centro y
+  // el resultado fue un donut negro con el medio claro, que no se parece a nada.
+  //
+  // Los circulos van MUY solapados a proposito --se pisan casi la mitad-- porque lo que
+  // se busca es que se fundan en una mancha de borde irregular. Separados, y con el
+  // desenfoque pequeno que pide el detalle fino, se cuentan uno a uno y parecen lunares.
+  [-0.30, -0.30, 0.26, 1.00],
+  [-0.22, -0.24, 0.18, 1.00],
+  [-0.14, -0.36, 0.20, 1.00],
+  [0.02, -0.28, 0.18, 0.95],
+  [0.15, -0.19, 0.16, 0.95],
+  [-0.40, -0.10, 0.20, 0.95],
+  [-0.15, -0.13, 0.18, 0.95],
+  [-0.32, 0.07, 0.18, 0.90],
+  [-0.01, -0.07, 0.15, 0.90],
 
-  // TIERRAS ALTAS: manchas amplias y FLOJAS (peso 0.3-0.45). No son cráteres, son la
-  // variación suave del terreno. Van grandes a propósito: a radio pequeño y peso alto
-  // es cuando el disco parece picado de viruelas, que es justo lo que hay que evitar.
-  [0.02, 0.02, 0.11, 0.40],
-  [-0.14, 0.08, 0.09, 0.35],
-  [0.36, -0.36, 0.10, 0.45],
-  [-0.06, 0.50, 0.12, 0.45],
-  [0.30, 0.44, 0.10, 0.40],
-  [-0.30, 0.10, 0.08, 0.30],
+  // Mare Crisium, al ESTE y aislado del resto, como en la Luna. Es el que garantiza
+  // que un cuarto creciente ensene un rasgo con peso y no solo motas.
+  [0.52, -0.26, 0.15, 1.00],
+  [0.58, -0.17, 0.10, 0.95],
 
-  // LIMBO, dando la vuelta completa. Anchas y muy flojas: aquí sólo hacen falta para
-  // que el canto no se vea liso y el disco se lea como bola. Con el escorzo quedan
-  // comprimidas contra el borde, que es lo que hace el efecto.
-  [0.00, -0.80, 0.12, 0.30],
-  [0.62, -0.52, 0.11, 0.30],
-  [0.80, 0.10, 0.11, 0.30],
-  [0.56, 0.58, 0.11, 0.30],
-  [0.04, 0.80, 0.12, 0.30],
-  [-0.58, 0.58, 0.11, 0.30],
-  [-0.80, 0.06, 0.11, 0.30],
-  [-0.62, -0.54, 0.11, 0.30],
+  // Mares medianos: Fecunditatis y Nectaris al sureste, Nubium al sur. Mas flojos que
+  // los grandes --la Luna tampoco los tiene igual de oscuros-- y sin llegar a tocarse
+  // con la masa principal.
+  [0.34, 0.10, 0.13, 0.80],
+  [0.20, 0.26, 0.11, 0.75],
+  [-0.18, 0.30, 0.14, 0.80],
+  [-0.28, 0.24, 0.11, 0.75],
+
+  // Mare Frigoris: en la Luna es un arco largo y estrecho pegado al norte.
+  [-0.06, -0.54, 0.09, 0.60],
+  [0.12, -0.50, 0.08, 0.55],
+
+  // TIERRAS ALTAS: anchas y flojas. Son variacion suave del terreno, no crateres; a
+  // radio pequeno y peso alto es cuando el disco parece picado de viruelas.
+  [0.30, -0.42, 0.11, 0.35],
+  [0.40, 0.34, 0.11, 0.32],
+  [0.06, 0.44, 0.12, 0.35],
+  [-0.44, 0.36, 0.10, 0.32],
+  [0.14, 0.06, 0.10, 0.28],
+
+  // LIMBO, la vuelta completa. Solo para que el canto no se vea liso y el disco se lea
+  // como bola; el escorzo las comprime contra el borde.
+  [0.00, -0.80, 0.12, 0.28],
+  [0.62, -0.52, 0.11, 0.28],
+  [0.80, 0.10, 0.11, 0.28],
+  [0.56, 0.58, 0.11, 0.28],
+  [0.04, 0.80, 0.12, 0.28],
+  [-0.58, 0.58, 0.11, 0.28],
+  [-0.80, 0.06, 0.11, 0.28],
+  [-0.62, -0.54, 0.11, 0.28],
 ] as const
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
@@ -323,13 +322,15 @@ function MoonGlyph({ size = 42, illum, waxing }:
             El desenfoque va antes del recorte --SVG aplica el filtro y LUEGO el
             clip-path-- así que no se sale del disco ni cruza el terminador. */}
         <filter id={`difu-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
-          {/* 0.024 y no 0.035: a 64 px de disco el sigma salía 1.1 px y las manchas
-              chicas miden 2 px de radio, así que el desenfoque se las comía --medido
-              sobre el render: la cara iluminada, que en cuarto sólo contiene manchas
-              pequeñas, quedaba con un tercio del contraste de la oscura--. A 0.024 el
-              sigma baja a 0.77 px: siguen viéndose suaves, que es lo que se le pide, y
-              las pequeñas sobreviven. */}
-          <feGaussianBlur stdDeviation={0.024 * R} />
+          {/* El desenfoque hace DOS trabajos y hay que servir a los dos. Tiene que fundir
+              los círculos solapados de un mismo mar --si no, se cuentan uno a uno y
+              parecen lunares-- sin llegar a disolver las manchas más chicas.
+              Estuvo en 0.035 (sigma 1.1 px a 64 px de disco) y se bajó a 0.024 porque
+              entonces había manchas de radio 0.06, o sea 2 px, y se las comía. Ya no las
+              hay: la más pequeña es 0.08. Así que vuelve a subir, a 0.05 (sigma 1.6 px),
+              que es lo que hace falta para que un racimo se lea como una sola mancha de
+              borde irregular. */}
+          <feGaussianBlur stdDeviation={0.05 * R} />
         </filter>
       </defs>
       {/* La parte en sombra, en gris cálido y no en el casi negro de antes (#1b1b1b): sobre
