@@ -795,9 +795,15 @@ const PS_M = 18
 // punta arranca en y=21 (borde de abajo del riel), o sea que necesita hasta y=34.
 // Los 2 px de más se los come el aire de en medio de la celda, no el margen
 // inferior (que sigue en `bottom: 4`).
-// +10 para el renglón de min/max del día arriba del riel.
-const PS_H = 30
-const PS_TOP = 10  // espacio arriba para min/max
+// +12 para el renglón de min/max del día arriba del riel.
+//
+// 32 y no 30: el min/max subió de 12 a 14 px y a 12 de margen ya no cabía. Con la
+// línea base en PS_TOP-1 y una altura de mayúscula de ~0.72 em, 14 px necesitan
+// llegar hasta y≈0.9; con PS_TOP=10 el número se salía por arriba del viewBox y
+// Chromium lo recortaba. Los 2 px se añaden ARRIBA (PS_TOP) y el alto total los
+// acompaña para que el renglón de cifras de abajo no se salga por el otro lado.
+const PS_H = 32
+const PS_TOP = 12  // espacio arriba para min/max
 
 function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
   delta: number | null; endLabel: string; imperial: boolean; minDay?: number | null; maxDay?: number | null
@@ -823,14 +829,16 @@ function PressureScale({ delta, endLabel, imperial, minDay, maxDay }: {
   }
   return (
     <svg width="100%" height={PS_H} viewBox={`0 0 ${PS_W} ${PS_H}`} fill="none">
-      {/* Min/max del día en amarillo arriba del riel */}
+      {/* Min/max del día en amarillo arriba del riel. A 14 y no 12: son dos lecturas
+          de pleno derecho --la horquilla del día-- y al tamaño anterior se leían como
+          una nota al pie. El alto del viewBox va con ellas, ver PS_H. */}
       {minDay != null && (
-        <text x={x0} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="start">
+        <text x={x0} y={PS_TOP - 1} fill="#facc15" fontSize="14" fontWeight="700" textAnchor="start">
           {imperial ? (minDay * 0.0295299830714).toFixed(2) : minDay.toFixed(1)}
         </text>
       )}
       {maxDay != null && (
-        <text x={x1} y={PS_TOP - 1} fill="#facc15" fontSize="12" fontWeight="700" textAnchor="end">
+        <text x={x1} y={PS_TOP - 1} fill="#facc15" fontSize="14" fontWeight="700" textAnchor="end">
           {imperial ? (maxDay * 0.0295299830714).toFixed(2) : maxDay.toFixed(1)}
         </text>
       )}
@@ -1912,7 +1920,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             </div>
             {(data?.humidex != null || humidexDeAyer) && (
               <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 3, whiteSpace: 'nowrap',
-                                          color: humidexDeAyer ? '#fff' : 'var(--w)' }}>
+                                          color: humidexDeAyer ? 'var(--red)' : 'var(--w)' }}>
                 {humidexDeAyer ? 'MÁXIMO' : humidexLabel(data!.humidex as number).toUpperCase()}
               </div>
             )}
@@ -2190,8 +2198,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             {/* La unidad DEBAJO, como el km/h del óvalo: en línea se comía el ancho que
                 necesitan las cuatro cifras del caso peor. De noche este renglón es el que
                 dice "MÁXIMO", también en blanco: rótulo y cifra van juntos. */}
+            {/* El rótulo MÁXIMO va en ROJO --`--red`, no `--alarma`, que está reservado a
+                los avisos-- mientras la cifra sigue en blanco. Son dos trabajos distintos:
+                el blanco de la cifra dice "esto no es una lectura viva" quedándose fuera de
+                la rampa de la celda, y el rojo del rótulo llama la atención sobre por qué.
+                Mismo criterio en UV y HUMIDEX. */}
             <div className="u" style={{ fontSize: 14, lineHeight: 1, marginTop: 2,
-                                        color: solarDeNoche ? '#fff' : 'var(--w)' }}>
+                                        color: solarDeNoche ? 'var(--red)' : 'var(--w)' }}>
               {solarDeNoche ? 'MÁXIMO' : 'W/m²'}
             </div>
             {/* Barra al pie con `marginTop: auto`, que se come el aire sobrante y la pega
@@ -2242,7 +2255,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 la cifra. "MÁXIMO" mide ~55 px a cuerpo 13 y el interior de esta celda son 68,
                 así que entra igual que "MODERADO", que es el caso peor de los niveles. */}
             {uvDeNoche ? (
-              <div className="u" style={{ fontSize: 13, color: '#fff', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
+              <div className="u" style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1, marginTop: 2, whiteSpace: 'nowrap' }}>
                 MÁXIMO
               </div>
             ) : data?.uv_index != null && (
