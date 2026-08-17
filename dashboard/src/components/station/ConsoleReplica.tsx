@@ -2027,10 +2027,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               {data?.humidex != null ? decNum(data.humidex.toFixed(1))
                 : humidexDeAyer ? decNum((humidexMaxDia as number).toFixed(1)) : '--'}
             </div>
+            {/* Mismo trato que el MÁXIMO de SOLAR y UV: negrita y 2 px más abajo. El
+                desplazamiento va en los dos estados --también cuando muestra el nivel en
+                palabras-- para que el rótulo no salte de sitio al conmutar. */}
             {(data?.humidex != null || humidexDeAyer) && (
-              {/* Mismo trato que el MÁXIMO de SOLAR y UV: negrita y 2 px más abajo. El
-                  desplazamiento va en los dos estados --también cuando muestra el nivel en
-                  palabras-- para que el rótulo no salte de sitio al conmutar. */}
               <div className="u" style={{ fontSize: 12, lineHeight: 1, marginTop: 5, whiteSpace: 'nowrap',
                                           fontWeight: humidexDeAyer ? 800 : undefined,
                                           color: humidexDeAyer ? 'var(--alarma)' : 'var(--w)' }}>
