@@ -31,6 +31,13 @@ WIDTH = int(os.environ.get("KIOSK_WIDTH", "1024"))
 HEIGHT = int(os.environ.get("KIOSK_HEIGHT", "600"))
 CACHE_TTL = float(os.environ.get("CACHE_TTL", "45"))              # segundos, por defecto
 READY_TIMEOUT_MS = float(os.environ.get("READY_TIMEOUT_MS", "15000"))
+# TTL de una captura hecha SIN que la página llegara a "ready". Corto a propósito:
+# esa imagen lleva placeholders, y con el TTL normal se quedaba pegada en el display
+# los 45 s completos --el sintoma de "tras un deploy la primera pantalla sale en
+# ceros y al refrescar ya va bien"--. Con esto se corrige sola en la siguiente
+# petición. No baja de 5 s para no dejar al renderer redibujando sin parar si los
+# datos están caídos de verdad.
+NOT_READY_TTL = float(os.environ.get("NOT_READY_TTL", "10"))
 JPEG_QUALITY = int(os.environ.get("JPEG_QUALITY", "80"))
 GOTO_RETRIES = int(os.environ.get("GOTO_RETRIES", "3"))           # reintentos de page.goto
 
@@ -168,6 +175,7 @@ async def _render(page_num: str) -> tuple[bytes, str, float]:
                 await asyncio.sleep(1.5 * (attempt + 1))
         if last_err is not None:
             raise last_err
+        listo = True
         try:
             # La página avisa cuándo tiene datos y es seguro capturar.
             await page.wait_for_selector(
@@ -175,8 +183,12 @@ async def _render(page_num: str) -> tuple[bytes, str, float]:
             )
         except Exception:
             # Si no llega a "ready" (datos caídos), capturamos igual para no
-            # dejar al display en negro; mostrará placeholders "--".
-            pass
+            # dejar al display en negro; mostrará placeholders "--". Pero la
+            # imagen se marca como provisional para que caduque enseguida: ver
+            # NOT_READY_TTL.
+            listo = False
+            print(f"[render] pagina {page_num} capturada SIN ready; "
+                  f"ttl recortado a {NOT_READY_TTL}s", flush=True)
 
         # Zonas táctiles y TTL, leídos DESPUÉS del ready: hasta ese momento el layout
         # puede moverse --llega un dato y una cifra cambia de ancho-- y las medidas
@@ -193,6 +205,11 @@ async def _render(page_num: str) -> tuple[bytes, str, float]:
                     ttl = max(5.0, float(crudo))
         except Exception as e:
             print(f"[render] sin mapa de zonas en {page_num}: {e}", flush=True)
+
+        # Una captura sin datos no puede heredar el TTL largo de la página: es
+        # provisional y tiene que dejar sitio al primer render bueno.
+        if not listo:
+            ttl = max(5.0, min(ttl, NOT_READY_TTL))
 
         img = await page.screenshot(
             type="jpeg",
