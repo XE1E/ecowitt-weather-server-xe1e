@@ -46,12 +46,19 @@ const CRUDOS: Record<string, string> = {
  *   · barometer   aro de 3 → r=38.5 en (64,64) llega a 24..104
  *   · thermometer cristal de 2 → 50..78 y 31..97
  *   · windsock    trazo de 1 (el de por defecto) → medio píxel
- *   · humidity y raindrops son macizos, sin trazo: su caja no cambia
+ *   · humidity es macizo, sin trazo: su caja no cambia
+ *   · raindrops YA NO es sólo macizo. En modo `outline` lleva un trazo de 6, que se
+ *     sale 3 unidades por cada lado de la geometría, así que su caja pasa de la
+ *     medida cruda (34,32,62,65) a llevar esos 3 sumados: (31,29,68,71). Se deja
+ *     igual en las dos variantes para que el icono no dé un salto de tamaño al
+ *     conmutar entre hueco y macizo; al macizo sólo le añade un poco de aire.
+ *     Sin esto, el contorno salía recortado por la izquierda y por abajo --visible
+ *     en el render, no teórico--.
  */
 const TINTA: Record<string, [number, number, number, number]> = {
   thermometer: [50, 31, 28, 66],
   humidity: [44, 32, 42, 65],
-  raindrops: [34, 32, 62, 65],
+  raindrops: [31, 29, 68, 71],
   barometer: [24, 24, 80, 80],
   windsock: [41.5, 29.5, 47, 67],
   'clear-day': [0, 0, 128, 128],   // este ya llena su lienzo

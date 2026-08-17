@@ -1873,8 +1873,14 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               cayendo agua. Cuando el detector esté en marcha, esta condición pasa a ser
               él --con el `precipitation_visible` de la cámara como apoyo-- y este es el
               único punto que hay que tocar. Ver docs/internal/PLAN-DETECTOR-LLUVIA.md. */}
-          <div style={{ position: 'absolute', top: 16, left: 12, overflow: 'visible' }}>
-            <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')}
+          {/* 48 y no 44, y a 10/14 en vez de 12/16: la caja de tinta de `raindrops` creció
+              6 unidades en cada eje para dejarle sitio al trazo del contorno (ver TINTA en
+              MeteoGlyph). A igualdad de `size` eso encogería el dibujo un 8 %, así que el
+              tamaño sube en la misma proporción --48/71 = 44/65-- y el sitio se corre 2 px
+              arriba y a la izquierda, que son las 3 unidades de aire nuevas. Resultado: las
+              gotas se ven exactamente donde y como estaban, pero sin recortarse. */}
+          <div style={{ position: 'absolute', top: 14, left: 10, overflow: 'visible' }}>
+            <MeteoGlyph name="raindrops" size={48} color={alertaCol('lluvia', '#38bdf8')}
               title={lloviendo ? 'lluvia' : 'sin lluvia'} outline={!lloviendo} />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
