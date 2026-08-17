@@ -106,6 +106,25 @@ Se reportan **dos booleanos**, no uno, porque son dos hechos distintos y ambos s
 
 Valores de partida, a ajustar en campo: `N = 3` impactos, `T = 60 s`, `T_fin = 5 min`.
 
+### Alternativas al piezo que se consideraron
+
+El piezo no es la única forma de detectar el impacto de una gota. Se descartaron éstas,
+y conviene dejar escrito por qué para no volver a recorrer el camino.
+
+| Vía | Veredicto |
+|---|---|
+| **Micrófono MEMS** (INMP441 por I²S) | Es la idea del disdrómetro acústico y sale digital, sin electrónica analógica ni diodos de protección. **Descartado:** un micro oye *todo* el barrio —tráfico, perros, truenos, voces—, mientras que un piezo pegado a una placa sólo oye lo que toca la placa. Esa sordera selectiva es precisamente lo que hace útil al piezo. |
+| **Acelerómetro MEMS** (ADXL345, LIS3DH) | **Plan B real.** Mide lo mismo —impulso mecánico— pero digital, sin acondicionamiento analógico, y algunos traen detección de *tap* por hardware con interrupción, que ahorraría el muestreo continuo. En contra: menos ancho de banda que un piezo, así que puede que no capte bien el flanco de una gota, y cuesta más. Si el frente analógico del piezo da guerra, éste es el sustituto. |
+| **Óptico: LED IR + fotodiodo** | Físicamente **la mejor opción**: sin contacto, sin persistencia de humedad, inmune a la vibración. Es lo que hace el RG-11 por dentro. **Descartado por dificultad:** hace falta óptica, modulación para rechazar la luz ambiente y resolver la condensación sobre la ventana. Es un proyecto en sí mismo. |
+| **Térmico: termistor autocalentado** | Una gota enfría el elemento y eso se detecta. Funciona —se usa en sensores de humectación foliar— pero es lento, consume calentando todo el rato, y el viento y la temperatura ambiente lo confunden. |
+| **Cazoletas más finas** | Reducir el paso del balancín es seguir teniendo un volumen mínimo. No cierra el hueco, sólo lo hace más pequeño. |
+| **Pesada con celda de carga** | La **otra forma de verdad** de cerrar el mismo hueco: un colector sobre una celda de carga detecta acumulaciones muy por debajo de lo que vuelca un balancín, y además *mide* en vez de detectar. Descartado por coste y complejidad —deriva, viento, evaporación— pero es honesto reconocer que resolvería el problema original mejor que un detector booleano. |
+
+**Conclusión:** el piezo gana por coste y sencillez, no por ser el único camino. Su
+ventaja estructural sobre las alternativas baratas es que, al estar acoplado
+mecánicamente sólo a la placa, ignora el ruido acústico del entorno sin tener que
+filtrarlo.
+
 ### Las dos cosas que lo hacen "funcionar solo"
 
 **Línea base autocalibrante.** La capacitancia en seco cambia con la temperatura, la
@@ -360,6 +379,52 @@ El tamaño de piezo elegido, el suelo de ruido y el umbral que acabe funcionando
 rango de picos de una gota, y el campaneo típico de gota frente a golpe. Esos números
 son los que fijan los umbrales de la máquina de estados y evitan tener que repetir la
 caracterización más adelante.
+
+## Cómo se mide la placa capacitiva: táctil del ESP32 o FDC1004
+
+Dos formas, y el orden importa: **empezar por la gratis**.
+
+### v1 — periférico táctil del ESP32
+
+El ESP32 mide capacitancia contando tiempos de carga y descarga. No cuesta nada, ya se
+maneja, y sirve de sobra para validar que la idea funciona. Su punto flaco es la
+**deriva**: la lectura se mueve con la temperatura y con la alimentación, y a la
+intemperie en CDMX, con el salto que hay entre el mediodía y la madrugada, es de
+esperar que se note. La línea base autocalibrante existe justamente para absorber eso;
+la pregunta es si le basta.
+
+### v2 — FDC1004, si la deriva molesta
+
+Conversor de capacitancia a digital de Texas Instruments, por I²C.
+
+| | |
+|---|---|
+| Canales | 4 |
+| Resolución | 0.5 fF (24 bits) |
+| Rango | ±15 pF por canal |
+| Offset (CAPDAC) | hasta 100 pF |
+| Muestreo | 100 / 200 / 400 por segundo |
+| Alimentación | 3.3 V, 750 µA activo |
+| Temperatura | −40 a 125 °C |
+
+Dos características suyas resuelven problemas concretos de este montaje:
+
+- **CAPDAC.** La placa tendrá decenas de pF en reposo y lo que interesa es el cambio
+  pequeño que provoca el agua. El CAPDAC resta esa base **en hardware**, así que los
+  ±15 pF de rango se dedican enteros a la variación útil. Es el patrón de "sensor
+  remoto con placa grande" para el que está pensado el chip.
+- **Drivers de guarda.** El cable hasta la electrónica tiene su propia capacitancia, que
+  cambia si se moja, si lo mueve el viento o si alguien se acerca. El chip saca una
+  señal de apantallamiento que la anula. Con el táctil del ESP32 el cable es parte de
+  lo que mides, y eso a la intemperie da guerra.
+
+Además mide de forma ratiométrica, así que deriva mucho menos con temperatura y
+alimentación — que es exactamente el punto flaco de la v1.
+
+**Ojo con un malentendido:** sus 400 muestras por segundo son pocas para un impacto,
+pero el FDC1004 **no toca el piezo**. Ése va por el ADC del ESP32 a unas 40 000
+muestras por segundo. El FDC1004 sólo mediría el canal capacitivo, que es "está
+mojado": una variable lenta donde 400 por segundo sobran.
 
 ## Coste
 
