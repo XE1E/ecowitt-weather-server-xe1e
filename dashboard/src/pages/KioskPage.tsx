@@ -114,11 +114,19 @@ export function KioskPage() {
   // pantallas llevan su propio contenedor y llaman al hook por su cuenta.
   useNavZones(rootRef, page)
 
+  // `data` existe pero VACÍO durante los primeros segundos tras reiniciar el
+  // receiver: `/api/current` responde un objeto con las 42 claves a null. Con un
+  // `!!data` la página se declaraba lista, el renderer capturaba los placeholders
+  // creyéndolos buenos y esa imagen en ceros se quedaba servida el TTL entero --el
+  // "tras un deploy la primera pantalla sale en ceros"--. Hay que exigir una
+  // lectura de verdad, no que el objeto exista.
+  const hayLectura = typeof data?.temperature_outdoor === 'number'
+
   const ready =
     page === '2' ? localFetched :
     page === '4' ? !!(forecast?.days?.length) :
     page === '5' ? multiReady :
-    (!loading && !!data)   // páginas 1 y 3
+    (!loading && hayLectura)   // páginas 1, 3 y consola
 
   const header = (
     <div className="flex items-center justify-between px-8 pt-4 pb-1">
