@@ -184,14 +184,14 @@ const MARES = [
   // A radio ~0.82 y no ~0.70: a 0.70 quedaba un anillo liso de casi un cuarto del radio
   // en todo el canto y el efecto se perdía. Con el escorzo aplicado llegan a 0.86, así
   // que siguen dentro del disco sin tocar el degradado del limbo.
-  [0.00, -0.82, 0.07],    // norte
-  [0.60, -0.56, 0.07],    // noreste
-  [0.82, 0.06, 0.07],     // este
-  [0.58, 0.58, 0.07],     // sureste
-  [0.02, 0.82, 0.07],     // sur
-  [-0.56, 0.60, 0.07],    // suroeste
-  [-0.82, 0.04, 0.07],    // oeste
-  [-0.60, -0.56, 0.07],   // noroeste
+  [0.00, -0.82, 0.095],   // norte
+  [0.60, -0.56, 0.095],   // noreste
+  [0.82, 0.06, 0.095],    // este
+  [0.58, 0.58, 0.095],    // sureste
+  [0.02, 0.82, 0.095],    // sur
+  [-0.56, 0.60, 0.095],   // suroeste
+  [-0.82, 0.04, 0.095],   // oeste
+  [-0.60, -0.56, 0.095],  // noroeste
 ] as const
 
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
@@ -310,7 +310,13 @@ function MoonGlyph({ size = 42, illum, waxing }:
             El desenfoque va antes del recorte --SVG aplica el filtro y LUEGO el
             clip-path-- así que no se sale del disco ni cruza el terminador. */}
         <filter id={`difu-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
-          <feGaussianBlur stdDeviation={0.035 * R} />
+          {/* 0.024 y no 0.035: a 64 px de disco el sigma salía 1.1 px y las manchas
+              chicas miden 2 px de radio, así que el desenfoque se las comía --medido
+              sobre el render: la cara iluminada, que en cuarto sólo contiene manchas
+              pequeñas, quedaba con un tercio del contraste de la oscura--. A 0.024 el
+              sigma baja a 0.77 px: siguen viéndose suaves, que es lo que se le pide, y
+              las pequeñas sobreviven. */}
+          <feGaussianBlur stdDeviation={0.024 * R} />
         </filter>
       </defs>
       {/* La parte en sombra, en gris cálido y no en el casi negro de antes (#1b1b1b): sobre
