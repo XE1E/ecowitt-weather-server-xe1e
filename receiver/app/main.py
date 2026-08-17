@@ -576,13 +576,24 @@ async def get_current_data(station: Optional[str] = None):
     except Exception as e:
         logger.error(f"Rain accumulation error: {e}")
 
-    # Lluvia de las últimas 2 horas, calculada integrando rain_rate.
+    # Lluvia acumulada en ventana móvil, integrando rain_rate. Son dos ventanas
+    # porque las consumen sitios distintos: la tarjeta del tablero usa 2 h y la
+    # consola usa 24 h. Ojo, 24 h móviles NO es `rain_daily`, que se reinicia a
+    # medianoche: a las 00:30 el diario dice casi cero aunque haya llovido toda
+    # la tarde, y era justo lo que hacía inútil el dato en la consola.
     try:
         rain_2h = await storage.get_rain_hours(hours=2, station=station)
         if rain_2h is not None:
             result["rain_2h"] = rain_2h
     except Exception as e:
         logger.error(f"Rain 2h calculation error: {e}")
+
+    try:
+        rain_24h = await storage.get_rain_hours(hours=24, station=station)
+        if rain_24h is not None:
+            result["rain_24h"] = rain_24h
+    except Exception as e:
+        logger.error(f"Rain 24h calculation error: {e}")
 
     # Promedio de viento de 10 min, calculado desde las muestras guardadas: la
     # estación no manda ninguno (ver get_wind_avg10m). Si algún día un dispositivo

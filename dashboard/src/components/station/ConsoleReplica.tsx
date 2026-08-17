@@ -1781,14 +1781,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             <MeteoGlyph name="raindrops" size={44} color={alertaCol('lluvia', '#38bdf8')} title="lluvia" />
           </div>
           {/* Tres valores con etiqueta, igual que PROMEDIO/RÁFAGA en la celda del
-              viento: 2 HORAS es lo caído en las últimas 2h (`rain_2h`), TASA la
+              viento: 24 H es lo caído en las últimas 24h (`rain_24h`), TASA la
               intensidad de ahora en mm/h (`rain_rate`) y MES el acumulado mensual.
               Sin etiqueta, tres cifras de lluvia son indistinguibles entre sí.
 
               Se usaba EVENTO (`rain_event`), pero su reset depende de la consola Ecowitt
-              (~24h sin lluvia) y en la práctica confundía más de lo que ayudaba. El
-              campo `rain_2h` se calcula en el servidor integrando `rain_rate` y responde
-              a "¿cuánto ha llovido recientemente?" de forma predecible. */}
+              (~24h sin lluvia) y en la práctica confundía más de lo que ayudaba. Luego
+              fueron 2 HORAS, que en la práctica pasaba demasiado tiempo en cero para
+              merecer un tercio de la celda.
+
+              Es la ventana MÓVIL de 24 h, no `rain_daily`: el diario se reinicia a
+              medianoche, así que a las 00:30 diría casi cero aunque hubiera llovido
+              toda la tarde. Lo calcula el servidor integrando `rain_rate`. */}
           {/* HISTOGRAMA de los últimos 7 días, a la derecha de la gota y al pie de la
               celda. Las tres cifras de arriba dicen "llueve ahora", "cuánto en este
               chubasco" y "cuánto va del mes"; ninguna dice cómo se repartió, que es la
@@ -1807,9 +1811,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               la izquierda para dejarle su hueco a la gota. */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 8, paddingLeft: 48, paddingRight: 4 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>2 HORAS</div>
+              <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>24 H</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
-                {decNum(u.rain(data?.rain_2h))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
+                {decNum(u.rain(data?.rain_24h))}<span className="u" style={{ fontSize: 14, color: 'var(--r)' }}>{u.rainU}</span>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
