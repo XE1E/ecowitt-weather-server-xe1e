@@ -84,6 +84,14 @@ Además del sitio web, el servidor alimenta pantallas físicas que muestran el c
 
 **Reloj Ulanzi TC001 (SVITRIX-XE1E)** — matriz LED de 32×8 con apps rotativas de temperatura, humedad, presión, calidad del aire, UV, viento, radiación y precipitación. Consulta `GET /api/svitrix` cada 1–5 min. Firmware: [svitrix-firmware-XE1E](https://github.com/XE1E/svitrix-firmware-XE1E).
 
+<p align="center">
+  <img src="docs/images/ulanzi-hora.jpg" alt="Ulanzi TC001 - App de hora" width="400"/>
+  <img src="docs/images/ulanzi-temp.jpg" alt="Ulanzi TC001 - Temperatura exterior de la estación" width="400"/>
+</p>
+<p align="center">
+  <em>App de hora</em> · <em>Temperatura exterior de la estación</em>
+</p>
+
 ### Impresión 3D
 
 **Escudo de radiación** para sensores WN31/WN32/WN35: protege el sensor de la radiación solar directa en instalaciones a la intemperie. Archivos STL en [`3d-prints/radiation-shield/`](3d-prints/radiation-shield/) y en [Printables](https://www.printables.com/model/1616544-ecowitt-sensor-radiation-shield).

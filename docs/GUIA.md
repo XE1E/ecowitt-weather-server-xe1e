@@ -896,6 +896,14 @@ contemplado pasaría desapercibido—.
 Firmware personalizado para el **reloj píxel Ulanzi TC001** (matriz LED 32×8).
 Muestra el clima de la estación en apps rotativas con iconos animados:
 
+<p align="center">
+  <img src="images/ulanzi-hora.jpg" alt="Ulanzi TC001: app de hora" width="400"/>
+  <img src="images/ulanzi-temp.jpg" alt="Ulanzi TC001: temperatura exterior de la estación" width="400"/>
+</p>
+<p align="center">
+  <em>El reloj rotando entre sus apps: la hora y la temperatura exterior de la estación</em>
+</p>
+
 - **Apps de clima:** temperatura exterior, humedad, presión, calidad del aire,
   UV, viento, radiación solar y precipitación.
 - **Apps nativas:** hora (varios modos), fecha, fase lunar, temperatura/humedad
