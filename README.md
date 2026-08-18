@@ -68,7 +68,11 @@ Además del sitio web, el servidor alimenta pantallas físicas que muestran el c
 **Kiosco Waveshare ESP32-S3 (táctil 7")** — funciona como *display tonto*: el **servidor renderiza** cada pantalla en Chromium headless (servicio `renderer`) y la sirve como JPEG (`GET /api/display.jpg?page=<slug>`); el ESP32 solo la baja y la pinta. El firmware **no sabe qué páginas existen** — con cada imagen recibe la cabecera `X-Kiosk-Nav` con las zonas táctiles, así que añadir pantallas es sólo cambiar el servidor. Arranca en la **réplica de la consola**, que hace de índice hacia detalle histórico por variable, récords, pronóstico, sensores y cámara. La pantalla lleva además su propio **BME280**, cuyas lecturas envía de vuelta (`POST /api/kiosk/local`) y se ven en el sitio. Firmware: [ecowitt-display-kiosk-xe1e](https://github.com/XE1E/ecowitt-display-kiosk-xe1e).
 
 <p align="center">
-  <img src="docs/images/kiosk-consola.png" alt="Kiosco - Réplica de consola" width="500"/>
+  <img src="docs/images/kiosk-consola.jpg" alt="Kiosco - Réplica de consola" width="400"/>
+  <img src="docs/images/kiosk-camara.jpg" alt="Kiosco - Cámara del exterior con análisis del cielo" width="400"/>
+</p>
+<p align="center">
+  <em>Réplica de la consola</em> · <em>Cámara del exterior con el análisis del cielo</em>
 </p>
 
 **E-paper LilyGo 4.7"** — cliente "gordo": dibuja él mismo la pantalla. El servidor le da el dato ya masticado en `GET /api/epaper/forecast.json`, con la forma de WeatherAPI `forecast.json` (basta apuntar ahí la URL del firmware). Ese endpoint **nunca devuelve 503**: si falta algún dato cae al pronóstico y lo marca, porque un error dejaría la pantalla vieja hasta el siguiente despertar.
