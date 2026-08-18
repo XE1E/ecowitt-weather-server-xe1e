@@ -374,6 +374,14 @@ sirve como JPEG (`GET /api/display.jpg?page=<slug>`); el ESP32 solo la baja y la
 pinta. Arranca en la **consola**, que hace de índice: cada celda lleva al detalle
 histórico de esa variable.
 
+<p align="center">
+  <img src="images/kiosk-consola.jpg" alt="Kiosco: réplica de la consola" width="400"/>
+  <img src="images/kiosk-camara.jpg" alt="Kiosco: cámara del exterior con el análisis del cielo" width="400"/>
+</p>
+<p align="center">
+  <em>El display colgado: la réplica de la consola y la página de la cámara con el análisis del cielo</em>
+</p>
+
 #### Navegación: el mapa de zonas
 
 El firmware **no sabe qué páginas existen**. Con cada JPEG recibe la cabecera

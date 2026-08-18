@@ -142,6 +142,19 @@
   }
   pre code { background: none; border: 0; padding: 0; }
 
+  /* Fotos. Las primeras de esta guía: hasta ahora era sólo texto e iconos SVG.
+     La fila se PARTE en pantalla angosta (`flex-wrap` con base de 320 px) en vez de
+     seguir encogiendo las dos fotos hasta que no se lea nada: en un teléfono se ven
+     una debajo de la otra y a ancho completo. En el `<img>` van `width`/`height` con
+     el tamaño real, que no fijan el dibujado --lo hace el CSS-- pero le dan al
+     navegador la proporción para reservar el hueco y que el texto no salte al cargar. */
+  .shots { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 8px; }
+  .shots img {
+    flex: 1 1 320px; min-width: 0; max-width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+  }
+  .shots-cap { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+
   /* Tables */
   .tablewrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
   table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
@@ -698,6 +711,12 @@
 
       <h3>Pantalla táctil de 7" (kiosco)</h3>
       <p>Una pantalla de 1024×600 colgada en la pared. Funciona con un reparto de trabajo poco común: <strong>el servidor dibuja la pantalla completa como imagen y la pantalla sólo la muestra</strong>. Eso la vuelve muy simple y permite rediseñar lo que se ve sin volver a programar el aparato.</p>
+
+      <div class="shots">
+        <img src="/img/kiosk-consola.jpg" alt="El kiosco mostrando la réplica de la consola" loading="lazy" width="1600" height="946">
+        <img src="/img/kiosk-camara.jpg" alt="El kiosco mostrando la cámara del exterior con el análisis del cielo" loading="lazy" width="1600" height="958">
+      </div>
+      <p class="shots-cap">La pantalla real: a la izquierda la réplica de la consola, a la derecha la cámara del exterior con el análisis del cielo.</p>
       <h4>Cómo se navega</h4>
       <p>La pantalla arranca en la <strong>consola</strong>, y la consola es el índice de todo: <strong>cada celda es un botón</strong>. Tocas la de la lluvia y aparece el histórico de lluvia; tocas la del viento y aparece el del viento. Es la misma idea que abrir un cajón — la celda que tocaste se despliega.</p>
       <p>Ya dentro, abajo hay una <strong>barra de botones</strong> para cambiar de periodo (24 horas, 7 días, 30 días, 12 meses) o saltar a los récords. Y para volver no hace falta apuntar: <strong>un toque en cualquier sitio que no sea un botón regresa a la pantalla anterior</strong>, y otro más a la de antes, hasta llegar de vuelta a la consola.</p>
