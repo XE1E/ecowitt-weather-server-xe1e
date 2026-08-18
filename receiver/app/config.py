@@ -254,6 +254,23 @@ class Settings(BaseSettings):
     # sigue fresco para una pantalla de pared. 0 = analizar en cada captura.
     camera_analysis_interval_min: int = 15
 
+    # ── Control de la CAPTURA (lo obedece el script de la Pi, que lee estos valores de
+    # /api/camera/capture-config en cada corrida). Así se prende/apaga la cámara y se
+    # cambia su ritmo y horario desde el panel, sin entrar a la Pi.
+    camera_capture_enabled: bool = True
+    # Minutos entre capturas. El timer de la Pi corre seguido y el script salta si no ha
+    # pasado este rato desde la última.
+    camera_capture_interval_min: int = 5
+    # Franja horaria de captura (hora local de la Pi, 0-23). De noche la cámara sólo ve
+    # negro: capturar y analizar entonces gasta cuota y disco sin aportar. Con
+    # start == end se captura las 24 h.
+    camera_capture_hour_start: int = 6
+    camera_capture_hour_end: int = 20
+
+    # ¿La página de cámara aparece en el kiosco? Si es False, la celda de condición de la
+    # consola vuelve a llevar al pronóstico y el menú no la lista.
+    kiosk_camera_enabled: bool = True
+
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)
 

@@ -140,6 +140,11 @@ EDITABLE_KEYS = {
     "camera_analysis_model_anthropic",
     "camera_analysis_model_gemini",
     "camera_analysis_interval_min",
+    "camera_capture_enabled",
+    "camera_capture_interval_min",
+    "camera_capture_hour_start",
+    "camera_capture_hour_end",
+    "kiosk_camera_enabled",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar

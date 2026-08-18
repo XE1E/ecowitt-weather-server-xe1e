@@ -2015,6 +2015,20 @@ async def camera_upload(request: Request):
 # espera el intervalo completo, que es lo que respeta la cuota del tier gratuito.
 _ultimo_analisis_ts = 0.0
 
+# Resultado del último intento de análisis, para el panel de diagnóstico. `ok` None
+# hasta el primer intento tras arrancar.
+_ultimo_analisis_resultado: Dict[str, Any] = {"ok": None, "at": None, "provider": None, "error": None}
+
+
+def _registrar_analisis(provider: Optional[str], error: Optional[str]) -> None:
+    """Guarda el desenlace del último análisis (lo lee /api/camera/diag)."""
+    _ultimo_analisis_resultado.update({
+        "ok": error is None,
+        "at": datetime.now(timezone.utc).isoformat(),
+        "provider": provider,
+        "error": error,
+    })
+
 
 def _debe_analizar() -> bool:
     """Throttle del análisis por `camera_analysis_interval_min`.
@@ -2044,6 +2058,10 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             gemini_model=settings.camera_analysis_model_gemini,
         )
         analysis_dict = analysis.to_dict()
+        # Se registra SIEMPRE el resultado del intento (éxito o error) para que el
+        # panel muestre "por qué no analiza" sin escarbar en logs: el 429 de cuota
+        # agotada, un timeout, etc.
+        _registrar_analisis(analysis.provider, analysis.error)
         if analysis.error:
             # NO se guarda: un fallo pasajero de la API (timeout, 503 del tier
             # gratuito de Gemini) NO debe borrar el último análisis bueno. Si lo
@@ -2063,12 +2081,73 @@ async def _analyze_sky_background(image_data: bytes) -> None:
                 logger.error("Error evaluando alertas visuales: %s", e)
     except Exception as e:
         logger.error("Error en análisis del cielo: %s", e)
+        _registrar_analisis(None, str(e)[:200])
 
 
 @app.get("/api/camera/status")
 async def camera_status():
     """¿Hay foto, de cuándo es y está vieja? Lo consulta la página del kiosco."""
     return _camera.status_with_analysis()
+
+
+@app.get("/api/camera/capture-config")
+async def camera_capture_config():
+    """Config que la Pi lee en cada corrida para decidir si captura ahora. Pública: no
+    trae secretos, y así el script no necesita el token para un simple GET."""
+    return {
+        "enabled": settings.camera_capture_enabled,
+        "interval_min": settings.camera_capture_interval_min,
+        "hour_start": settings.camera_capture_hour_start,
+        "hour_end": settings.camera_capture_hour_end,
+    }
+
+
+@app.get("/api/camera/diag")
+async def camera_diag(authorization: Optional[str] = Header(default=None)):
+    """Estado consolidado para el panel: última foto, último análisis (con su error si
+    lo hubo), proveedor activo y la config vigente. Así se ve 'por qué no analiza'."""
+    _require_admin(authorization)
+    resolved = sky_analyzer.resolve_provider(
+        settings.camera_analysis_provider, settings.anthropic_api_key, settings.gemini_api_key)
+    return {
+        "capture": {
+            "enabled": settings.camera_capture_enabled,
+            "interval_min": settings.camera_capture_interval_min,
+            "hour_start": settings.camera_capture_hour_start,
+            "hour_end": settings.camera_capture_hour_end,
+            "status": _camera.status(),
+        },
+        "analysis": {
+            "enabled": settings.camera_analysis_enabled,
+            "interval_min": settings.camera_analysis_interval_min,
+            "provider_setting": settings.camera_analysis_provider,
+            "active_provider": resolved,
+            "has_gemini_key": bool(settings.gemini_api_key),
+            "has_anthropic_key": bool(settings.anthropic_api_key),
+            "model_gemini": settings.camera_analysis_model_gemini,
+            "model_anthropic": settings.camera_analysis_model_anthropic,
+            "last_attempt": _ultimo_analisis_resultado,
+            "last_saved": _camera.get_analysis(),
+        },
+        "retention_days": settings.camera_retention_days,
+        "stale_seconds": settings.camera_stale_seconds,
+        "kiosk_camera_enabled": settings.kiosk_camera_enabled,
+    }
+
+
+@app.post("/api/camera/analyze-now")
+async def camera_analyze_now(authorization: Optional[str] = Header(default=None)):
+    """Fuerza el análisis de la última foto AHORA, saltándose el intervalo. Para el
+    botón del panel: probar tras cambiar ajustes o refrescar a voluntad."""
+    _require_admin(authorization)
+    if not (settings.anthropic_api_key or settings.gemini_api_key):
+        raise HTTPException(status_code=400, detail="No hay API key configurada para el análisis")
+    ultima = _camera.latest()
+    if ultima is None:
+        raise HTTPException(status_code=404, detail="No hay ninguna foto que analizar todavía")
+    data, _ = ultima
+    await _analyze_sky_background(data)
+    return {"status": "ok", "result": _ultimo_analisis_resultado}
 
 
 @app.get("/api/camera/analysis")
