@@ -187,8 +187,13 @@ export function CamaraPage({ slug }: { slug: string }) {
               </div>
               {/* Pronóstico a corto plazo del análisis --lo que se espera en 1-2 h--,
                   para completar la narrativa: qué se ve ARRIBA y qué viene AQUÍ. En azul
-                  cielo para distinguirlo de la descripción. */}
-              {an?.forecast_hint && (
+                  cielo para distinguirlo de la descripción.
+                  SÓLO si la foto es RECIENTE: un pronóstico sacado de una imagen vieja es
+                  lo más engañoso que puede haber --puede decir "sin riesgo de lluvia"
+                  mientras ya llueve, porque lo dedujo de un cielo despejado de hace rato--.
+                  La descripción sí se queda (es lo que se veía entonces, y el aviso FOTO
+                  ANTIGUA lo enmarca), pero la predicción a futuro no. */}
+              {an?.forecast_hint && !vieja && (
                 <div style={{ marginTop: 9, display: 'flex', alignItems: 'flex-start', gap: 9,
                   color: '#9ec5ff', fontSize: 20, fontWeight: 600, lineHeight: 1.25 }}>
                   <span style={{ flexShrink: 0, fontSize: 18 }}>↗</span>
