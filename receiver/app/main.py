@@ -2102,6 +2102,13 @@ async def camera_capture_config():
     }
 
 
+@app.get("/api/kiosk/config")
+async def kiosk_config():
+    """Config pública que leen las páginas del kiosco (consola, menú) para decidir qué
+    mostrar. De momento sólo si la cámara aparece; se puede ampliar sin romper nada."""
+    return {"camera_enabled": settings.kiosk_camera_enabled}
+
+
 @app.get("/api/camera/diag")
 async def camera_diag(authorization: Optional[str] = Header(default=None)):
     """Estado consolidado para el panel: última foto, último análisis (con su error si

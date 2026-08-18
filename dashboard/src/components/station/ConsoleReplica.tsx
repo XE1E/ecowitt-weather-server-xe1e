@@ -1038,6 +1038,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
    */
   const [cargado, setCargado] = useState({ fc: false, luna: false, imeca: false })
   const [horas, setHoras] = useState<ForecastHour[]>([])
+  // ¿La celda de condición abre la cámara? Lo decide el toggle del admin
+  // (kiosk_camera_enabled). Por defecto sí; si el fetch falla o tarda, se mantiene el
+  // comportamiento normal --mostrar la cámara-- que es el caso común.
+  const [camaraKiosco, setCamaraKiosco] = useState(true)
+  useEffect(() => {
+    fetch('/api/kiosk/config')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j && typeof j.camera_enabled === 'boolean') setCamaraKiosco(j.camera_enabled) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
@@ -2065,7 +2075,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ~100 a 169 px de ancho y su temperatura de 13 a 19 px.
               Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
               hacen falta porque el icono ya trae aire por dentro. */}
-          <div className="cell derivada" data-nav={CONSOLA_NAV.condiciones}
+          <div className="cell derivada" data-nav={camaraKiosco ? CONSOLA_NAV.condiciones : CONSOLA_NAV.cielo}
             style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.
