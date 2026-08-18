@@ -332,7 +332,7 @@ async def analyze_sky(
     provider: Provider = "auto",
     anthropic_model: Optional[str] = None,
     gemini_model: Optional[str] = None,
-    timeout: float = 30.0,
+    timeout: float = 45.0,
 ) -> SkyAnalysis:
     """
     Analiza una imagen del cielo usando el proveedor configurado.
