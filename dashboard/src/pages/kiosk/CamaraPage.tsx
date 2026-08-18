@@ -53,7 +53,7 @@ const COND_EMOJI: Record<string, string> = {
   foggy: '🌫️', rainy: '🌧️', stormy: '⛈️', night: '🌙',
 }
 const COND_ES: Record<string, string> = {
-  clear: 'DESPEJADO', partly_cloudy: 'PARC. NUBLADO', mostly_cloudy: 'MAY. NUBLADO',
+  clear: 'DESPEJADO', partly_cloudy: 'PARCIALMENTE NUBLADO', mostly_cloudy: 'MAYORMENTE NUBLADO',
   overcast: 'CUBIERTO', foggy: 'NEBLINA', rainy: 'LLUVIA', stormy: 'TORMENTA', night: 'NOCHE',
 }
 const VIS_ES: Record<string, string> = {
@@ -100,9 +100,6 @@ export function CamaraPage({ slug }: { slug: string }) {
       // Lista cuando se sabe que NO hay foto (se pinta el aviso) o cuando la que hay
       // ya está descargada y pintada.
       data-kiosk-ready={pedido && (!hayFoto || imagenLista) ? 'true' : 'false'}
-      // Toda la pantalla es una sola zona táctil: tocarla vuelve a la consola. Es lo
-      // pedido --tocar la imagen regresa a inicio-- y no depende de la pila del firmware.
-      data-nav="consola"
       style={{
         width: 1024, height: 600, background: '#000', overflow: 'hidden',
         position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -111,6 +108,13 @@ export function CamaraPage({ slug }: { slug: string }) {
     >
       <style>{CONSOLE_CSS}</style>
       <NavDebugOverlay nodo={rootRef} />
+
+      {/* Zona táctil que cubre TODA la pantalla: tocar donde sea vuelve a la consola.
+          Va en un HIJO absoluto, no en la raíz: el medidor de zonas usa
+          querySelectorAll, que NO incluye al propio nodo raíz, así que una `data-nav`
+          puesta ahí no se mediría y la página se quedaría sin zonas --y el firmware
+          caería a su barra de pestañas de abajo, mandando el toque a otras páginas--. */}
+      <div data-nav="consola" style={{ position: 'absolute', inset: 0 }} />
 
       {hayFoto ? (
         <>
@@ -124,17 +128,20 @@ export function CamaraPage({ slug }: { slug: string }) {
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           />
 
-          {/* Cabecera SOBREPUESTA: sólo el rótulo. NO lleva hora --la cámara ya quema
-              su propia marca de tiempo en la esquina de la foto, así que un reloj aquí
-              la repetiría--. La antigüedad la dice esa marca más el aviso FOTO ANTIGUA. */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 20px 22px',
+          {/* Cabecera SOBREPUESTA, alineada a la DERECHA: la cámara quema su propia
+              marca de fecha/hora en la esquina ARRIBA-IZQUIERDA, así que el rótulo va al
+              otro lado para no encimarse. Y no lleva hora --la repetiría--: la antigüedad
+              la dice esa marca más el aviso FOTO ANTIGUA. */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 22px 22px',
+            textAlign: 'right',
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 100%)' }}>
             <span style={{ color: '#fff', fontSize: 26, fontWeight: 800, letterSpacing: 3 }}>EXTERIOR</span>
           </div>
 
-          {/* Aviso sobre la propia foto: si es de hace horas hay que verlo al mirarla. */}
+          {/* Aviso sobre la propia foto: si es de hace horas hay que verlo al mirarla.
+              A la DERECHA, bajo el rótulo, para no pisar la marca de la cámara. */}
           {vieja && (
-            <div style={{ position: 'absolute', top: 48, left: 20, background: 'rgba(255,65,40,0.92)',
+            <div style={{ position: 'absolute', top: 48, right: 22, background: 'rgba(255,65,40,0.92)',
               color: '#000', fontSize: 17, fontWeight: 800, letterSpacing: 2, padding: '4px 10px',
               borderRadius: 6 }}>
               FOTO ANTIGUA
@@ -164,7 +171,7 @@ export function CamaraPage({ slug }: { slug: string }) {
                 {an?.cloud_coverage_pct != null && (
                   <span style={{ color: '#8ab4ff' }}>{an.cloud_coverage_pct}% NUBES</span>
                 )}
-                {visibilidad && <span style={{ color: '#b0b0b0' }}>VIS. {visibilidad}</span>}
+                {visibilidad && <span style={{ color: '#b0b0b0' }}>VISIBILIDAD {visibilidad}</span>}
                 {an?.precipitation_visible && (
                   <span style={{ color: '#ffb020' }}>LLUVIA EN EL HORIZONTE</span>
                 )}
