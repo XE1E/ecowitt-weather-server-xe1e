@@ -59,6 +59,11 @@ const COND_ES: Record<string, string> = {
 const VIS_ES: Record<string, string> = {
   excellent: 'EXCELENTE', good: 'BUENA', moderate: 'MODERADA', poor: 'POBRE', very_poor: 'MUY POBRE',
 }
+const CLOUD_TYPE_ES: Record<string, string> = {
+  cirrus: 'CIRROS', cumulus: 'CÚMULOS', stratus: 'ESTRATOS', cumulonimbus: 'CUMULONIMBOS',
+  altocumulus: 'ALTOCÚMULOS', stratocumulus: 'ESTRATOCÚMULOS', nimbostratus: 'NIMBOESTRATOS',
+  mixed: 'NUBES MIXTAS',
+}
 
 export function CamaraPage({ slug }: { slug: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -90,6 +95,9 @@ export function CamaraPage({ slug }: { slug: string }) {
   const emoji = COND_EMOJI[an?.sky_condition || ''] || '🌤️'
   const condicion = COND_ES[an?.sky_condition || ''] || an?.sky_condition?.toUpperCase()
   const visibilidad = VIS_ES[an?.visibility || '']
+  // El tipo de nube sólo cuando aporta: con cielo despejado o desconocido no está en
+  // el mapa, así que no se pinta y no duplica el "DESPEJADO" de la condición.
+  const nubes = CLOUD_TYPE_ES[an?.cloud_type || '']
 
   useNavZones(rootRef, slug)
 
@@ -168,6 +176,7 @@ export function CamaraPage({ slug }: { slug: string }) {
               <div style={{ marginTop: an?.description ? 10 : 0, display: 'flex',
                 flexWrap: 'wrap', gap: '4px 22px', fontSize: 21, fontWeight: 800, letterSpacing: 0.6 }}>
                 {condicion && <span style={{ color: '#f0f0f0' }}>{condicion}</span>}
+                {nubes && <span style={{ color: '#d0d0d0' }}>{nubes}</span>}
                 {an?.cloud_coverage_pct != null && (
                   <span style={{ color: '#8ab4ff' }}>{an.cloud_coverage_pct}% NUBES</span>
                 )}
