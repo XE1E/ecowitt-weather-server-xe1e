@@ -76,6 +76,17 @@ El detalle: **los puertos del Archer C6 NO son PoE.** Dos caminos:
    C6 (LAN) ──► Inyector PoE ──► cable único ──► Cámara (corriente + red)
    ```
 
+   **Inyector recomendado: TP-Link TL-POE160S** (PoE+ Gigabit 802.3af/at, un puerto,
+   ~$300–450 MXN en Amazon MX). Misma marca que el router y la cámara. Alternativa más
+   barata: **TL-POE150S** (802.3af Gigabit, ~$250–350 MXN); da 15.4 W, suficiente para la
+   Tapo (consume ~5–8 W).
+
+   Al comprar, confirma en el listado:
+   - Que diga **802.3af** o **802.3af/at** — **NO** un PoE "pasivo" de 24V/48V (esos no son
+     estándar y podrían dañar la cámara).
+   - Que sea **Gigabit / 10-100-1000**.
+   - Que sea **inyector** (injector), no "splitter" ni "extractor".
+
 2. **Sin PoE** (si hay enchufe cerca de la cámara): el **adaptador de corriente de la
    cámara** en el sitio + un cable ethernet normal del C6 a la cámara.
 
