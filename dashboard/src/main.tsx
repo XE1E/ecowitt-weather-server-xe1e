@@ -32,6 +32,7 @@ import {
   AdminPublicacion,
   AdminNotificaciones,
   AdminIntegraciones,
+  AdminCamara,
   AdminSistema,
   AdminUpdates,
   AdminWizard,
@@ -82,6 +83,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="publicacion" element={<AdminPublicacion />} />
               <Route path="notificaciones" element={<AdminNotificaciones />} />
               <Route path="integraciones" element={<AdminIntegraciones />} />
+              <Route path="camara" element={<AdminCamara />} />
               <Route path="sistema" element={<AdminSistema />} />
               <Route path="updates" element={<AdminUpdates />} />
             </Route>

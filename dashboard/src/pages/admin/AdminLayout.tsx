@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/admin/publicacion', label: 'Publicación', icon: '📤' },
   { to: '/admin/notificaciones', label: 'Notificaciones', icon: '💬' },
   { to: '/admin/integraciones', label: 'Integraciones', icon: '🔌' },
+  { to: '/admin/camara', label: 'Cámara', icon: '📷' },
   { to: '/admin/sistema', label: 'Sistema', icon: '⚙️' },
   { to: '/admin/updates', label: 'Actualizaciones', icon: '🔄' },
 ]
