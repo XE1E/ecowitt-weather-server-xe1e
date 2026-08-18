@@ -19,6 +19,7 @@ import platform
 import re
 import secrets
 import shutil
+import time
 from zoneinfo import ZoneInfo
 
 from .config import settings
@@ -1999,12 +2000,36 @@ async def camera_upload(request: Request):
         raise HTTPException(status_code=500, detail="Error interno")
     logger.info("Cámara: captura de %d bytes recibida", meta["bytes"])
 
-    # Análisis del cielo con visión (asíncrono, no bloquea la respuesta)
+    # Análisis del cielo con visión (asíncrono, no bloquea la respuesta).
+    # NO en cada captura: ver _debe_analizar (throttle por intervalo).
     has_any_key = settings.anthropic_api_key or settings.gemini_api_key
-    if has_any_key and settings.camera_analysis_enabled:
+    if has_any_key and settings.camera_analysis_enabled and _debe_analizar():
         asyncio.create_task(_analyze_sky_background(data))
 
     return {"ok": True, **meta}
+
+
+# Momento (monotónico) del último análisis DISPARADO. Empieza en 0 para que la primera
+# captura tras arrancar sí analice. Se pone ANTES de lanzar el análisis, aunque falle:
+# si Gemini devuelve 429 no tiene sentido reintentar a los 5 min y volver a chocar; se
+# espera el intervalo completo, que es lo que respeta la cuota del tier gratuito.
+_ultimo_analisis_ts = 0.0
+
+
+def _debe_analizar() -> bool:
+    """Throttle del análisis por `camera_analysis_interval_min`.
+
+    El análisis NO corre en cada captura: a 5 min son ~288/día y agotan la cuota diaria
+    gratuita de Gemini (429), dejando el análisis congelado media tarde. Con 15 min caen
+    ~72-96/día. Con el intervalo en 0 se analiza en cada captura (comportamiento previo).
+    """
+    global _ultimo_analisis_ts
+    interval = max(0, settings.camera_analysis_interval_min) * 60
+    ahora = time.monotonic()
+    if interval and (ahora - _ultimo_analisis_ts) < interval:
+        return False
+    _ultimo_analisis_ts = ahora
+    return True
 
 
 async def _analyze_sky_background(image_data: bytes) -> None:

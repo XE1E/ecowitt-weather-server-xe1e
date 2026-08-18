@@ -247,6 +247,12 @@ class Settings(BaseSettings):
     # Modelos por proveedor (se usan defaults si no se especifican)
     camera_analysis_model_anthropic: str = "claude-sonnet-4-20250514"
     camera_analysis_model_gemini: str = "gemini-flash-latest"
+    # Cada cuántos MINUTOS analizar el cielo. NO se analiza en cada captura: a 5 min
+    # serían ~288/día y agotan el tier gratuito de Gemini, que empieza a devolver 429
+    # y deja el análisis congelado en el último bueno (uno viejo mostrado sobre una
+    # foto nueva). El cielo no cambia tanto en 5 min; 15 deja ~72-96/día, holgado, y
+    # sigue fresco para una pantalla de pared. 0 = analizar en cada captura.
+    camera_analysis_interval_min: int = 15
 
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)

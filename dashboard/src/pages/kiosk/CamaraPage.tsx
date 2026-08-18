@@ -29,8 +29,18 @@ interface Analysis {
   precipitation_visible?: boolean
   description?: string
   forecast_hint?: string
+  analyzed_at?: string
   error?: string
 }
+
+/**
+ * A partir de aquí el análisis se considera desligado de la foto actual y NO se pinta.
+ * El análisis se rehace cada `camera_analysis_interval_min` (15 por defecto), así que
+ * uno sano tiene <20 min. Si envejece más es porque lleva rato fallando (cuota de
+ * Gemini agotada, timeouts): mostrar "cielo despejado" de hace una hora sobre una foto
+ * nublada de ahora es justo la mentira que hay que evitar. Mejor foto sin análisis.
+ */
+const ANALISIS_VIEJO_S = 40 * 60
 
 interface Estado {
   available?: boolean
@@ -91,7 +101,9 @@ export function CamaraPage({ slug }: { slug: string }) {
   // El análisis sólo se pinta si vino sin error y trae al menos una descripción. Con
   // el fix del servidor, un fallo pasajero de Gemini ya no borra el último bueno.
   const an = st?.analysis
+  const anEdadS = an?.analyzed_at ? (Date.now() - new Date(an.analyzed_at).getTime()) / 1000 : 0
   const hayAnalisis = !!an && !an.error && !!(an.description || an.sky_condition)
+    && anEdadS < ANALISIS_VIEJO_S
   const emoji = COND_EMOJI[an?.sky_condition || ''] || '🌤️'
   const condicion = COND_ES[an?.sky_condition || ''] || an?.sky_condition?.toUpperCase()
   const visibilidad = VIS_ES[an?.visibility || '']

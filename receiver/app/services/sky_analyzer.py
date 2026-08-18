@@ -51,8 +51,21 @@ Analiza esta imagen del cielo y responde en JSON con esta estructura exacta:
   "forecast_hint": "Sugerencia de pronóstico a 1-2 horas basada en lo que se ve"
 }
 
-Si la imagen está muy oscura (noche), indica lo que puedas ver (luces, estrellas,
-luna, nubes iluminadas) y usa "night" en sky_condition.
+CÓMO ESTIMAR LA COBERTURA (cloud_coverage_pct), que es lo que más se equivoca: fíjate en
+cuánto CIELO DESPEJADO queda visible (azul de día; oscuro limpio o estrellas de noche) y
+resta.
+- Capa gris o blanca continua que tapa casi todo, apenas se ve azul  -> 90-100, "overcast".
+- Nubes dominan pero quedan claros de azul                            -> 60-90, "mostly_cloudy".
+- Mitad nubes, mitad azul                                             -> 30-60, "partly_cloudy".
+- Mayormente azul con nubes sueltas                                   -> 10-30, "partly_cloudy".
+- Azul casi total                                                     ->  0-10, "clear".
+El % y sky_condition DEBEN concordar. No tiendas por defecto a "partly_cloudy": ante una
+capa continua sin huecos de azul, es "overcast", no parcial.
+
+OJO CON EL ANOCHECER Y LA NOCHE: al atardecer una capa de nubes se ve GRIS OSCURA, AZUL
+PLOMO o casi negra --eso es cielo CUBIERTO, no despejado; no confundas oscuridad con
+cielo limpio--. Si de verdad es de noche y no distingues nubes, usa "night" e indica lo
+que veas (luces, luna, estrellas).
 
 Responde SOLO el JSON, sin explicaciones adicionales.
 """

@@ -139,6 +139,7 @@ EDITABLE_KEYS = {
     "gemini_api_key",
     "camera_analysis_model_anthropic",
     "camera_analysis_model_gemini",
+    "camera_analysis_interval_min",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar
