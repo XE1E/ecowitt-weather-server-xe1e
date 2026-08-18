@@ -56,6 +56,37 @@ Ponlo en **modo Punto de Acceso (Access Point)**, **no** en modo Router.
 Un dispositivo en el WiFi del C6 recibe una IP `192.168.100.x` y hace ping a la Pi
 (`192.168.100.202`) y a las cámaras. Si todos están en esa red, listo.
 
+## Conectar la cámara: mejor por ethernet (PoE)
+
+Aunque el C6 quede a ~2 m de la cámara, conviene pasar la **Tapo C325WB a ethernet** en
+vez de WiFi:
+
+- **Fiabilidad 24/7**: sin cortes de WiFi ni congestión de canal ni reconexiones.
+- **Se salta el problema del canal** por completo — la cámara ni usa el WiFi.
+- La C325WB **soporta PoE 802.3af/at**, así que **un solo cable ethernet le da corriente y
+  red a la vez** (ideal en fachada, sin enchufe cerca).
+
+El detalle: **los puertos del Archer C6 NO son PoE.** Dos caminos:
+
+1. **Con PoE** (recomendado si no hay enchufe junto a la cámara): un **inyector PoE
+   802.3af** barato (~$150–300 MXN). El inyector se queda junto al router y un solo cable
+   llega a la cámara:
+
+   ```
+   C6 (LAN) ──► Inyector PoE ──► cable único ──► Cámara (corriente + red)
+   ```
+
+2. **Sin PoE** (si hay enchufe cerca de la cámara): el **adaptador de corriente de la
+   cámara** en el sitio + un cable ethernet normal del C6 a la cámara.
+
+Notas al pasar a cable:
+
+- La cámara tomará IP por DHCP igual que por WiFi; el script de captura la localiza por su
+  **MAC**, así que aunque cambie de IP no hay que tocar nada.
+- Para la configuración inicial la app Tapo quizá la pida por WiFi/Bluetooth una vez;
+  después, cableada, queda sólida.
+- Con cable, el WiFi de la cámara ya no hace falta.
+
 ## Ajustes de referencia
 
 | Ajuste | Valor |
