@@ -307,7 +307,7 @@ export function AdminCamara() {
           </div>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Con "Mostrar en el kiosco" apagado, la celda de condición de la consola vuelve a llevar al
+          Con "Mostrar en el kiosco" apagado, la celda de sol y luna de la consola vuelve a llevar al
           pronóstico y la cámara no aparece en el menú del display.
         </p>
       </div>

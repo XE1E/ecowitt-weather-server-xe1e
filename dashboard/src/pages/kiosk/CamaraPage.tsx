@@ -1,7 +1,7 @@
 /**
  * Vista del exterior desde la cámara (Tapo C325WB) + análisis del cielo.
  *
- * Se abre tocando la celda de CONDICIÓN ACTUAL de la consola. Muestra la última foto
+ * Se abre tocando la celda de SOL Y LUNA de la consola. Muestra la última foto
  * y, sobre ella, la descripción del cielo que genera el análisis con IA (Gemini) de
  * esa misma imagen: condición, cobertura de nubes y una frase de lo que se ve.
  *

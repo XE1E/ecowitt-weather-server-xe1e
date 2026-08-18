@@ -1038,7 +1038,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
    */
   const [cargado, setCargado] = useState({ fc: false, luna: false, imeca: false })
   const [horas, setHoras] = useState<ForecastHour[]>([])
-  // ¿La celda de condición abre la cámara? Lo decide el toggle del admin
+  // ¿La celda de sol y luna abre la cámara? Lo decide el toggle del admin
   // (kiosk_camera_enabled). Por defecto sí; si el fetch falla o tarda, se mantiene el
   // comportamiento normal --mostrar la cámara-- que es el caso común.
   const [camaraKiosco, setCamaraKiosco] = useState(true)
@@ -2075,7 +2075,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               ~100 a 169 px de ancho y su temperatura de 13 a 19 px.
               Sangría lateral de 8 y no los 12 de `.cell`: son 8 px más de tira, y arriba no
               hacen falta porque el icono ya trae aire por dentro. */}
-          <div className="cell derivada" data-nav={camaraKiosco ? CONSOLA_NAV.condiciones : CONSOLA_NAV.cielo}
+          <div className="cell derivada" data-nav={CONSOLA_NAV.condiciones}
             style={{ display: 'flex', flexDirection: 'column', padding: '2px 8px' }}>
             {/* MITAD DE ARRIBA: icono y descripción, CENTRADOS como bloque --antes colgaban
                 del borde izquierdo-- y separados 8 px.
@@ -2158,7 +2158,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               celda menos bordes y sangría), así que manda el ancho.
               La primera versión pidió 76 con sangría 6 y flex se los recortó a 63 sin
               avisar; de ahí el `flexShrink: 0` del disco y que las horas cedan cuerpo. */}
-          <div className="cell derivada" data-nav={CONSOLA_NAV.cielo} style={{ padding: '4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          {/* Esta celda es la que abre la CÁMARA. Si el toggle del admin la tiene
+              apagada cae al pronóstico, que es a donde llevaba antes: así la celda
+              nunca queda sin destino. */}
+          <div className="cell derivada" data-nav={camaraKiosco ? CONSOLA_NAV.luna : CONSOLA_NAV.condiciones} style={{ padding: '4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             {/* El disco baja de 74 a 64 px: al lado de las dos horas se veía desproporcionado.
                 Va dentro de una caja de 74 --el tamaño de ANTES-- centrada: si se encogiera el
                 glifo a secas, esta fila es un flex centrado y las horas se correrían 5 px hacia
