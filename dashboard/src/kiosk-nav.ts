@@ -110,10 +110,10 @@ export const STATS_VIEWS: Record<StatsKey, { label: string; ttl: number }> = {
  * decidir si se generaliza el mapeo en el firmware en vez de acumular casos
  * particulares"--.
  *
- * TTL de 5 min porque la captura se acordó cada 5-10: pedirla más seguido sólo
- * redibuja la misma foto.
+ * TTL alineado con el intervalo de captura (3 min): redibujar más seguido sólo
+ * repintaría la misma foto, y menos dejaría ver una vieja pese a haber una nueva.
  */
-export const CAMARA_TTL = 300
+export const CAMARA_TTL = 180
 
 /** Las cinco páginas clásicas, que se conservan tal cual y cuelgan del menú. */
 export const CLASICAS = [
