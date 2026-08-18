@@ -151,11 +151,12 @@ export function CamaraPage({ slug }: { slug: string }) {
           {/* Cabecera SOBREPUESTA, alineada a la DERECHA: la cámara quema su propia
               marca de fecha/hora en la esquina ARRIBA-IZQUIERDA, así que el rótulo va al
               otro lado para no encimarse. Y no lleva hora --la repetiría--: la antigüedad
-              la dice esa marca más el aviso FOTO ANTIGUA. */}
+              la dice esa marca más el aviso FOTO ANTIGUA. Mismo cuerpo y estilo que la
+              descripción del clima (25 px, peso 700) para que se lean como una familia. */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 22px 22px',
             textAlign: 'right',
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 100%)' }}>
-            <span style={{ color: '#fff', fontSize: 26, fontWeight: 800, letterSpacing: 3 }}>EXTERIOR</span>
+            <span style={{ color: '#fff', fontSize: 25, fontWeight: 700 }}>Estación Clima XE1E</span>
           </div>
 
           {/* Aviso sobre la propia foto: si es de hace horas hay que verlo al mirarla.
@@ -183,10 +184,12 @@ export function CamaraPage({ slug }: { slug: string }) {
                   </div>
                 </div>
               )}
-              {/* Renglón de apoyo: condición, cobertura y visibilidad. Más grande a
-                  petición: se lee de lejos, que es desde donde se mira la pantalla. */}
+              {/* Renglón de apoyo: condición, cobertura y visibilidad. Centrado y que se
+                  ajuste solo (envuelve si no cabe). Se lee de lejos, que es desde donde se
+                  mira la pantalla. */}
               <div style={{ marginTop: an?.description ? 10 : 0, display: 'flex',
-                flexWrap: 'wrap', gap: '4px 22px', fontSize: 21, fontWeight: 800, letterSpacing: 0.6 }}>
+                flexWrap: 'wrap', justifyContent: 'center', gap: '4px 22px',
+                fontSize: 21, fontWeight: 800, letterSpacing: 0.6 }}>
                 {condicion && <span style={{ color: '#f0f0f0' }}>{condicion}</span>}
                 {nubes && <span style={{ color: '#d0d0d0' }}>{nubes}</span>}
                 {an?.cloud_coverage_pct != null && (
