@@ -151,6 +151,44 @@ abren puertos hacia la cámara**. Se acordó **foto cada 5-10 min + timelapse di
 en vez de directo 24/7, que serían ~1 TB/mes de subida. Añadirla como página del
 kiosco **toca también el firmware**, que tiene cableado el número de pestañas.
 
+## 2.c Timelapse diario — ✅ HECHO (2026-08-18)
+
+Era la última casilla sin marcar de `PLAN-CAMARA-EXTERIOR.md`, que dejó abierta a
+propósito la decisión de "generarlo en el VPS o en casa". **Se hace en el VPS**
+(`receiver/app/services/timelapse.py`, ffmpeg en el Dockerfile del receiver) y se ve en
+`/pro/camara` con selector de día. Razones y alternativas descartadas, en el plan.
+
+Lo que hay que saber para operarlo:
+
+- **Requiere reconstruir la imagen del receiver**: ffmpeg entra por su Dockerfile. Si
+  falta, las fotos siguen llegando y lo único que pasa es que el vídeo no aparece nunca
+  — de ahí que `Admin → Cámara` y `/api/camera/diag` digan si está.
+- Ajustes en `Admin → Cámara`: fps, mínimo de capturas y retención de los vídeos, más un
+  botón de rehacer el de hoy.
+- Los vídeos viven en `<camera_dir>/timelapse/`, **fuera** de las carpetas de día y con
+  retención propia (90 días): la poda de fotogramas no se los lleva.
+
+## 2.d CI en rojo desde hacía semanas — ✅ ARREGLADO (2026-08-18)
+
+Encontrado al ir a commitear el timelapse: `main` tenía el CI **rojo**, y por lo mismo
+que ya había pasado antes (ver el comentario largo de `receiver/ruff.toml`) — un CI que
+falla siempre deja de significar nada, así que nadie mira si lo que rompe es tuyo.
+
+- **Ruff, 3 avisos**, todos de las reglas que ese `ruff.toml` seleccionó por ser "errores
+  de verdad": `weatherapi` importado y sin usar en `main.py` (lo usa
+  `forecast_consensus`, no él), `timedelta` sin usar en `forecast_consensus.py`, y un
+  f-string sin placeholders en `alerts.py` (la `f` se copió de la línea vecina, que sí
+  tiene uno). Los tres arreglados.
+- **Un test fallando**: `test_local_forecast_rising_high` esperaba que 1025 hPa fuera
+  presión "alta", pero el commit `115016d` (2026-08-11) **recalibró los umbrales para la
+  CDMX** a propósito —alta ≥ 1030 en vez de ≥ 1022, porque a 2240 m la media local ya es
+  1027 y con el umbral estándar casi todo día salía "alto"— y el test se quedó atrás.
+  Actualizado a 1032, y añadido otro que fija justo lo que la recalibración buscaba (que
+  1027 salga "normal"), para que la próxima vez el test explique el porqué.
+
+Ojo para la próxima: **la versión de Ruff está fijada** en el workflow (0.16.2) y las
+reglas en `receiver/ruff.toml`. Subirla debe ser deliberado.
+
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
 dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:

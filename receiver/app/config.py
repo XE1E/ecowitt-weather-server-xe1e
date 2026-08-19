@@ -267,6 +267,25 @@ class Settings(BaseSettings):
     camera_capture_hour_start: int = 6
     camera_capture_hour_end: int = 20
 
+    # ── Timelapse diario (services/timelapse.py). Los fotogramas ya se archivan por
+    # día; esto los junta en un MP4 con ffmpeg EN EL VPS. Ver el módulo para por qué
+    # aquí y no en la Pi de casa.
+    camera_timelapse_enabled: bool = True
+    # Fotogramas por segundo del vídeo. Con la ventana de captura de 06-20 h a 5 min
+    # son ~168 capturas, así que a 12 fps el día dura ~14 s: por debajo de eso las
+    # nubes dan saltos y por encima se pasa demasiado rápido para verlas moverse.
+    camera_timelapse_fps: int = 12
+    # Ancho del vídeo. La C325WB da 2K; 1280 baja el archivo a un par de MB sin que se
+    # note en pantalla, y el encode de un día entero se queda en segundos.
+    camera_timelapse_width: int = 1280
+    # Por debajo de esto no se genera nada: con cuatro capturas el "vídeo" sería un
+    # pestañeo de un tercio de segundo, y da peor impresión que no ofrecerlo.
+    camera_timelapse_min_frames: int = 10
+    # Retención de los VÍDEOS, aparte de la de los fotogramas (7 días) y mucho más
+    # larga: un día de fotos pesa ~30 MB y su vídeo ~2 MB, así que el timelapse es lo
+    # que puede sobrevivir meses. 0 = no purgar nunca.
+    camera_timelapse_retention_days: int = 90
+
     # ¿La página de cámara aparece en el kiosco? Si es False, la celda de condición de la
     # consola vuelve a llevar al pronóstico y el menú no la lista.
     kiosk_camera_enabled: bool = True

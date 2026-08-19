@@ -6,9 +6,10 @@ and stores it in InfluxDB.
 """
 
 from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List, Any
 from collections import deque
 import asyncio
@@ -38,7 +39,6 @@ from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
 from .services import openmeteo
-from .services import weatherapi
 from .services import forecast_consensus
 from .services.almanac import get_almanac
 from .services import satellite
@@ -51,6 +51,7 @@ from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
 from .services.camera import CameraStore
+from .services.timelapse import TimelapseService, TimelapseError
 from .services import sky_analyzer
 
 # Configure logging
@@ -299,6 +300,39 @@ async def daily_rollup_task():
             logger.error(f"Refresco de resumen diario falló: {e}")
 
 
+async def timelapse_task():
+    """
+    Mantiene el timelapse: refresca el vídeo de HOY según entran capturas, cierra el de
+    AYER y purga los que pasan de la retención.
+
+    La frescura vive aquí y no en el endpoint a propósito: así el encode ocurre a un
+    ritmo conocido --una vez cada media hora-- en vez de depender de cuánta gente entre
+    a la página. Ayer se rehace también en cada vuelta porque la primera pasada tras la
+    medianoche puede pillar capturas aún en camino (el script de casa reintenta), y
+    porque si el servidor estuvo apagado nadie lo generó.
+    """
+    if not settings.camera_timelapse_enabled:
+        return
+    if not TimelapseService.ffmpeg_available():
+        logger.warning("Timelapse habilitado pero ffmpeg no está en la imagen; se omite")
+        return
+    await asyncio.sleep(300)  # gracia inicial: que no compita con el arranque
+    while True:
+        try:
+            hoy = datetime.now().astimezone().date()
+            ayer = hoy - timedelta(days=1)
+            for dia in (hoy, ayer):
+                try:
+                    await _timelapse.ensure(dia.isoformat())
+                except TimelapseError as e:
+                    # Lo normal a primera hora: aún no hay fotogramas suficientes.
+                    logger.debug("timelapse %s: %s", dia, e)
+            _timelapse.prune()
+        except Exception as e:
+            logger.error(f"Tarea de timelapse falló: {e}")
+        await asyncio.sleep(1800)  # 30 min
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize connections on startup."""
@@ -350,6 +384,9 @@ async def startup_event():
 
     # Acumuladores: resumen diario (Dayfile) para récords/climatología
     asyncio.create_task(daily_rollup_task())
+
+    # Timelapse diario de la cámara (hoy y ayer, más la purga)
+    asyncio.create_task(timelapse_task())
 
 
 @app.on_event("shutdown")
@@ -1946,6 +1983,14 @@ async def get_daily_rain(days: int = 7, station: Optional[str] = None):
 # ── Cámara del exterior ──────────────────────────────────────────────────────
 # La cámara está detrás del NAT de casa y el servidor en el VPS, así que la foto se
 # EMPUJA hacia aquí. Ver docs/internal/PLAN-CAMARA-EXTERIOR.md y services/camera.py.
+_timelapse = TimelapseService(
+    base_dir=settings.camera_dir,
+    fps=settings.camera_timelapse_fps,
+    width=settings.camera_timelapse_width,
+    min_frames=settings.camera_timelapse_min_frames,
+    retention_days=settings.camera_timelapse_retention_days,
+)
+
 _camera = CameraStore(
     base_dir=settings.camera_dir,
     retention_days=settings.camera_retention_days,
@@ -2135,6 +2180,19 @@ async def camera_diag(authorization: Optional[str] = Header(default=None)):
             "model_anthropic": settings.camera_analysis_model_anthropic,
             "last_attempt": _ultimo_analisis_resultado,
             "last_saved": _camera.get_analysis(),
+        },
+        # El timelapse entra en el diagnóstico porque su fallo típico no es de datos
+        # sino de despliegue: si la imagen se reconstruye sin ffmpeg, las capturas
+        # siguen llegando y lo único que pasa es que el vídeo no aparece nunca.
+        "timelapse": {
+            "enabled": settings.camera_timelapse_enabled,
+            "ffmpeg": TimelapseService.ffmpeg_available(),
+            "fps": settings.camera_timelapse_fps,
+            "width": settings.camera_timelapse_width,
+            "min_frames": settings.camera_timelapse_min_frames,
+            "retention_days": settings.camera_timelapse_retention_days,
+            "disk_bytes": _timelapse.disk_bytes(),
+            "days": _timelapse.days(),
         },
         "retention_days": settings.camera_retention_days,
         "stale_seconds": settings.camera_stale_seconds,
@@ -2332,6 +2390,83 @@ async def camera_latest():
 async def camera_days():
     """Días con histórico y cuántas capturas tiene cada uno (para el timelapse)."""
     return {"retention_days": settings.camera_retention_days, "days": _camera.days()}
+
+
+@app.get("/api/camera/timelapse/days")
+async def timelapse_days():
+    """Qué días tienen vídeo (o fotogramas para hacerlo), del más nuevo al más viejo."""
+    return {
+        "enabled": settings.camera_timelapse_enabled,
+        "ffmpeg": TimelapseService.ffmpeg_available(),
+        "fps": settings.camera_timelapse_fps,
+        "min_frames": settings.camera_timelapse_min_frames,
+        "retention_days": settings.camera_timelapse_retention_days,
+        "frames_retention_days": settings.camera_retention_days,
+        "disk_bytes": _timelapse.disk_bytes(),
+        "days": _timelapse.days(),
+    }
+
+
+@app.get("/api/camera/timelapse/{date}.mp4")
+async def timelapse_video(date: str):
+    """
+    El vídeo del día. Si todavía no existe se pone a generarlo EN SEGUNDO PLANO y
+    responde 202: el encode tarda segundos y dejar la petición colgada mientras corre
+    ffmpeg daría un tiempo de espera raro en el navegador (y varias peticiones a la vez
+    encolarían encodes). La web consulta `timelapse/days` y vuelve a pedirlo.
+    """
+    if not settings.camera_timelapse_enabled:
+        raise HTTPException(status_code=404, detail="El timelapse está deshabilitado")
+    try:
+        st = _timelapse.status(date)
+    except TimelapseError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if st["video"]:
+        return FileResponse(
+            _timelapse.video_path(date),
+            media_type="video/mp4",
+            filename=f"timelapse-{date}.mp4",
+            # Un día cerrado no cambia nunca; el de hoy sí, según entran capturas.
+            headers={"Cache-Control": "max-age=300" if st["stale"] else "max-age=86400"},
+        )
+
+    if st["generating"]:
+        raise HTTPException(status_code=202, detail="El vídeo se está generando")
+    if not st["enough_frames"]:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{date}: sólo hay {st['frames']} captura(s); "
+                   f"hacen falta {settings.camera_timelapse_min_frames}",
+        )
+    if not TimelapseService.ffmpeg_available():
+        raise HTTPException(status_code=503, detail="ffmpeg no está disponible en el servidor")
+
+    asyncio.create_task(_timelapse_generar(date))
+    raise HTTPException(status_code=202, detail="Generando el vídeo; vuelve a pedirlo en un momento")
+
+
+@app.post("/api/camera/timelapse/{date}")
+async def timelapse_regenerate(date: str, authorization: Optional[str] = Header(default=None)):
+    """Rehace el vídeo de un día aunque ya exista (botón del panel)."""
+    _require_admin(authorization)
+    if not TimelapseService.ffmpeg_available():
+        raise HTTPException(status_code=503, detail="ffmpeg no está disponible en el servidor")
+    try:
+        return await _timelapse.ensure(date, force=True)
+    except TimelapseError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+async def _timelapse_generar(date: str) -> None:
+    """Encode en segundo plano. Se traga los errores: ya quedan en el log y el estado
+    del día los vuelve a contar solo (sigue sin vídeo)."""
+    try:
+        await _timelapse.ensure(date)
+    except TimelapseError as e:
+        logger.warning("timelapse %s: %s", date, e)
+    except Exception as e:
+        logger.error("timelapse %s falló: %s", date, e)
 
 
 @app.get("/api/summaries/daily")

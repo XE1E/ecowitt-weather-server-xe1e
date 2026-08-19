@@ -572,7 +572,8 @@ Sin esto, una petición GET durante el volcado serviría media imagen.
 Si un día solo llegaron 10 capturas, no se borran para hacer hueco; se borran cuando
 el día tiene más de `CAMERA_RETENTION_DAYS` (default 7) de antigüedad.
 
-**Detección de foto vieja:** `stale_seconds` (default 1200 = 20 min). Si la foto
+**Detección de foto vieja:** `stale_seconds` (default 900 = 15 min, tres capturas
+perdidas con la cadencia de 5 min). Si la foto
 tiene más edad, `stale: true` en el status y el kiosco puede mostrarlo visualmente.
 
 ##### Endpoints de la cámara
@@ -583,6 +584,9 @@ tiene más edad, `stale: true` en el status y el kiosco puede mostrarlo visualme
 | `GET /api/camera/latest.jpg` | La última, con `X-Captured-At` |
 | `GET /api/camera/status` | `available`, `captured_at`, `age_seconds`, `stale` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
+| `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
+| `GET /api/camera/timelapse/<fecha>.mp4` | El timelapse de ese día |
+| `POST /api/camera/timelapse/<fecha>` | Rehace el vídeo del día (requiere admin) |
 
 ```bash
 curl -H "X-Camera-Token: $TOKEN" --data-binary @foto.jpg \
@@ -598,6 +602,36 @@ curl -H "X-Camera-Token: $TOKEN" --data-binary @foto.jpg \
 `CAMERA_UPLOAD_TOKEN` es un token **propio**, no el del panel de administración: lo
 lleva un script desatendido y, si se filtra, sólo permite subir fotos. Sin token
 configurado la subida responde **503** y no guarda nada.
+
+##### Timelapse diario
+
+Las capturas del día se juntan en un **MP4** con **ffmpeg**, y se ven en `/pro/camara`
+con un selector de día. Se genera **en el VPS**, donde ya están los fotogramas: hacerlo
+en la Raspberry Pi de casa habría metido un encode en un nodo IRLP en producción y
+habría añadido subida por el enlace de casa, que es el recurso escaso.
+
+| Ajuste | Default | Qué |
+|---|---|---|
+| `CAMERA_TIMELAPSE_ENABLED` | `true` | Apagarlo deja de generar (las fotos siguen guardándose) |
+| `CAMERA_TIMELAPSE_FPS` | `12` | Con la ventana de 06–20 h a 5 min son ~168 capturas: ~14 s de vídeo |
+| `CAMERA_TIMELAPSE_WIDTH` | `1280` | La cámara da 2K; 1280 deja el archivo en un par de MB |
+| `CAMERA_TIMELAPSE_MIN_FRAMES` | `10` | Por debajo no se genera: duraría un pestañeo |
+| `CAMERA_TIMELAPSE_RETENTION_DAYS` | `90` | Retención de los **vídeos** (0 = no purgar) |
+
+Los cuatro últimos se editan también en **Admin → Cámara**, con un botón para rehacer el
+vídeo de hoy y el aviso de si al contenedor le falta ffmpeg.
+
+**Dos decisiones que conviene conocer:**
+
+- **Los vídeos se guardan aparte de las fotos**, en `<camera_dir>/timelapse/`, con
+  retención propia y mucho más larga. Un día de fotos pesa ~30 MB y su vídeo ~2 MB, así
+  que el timelapse es lo que puede sobrevivir meses mientras los fotogramas se podan a
+  los 7 días.
+- **La frescura la lleva una tarea del servidor**, no las visitas: refresca el de hoy
+  cada 30 min y cierra el de ayer. El endpoint público sirve el vídeo que hay aunque le
+  falten las últimas capturas; si cada visita regenerara el día en curso, un par de
+  visitantes bastarían para tener ffmpeg corriendo sin parar. Un día que aún no tiene
+  vídeo sí se monta al pedirlo: el endpoint responde `202` y la página espera.
 
 ##### Análisis del cielo con IA
 
@@ -1392,4 +1426,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-08-09.*
+*Última actualización: 2026-08-18.*

@@ -234,6 +234,9 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
+| `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
+| `GET /api/camera/timelapse/<fecha>.mp4` | El timelapse de ese día (ver abajo) |
+| `POST /api/camera/timelapse/<fecha>` | Rehace el vídeo del día. **Requiere admin** |
 | `POST /api/camera/upload` | Recibe una captura. **Requiere token** (ver abajo) |
 
 ### Cámara del exterior
@@ -278,6 +281,66 @@ GET /api/camera/status
 
 Con `available: false` la web oculta la tarjeta de Inicio y el kiosco muestra «sin
 imagen»; con `stale: true` ambos marcan **FOTO ANTIGUA** sobre la propia imagen.
+
+### Timelapse diario
+
+Las capturas archivadas de un día (`<camera_dir>/YYYY-MM-DD/HHMMSS.jpg`) se juntan en un
+**MP4** con ffmpeg, **en el VPS**. La alternativa —animar los JPEG en el navegador— se
+descartó: a tamaño completo son ~50 MB de tráfico por día, y reducirlo pedía otra
+dependencia más un reproductor a mano, para acabar con algo que no se comparte ni se
+busca.
+
+```json
+GET /api/camera/timelapse/days
+{
+  "enabled": true,
+  "ffmpeg": true,               // false = la imagen se construyó sin ffmpeg
+  "fps": 12,
+  "min_frames": 10,
+  "retention_days": 90,         // de los VÍDEOS (los fotogramas duran 7)
+  "frames_retention_days": 7,
+  "disk_bytes": 4194304,
+  "days": [
+    {
+      "date": "2026-08-18",
+      "frames": 168,            // capturas archivadas de ese día
+      "video": true,
+      "bytes": 2097152,
+      "fps": 12,
+      "seconds": 14.0,
+      "frames_used": 168,       // con cuántas se montó el vídeo que hay
+      "stale": false,           // true = han llegado capturas nuevas desde el montaje
+      "generating": false,
+      "enough_frames": true
+    }
+  ]
+}
+```
+
+```
+GET /api/camera/timelapse/2026-08-18.mp4
+```
+
+| Respuesta | Cuándo |
+|---|---|
+| `200` | El vídeo, `Content-Type: video/mp4`. `max-age=86400` si el día está cerrado |
+| `202` | No existe todavía: **se ha puesto a generarlo** en segundo plano. Volver a pedirlo |
+| `400` | La fecha no es `YYYY-MM-DD` |
+| `404` | Ese día no junta `min_frames` capturas, o el timelapse está deshabilitado |
+| `503` | El servidor no tiene ffmpeg |
+
+El `202` es deliberado: el encode tarda segundos y dejar la petición colgada daría una
+espera muda en el navegador. La web consulta `timelapse/days` y vuelve a pedirlo.
+
+**Quién mantiene el vídeo.** Una tarea del servidor refresca el de **hoy** cada 30 min
+según entran capturas y cierra el de **ayer**; el endpoint público **no** rehace un
+vídeo que ya existe aunque le falten las últimas capturas (`stale: true`), para que el
+encode ocurra a un ritmo conocido y no dependa de cuánta gente entre a la página.
+
+**Dónde viven.** En `<camera_dir>/timelapse/`, **fuera** de las carpetas de día: así la
+poda de fotogramas no se los lleva. Un día de fotos pesa ~30 MB y su vídeo ~2 MB, así
+que el timelapse es lo que puede sobrevivir meses (`CAMERA_TIMELAPSE_RETENTION_DAYS`,
+90 por defecto).
 
 ### SVITRIX (reloj Ulanzi TC001)
 

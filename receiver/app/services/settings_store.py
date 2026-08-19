@@ -145,6 +145,10 @@ EDITABLE_KEYS = {
     "camera_capture_hour_start",
     "camera_capture_hour_end",
     "kiosk_camera_enabled",
+    "camera_timelapse_enabled",
+    "camera_timelapse_fps",
+    "camera_timelapse_min_frames",
+    "camera_timelapse_retention_days",
 }
 
 # Claves sensibles: se enmascaran al mostrarse y "en blanco = conservar" al guardar

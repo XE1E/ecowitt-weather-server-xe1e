@@ -30,7 +30,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Tablas** | Resumen tabular de todas las variables (actual, mín/máx del día), con selector entre **estación principal y remota** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día" |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
-| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
+| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
@@ -205,6 +205,7 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | POST/GET | `/api/camera/upload` · `/api/camera/latest.jpg` | Sube y sirve la foto del exterior (token propio `CAMERA_UPLOAD_TOKEN`) |
 | GET | `/api/camera/analysis` · `/api/camera/analysis/validation` | Análisis del cielo con IA + validación vs pronóstico |
 | GET | `/api/camera/analysis/history` | Histórico diario de análisis (lista días o `?date=YYYY-MM-DD`) |
+| GET | `/api/camera/timelapse/days` · `/api/camera/timelapse/<fecha>.mp4` | Timelapse diario: qué días hay y el vídeo del día (MP4, montado con ffmpeg) |
 | GET | `/health` | Estado del servicio |
 
 > **Multi-estación:** `/api/current`, `/api/history` y `/api/stats/daily` aceptan `?station=<nombre>` para consultar una **estación secundaria** (p. ej. `gw1100`); sin el parámetro devuelven la **principal**.

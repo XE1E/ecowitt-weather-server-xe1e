@@ -31,6 +31,16 @@ interface Diag {
     last_attempt: { ok: boolean | null; at: string | null; provider: string | null; error: string | null }
     last_saved: { sky_condition?: string; cloud_coverage_pct?: number; description?: string; analyzed_at?: string } | null
   }
+  timelapse: {
+    enabled: boolean
+    ffmpeg: boolean
+    fps: number
+    width: number
+    min_frames: number
+    retention_days: number
+    disk_bytes: number
+    days: { date: string; frames: number; video: boolean; bytes: number; seconds: number; stale: boolean }[]
+  }
   retention_days: number
   stale_seconds: number
   kiosk_camera_enabled: boolean
@@ -48,6 +58,10 @@ interface Form {
   camera_analysis_model_anthropic: string
   camera_retention_days: number
   kiosk_camera_enabled: boolean
+  camera_timelapse_enabled: boolean
+  camera_timelapse_fps: number
+  camera_timelapse_min_frames: number
+  camera_timelapse_retention_days: number
   gemini_api_key: string
   anthropic_api_key: string
 }
@@ -106,6 +120,7 @@ export function AdminCamara() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [rehaciendo, setRehaciendo] = useState(false)
   const [msg, setMsg] = useState<{ t: 'ok' | 'err'; x: string } | null>(null)
 
   const cargar = useCallback(async () => {
@@ -125,6 +140,10 @@ export function AdminCamara() {
       camera_analysis_model_anthropic: d.analysis.model_anthropic,
       camera_retention_days: d.retention_days,
       kiosk_camera_enabled: d.kiosk_camera_enabled,
+      camera_timelapse_enabled: d.timelapse.enabled,
+      camera_timelapse_fps: d.timelapse.fps,
+      camera_timelapse_min_frames: d.timelapse.min_frames,
+      camera_timelapse_retention_days: d.timelapse.retention_days,
       gemini_api_key: '',
       anthropic_api_key: '',
     })
@@ -165,6 +184,27 @@ export function AdminCamara() {
       } else setMsg({ t: 'err', x: j.detail || 'No se pudo analizar' })
     } catch { setMsg({ t: 'err', x: 'Error de conexión' }) }
     finally { setAnalyzing(false) }
+  }
+
+  const rehacerTimelapse = async () => {
+    // Hoy y no ayer: es el que se queda corto segun entran capturas, y el que uno
+    // quiere ver recien montado tras cambiar los fps.
+    const hoy = new Date()
+    const fecha = [
+      hoy.getFullYear(),
+      String(hoy.getMonth() + 1).padStart(2, '0'),
+      String(hoy.getDate()).padStart(2, '0'),
+    ].join('-')
+    setRehaciendo(true); setMsg(null)
+    try {
+      const r = await fetchWithAuth('/api/camera/timelapse/' + fecha, { method: 'POST' })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok) {
+        setMsg({ t: 'ok', x: 'Video de hoy rehecho (' + (j.frames_used ?? '?') + ' capturas)' })
+        cargar()
+      } else setMsg({ t: 'err', x: j.detail || 'No se pudo generar' })
+    } catch { setMsg({ t: 'err', x: 'Error de conexion' }) }
+    finally { setRehaciendo(false) }
   }
 
   if (loading || !form || !diag) return <div className="text-slate-400">Cargando...</div>
@@ -309,6 +349,73 @@ export function AdminCamara() {
         <p className="text-xs text-slate-500 mt-2">
           Con "Mostrar en el kiosco" apagado, la celda de sol y luna de la consola vuelve a llevar al
           pronóstico y la cámara no aparece en el menú del display.
+        </p>
+      </div>
+
+      {/* TIMELAPSE */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Toggle enabled={form.camera_timelapse_enabled} onChange={(v) => up('camera_timelapse_enabled', v)} />
+            <span className="text-sm font-medium">Timelapse diario</span>
+          </div>
+          <button onClick={rehacerTimelapse} disabled={rehaciendo || !diag.timelapse.ffmpeg}
+            className="text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50 px-3 py-1.5 rounded-lg">
+            {rehaciendo ? 'Montando...' : '🎬 Rehacer el de hoy'}
+          </button>
+        </div>
+
+        {/* ffmpeg es un fallo de DESPLIEGUE, no de datos: si la imagen se reconstruye
+            sin el, las fotos siguen llegando y lo unico que pasa es que no hay video. */}
+        {!diag.timelapse.ffmpeg && (
+          <p className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">
+            El contenedor no tiene <code>ffmpeg</code>: no se puede generar ningun video. Reconstruye la
+            imagen del receiver (su Dockerfile ya lo instala).
+          </p>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 w-28">Velocidad</span>
+            <Num value={form.camera_timelapse_fps} onChange={(v) => up('camera_timelapse_fps', v)} min={1} max={60} suffix="fps" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 w-28">Minimo</span>
+            <Num value={form.camera_timelapse_min_frames} onChange={(v) => up('camera_timelapse_min_frames', v)} min={2} max={200} suffix="capturas" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 w-28">Guardar videos</span>
+            <Num value={form.camera_timelapse_retention_days} onChange={(v) => up('camera_timelapse_retention_days', v)} min={0} max={3650} suffix="dias" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 w-28">En disco</span>
+            <span className="text-sm text-slate-300">
+              {diag.timelapse.disk_bytes ? (diag.timelapse.disk_bytes / (1024 * 1024)).toFixed(1) + ' MB' : '--'}
+              <span className="text-xs text-slate-500"> en {diag.timelapse.days.filter((d) => d.video).length} video(s)</span>
+            </span>
+          </div>
+        </div>
+
+        {!!diag.timelapse.days.length && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {diag.timelapse.days.slice(0, 8).map((d) => (
+              <span key={d.date}
+                title={d.frames + ' capturas' + (d.video ? ' - ' + d.seconds + 's - ' + (d.bytes / (1024 * 1024)).toFixed(1) + ' MB' : ' - sin video')}
+                className={'text-xs px-2 py-1 rounded-lg border ' + (d.video
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : 'bg-white/5 border-white/10 text-slate-400')}>
+                {d.date.slice(5)} {d.video ? d.seconds + 's' : d.frames + 'f'}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-slate-500 mt-2">
+          Se monta en el servidor con ffmpeg: hoy se refresca cada media hora segun entran capturas y
+          ayer se cierra solo. Los videos se guardan <span className="text-slate-400">aparte de las
+          fotos</span> y con retencion propia, mucho mas larga: un dia de fotos pesa ~30 MB y su video
+          ~2 MB, asi que el timelapse es lo que puede sobrevivir meses. Cambiar los fps solo afecta a
+          los videos que se monten a partir de entonces.
         </p>
       </div>
     </div>

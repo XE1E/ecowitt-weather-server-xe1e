@@ -168,9 +168,36 @@ que depende de tener la cámara físicamente.
       (`CAMERA_RETENTION_DAYS`, 7 por defecto): si un día la cadencia falla y sólo
       llegan diez capturas, borrar "las más viejas" se comería días enteros de
       historia buena a cambio de nada.
-- [ ] **Timelapse diario.** Generarlo en el VPS o en casa, y dónde se publica. El
-      histórico ya se está guardando en `<camera_dir>/YYYY-MM-DD/HHMMSS.jpg` y
-      `GET /api/camera/days` dice qué hay.
+- [x] **Timelapse diario — HECHO (2026-08-18).** `receiver/app/services/timelapse.py`
+      junta los fotogramas del día en un MP4 con **ffmpeg**, y se ve en `/pro/camara`
+      con selector de día (`components/station/TimelapseCard.tsx`).
+
+      **Se genera en el VPS**, que era la decisión abierta de este punto. Los
+      fotogramas ya están ahí; hacerlo en casa habría metido un encode en la Pi
+      —un nodo IRLP en producción, con el audio por medio— y habría añadido subida
+      por el enlace de casa, que es el recurso escaso. Es un encode al día de ~170
+      fotogramas, nada que ver con transcodificar en directo, que es lo que el ARM
+      del free tier no aguantaría. Se descartó también animar los JPEG en el
+      navegador: ~50 MB de tráfico por día a tamaño completo, y reducirlo pedía
+      Pillow más un reproductor a mano para acabar con algo que no se comparte ni
+      se busca.
+
+      Dos decisiones que se tomaron por el camino:
+
+      - **Los vídeos viven fuera de las carpetas de día** (`<camera_dir>/timelapse/`),
+        con retención propia de 90 días. Así la poda de fotogramas no se los lleva:
+        un día de fotos pesa ~30 MB y su vídeo ~2 MB, así que el timelapse es lo que
+        puede sobrevivir meses.
+      - **La frescura la lleva una tarea periódica** (hoy cada 30 min, ayer se cierra
+        solo), no las visitas. El endpoint público sirve el vídeo que hay aunque le
+        falten las últimas capturas; si cada visita regenerara el día en curso, un par
+        de visitantes tendrían ffmpeg corriendo sin parar. Un día sin vídeo sí se monta
+        al pedirlo, con un `202` y la página esperando.
+
+      Ajustes en `Admin → Cámara` (fps, mínimo de capturas, retención) más un botón de
+      rehacer el de hoy y el aviso de si al contenedor le falta ffmpeg — que es el fallo
+      típico, porque no es de datos sino de despliegue: **el Dockerfile del receiver
+      instala ffmpeg**, así que la imagen hay que reconstruirla.
 - [x] **Kiosco.** Página `camara`, en el menú que abre el reloj. **No hizo falta tocar
       el firmware**: ver la sección de arriba.
 - [x] **Dashboard web.** `/pro/camara` con su entrada en la navegación, tarjeta en

@@ -189,7 +189,13 @@ class CameraStore:
                     datetime.strptime(nombre, "%Y-%m-%d")
                 except ValueError:
                     continue
-                out.append({"date": nombre, "frames": len(os.listdir(ruta))})
+                # Sólo los .jpg: en esa carpeta vive también `analysis.json` (el
+                # histórico de análisis del día), que contaba como un fotograma más.
+                try:
+                    n = sum(1 for x in os.listdir(ruta) if x.lower().endswith(".jpg"))
+                except OSError:
+                    n = 0
+                out.append({"date": nombre, "frames": n})
         except OSError:
             pass
         return out
