@@ -36,7 +36,11 @@ function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH 
   glyph?: string; glyphH?: number; outline?: boolean
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 min-w-[110px] flex items-center gap-2.5">
+    // `shrink-0` es obligatorio junto al `whitespace-nowrap` de abajo: un item de flex se
+    // encoge por omisión, y `min-w` no lo impide, así que la casilla se estrechaba por
+    // debajo de su contenido y el texto se salía ENCIMA de la casilla siguiente --se vio
+    // en el render: el "18 km/h" del viento pisando la brújula del rumbo--.
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 min-w-[110px] shrink-0 flex items-center gap-2.5">
       {glyph && (
         <span className={hex ? '' : color} style={hex ? { color: hex } : undefined}>
           <MeteoGlyph name={glyph} size={glyphH} color="currentColor" title={label} outline={outline} />
