@@ -28,14 +28,68 @@ import raindrops from '@meteocons/svg/monochrome/raindrops.svg?raw'
 import windsock from '@meteocons/svg/monochrome/windsock.svg?raw'
 import clearDay from '@meteocons/svg/monochrome/clear-day.svg?raw'
 
+// Familias GRADUADAS: el icono cambia con el valor (grado Beaufort, nivel de presión,
+// rumbo). Van por aquí y no por `<WeatherIcon>` porque las variantes `fill` y `line` de
+// Meteocons están pintadas para fondo CLARO --el número del Beaufort es `#202939` y la
+// carátula del barómetro `#475569`, invisibles sobre este panel-- mientras la
+// `monochrome` es negro puro y aquí se tiñe. Ver la nota de `theme/icons.ts`.
+import windBeaufort0 from '@meteocons/svg/monochrome/wind-beaufort-0.svg?raw'
+import windBeaufort1 from '@meteocons/svg/monochrome/wind-beaufort-1.svg?raw'
+import windBeaufort2 from '@meteocons/svg/monochrome/wind-beaufort-2.svg?raw'
+import windBeaufort3 from '@meteocons/svg/monochrome/wind-beaufort-3.svg?raw'
+import windBeaufort4 from '@meteocons/svg/monochrome/wind-beaufort-4.svg?raw'
+import windBeaufort5 from '@meteocons/svg/monochrome/wind-beaufort-5.svg?raw'
+import windBeaufort6 from '@meteocons/svg/monochrome/wind-beaufort-6.svg?raw'
+import windBeaufort7 from '@meteocons/svg/monochrome/wind-beaufort-7.svg?raw'
+import windBeaufort8 from '@meteocons/svg/monochrome/wind-beaufort-8.svg?raw'
+import windBeaufort9 from '@meteocons/svg/monochrome/wind-beaufort-9.svg?raw'
+import windBeaufort10 from '@meteocons/svg/monochrome/wind-beaufort-10.svg?raw'
+import windBeaufort11 from '@meteocons/svg/monochrome/wind-beaufort-11.svg?raw'
+import windBeaufort12 from '@meteocons/svg/monochrome/wind-beaufort-12.svg?raw'
+import barometerLow from '@meteocons/svg/monochrome/barometer-low.svg?raw'
+import barometerModerate from '@meteocons/svg/monochrome/barometer-moderate.svg?raw'
+import barometerHigh from '@meteocons/svg/monochrome/barometer-high.svg?raw'
+import barometerVerryHigh from '@meteocons/svg/monochrome/barometer-verry-high.svg?raw'
+import barometerExtreme from '@meteocons/svg/monochrome/barometer-extreme.svg?raw'
+import compassN from '@meteocons/svg/monochrome/compass-n.svg?raw'
+import compassNe from '@meteocons/svg/monochrome/compass-ne.svg?raw'
+import compassE from '@meteocons/svg/monochrome/compass-e.svg?raw'
+import compassSe from '@meteocons/svg/monochrome/compass-se.svg?raw'
+import compassS from '@meteocons/svg/monochrome/compass-s.svg?raw'
+import compassSw from '@meteocons/svg/monochrome/compass-sw.svg?raw'
+import compassW from '@meteocons/svg/monochrome/compass-w.svg?raw'
+import compassNw from '@meteocons/svg/monochrome/compass-nw.svg?raw'
+import thermometerWarmer from '@meteocons/svg/monochrome/thermometer-warmer.svg?raw'
+import thermometerColder from '@meteocons/svg/monochrome/thermometer-colder.svg?raw'
+import thermometerRaindrop from '@meteocons/svg/monochrome/thermometer-raindrop.svg?raw'
+import uvIndex from '@meteocons/svg/monochrome/uv-index.svg?raw'
+import dust from '@meteocons/svg/monochrome/dust.svg?raw'
+
 const CRUDOS: Record<string, string> = {
   thermometer, humidity, barometer, raindrops, windsock, 'clear-day': clearDay,
+  'wind-beaufort-0': windBeaufort0, 'wind-beaufort-1': windBeaufort1, 'wind-beaufort-2': windBeaufort2, 'wind-beaufort-3': windBeaufort3,
+  'wind-beaufort-4': windBeaufort4, 'wind-beaufort-5': windBeaufort5, 'wind-beaufort-6': windBeaufort6, 'wind-beaufort-7': windBeaufort7,
+  'wind-beaufort-8': windBeaufort8, 'wind-beaufort-9': windBeaufort9, 'wind-beaufort-10': windBeaufort10, 'wind-beaufort-11': windBeaufort11,
+  'wind-beaufort-12': windBeaufort12, 'barometer-low': barometerLow, 'barometer-moderate': barometerModerate, 'barometer-high': barometerHigh,
+  'barometer-verry-high': barometerVerryHigh, 'barometer-extreme': barometerExtreme, 'compass-n': compassN, 'compass-ne': compassNe,
+  'compass-e': compassE, 'compass-se': compassSe, 'compass-s': compassS, 'compass-sw': compassSw,
+  'compass-w': compassW, 'compass-nw': compassNw, 'thermometer-warmer': thermometerWarmer, 'thermometer-colder': thermometerColder,
+  'thermometer-raindrop': thermometerRaindrop, 'uv-index': uvIndex, 'dust': dust,
 }
 
 /**
  * Caja de la tinta de cada icono dentro de su lienzo de 128×128: `x y ancho alto`.
  * Medida con `svg.getBBox()` sobre la página real, no estimada. Si se agrega un
- * icono nuevo hay que medirlo (scratchpad/tinta.py) o se verá descentrado.
+ * icono nuevo hay que medirlo o se verá descentrado:
+ *
+ *     python scripts/tinta-meteocons.py <icono>
+ *
+ * Esa herramienta calcula la misma caja sin navegador y está validada contra las cuatro
+ * filas de aquí que se midieron a mano (reproduce `thermometer` y `barometer` exactas).
+ * Ojo con una cosa que documenta ella y conviene saber aquí: varios iconos LATEN con un
+ * `animateTransform type="scale"` de hasta 1.1x, así que la caja tiene que cubrir el
+ * máximo del latido --si no, el glifo se recorta justo en el pico--; es lo que explica
+ * que la caja de `humidity` sea mayor que su geometría en reposo.
  *
  * Las cajas llevan sumada la MITAD DEL TRAZO, que `getBBox()` no cuenta: devuelve
  * la caja de la geometría, y un contorno la desborda media anchura de trazo por
@@ -62,6 +116,43 @@ const TINTA: Record<string, [number, number, number, number]> = {
   barometer: [24, 24, 80, 80],
   windsock: [41.5, 29.5, 47, 67],
   'clear-day': [0, 0, 128, 128],   // este ya llena su lienzo
+  // Beaufort: la familia entera comparte caja --la MAYOR de los trece, la de los
+  // grados de dos cifras-- a propósito. Con la caja justa de cada uno, el glifo
+  // cambiaría de tamaño al cambiar el viento, que se lee como un fallo de dibujo.
+  // Es un icono ANCHO (89x58), no cuadrado: a 28 px de alto ocupa 43 de ancho.
+  'wind-beaufort-0': [22, 35, 89, 58],
+  'wind-beaufort-1': [22, 35, 89, 58],
+  'wind-beaufort-2': [22, 35, 89, 58],
+  'wind-beaufort-3': [22, 35, 89, 58],
+  'wind-beaufort-4': [22, 35, 89, 58],
+  'wind-beaufort-5': [22, 35, 89, 58],
+  'wind-beaufort-6': [22, 35, 89, 58],
+  'wind-beaufort-7': [22, 35, 89, 58],
+  'wind-beaufort-8': [22, 35, 89, 58],
+  'wind-beaufort-9': [22, 35, 89, 58],
+  'wind-beaufort-10': [22, 35, 89, 58],
+  'wind-beaufort-11': [22, 35, 89, 58],
+  'wind-beaufort-12': [22, 35, 89, 58],
+  // Barómetros y brújulas: los catorce miden exactamente lo mismo que el
+  // `barometer` de arriba, que es la caja ya probada en la consola.
+  'barometer-low': [24, 24, 80, 80],
+  'barometer-moderate': [24, 24, 80, 80],
+  'barometer-high': [24, 24, 80, 80],
+  'barometer-verry-high': [24, 24, 80, 80],
+  'barometer-extreme': [24, 24, 80, 80],
+  'compass-n': [24, 24, 80, 80],
+  'compass-ne': [24, 24, 80, 80],
+  'compass-e': [24, 24, 80, 80],
+  'compass-se': [24, 24, 80, 80],
+  'compass-s': [24, 24, 80, 80],
+  'compass-sw': [24, 24, 80, 80],
+  'compass-w': [24, 24, 80, 80],
+  'compass-nw': [24, 24, 80, 80],
+  'thermometer-warmer': [50, 31, 44, 66],
+  'thermometer-colder': [50, 31, 44, 66],
+  'thermometer-raindrop': [47.2, 28.4, 44, 72.6],
+  'uv-index': [16, 16, 96, 96],
+  'dust': [24, 39, 87, 51],
 }
 
 /**

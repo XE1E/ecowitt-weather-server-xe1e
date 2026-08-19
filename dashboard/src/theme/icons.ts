@@ -29,6 +29,26 @@ export const ICON = {
 
 // ── Familias graduadas: el icono cambia con el valor, así que informa ──────────
 
+/*
+ * NOTA GENERAL sobre las familias que aquí NO se usan (verificado 2026-08-18,
+ * leyendo los propios SVG del paquete).
+ *
+ * Las variantes `fill` y `line` de Meteocons están pintadas para fondo CLARO, y este
+ * panel es oscuro. No es una rareza de un icono suelto, es la paleta de las dos
+ * variantes:
+ *   · `wind-beaufort-0..12`: el dibujo son dos trazos de 4 px en `#E2E8F0` y el
+ *     número va relleno de `#202939` --azul casi negro-- sobre fondo oscuro.
+ *   · `barometer-*`: carátula `#475569` con aro `#1E293B` (en `line`, los ocho
+ *     trazos son `#1E293B`). Sólo la aguja `#EF4444` se distingue.
+ *   · `compass-*`: mayoría de `#1E293B`.
+ *
+ * O sea que el rechazo de más abajo no era del icono sino de la variante. La vía que
+ * sí funcionaría es la de `MeteoGlyph`: variante `monochrome` (negro puro) teñida con
+ * `currentColor`, que es como la consola pinta ya su barómetro. Cuesta medir la caja
+ * de tinta de cada icono nuevo (ver la cabecera de `MeteoGlyph.tsx`): sin medirla, el
+ * glifo sale descentrado dentro de su lienzo de 128.
+ */
+
 /**
  * Presión: se usa la TENDENCIA, no el nivel, y con los chevrones —no con la
  * carátula de barómetro—.
@@ -118,8 +138,17 @@ export function iconLluvia(tasaMmH?: number | null, acumuladoMm?: number | null)
 export function iconAlerta(clave: string): string {
   const k = clave.includes(':') ? clave.split(':')[1] : clave   // quita la estación
   if (k === 'temp_drop' || k === 'temp_rise') return 'thermometer'
+  // El FRÍO con el termómetro de frío. Antes toda clave de temperatura caía en
+  // `thermometer-warmer`, así que una alerta de `temp_low` --o de `feels_low`, con
+  // viento helado-- se ilustraba con un termómetro rojo de calor: el icono decía lo
+  // contrario que la alerta. `thermometer-colder` es el mismo dibujo en azul
+  // (#2563EB), así que la pareja se lee como pareja.
+  if (k === 'temp_low' || k === 'feels_low') return 'thermometer-colder'
   if (k.startsWith('temp_') || k.startsWith('feels_')) return 'thermometer-warmer'
-  if (k.startsWith('dew_')) return 'humidity'
+  // El rocío tenía el icono de humedad, que es el de las alertas de humedad: dos
+  // alarmas distintas con el mismo dibujo. `thermometer-raindrop` dice lo que es --una
+  // temperatura, la de condensación-- y no se confunde con la humedad relativa.
+  if (k.startsWith('dew_')) return 'thermometer-raindrop'
   if (k.startsWith('humidity_')) return 'humidity'
   if (k === 'wind_high') return 'windsock'
   if (k === 'gust_high') return 'wind-alert'
@@ -134,6 +163,67 @@ export function iconAlerta(clave: string): string {
   if (k.startsWith('sensor_')) return 'not-available'
   if (k === 'aqi_high' || k === 'imeca_high') return 'dust'
   return 'code-orange'
+}
+
+// ── Glifos TEÑIBLES para <MeteoGlyph> ─────────────────────────────────────────
+//
+// Estos devuelven nombres de la variante `monochrome`, que MeteoGlyph tiñe con el color
+// de la variable. Es lo que permite usar las familias graduadas que la nota de arriba
+// descarta para `<WeatherIcon>`: el problema era la paleta de `fill`/`line`, no el icono.
+
+/**
+ * Grado Beaufort → glifo del viento. Reutiliza `gradoBeaufort`, así que el icono y el
+ * número que muestre la tarjeta coinciden por construcción.
+ *
+ * Sin dato cae en el grado 0, que es "calma": el dibujo de la escala en su punto más
+ * bajo. Es preferible a un hueco, y no miente más que un `--` al lado.
+ */
+export function glifoViento(kmh?: number | null): string {
+  return `wind-beaufort-${gradoBeaufort(kmh) ?? 0}`
+}
+
+/**
+ * Presión → carátula de barómetro por NIVEL.
+ *
+ * Los tres primeros cortes son exactamente los del servidor
+ * (`receiver/app/services/forecaster.py::_level`), recalibrados para la CDMX sobre 90
+ * días de histórico local: a 2240 m la media es 1027 hPa, así que el umbral estándar de
+ * "alta" (1022) daba casi todos los días por altos. Si allí se cambian, hay que
+ * cambiarlos aquí; el icono no debe decir "alta" cuando el texto dice "normal".
+ *
+ *   < 1024   baja        1024-1029  normal        >= 1030  alta
+ *
+ * Los dos niveles de arriba no existen en el servidor: son la parte alta del rango
+ * MEDIDO aquí (999-1036 hPa), y están para que un día de presión récord no se vea igual
+ * que un martes cualquiera de 1030.
+ */
+export function glifoPresion(hPa?: number | null): string {
+  if (hPa == null) return 'barometer'
+  if (hPa >= 1034) return 'barometer-extreme'
+  if (hPa >= 1032) return 'barometer-verry-high'
+  if (hPa >= 1030) return 'barometer-high'
+  if (hPa >= 1024) return 'barometer-moderate'
+  return 'barometer-low'
+}
+
+/**
+ * Rumbo en grados → brújula de 8 sectores.
+ *
+ * Sectores de 45° centrados en cada rumbo (el norte abarca de 337.5 a 22.5), igual
+ * criterio que `cardinal()` en `weather.ts`, para que el dibujo y las letras no puedan
+ * discrepar. Sin dato, la brújula sin aguja.
+ */
+export function glifoRumbo(grados?: number | null): string {
+  if (grados == null) return 'compass'
+  const g = ((grados % 360) + 360) % 360
+  const i = Math.round(g / 45) % 8
+  return `compass-${['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'][i]}`
+}
+
+/** Termómetro que corresponde al signo de una diferencia de temperatura. */
+export function glifoTermometro(delta?: number | null): string {
+  if (delta == null) return 'thermometer'
+  return delta > 0 ? 'thermometer-warmer' : delta < 0 ? 'thermometer-colder' : 'thermometer'
 }
 
 /** Fase lunar → icono. `fase` es 0..1 (0 = luna nueva). */

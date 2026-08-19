@@ -41,9 +41,17 @@ Documento de referencia para uniformizar estilos en todo el dashboard y kiosko.
 
 | Tendencia | Icono | Color Hex | Tailwind |
 |-----------|-------|-----------|----------|
-| Subiendo | `▲` / `ArrowUp` | `#22c55e` | `text-green-500` |
-| Bajando | `▼` / `ArrowDown` | `#ef4444` | `text-red-500` |
-| Estable | `–` / `Minus` | `#94a3b8` | `text-slate-400` |
+| Subiendo | `TrendArrow trend="up"` | `#22c55e` | `text-green-500` |
+| Bajando | `TrendArrow trend="down"` | `#ef4444` | `text-red-500` |
+| Estable | `TrendArrow trend="stable"` | `#94a3b8` | `text-slate-400` |
+
+> El dibujo lo hace **`dashboard/src/components/TrendArrow.tsx`**, con SVG propio, y
+> **no** `ArrowUp`/`ArrowDown` de Lucide: la flecha propia va RELLENA y a 16-24 px
+> --el tamaño en que se usa-- se lee mejor que la de trazo. Esta tabla decía Lucide y
+> el código nunca lo fue; se alinea el documento con el código (2026-08-18). Lucide
+> se sigue usando para la iconografía de INTERFAZ (botones, navegación), no para los
+> datos. Quien pinte tendencias debe usar `TrendArrow` y `getTrend`, no dibujar
+> flechas propias, que es justo lo que esta tabla existe para evitar.
 
 ### Umbrales de tendencia
 - **Temperatura**: ±0.5°C en 1 hora

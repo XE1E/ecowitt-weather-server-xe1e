@@ -18,6 +18,8 @@ import fogNight from '@meteocons/svg/fill/fog-night.svg'
 import mist from '@meteocons/svg/fill/mist.svg'
 import thermometer from '@meteocons/svg/fill/thermometer.svg'
 import thermometerWarmer from '@meteocons/svg/fill/thermometer-warmer.svg'
+import thermometerColder from '@meteocons/svg/fill/thermometer-colder.svg'
+import thermometerRaindrop from '@meteocons/svg/fill/thermometer-raindrop.svg'
 import humidity from '@meteocons/svg/fill/humidity.svg'
 import barometer from '@meteocons/svg/fill/barometer.svg'
 import windsock from '@meteocons/svg/fill/windsock.svg'
@@ -83,6 +85,8 @@ const ICONS: Record<string, string> = {
   mist,
   thermometer,
   'thermometer-warmer': thermometerWarmer,
+  'thermometer-colder': thermometerColder,
+  'thermometer-raindrop': thermometerRaindrop,
   humidity,
   barometer,
   windsock,
