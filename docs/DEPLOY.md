@@ -24,9 +24,15 @@ WS2910 ──HTTP:8080──▶ [ nginx dashboard ] ─┬─ /            → S
 
 ## 1. Liberar el puerto 8080 (apagar Apache/WeatherNode)
 
-El WeatherNode actual usa Apache en el 8080. Lo detenemos para que nuestro stack
-tome ese puerto (los datos de WeatherNode no se pierden; quedan en el VPS por si
-quieres volver).
+El WeatherNode usaba Apache en el 8080. Se detiene para que nuestro stack tome ese
+puerto.
+
+> **Ya no está en el VPS (borrado el 2026-08-18).** Ocupaba 289 MB en
+> `/var/www/html/weathernode` y no guardaba nada: se comprobó su SQLite antes de
+> borrarlo y la tabla `weather_readings` tenía **0 filas** --era una instalación de
+> Laravel con su `vendor/` y treinta archivos de idiomas--. De su base y su config
+> quedó un archivo de 122 KB en `~/ecowitt-backups/weathernode-config-20260819.tar.gz`,
+> por si hiciera falta recuperar algún ajuste o la API key que tenía guardada.
 
 ```bash
 sudo systemctl disable --now apache2
@@ -219,7 +225,7 @@ Lo que **no** conviene borrar a ciegas:
 |---|---|---|
 | `/var/lib/docker/volumes` | InfluxDB y compañía | Son **los datos**. Aquí ocupan ~106 MB |
 | `~/ecowitt-backups` | Backups de InfluxDB | Ocupan ~3 MB y el script ya rota los últimos 7 |
-| `/var/www` | El WeatherNode viejo (Apache) | ~289 MB. Se conservó a propósito por si se quiere volver; borrarlo es una decisión, no limpieza |
+| `/var/www` | ~~El WeatherNode viejo~~ | Borrado el 2026-08-18 (289 MB). Se verificó antes que su SQLite no tenía ni una lectura de clima |
 | `/opt/unified-monitoring-agent` | Agente de Oracle Cloud | ~331 MB, es de la plataforma |
 
 Conviene mirar `docker system df` de vez en cuando, sobre todo tras varios despliegues
@@ -259,4 +265,6 @@ docker compose exec influxdb influx delete --bucket ecowitt \
   Caddy (`docker compose --profile caddy up -d`). El WS2910 sigue en HTTP por IP:8080.
 - **Home Assistant (remoto):** lee la API REST pública, p. ej.
   `http://163.192.147.208:8080/api/current` (ver Arquitectura B en ESTUDIO_VIABILIDAD.md).
-- **Volver a WeatherNode:** `sudo systemctl enable --now apache2` tras `docker compose down`.
+- **Volver a WeatherNode:** ya no es un interruptor. Su aplicación se borró el
+  2026-08-18 (ver §1), así que habría que reinstalarla antes de reactivar Apache
+  (`sudo systemctl enable --now apache2`, que sigue instalado y ocupa ~6 MB).
