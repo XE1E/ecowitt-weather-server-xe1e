@@ -28,6 +28,8 @@ import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
 import { EarthquakesCard } from '../components/station/EarthquakesCard'
 import { RadarCard } from '../components/station/RadarCard'
+import { CameraCard } from '../components/station/CameraCard'
+import { SkyAnalysisCard } from '../components/station/SkyAnalysisCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { MetarCard } from '../components/station/MetarCard'
@@ -81,6 +83,7 @@ export function MiTableroPage() {
   // Catálogo de tarjetas elegibles (la de condiciones actuales va fija aparte)
   const CARDS: { key: string; label: string; span: 1 | 2 | 3; render: () => JSX.Element }[] = [
     { key: 'ministats', label: 'Resumen rápido', span: 3, render: () => <MiniStats data={data!} stats={stats} forecast={forecast} compare={compare} /> },
+    { key: 'skyanalysis', label: 'Análisis del cielo (IA)', span: 1, render: () => <SkyAnalysisCard /> },
     { key: 'wind', label: 'Viento', span: 1, render: () => <WindFlipCard data={data!} /> },
     { key: 'pressure', label: 'Presión', span: 1, render: () => <PressureCard data={data!} stats={stats} history={history} /> },
     { key: 'localforecast', label: 'Pronóstico local', span: 1, render: () => <LocalForecastCard lf={localForecast} /> },
@@ -99,11 +102,17 @@ export function MiTableroPage() {
     { key: 'interior', label: 'Interior', span: 1, render: () => <InteriorCard data={data!} /> },
     { key: 'extra', label: 'Sensores adicionales', span: 1, render: () => <ExtraSensorsCard data={data!} history={history} /> },
     { key: 'remote', label: 'Estación remota', span: 1, render: () => <RemoteStationCard /> },
+    // La cámara va a ancho completo por el mismo motivo que en Inicio: en una columna
+    // de un tercio la foto se queda en miniatura. Y aquí NO se oculta si no hay captura
+    // (a diferencia de Inicio): si el usuario eligió la tarjeta a mano, hacerla
+    // desaparecer parece que la selección no funcionó --y en modo edición dejaría un
+    // marco vacío imposible de arrastrar--. El hueco explicado es la respuesta correcta.
+    { key: 'camera', label: 'Cámara del exterior', span: 3, render: () => <CameraCard /> },
     { key: 'radar', label: 'Radar', span: 3, render: () => <RadarCard /> },
   ]
   const ALL = CARDS.map((c) => c.key)
   // Por defecto se muestran unas cuantas; el usuario ajusta y se guarda.
-  const DEFAULT = ['wind', 'pressure', 'forecast', 'tempchart', 'precip', 'uvsolar', 'sunmoon', 'air', 'remote']
+  const DEFAULT = ['skyanalysis', 'wind', 'pressure', 'forecast', 'tempchart', 'precip', 'uvsolar', 'sunmoon', 'air', 'remote', 'camera']
 
   const [visible, setVisible] = useState<string[]>(() => {
     try {

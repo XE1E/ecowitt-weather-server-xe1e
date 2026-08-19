@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-09.
+> Última actualización: 2026-08-18.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -269,28 +269,49 @@ usa 4. Verificado en producción el 2026-08-04:
 - [x] El tab **Consola** del dashboard quedó igual sin trabajo extra: es el MISMO
       componente (`ConsoleReplica`), así que se arregló en un solo lugar.
 
-## 8. Revisiones detectadas el 2026-08-03
-- [ ] **SMN sin datos — es caída de CONAGUA, no nuestra.** `/api/smn` y
-      `/api/smn/municipios` devuelven 502 porque el webservice de origen responde
-      **HTTP 500**: `https://smn.conagua.gob.mx/tools/GUI/webservices/?method=1`.
-      Verificado que falla **igual desde el VPS y desde otra red**, así que no es
-      bloqueo de IP. Nada que arreglar del lado del servidor, pero **falta
-      degradar con gracia**: hoy la página queda sin contenido en vez de decir
-      "el SMN no está disponible". Considerar además cachear la última respuesta
-      buena para sobrevivir estas caídas.
-- [ ] **Mi Tablero no muestra tendencias.** Confirmado: `MiTableroPage.tsx` tiene
-      **cero** usos de `TrendArrow`, `getTrend` y `TrendBadge`, mientras Inicio y la
-      consola sí las pintan. Hay que decidir si los widgets del tablero llevan
-      flecha (y con qué umbrales: los de `CONVENCIONES.md`, ±0.5 °C / ±3 % / ±1 hPa).
-- [ ] **Climograma se ve raro — falta señalar meses parciales.** No es un bug de
-      dibujo: `/api/climate/noaa?year=2026` devuelve **sólo 2 meses** (julio y
-      agosto) porque la estación arrancó el 2026-07-19. Julio sale con 68.1 mm
-      siendo un mes **incompleto** (del 19 en adelante) y agosto con 0.5 mm de 3
-      días, presentados como si fueran totales mensuales — eso es lo que
-      desconcierta. Un climograma es por definición una figura de 12 meses. Opciones:
-      marcar visualmente los meses parciales, no graficarlos hasta tener el mes
-      completo, o mostrar el aviso de "climatología en construcción" hasta juntar
-      un año. Decidir cuál.
+## 8. Revisiones detectadas el 2026-08-03 — REVERIFICADO 2026-08-18
+
+**Aviso: dos de los tres puntos ya estaban arreglados y el tercero era un falso
+positivo.** Esta sección se quedó sin actualizar y se usó como lista de trabajo el
+2026-08-18, mandando a revisar cosas ya resueltas. Si se arregla algo de aquí, tacharlo
+en el momento.
+
+- [x] **SMN sin datos — HECHO (backend y frontend).** La caída sigue siendo de CONAGUA
+      (su webservice responde HTTP 500), pero ya se degrada con gracia y se cachea la
+      última respuesta buena, que era justo lo que pedía este punto:
+      - `smn.py::_daily_all` / `_hourly_for` / `municipios` **sirven la copia guardada
+        aunque haya expirado el TTL** cuando el origen falla, y la marcan con `stale` +
+        `age_minutes` (edad del DATO, no de la respuesta).
+      - `ForecastPage` distingue tres estados: `caido` ("El SMN no está disponible
+        ahora"), `sin-municipio` ("El SMN no publica pronóstico para este municipio") y
+        el aviso ámbar de dato viejo con su antigüedad. `ForecastCompareCard` también
+        rotula "SMN de la última publicación".
+      - Residual real, menor: la caché es **en memoria**, así que un reinicio del
+        proceso con CONAGUA caído deja el 502 (ya con mensaje decente). Persistirla a
+        disco sería la mejora, si alguna vez molesta.
+- [x] **Climograma con meses parciales — HECHO.** `ClimatePage` calcula `parcial` (días
+      con dato vs. días del mes), pinta esos meses con la trama `climoParcial` en vez
+      del relleno liso, el tooltip dice "incompleto: N de M días" y hay nota al pie
+      cuando `hayParciales`. No hacía falta decidir nada más.
+- [x] **"Mi Tablero no muestra tendencias" — FALSO POSITIVO.** La auditoría buscó
+      `TrendArrow|getTrend|TrendBadge` dentro de `MiTableroPage.tsx`, encontró cero y
+      concluyó que no había tendencias. Pero **`HomePage.tsx` también tiene cero**: en
+      las dos páginas las tendencias viven en los componentes hijos
+      (`CurrentConditions`, `ExtraSensorsCard`, `PressureCard`, `RemoteStationCard`,
+      `StationSummaryTable`), y Mi Tablero les pasa `history` exactamente igual que
+      Inicio --comparadas una por una las invocaciones de ambos ficheros--. No había
+      nada que arreglar. Lección: grepear una página por el helper no dice si la
+      tendencia se ve; hay que mirar qué reciben los hijos.
+- [x] **Lo que sí destapó la comparación: Mi Tablero le faltaban dos tarjetas.**
+      `CameraCard` y `SkyAnalysisCard` estaban en Inicio y **no figuraban en el
+      catálogo** de Mi Tablero, mientras su propio `PageInfo` promete "las mismas
+      tarjetas del Inicio". Añadidas el 2026-08-18: análisis del cielo con `span 1`
+      (como en Inicio, bajo las condiciones) y cámara con `span 3` (una foto en una
+      columna de un tercio se queda en miniatura). Las dos entran en `DEFAULT`, que
+      sólo afecta a quien llega nuevo --el resto tiene su selección en localStorage--.
+      La cámara aquí **no** lleva `ocultarSiVacia`: si el usuario la eligió a mano,
+      esconderla parece que la selección no funcionó, y en modo edición dejaría un
+      marco vacío imposible de arrastrar.
 
 ---
 ### Hecho reciente (referencia)
