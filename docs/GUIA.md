@@ -624,9 +624,10 @@ vídeo de hoy y el aviso de si al contenedor le falta ffmpeg.
 **Dos decisiones que conviene conocer:**
 
 - **Los vídeos se guardan aparte de las fotos**, en `<camera_dir>/timelapse/`, con
-  retención propia y mucho más larga. Un día de fotos pesa ~30 MB y su vídeo ~2 MB, así
-  que el timelapse es lo que puede sobrevivir meses mientras los fotogramas se podan a
-  los 7 días.
+  retención propia y mucho más larga. Medido el 2026-08-18: un día son 237 capturas =
+  25 MB de fotos y 5.9 MB de vídeo (19.8 s), montado en ~10 s. Así que el timelapse es lo
+  que puede sobrevivir meses --90 días ≈ 540 MB-- mientras los fotogramas se podan a los
+  7 días.
 - **La frescura la lleva una tarea del servidor**, no las visitas: refresca el de hoy
   cada 30 min y cierra el de ayer. El endpoint público sirve el vídeo que hay aunque le
   falten las últimas capturas; si cada visita regenerara el día en curso, un par de

@@ -31,7 +31,7 @@ interface ImecaData {
  * tiene la casilla —sea clase de Tailwind o hex del IMECA— y no hay que duplicar la
  * paleta en dos formatos.
  */
-function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH = 26, outline }: {
+function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH = 28, outline }: {
   label: string; value: string; sub?: string; color?: string; hex?: string
   glyph?: string; glyphH?: number; outline?: boolean
 }) {
@@ -42,7 +42,10 @@ function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH 
           <MeteoGlyph name={glyph} size={glyphH} color="currentColor" title={label} outline={outline} />
         </span>
       )}
-      <div className="min-w-0">
+      {/* `whitespace-nowrap`: el glifo se come ancho, y sin esto los rótulos y los
+          valores se partían en dos líneas --"18 / km/h", "PROB. / LLUVIA"--. La casilla
+          crece lo que necesite y la tira entera ya scrollea en horizontal. */}
+      <div className="whitespace-nowrap">
         <p className="text-[10px] uppercase tracking-wider text-slate-400">{label}</p>
         <p className={`text-lg font-bold ${hex ? '' : color}`} style={hex ? { color: hex } : undefined}>{value}</p>
         {sub && <p className="text-[11px] text-slate-400">{sub}</p>}
@@ -102,9 +105,10 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         color="text-emerald-300"
         // Igual que la presión: el grado sale de los km/h métricos.
         glyph={glifoViento(g?.max)}
-        // El Beaufort es ANCHO (89x58 de tinta), así que va un poco más bajo para no
-        // comerse la casilla; a 22 px de alto ocupa 34 de ancho.
-        glyphH={22}
+        // El Beaufort es ANCHO (89x58 de tinta) y de trazo fino con la cifra pequeña:
+        // medido en el render a 22 px se quedaba en decoración, así que va a 32 --49 de
+        // ancho-- que es donde el grado se lee de verdad.
+        glyphH={32}
       />
       {data.wind_direction != null && (
         // Casilla nueva: el rumbo no estaba en la tira, aunque el dato llega desde el

@@ -9,10 +9,13 @@ aquí y el otro candidato --la Raspberry Pi de casa-- es un nodo IRLP en producc
 que no conviene meterle un encode, además de que habría que subir el vídeo por el
 enlace de casa, que es el recurso escaso.
 
-Se descartó también animar los JPEG en el navegador: a tamaño completo son ~50 MB de
-tráfico por día, y bajarlo a base de miniaturas pedía otra dependencia (Pillow) más un
-reproductor a mano, para acabar con algo que no se puede compartir ni buscar. Un MP4
-sale a un par de MB, lo reproduce cualquier `<video>` y se descarga.
+Se descartó también animar los JPEG en el navegador: a tamaño completo son ~25 MB de
+tráfico por día, y reducirlo pedía otra dependencia (Pillow) más un reproductor a mano,
+para acabar con algo que no se puede compartir ni buscar. El MP4 lo reproduce cualquier
+`<video>`, se descarga y baja ese día a ~6 MB.
+
+Medido en producción el 2026-08-18 (VPS ARM del free tier de Oracle): 237 capturas de
+2K = 25 MB de fotos, que dan un vídeo de 19.8 s y 5.9 MB, y el encode tardó unos 10 s.
 
 Dónde vive el vídeo:
     <camera_dir>/timelapse/YYYY-MM-DD.mp4    el vídeo del día
@@ -20,9 +23,9 @@ Dónde vive el vídeo:
 
 Los vídeos van FUERA de las carpetas de día a propósito. Así la poda de fotogramas
 (`CameraStore._prune`, 7 días) no se los lleva, y el timelapse se convierte en lo que
-sobrevive: las fotos de un día pesan ~30 MB y su vídeo ~2 MB, así que se pueden guardar
-meses de días por lo que cuestan unos pocos días de fotogramas. Tienen su propia
-retención, mucho más larga.
+sobrevive: las fotos de un día pesan ~25 MB y su vídeo ~6 MB, o sea que por cada día
+guardado el vídeo cuesta la cuarta parte. Tienen su propia retención, mucho más larga:
+90 días de vídeo son ~540 MB, contra los ~175 MB que ocupan los 7 días de fotogramas.
 
 El `.json` de al lado es lo que permite saber si el vídeo de HOY está al día: si han
 llegado más capturas que las que se usaron, hay que regenerarlo. Comparar fechas de

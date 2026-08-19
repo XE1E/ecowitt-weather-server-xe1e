@@ -338,9 +338,10 @@ vídeo que ya existe aunque le falten las últimas capturas (`stale: true`), par
 encode ocurra a un ritmo conocido y no dependa de cuánta gente entre a la página.
 
 **Dónde viven.** En `<camera_dir>/timelapse/`, **fuera** de las carpetas de día: así la
-poda de fotogramas no se los lleva. Un día de fotos pesa ~30 MB y su vídeo ~2 MB, así
-que el timelapse es lo que puede sobrevivir meses (`CAMERA_TIMELAPSE_RETENTION_DAYS`,
-90 por defecto).
+poda de fotogramas no se los lleva. Medido en producción el 2026-08-18: 237 capturas de
+un día ocupan **25 MB** y su vídeo **5.9 MB** (19.8 s), y el encode tardó ~10 s en el ARM
+del free tier. O sea que el timelapse es lo que puede sobrevivir meses
+(`CAMERA_TIMELAPSE_RETENTION_DAYS`, 90 por defecto ≈ 540 MB).
 
 ### SVITRIX (reloj Ulanzi TC001)
 

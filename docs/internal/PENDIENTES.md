@@ -167,6 +167,11 @@ Lo que hay que saber para operarlo:
   botón de rehacer el de hoy.
 - Los vídeos viven en `<camera_dir>/timelapse/`, **fuera** de las carpetas de día y con
   retención propia (90 días): la poda de fotogramas no se los lleva.
+- **Medido en producción el 2026-08-18**, porque la cifra que se escribió al implementarlo
+  (~2 MB por vídeo) era optimista: 237 capturas de un día ocupan **25 MB** y dan un vídeo
+  de **5.9 MB** y 19.8 s, montado en **~10 s** en el ARM del free tier. Con 90 días de
+  retención son ~540 MB, contra ~175 MB de los 7 días de fotogramas. Sigue mereciendo la
+  pena, pero no es "gratis" como sonaba.
 
 ## 2.d CI en rojo desde hacía semanas — ✅ ARREGLADO (2026-08-18)
 

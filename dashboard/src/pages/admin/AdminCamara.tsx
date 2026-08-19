@@ -413,9 +413,9 @@ export function AdminCamara() {
         <p className="text-xs text-slate-500 mt-2">
           Se monta en el servidor con ffmpeg: hoy se refresca cada media hora segun entran capturas y
           ayer se cierra solo. Los videos se guardan <span className="text-slate-400">aparte de las
-          fotos</span> y con retencion propia, mucho mas larga: un dia de fotos pesa ~30 MB y su video
-          ~2 MB, asi que el timelapse es lo que puede sobrevivir meses. Cambiar los fps solo afecta a
-          los videos que se monten a partir de entonces.
+          fotos</span> y con retencion propia, mucho mas larga: un dia de fotos ocupa ~25 MB y su
+          video ~6 MB, asi que el timelapse es lo que puede sobrevivir meses (90 dias ~ 540 MB).
+          Cambiar los fps solo afecta a los videos que se monten a partir de entonces.
         </p>
       </div>
     </div>

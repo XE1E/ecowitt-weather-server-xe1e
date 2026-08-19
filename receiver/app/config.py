@@ -282,8 +282,8 @@ class Settings(BaseSettings):
     # pestañeo de un tercio de segundo, y da peor impresión que no ofrecerlo.
     camera_timelapse_min_frames: int = 10
     # Retención de los VÍDEOS, aparte de la de los fotogramas (7 días) y mucho más
-    # larga: un día de fotos pesa ~30 MB y su vídeo ~2 MB, así que el timelapse es lo
-    # que puede sobrevivir meses. 0 = no purgar nunca.
+    # larga: medido en producción, un día de fotos pesa ~25 MB y su vídeo ~6 MB, así que
+    # el timelapse es lo que puede sobrevivir meses --90 días son ~540 MB--. 0 = nunca.
     camera_timelapse_retention_days: int = 90
 
     # ¿La página de cámara aparece en el kiosco? Si es False, la celda de condición de la
