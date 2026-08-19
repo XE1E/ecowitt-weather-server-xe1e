@@ -13,11 +13,19 @@ timelapse dan más y cuestan casi nada.
 Qué se guarda:
     <camera_dir>/latest.jpg              la última, servida tal cual
     <camera_dir>/latest.json             su metadato (cuándo se capturó, tamaño)
-    <camera_dir>/YYYY-MM-DD/HHMMSS.jpg   histórico, para el timelapse diario
+    <camera_dir>/YYYY-MM-DD/HHMMSS.jpg   fotogramas del día, para el timelapse
+    <camera_dir>/analysis/YYYY-MM-DD.json  el análisis del cielo de ese día
+    <camera_dir>/timelapse/YYYY-MM-DD.mp4  su vídeo (lo escribe services/timelapse.py)
 
-El histórico se poda por DÍAS COMPLETOS y no por número de fotos: si un día la
+El histórico de FOTOS se poda por DÍAS COMPLETOS y no por número de fotos: si un día la
 cadencia falla y sólo llegan diez capturas, borrar "las más viejas" se comería días
 enteros de historia buena a cambio de nada.
+
+El análisis del cielo vive FUERA de la carpeta del día, igual que el vídeo. Antes se
+guardaba dentro (`<camera_dir>/YYYY-MM-DD/analysis.json`) y por tanto **moría con los
+fotogramas a los 7 días**: la curva de cómo se nubló un día --que es el registro más
+interesante y el más barato, unos 6 KB frente a los 25 MB de sus fotos-- desaparecía a la
+semana. Al sacarlo tiene retención propia, por omisión ninguna: se guarda para siempre.
 """
 from __future__ import annotations
 
@@ -40,10 +48,14 @@ MAX_BYTES = 12 * 1024 * 1024
 
 
 class CameraStore:
-    def __init__(self, base_dir: str, retention_days: int = 7, stale_seconds: int = 1200):
+    def __init__(self, base_dir: str, retention_days: int = 7, stale_seconds: int = 1200,
+                 analysis_retention_days: int = 0):
         self.base = base_dir
         self.retention_days = max(0, retention_days)
         self.stale_seconds = stale_seconds
+        # Retención propia del histórico de análisis, independiente de la de las fotos.
+        # 0 = no purgar nunca, que es el default: son ~6 KB al día.
+        self.analysis_retention_days = max(0, analysis_retention_days)
 
     # ── rutas ────────────────────────────────────────────────────────────────
     @property
@@ -61,6 +73,15 @@ class CameraStore:
     @property
     def analysis_history(self) -> str:
         return os.path.join(self.base, "analysis_history.json")
+
+    @property
+    def analysis_dir(self) -> str:
+        """Carpeta del histórico diario de análisis, hermana de `timelapse/`.
+
+        El nombre NO parsea como fecha, así que `_prune` --que borra carpetas de día
+        vencidas-- la ignora sola. Es lo mismo que protege a los vídeos.
+        """
+        return os.path.join(self.base, "analysis")
 
     # ── escritura ────────────────────────────────────────────────────────────
     def save(self, data: bytes, taken_at: Optional[datetime] = None) -> Dict[str, Any]:
@@ -101,6 +122,8 @@ class CameraStore:
         if self.retention_days > 0:
             self._archive(data, ts)
             self._prune()
+        if self.analysis_retention_days > 0:
+            self.prune_analysis(self.analysis_retention_days)
         return meta
 
     def _archive(self, data: bytes, ts: datetime) -> None:
@@ -338,7 +361,16 @@ class CameraStore:
     # ── histórico diario de análisis ─────────────────────────────────────────
 
     def _daily_analysis_path(self, date_str: str) -> str:
-        """Ruta al archivo de análisis del día (YYYY-MM-DD)."""
+        """Ruta al análisis de un día. `date_str` llega de la URL en `get_daily_analysis`,
+        así que se valida: sin esto un `../..` saldría de la carpeta."""
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            raise ValueError(f"fecha inválida: {date_str!r}")
+        return os.path.join(self.analysis_dir, f"{date_str}.json")
+
+    def _daily_analysis_path_legacy(self, date_str: str) -> str:
+        """Dónde vivía antes: dentro de la carpeta del día. Sólo lo usa la migración."""
         return os.path.join(self.base, date_str, "analysis.json")
 
     def _append_to_daily(self, analysis: Dict[str, Any]) -> None:
@@ -354,15 +386,10 @@ class CameraStore:
         except ValueError:
             return
 
-        path = self._daily_analysis_path(date_str)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-
-        # Cargar existente o crear nuevo
         try:
-            with open(path, encoding="utf-8") as f:
-                daily = json.load(f)
-        except (OSError, ValueError):
-            daily = []
+            daily = self.get_daily_analysis(date_str) or []
+        except ValueError:
+            return
 
         # Agregar entrada compacta
         entry = {
@@ -375,16 +402,23 @@ class CameraStore:
             "precip": analysis.get("precipitation_visible", False),
         }
         daily.append(entry)
+        self._write_daily_analysis(date_str, daily)
 
-        # Guardar
+    def _write_daily_analysis(self, date_str: str, entradas: list) -> None:
+        """Vuelca el histórico de un día. Atómico, como el resto de escrituras de aquí."""
+        path = self._daily_analysis_path(date_str)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(daily, f, ensure_ascii=False)
+            json.dump(entradas, f, ensure_ascii=False)
         os.replace(tmp, path)
 
     def get_daily_analysis(self, date_str: str) -> Optional[list]:
-        """Obtiene el histórico de análisis de un día específico (YYYY-MM-DD)."""
-        path = self._daily_analysis_path(date_str)
+        """Histórico de análisis de un día (YYYY-MM-DD), o None si no hay."""
+        try:
+            path = self._daily_analysis_path(date_str)
+        except ValueError:
+            return None
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
@@ -395,25 +429,93 @@ class CameraStore:
         """Lista los días que tienen análisis guardados, del más reciente al más antiguo."""
         out = []
         try:
-            for nombre in sorted(os.listdir(self.base), reverse=True):
-                ruta = os.path.join(self.base, nombre)
-                if not os.path.isdir(ruta):
+            for nombre in sorted(os.listdir(self.analysis_dir), reverse=True):
+                base, ext = os.path.splitext(nombre)
+                if ext != ".json":
                     continue
                 try:
-                    datetime.strptime(nombre, "%Y-%m-%d")
+                    datetime.strptime(base, "%Y-%m-%d")
                 except ValueError:
                     continue
-                analysis_path = os.path.join(ruta, "analysis.json")
-                if os.path.exists(analysis_path):
-                    try:
-                        with open(analysis_path, encoding="utf-8") as f:
-                            data = json.load(f)
-                        out.append({"date": nombre, "count": len(data)})
-                    except (OSError, ValueError):
-                        pass
+                try:
+                    with open(os.path.join(self.analysis_dir, nombre), encoding="utf-8") as f:
+                        data = json.load(f)
+                    out.append({"date": base, "count": len(data)})
+                except (OSError, ValueError):
+                    pass
         except OSError:
             pass
         return out
+
+    # ── migración y retención del histórico de análisis ──────────────────────
+
+    def migrate_daily_analysis(self) -> int:
+        """
+        Sube los `analysis.json` que quedaron dentro de las carpetas de día.
+
+        Se ejecuta al arrancar y es IDEMPOTENTE: lo ya migrado no está en el origen.
+        Corre contrarreloj con la poda de fotogramas --lo que no se migre antes de que
+        el día venza se pierde con la carpeta--, así que conviene que vaya en el
+        arranque y no bajo demanda. Devuelve cuántos días movió.
+        """
+        movidos = 0
+        try:
+            nombres = sorted(os.listdir(self.base))
+        except OSError:
+            return 0
+        for nombre in nombres:
+            try:
+                datetime.strptime(nombre, "%Y-%m-%d")
+            except ValueError:
+                continue
+            viejo = self._daily_analysis_path_legacy(nombre)
+            if not os.path.exists(viejo):
+                continue
+            try:
+                with open(viejo, encoding="utf-8") as f:
+                    entradas = json.load(f)
+                if not isinstance(entradas, list):
+                    continue
+                # Si ya hubiera destino, se FUNDEN por marca de tiempo en vez de
+                # sobrescribir: perder análisis en una migración sería el peor final
+                # posible para el dato que se está intentando salvar.
+                previas = self.get_daily_analysis(nombre) or []
+                vistas = {e.get("ts") for e in previas}
+                fundidas = previas + [e for e in entradas if e.get("ts") not in vistas]
+                fundidas.sort(key=lambda e: e.get("ts") or "")
+                self._write_daily_analysis(nombre, fundidas)
+                os.remove(viejo)
+                movidos += 1
+            except (OSError, ValueError) as e:
+                logger.warning("no se pudo migrar el análisis de %s: %s", nombre, e)
+        if movidos:
+            logger.info("análisis del cielo: %d día(s) movidos a %s", movidos, self.analysis_dir)
+        return movidos
+
+    def prune_analysis(self, retention_days: int) -> int:
+        """Borra los análisis más viejos que la retención. 0 = no purgar nunca."""
+        if retention_days <= 0:
+            return 0
+        limite = (datetime.now().astimezone() - timedelta(days=retention_days)).date()
+        quitados = 0
+        try:
+            for nombre in os.listdir(self.analysis_dir):
+                base, ext = os.path.splitext(nombre)
+                if ext != ".json":
+                    continue
+                try:
+                    dia = datetime.strptime(base, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if dia < limite:
+                    try:
+                        os.remove(os.path.join(self.analysis_dir, nombre))
+                        quitados += 1
+                    except OSError:
+                        pass
+        except OSError:
+            pass
+        return quitados
 
     def get_analysis(self) -> Optional[Dict[str, Any]]:
         """Lee el último análisis del cielo, si existe."""

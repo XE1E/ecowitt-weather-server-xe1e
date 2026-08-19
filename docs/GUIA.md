@@ -634,6 +634,23 @@ vídeo de hoy y el aviso de si al contenedor le falta ffmpeg.
   visitantes bastarían para tener ffmpeg corriendo sin parar. Un día que aún no tiene
   vídeo sí se monta al pedirlo: el endpoint responde `202` y la página espera.
 
+##### Qué sobrevive a qué (retenciones)
+
+Tres cosas distintas con tres retenciones distintas, y conviene tenerlo claro porque
+determina qué se puede consultar de un día pasado:
+
+| Qué | Dónde | Retención | Tamaño al día |
+|---|---|---|---|
+| Fotogramas | `<camera_dir>/YYYY-MM-DD/` | `CAMERA_RETENTION_DAYS` (7) | ~25 MB |
+| Vídeo del timelapse | `<camera_dir>/timelapse/` | `CAMERA_TIMELAPSE_RETENTION_DAYS` (90) | ~6 MB |
+| Histórico de análisis | `<camera_dir>/analysis/` | `CAMERA_ANALYSIS_RETENTION_DAYS` (0 = nunca) | ~6 KB |
+
+Las dos últimas viven **fuera** de la carpeta del día justamente para que la poda de
+fotogramas no se las lleve. El análisis estuvo dentro hasta el 2026-08-18 y por eso
+moría a los 7 días; al sacarlo se añadió una **migración que corre al arrancar** y sube
+lo que quedara en el sitio viejo (idempotente, y funde en vez de pisar si hubiera datos
+en los dos sitios).
+
 ##### Análisis del cielo con IA
 
 Cada foto se analiza automáticamente con un modelo de visión (**Gemini** o **Claude**)

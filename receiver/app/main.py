@@ -388,6 +388,17 @@ async def startup_event():
     # Timelapse diario de la cámara (hoy y ayer, más la purga)
     asyncio.create_task(timelapse_task())
 
+    # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
+    # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
+    # que quedara en el sitio viejo. Va en el arranque y no bajo demanda porque corre
+    # contrarreloj contra esa poda, y es idempotente: no encuentra nada la segunda vez.
+    try:
+        movidos = _camera.migrate_daily_analysis()
+        if movidos:
+            logger.info(f"Análisis del cielo: {movidos} día(s) migrados fuera de la carpeta del día")
+    except Exception as e:
+        logger.warning(f"No se pudo migrar el histórico de análisis: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -1995,6 +2006,7 @@ _camera = CameraStore(
     base_dir=settings.camera_dir,
     retention_days=settings.camera_retention_days,
     stale_seconds=settings.camera_stale_seconds,
+    analysis_retention_days=settings.camera_analysis_retention_days,
 )
 
 

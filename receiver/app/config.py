@@ -253,6 +253,12 @@ class Settings(BaseSettings):
     # foto nueva). El cielo no cambia tanto en 5 min; 15 deja ~72-96/día, holgado, y
     # sigue fresco para una pantalla de pared. 0 = analizar en cada captura.
     camera_analysis_interval_min: int = 15
+    # Retención del HISTÓRICO diario de análisis (la curva de cobertura por día), que
+    # vive en <camera_dir>/analysis/ y NO dentro de la carpeta del día. Antes estaba
+    # dentro y se lo llevaba la poda de fotos a los 7 días; es el registro más barato que
+    # produce la cámara --unos 6 KB al día, frente a 25 MB de sus fotos-- así que por
+    # omisión NO se purga: diez años son ~22 MB. Un número > 0 activa la purga.
+    camera_analysis_retention_days: int = 0
 
     # ── Control de la CAPTURA (lo obedece el script de la Pi, que lee estos valores de
     # /api/camera/capture-config en cada corrida). Así se prende/apaga la cámara y se

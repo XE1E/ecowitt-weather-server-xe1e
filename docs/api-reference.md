@@ -234,6 +234,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
+| `GET /api/camera/analysis/history` | Días con análisis, o `?date=` para la curva de un día |
 | `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
 | `GET /api/camera/timelapse/<fecha>.mp4` | El timelapse de ese día (ver abajo) |
 | `POST /api/camera/timelapse/<fecha>` | Rehace el vídeo del día. **Requiere admin** |
