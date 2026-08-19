@@ -191,6 +191,42 @@ docker compose exec influxdb influx restore /tmp/restore -t "$INFLUXDB_TOKEN" --
 
 ---
 
+## 8b. Espacio en disco — el caché de Docker se come el VPS
+
+**Lo que pasó el 2026-08-18:** el disco estaba al **73 % (35 GB de 49)** y el 79 % de lo
+ocupado era **caché de compilación de Docker: 27.7 GB**. No eran datos ni imágenes: es
+lo que va dejando cada `docker compose build`, y una tarde de despliegues seguidos lo
+dispara. Limpiándolo el disco bajó a **9.7 GB (20 %)**.
+
+```bash
+docker system df          # mirar ANTES: dice cuánto es recuperable de cada cosa
+```
+
+Lo que se puede borrar sin pensarlo, porque se regenera solo:
+
+```bash
+docker builder prune -af          # caché de compilación (lo gordo)
+sudo journalctl --vacuum-size=200M   # logs del sistema; deja los recientes
+```
+
+`builder prune` **no toca** imágenes, contenedores, volúmenes ni datos: sólo hace que la
+siguiente compilación tarde más porque parte de cero. Se comprobó que los cinco
+servicios seguían en pie después.
+
+Lo que **no** conviene borrar a ciegas:
+
+| Ruta | Qué es | Por qué |
+|---|---|---|
+| `/var/lib/docker/volumes` | InfluxDB y compañía | Son **los datos**. Aquí ocupan ~106 MB |
+| `~/ecowitt-backups` | Backups de InfluxDB | Ocupan ~3 MB y el script ya rota los últimos 7 |
+| `/var/www` | El WeatherNode viejo (Apache) | ~289 MB. Se conservó a propósito por si se quiere volver; borrarlo es una decisión, no limpieza |
+| `/opt/unified-monitoring-agent` | Agente de Oracle Cloud | ~331 MB, es de la plataforma |
+
+Conviene mirar `docker system df` de vez en cuando, sobre todo tras varios despliegues
+seguidos.
+
+---
+
 ## 9. Simulador de datos (opcional, mientras llega el hardware)
 
 Para ver el dashboard "vivo" antes de tener el WS2910, un script empuja lecturas

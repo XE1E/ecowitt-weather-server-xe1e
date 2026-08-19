@@ -260,6 +260,26 @@ def test_el_cartel_se_rellena_sin_recodificar(tmp_path):
     assert os.path.getmtime(svc.video_path("2026-08-18")) == mtime   # no recodificó
 
 
+@sin_ffmpeg
+def test_los_dias_viejos_tambien_reciben_cartel(tmp_path):
+    """
+    La tarea periodica solo toca hoy y ayer, asi que sin este barrido los dias mas
+    viejos --hasta 90 con la retencion por omision-- se quedarian sin cartel.
+    """
+    _dia(tmp_path, "2026-08-18", 6)
+    _dia(tmp_path, "2026-08-10", 6)
+    svc = _svc(tmp_path)
+    asyncio.run(svc.ensure("2026-08-18"))
+    asyncio.run(svc.ensure("2026-08-10"))
+    os.remove(svc.poster_path("2026-08-10"))
+    assert svc.status("2026-08-10")["poster"] is False
+
+    assert asyncio.run(svc.fill_missing_posters()) == 1
+    assert svc.status("2026-08-10")["poster"] is True
+    # Y no rehace los que ya lo tienen.
+    assert asyncio.run(svc.fill_missing_posters()) == 0
+
+
 def test_cartel_con_fecha_invalida(tmp_path):
     with pytest.raises(TimelapseError):
         _svc(tmp_path).poster_path("../../etc/passwd")

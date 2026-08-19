@@ -327,6 +327,9 @@ async def timelapse_task():
                 except TimelapseError as e:
                     # Lo normal a primera hora: aún no hay fotogramas suficientes.
                     logger.debug("timelapse %s: %s", dia, e)
+            # Los días viejos también necesitan cartel: aquí arriba sólo se han tocado
+            # hoy y ayer, y la retención guarda hasta 90 días de vídeo.
+            await _timelapse.fill_missing_posters()
             _timelapse.prune()
         except Exception as e:
             logger.error(f"Tarea de timelapse falló: {e}")

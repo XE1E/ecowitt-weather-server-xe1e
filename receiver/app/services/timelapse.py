@@ -377,6 +377,27 @@ class TimelapseService:
             except OSError:
                 pass
 
+    async def fill_missing_posters(self, tope: int = 10) -> int:
+        """
+        Pone cartel a los días que tienen vídeo y no lo tienen.
+
+        Hace falta porque la tarea periódica sólo se ocupa de HOY y AYER, así que sin
+        esto los días más viejos --hasta 90 con la retención por omisión-- se quedarían
+        con el rectángulo negro para siempre: justo lo que el cartel viene a arreglar.
+        Cada uno cuesta un `ffmpeg` que sólo busca y extrae un fotograma, pero se limita
+        el número por vuelta para no encadenar decenas de golpe al arrancar.
+        """
+        hechos = 0
+        for d in self.days():
+            if hechos >= tope:
+                break
+            if d["video"] and not d["poster"]:
+                if await self._poster(d["date"]):
+                    hechos += 1
+        if hechos:
+            logger.info("timelapse: %d cartel(es) generados", hechos)
+        return hechos
+
     def prune(self) -> int:
         """Borra los vídeos más viejos que la retención. Devuelve cuántos quitó."""
         if self.retention_days <= 0:
