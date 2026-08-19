@@ -1,9 +1,11 @@
 # Plan — Integración del análisis del cielo en pronóstico y condiciones
 
-> Escrito el 2026-08-11. Vive en git.
+> Escrito el 2026-08-11. Cerrado como **✅ TERMINADO el 2026-08-19**: las 5 fases y
+> las 4 decisiones de más abajo quedaron resueltas. Vive en git.
 >
-> **Estado:** análisis del cielo implementado y funcionando con Gemini (gratis).
-> Este documento evalúa cómo usarlo para mejorar pronóstico y condiciones actuales.
+> **Estado:** análisis del cielo implementado y funcionando con Gemini (gratis),
+> con sus 5 fases desplegadas y sus decisiones de diseño ya cerradas (ver
+> *Decisiones*, al final).
 
 ## Contexto
 
@@ -228,23 +230,32 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 
 ---
 
-## Decisiones pendientes
+## Decisiones — revisadas 2026-08-19
 
-1. **¿Dónde mostrar el análisis en la página principal?**
-   - Opción A: Tarjeta dedicada "Estado del cielo"
-   - Opción B: Integrado en la tarjeta de condiciones actuales
-   - Opción C: Solo en la página de la cámara (actual)
+1. **¿Dónde mostrar el análisis en la página principal?** — ✅ **Resuelto: Opción A.**
+   `SkyAnalysisCard` es tarjeta propia en Inicio (`HomePage.tsx`) y también en Mi
+   Tablero (añadida el 2026-08-18), separada de `CameraCard`.
 
-2. **¿Alertas visuales van a Telegram/correo o solo se muestran en la web?**
-   - Depende de cuántos falsos positivos genere en la práctica
+2. **¿Alertas visuales van a Telegram/correo o solo se muestran en la web?** —
+   ✅ **Resuelto: van a los dos.** La categoría `visual` (`sky_storm`,
+   `sky_precipitation`, `sky_visibility`) usa el mismo enrutamiento por categoría
+   que el resto de alertas (`alerts.py::_channel_allows`, `telegram_categories`/
+   `email_categories`) — nada especial que decidir, ya se comporta como cualquier
+   otra alerta y es configurable por canal desde Admin.
 
-3. **¿Historial de análisis en InfluxDB o en archivos JSON?**
-   - JSON es más simple y ya tenemos el patrón con las fotos
-   - InfluxDB permite queries más potentes
+3. **¿Historial de análisis en InfluxDB o en archivos JSON?** — ✅ **Resuelto: JSON.**
+   Implementado con el patrón de las fotos (`camera.py`: `analysis_history.json` +
+   un `analysis/YYYY-MM-DD.json` por día). No se ha necesitado InfluxDB.
 
-4. **¿Análisis solo de día?**
-   - Reduciría llamadas a la API y evita análisis de poca utilidad
-   - Usar sunrise/sunset del almanac para decidir
+4. **¿Análisis solo de día?** — ✅ **Resuelto, por otra vía.** No es por
+   `sunrise`/`sunset` del almanac como proponía este punto, sino por horario fijo
+   configurable: Admin → Cámara tiene `camera_capture_hour_start`/`_hour_end`
+   (`AdminCamara.tsx`), que la Pi lee de `/api/camera/capture-config` para decidir
+   si captura. Como el análisis sólo corre sobre capturas recibidas
+   (`_analyze_sky_background` se dispara desde `/api/camera/upload`), acotar el
+   horario de captura acota también el de análisis — mismo ahorro de cuota que
+   buscaba esta decisión, con un horario fijo en vez de dinámico por amanecer/
+   atardecer.
 
 ---
 
