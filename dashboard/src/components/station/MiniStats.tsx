@@ -31,29 +31,29 @@ interface ImecaData {
  * tiene la casilla —sea clase de Tailwind o hex del IMECA— y no hay que duplicar la
  * paleta en dos formatos.
  */
-function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH = 28, outline }: {
+function Tile({ label, value, sub, color = 'text-slate-100', hex, glyph, glyphH = 26, outline }: {
   label: string; value: string; sub?: string; color?: string; hex?: string
   glyph?: string; glyphH?: number; outline?: boolean
 }) {
+  const tinte = hex ? '' : color
+  const estilo = hex ? { color: hex } : undefined
   return (
-    // `shrink-0` es obligatorio junto al `whitespace-nowrap` de abajo: un item de flex se
-    // encoge por omisión, y `min-w` no lo impide, así que la casilla se estrechaba por
-    // debajo de su contenido y el texto se salía ENCIMA de la casilla siguiente --se vio
-    // en el render: el "18 km/h" del viento pisando la brújula del rumbo--.
-    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 min-w-[110px] shrink-0 flex items-center gap-2.5">
+    // Apilado y CENTRADO. Antes iba el glifo a la izquierda y el texto a su derecha, y
+    // dentro de la casilla los rótulos quedaban descolgados hacia el lado derecho. De
+    // paso la casilla se estrecha: el ancho lo fija la rejilla de fuera, igual para
+    // todas, así que da lo mismo cuántas casillas opcionales aparezcan.
+    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 flex flex-col items-center text-center gap-0.5">
       {glyph && (
-        <span className={hex ? '' : color} style={hex ? { color: hex } : undefined}>
+        <span className={tinte} style={estilo}>
           <MeteoGlyph name={glyph} size={glyphH} color="currentColor" title={label} outline={outline} />
         </span>
       )}
-      {/* `whitespace-nowrap`: el glifo se come ancho, y sin esto los rótulos y los
-          valores se partían en dos líneas --"18 / km/h", "PROB. / LLUVIA"--. La casilla
-          crece lo que necesite y la tira entera ya scrollea en horizontal. */}
-      <div className="whitespace-nowrap">
-        <p className="text-[10px] uppercase tracking-wider text-slate-400">{label}</p>
-        <p className={`text-lg font-bold ${hex ? '' : color}`} style={hex ? { color: hex } : undefined}>{value}</p>
-        {sub && <p className="text-[11px] text-slate-400">{sub}</p>}
-      </div>
+      {/* El RÓTULO sí puede partirse en dos líneas --"PRECIPITACIÓN" no cabe de una en
+          una casilla de ~110 px-- pero el valor no: partir "18 km/h" se lee como un
+          fallo, y un rótulo en dos líneas centradas, no. */}
+      <p className="text-[10px] uppercase tracking-wide text-slate-400 leading-tight">{label}</p>
+      <p className={`text-base font-bold whitespace-nowrap ${tinte}`} style={estilo}>{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 whitespace-nowrap">{sub}</p>}
     </div>
   )
 }
@@ -85,7 +85,13 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
     : null
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1">
+    // Rejilla en vez de tira con scroll. Con `overflow-x-auto` las doce casillas sumaban
+    // ~1580 px y en una pantalla de 1440 salía una barra de desplazamiento horizontal,
+    // que en una fila de resumen se lee como que algo no cabe. Con `auto-fit` +
+    // `minmax(0,1fr)` todas miden LO MISMO, se reparten el ancho disponible y bajan de
+    // fila cuando no caben, así que nunca hay slider y da igual cuántas casillas
+    // opcionales --IMECA, rumbo, "vs 24 h"-- se estén mostrando.
+    <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(104px,1fr))]">
       <Tile
         label="Hoy"
         value={t?.max != null ? `${u.temp(t.max)}${u.tempU}` : '--'}
@@ -109,10 +115,10 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         color="text-emerald-300"
         // Igual que la presión: el grado sale de los km/h métricos.
         glyph={glifoViento(g?.max)}
-        // El Beaufort es ANCHO (89x58 de tinta) y de trazo fino con la cifra pequeña:
-        // medido en el render a 22 px se quedaba en decoración, así que va a 32 --49 de
-        // ancho-- que es donde el grado se lee de verdad.
-        glyphH={32}
+        // El Beaufort es el único ANCHO de todos (89x58 de tinta): a 26 px de alto
+        // ocuparía 40 de ancho y desequilibraría la fila, así que va a 24 --37 de
+        // ancho--, que sigue dejando legible la cifra del grado.
+        glyphH={24}
       />
       {data.wind_direction != null && (
         // Casilla nueva: el rumbo no estaba en la tira, aunque el dato llega desde el
@@ -164,7 +170,7 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
         // "vs 24 h antes", no "vs ayer": /api/compare promedia las últimas 24 h
         // contra las 24 h previas (ventana rodante), no el día de ayer completo.
         <Tile
-          label="vs 24 h antes"
+          label="vs 24 h"
           value={`${dDisp > 0 ? '+' : ''}${dDisp.toFixed(1)}°`}
           sub={dDisp > 0.1 ? 'más cálido' : dDisp < -0.1 ? 'más frío' : 'similar'}
           color={dDisp > 0.1 ? 'text-red-300' : dDisp < -0.1 ? 'text-sky-300' : 'text-slate-300'}
