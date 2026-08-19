@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "air", "visual", "earthquake"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake"]
 
 
 def _category_for(rule_key: str) -> str:
@@ -51,6 +51,10 @@ def _category_for(rule_key: str) -> str:
         return "battery"
     if rule_key.startswith("sensor_"):
         return "sensor"
+    # La cámara COMO EQUIPO (sin señal, análisis fallando): distinta de "visual",
+    # que es la interpretación del cielo que la cámara ve.
+    if rule_key.startswith("camera_"):
+        return "camera"
     if rule_key in ("aqi_high", "imeca_high"):
         return "air"
     if rule_key.startswith("sky_"):
@@ -113,6 +117,10 @@ class AlertService:
         # Estado de "estación caída" por estación: {station_name: bool}
         # None = principal, "gw1100" = secundaria, etc.
         self.stations_offline: Dict[Optional[str], bool] = {}
+        # Estado de "cámara sin señal" (deja de mandar fotos) y contador de
+        # análisis IA fallidos SEGUIDOS (se resetea en cuanto uno sale bien).
+        self._camera_offline: bool = False
+        self._camera_analysis_fails: int = 0
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         # sensor -> última vez que reportó, por estación. Con la fecha se puede
@@ -611,6 +619,63 @@ class AlertService:
             return msg
 
         return None
+
+    async def check_camera_offline(self, status: Optional[Dict[str, Any]]) -> None:
+        """
+        Avisa si la cámara del exterior deja de mandar fotos, y cuando vuelve.
+
+        `status` es el dict de `CameraStore.status()`. Si nunca llegó ninguna foto
+        (`available=False`) no se avisa: sin al menos una captura no se puede
+        distinguir "la cámara no está configurada" de "se cayó" — igual que
+        `check_station` con `last_iso=None`.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_camera_offline_enabled", True):
+            return
+        if not status or not status.get("available"):
+            return
+        age = status.get("age_seconds")
+        if age is None:
+            return
+        threshold_s = float(getattr(s, "alert_camera_offline_minutes", 30)) * 60
+
+        if age > threshold_s and not self._camera_offline:
+            self._camera_offline = True
+            msg = f"📷 La cámara no envía fotos desde hace {int(age // 60)} min."
+            self._add_to_history("camera_offline", msg, resolved=False)
+            await self._safe_notify(f"⚠️ ALERTA — {msg}", category="camera")
+        elif age <= threshold_s and self._camera_offline:
+            self._camera_offline = False
+            self._add_to_history("camera_offline", "Cámara sin señal", resolved=True)
+            await self._safe_notify("✅ Normalizado — 📷 La cámara volvió a enviar fotos.", category="camera")
+
+    async def check_camera_analysis(self, error: Optional[str]) -> None:
+        """
+        Avisa si el análisis del cielo (Claude/Gemini) lleva varios intentos
+        SEGUIDOS fallando (cuota agotada, timeout, API caída), y cuando se
+        recupera. Se llama tras cada intento, con o sin error.
+
+        Dispara solo al CRUZAR el umbral (no en cada fallo posterior) para no
+        repetir el aviso mientras la falla se sostiene.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_camera_analysis_enabled", True):
+            return
+        threshold = max(1, int(getattr(s, "alert_camera_analysis_fails", 3)))
+
+        if error:
+            self._camera_analysis_fails += 1
+            if self._camera_analysis_fails == threshold:
+                msg = f"🤖 El análisis de la cámara lleva {threshold} intentos seguidos fallando: {error}"
+                self._add_to_history("camera_analysis_failing", msg, resolved=False)
+                await self._safe_notify(f"⚠️ ALERTA — {msg}", category="camera")
+        else:
+            if self._camera_analysis_fails >= threshold:
+                self._add_to_history("camera_analysis_failing", "Análisis de cámara fallando", resolved=True)
+                await self._safe_notify(
+                    "✅ Normalizado — 🤖 El análisis de la cámara volvió a funcionar.", category="camera"
+                )
+            self._camera_analysis_fails = 0
 
     async def _safe_notify(self, text: str, category: Optional[str] = None) -> None:
         try:

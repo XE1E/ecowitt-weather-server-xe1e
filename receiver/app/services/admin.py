@@ -153,6 +153,15 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_air_enabled": settings.alert_air_enabled,
         "alert_aqi_threshold": settings.alert_aqi_threshold,
         "alert_imeca_threshold": settings.alert_imeca_threshold,
+        # Cámara: visuales (análisis del cielo) y de equipo (sin señal / análisis fallando).
+        # Faltaban las dos primeras aquí: existían en config.py y las usaba check_sky, pero
+        # el panel no podía verlas ni editarlas porque este diccionario no las exponía.
+        "alert_visual_enabled": settings.alert_visual_enabled,
+        "alert_visual_rules_disabled": list(settings.alert_visual_rules_disabled or []),
+        "alert_camera_offline_enabled": settings.alert_camera_offline_enabled,
+        "alert_camera_offline_minutes": settings.alert_camera_offline_minutes,
+        "alert_camera_analysis_enabled": settings.alert_camera_analysis_enabled,
+        "alert_camera_analysis_fails": settings.alert_camera_analysis_fails,
         "telegram_enabled": settings.telegram_enabled,
         "telegram_bot_token_masked": mask(settings.telegram_bot_token),
         "telegram_chat_id": settings.telegram_chat_id,

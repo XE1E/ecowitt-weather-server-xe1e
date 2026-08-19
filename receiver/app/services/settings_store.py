@@ -81,6 +81,10 @@ EDITABLE_KEYS = {
     "alert_imeca_threshold",
     "alert_visual_enabled",
     "alert_visual_rules_disabled",
+    "alert_camera_offline_enabled",
+    "alert_camera_offline_minutes",
+    "alert_camera_analysis_enabled",
+    "alert_camera_analysis_fails",
     # Alertas de sismos
     "alert_earthquake_enabled",
     "alert_earthquake_magnitude",

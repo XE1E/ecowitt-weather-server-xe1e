@@ -105,6 +105,12 @@ class Settings(BaseSettings):
     # visible en horizonte), sky_visibility (visibilidad reducida).
     alert_visual_enabled: bool = True
     alert_visual_rules_disabled: List[str] = []
+    # Avisos de la cámara como equipo: sin señal (deja de mandar fotos) y el
+    # análisis IA fallando varias veces seguidas (cuota agotada, timeout, API caída).
+    alert_camera_offline_enabled: bool = True
+    alert_camera_offline_minutes: int = 30
+    alert_camera_analysis_enabled: bool = True
+    alert_camera_analysis_fails: int = 3
 
     # Telegram notifications
     telegram_enabled: bool = False

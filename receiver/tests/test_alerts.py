@@ -192,7 +192,62 @@ def test_station_check_ignores_empty():
     assert c.msgs == []
 
 
+def test_camera_offline_then_recovery():
+    c = Collector()
+    svc = AlertService(make_settings(alert_camera_offline_minutes=30), notifier=c)
+
+    # Sin foto todavía -> nada (no se puede distinguir de "sin configurar")
+    asyncio.run(svc.check_camera_offline({"available": False}))
+    assert c.msgs == []
+
+    # Foto reciente -> nada
+    asyncio.run(svc.check_camera_offline({"available": True, "age_seconds": 120}))
+    assert c.msgs == []
+
+    # Foto vieja -> alerta (una vez)
+    asyncio.run(svc.check_camera_offline({"available": True, "age_seconds": 2000}))
+    asyncio.run(svc.check_camera_offline({"available": True, "age_seconds": 2100}))  # no repite
+    assert len(c.msgs) == 1 and "no envía fotos" in c.msgs[0]
+
+    # Vuelve a llegar una foto reciente -> recuperación
+    asyncio.run(svc.check_camera_offline({"available": True, "age_seconds": 60}))
+    assert len(c.msgs) == 2 and "volvió a enviar" in c.msgs[1]
+
+
+def test_camera_offline_disabled():
+    c = Collector()
+    svc = AlertService(make_settings(alert_camera_offline_enabled=False), notifier=c)
+    asyncio.run(svc.check_camera_offline({"available": True, "age_seconds": 99999}))
+    assert c.msgs == []
+
+
+def test_camera_analysis_failing_then_recovery():
+    c = Collector()
+    svc = AlertService(make_settings(alert_camera_analysis_fails=3), notifier=c)
+
+    # Dos fallos: todavía no cruza el umbral
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    assert c.msgs == []
+
+    # Tercer fallo -> dispara (y un cuarto no repite)
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    assert len(c.msgs) == 1 and "3 intentos seguidos fallando" in c.msgs[0]
+
+    # Un análisis exitoso -> normaliza y resetea el contador
+    asyncio.run(svc.check_camera_analysis(None))
+    assert len(c.msgs) == 2 and "volvió a funcionar" in c.msgs[1]
+
+    # Dos fallos más no vuelven a disparar (contador reseteado, no llega a 3)
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    asyncio.run(svc.check_camera_analysis("timeout"))
+    assert len(c.msgs) == 2
+
+
 def test_category_mapping():
+    assert _category_for("camera_offline") == "camera"
+    assert _category_for("camera_analysis_failing") == "camera"
     assert _category_for("temp_high") == "temp"
     assert _category_for("temp_low") == "temp"
     assert _category_for("gust_high") == "wind"

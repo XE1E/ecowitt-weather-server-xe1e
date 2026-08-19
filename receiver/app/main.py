@@ -244,6 +244,9 @@ async def station_watchdog():
                     station=name, label=label
                 )
 
+            # Cámara del exterior: sin señal si deja de mandar fotos.
+            await alert_service.check_camera_offline(_camera.status())
+
         except Exception as e:
             logger.error(f"Watchdog error: {e}")
         await asyncio.sleep(60)
@@ -2122,6 +2125,10 @@ async def _analyze_sky_background(image_data: bytes) -> None:
         # panel muestre "por qué no analiza" sin escarbar en logs: el 429 de cuota
         # agotada, un timeout, etc.
         _registrar_analisis(analysis.provider, analysis.error)
+        try:
+            await alert_service.check_camera_analysis(analysis.error)
+        except Exception as e:
+            logger.error("Error evaluando alerta de análisis de cámara: %s", e)
         if analysis.error:
             # NO se guarda: un fallo pasajero de la API (timeout, 503 del tier
             # gratuito de Gemini) NO debe borrar el último análisis bueno. Si lo
@@ -2141,7 +2148,12 @@ async def _analyze_sky_background(image_data: bytes) -> None:
                 logger.error("Error evaluando alertas visuales: %s", e)
     except Exception as e:
         logger.error("Error en análisis del cielo: %s", e)
-        _registrar_analisis(None, str(e)[:200])
+        error_msg = str(e)[:200]
+        _registrar_analisis(None, error_msg)
+        try:
+            await alert_service.check_camera_analysis(error_msg)
+        except Exception as e2:
+            logger.error("Error evaluando alerta de análisis de cámara: %s", e2)
 
 
 @app.get("/api/camera/status")

@@ -429,7 +429,8 @@
       <p>El sistema detecta <strong>tendencias</strong> comparando las últimas fotos (~1 hora): te dice si se está nublando, despejando, o si viene posible tormenta. También <strong>valida</strong> lo que ve la cámara contra lo que predicen los modelos meteorológicos (Open-Meteo), y te dice si coinciden o hay discrepancia.</p>
       <p>En la página de Cámara hay un <strong>histórico de análisis</strong>: para cada día, una barra por cada análisis —de 00:00 a 24:00— cuya altura es la cobertura de nubes y cuyo color va del verde (despejado) al gris (cubierto), más el promedio, el mínimo y el máximo del día y el recuento de condiciones observadas. Es la curva de cómo se nubló la jornada, y se puede navegar día a día.</p>
       <p>Ese histórico <strong>se conserva indefinidamente</strong>, aunque las fotos de ese día ya se hayan borrado: ocupa unos pocos kilobytes por día, así que es el registro más barato y más duradero que produce la cámara.</p>
-      <p>Si activas las <strong>alertas visuales</strong>, recibes aviso por Telegram o correo cuando la IA detecta nubes de tormenta formándose, lluvia aproximándose o visibilidad reducida. Se configuran en Admin → Notificaciones.</p>
+      <p>Si activas las <strong>alertas visuales</strong>, recibes aviso por Telegram o correo cuando la IA detecta nubes de tormenta formándose, lluvia aproximándose o visibilidad reducida. Se activan (y cada una se puede apagar por separado) en Admin → Alertas, en la tarjeta "📷 Cámara"; el canal se elige en Admin → Notificaciones.</p>
+      <p>Aparte de lo que <em>ve</em>, la cámara también avisa de sí misma: si <strong>deja de mandar fotos</strong> por un rato (no confunde "aún sin configurar" con "se cayó": no avisa hasta que llegó al menos una foto), o si el <strong>análisis de IA lleva varios intentos seguidos fallando</strong> —cuota agotada, timeout—. Se normaliza solo en cuanto vuelve una foto reciente o un análisis exitoso.</p>
 
       <h3>Astronomía</h3>
       <p>Todo se calcula localmente para estas coordenadas, sin servicios externos. Del <strong>Sol</strong>: salida, ocaso, mediodía solar, duración del día y <strong>su cambio respecto a ayer</strong> (el detalle que te deja notar que los días ya se están acortando), más elevación y azimut actuales. De la <strong>Luna</strong>: salida y ocaso, fase, iluminación, edad, distancia y las próximas fases.</p>
@@ -698,12 +699,14 @@
             <tr><td>Batería baja</td><td>Un sensor lo reporta</td><td>Cambiar las pilas de ese sensor</td></tr>
             <tr><td>Sensor perdido</td><td>Un sensor que antes reportaba dejó de hacerlo</td><td>Suele ser alcance de radio o batería agotada. Se normaliza solo al volver</td></tr>
             <tr><td>Calidad del aire</td><td>AQI o IMECA sobre su umbral</td><td>Se revisa cada ~30 min. Es dato externo, no de la estación</td></tr>
+            <tr><td>Cámara sin señal</td><td>Sin fotos nuevas por N minutos (30 por defecto)</td><td>Revisar la cámara o la red de casa. No avisa si nunca llegó ninguna foto</td></tr>
+            <tr><td>Análisis de cámara fallando</td><td>El análisis de IA lleva N intentos seguidos con error (3 por defecto)</td><td>Suele ser cuota agotada del proveedor o un corte pasajero de su API. Se normaliza solo al volver</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="callout">
-        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor y aire— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
+        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor, cámara (sin señal/análisis) y aire— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
       </div>
     </section>
 

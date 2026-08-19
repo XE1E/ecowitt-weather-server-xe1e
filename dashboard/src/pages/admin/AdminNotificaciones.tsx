@@ -34,8 +34,9 @@ const CATEGORIES = [
   { key: 'station', icon: '📡', label: 'Estacion offline' },
   { key: 'battery', icon: '🔋', label: 'Bateria baja' },
   { key: 'sensor', icon: '📶', label: 'Sensor perdido' },
+  { key: 'camera', icon: '📷', label: 'Cámara (sin señal/análisis)' },
   { key: 'air', icon: '🌫️', label: 'Calidad aire' },
-  { key: 'visual', icon: '📷', label: 'Visual (cielo)' },
+  { key: 'visual', icon: '👁️', label: 'Visual (cielo)' },
   { key: 'earthquake', icon: '🌋', label: 'Sismos' },
 ] as const
 

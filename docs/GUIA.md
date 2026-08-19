@@ -693,7 +693,18 @@ modelos (Open-Meteo) y muestra un indicador de confianza: ✓ Coincide (95%),
 - `sky_visibility`: Visibilidad reducida (pobre o muy pobre)
 
 Las alertas usan **histéresis** (requieren 2 análisis consecutivos) para evitar falsos
-positivos. Se activan en Admin → Notificaciones → categoría "Visual (cielo)".
+positivos. Se activan (y cada una se puede apagar por separado) en **Admin → Alertas**,
+en la tarjeta "📷 Cámara"; el canal (Telegram/correo) se elige en Admin →
+Notificaciones → categoría "Visual (cielo)".
+
+**Alertas de la cámara como equipo** (distintas de las visuales: aquí no importa lo que
+ve, sino si el hardware/análisis funciona), en la misma tarjeta de Admin → Alertas:
+- **Cámara sin señal**: no llega una foto nueva desde hace N minutos (default 30). No
+  avisa si nunca llegó ninguna foto (evita confundir "sin configurar" con "se cayó").
+- **Análisis IA fallando**: el análisis lleva N intentos seguidos con error — cuota
+  agotada, timeout, API caída (default 3). Se normaliza en cuanto uno sale bien.
+
+Van por Telegram/correo en la categoría "Cámara (sin señal/análisis)".
 
 **Configuración:** en Admin → Sistema hay opciones para:
 - Habilitar/deshabilitar el análisis
@@ -1103,6 +1114,9 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
 | **Sismos** | magnitud ≥ umbral (default 6.0), cercanos a la estación (≤ 800 km); fuente SSN/USGS |
+| **Visual (cielo)** | tormenta formándose / lluvia visible / visibilidad reducida — ver [Análisis del cielo con IA](#análisis-del-cielo-con-ia) |
+| **Cámara sin señal** | deja de llegar una foto nueva por N minutos (default 30) |
+| **Análisis de cámara fallando** | el análisis IA (Gemini/Claude) lleva N intentos seguidos con error (default 3) |
 
 ### Estación remota (GW1100)
 

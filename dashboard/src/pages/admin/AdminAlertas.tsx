@@ -41,6 +41,12 @@ interface AlertSettings {
   alert_imeca_threshold: number
   alert_earthquake_enabled: boolean
   alert_earthquake_magnitude: number
+  alert_visual_enabled: boolean
+  alert_visual_rules_disabled: string[]
+  alert_camera_offline_enabled: boolean
+  alert_camera_offline_minutes: number
+  alert_camera_analysis_enabled: boolean
+  alert_camera_analysis_fails: number
   telegram_enabled: boolean
   telegram_chat_id: string | null
   email_enabled: boolean
@@ -132,6 +138,9 @@ export function AdminAlertas() {
   const [selected, setSelected] = useState<string | null>(null)  // null = principal
   const [offlineMin, setOfflineMin] = useState(15)  // watchdog de la secundaria
   const [disabled, setDisabled] = useState<string[]>([])  // reglas apagadas
+  // Reglas visuales apagadas (sky_storm/sky_precipitation/sky_visibility). Son
+  // globales (no hay una por estación), así que solo se editan con isPrincipal.
+  const [visualDisabled, setVisualDisabled] = useState<string[]>([])
   // Campos que la estación seleccionada REPORTA de verdad, para no ofrecer umbrales de
   // sensores que no tiene. `null` = no se pudo averiguar, y entonces se muestra todo.
   const [campos, setCampos] = useState<Set<string> | null>(null)
@@ -148,6 +157,7 @@ export function AdminAlertas() {
       setCampos(camposDe(cur))
       setSettings(s); setGlobalCache(s)
       setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
+      setVisualDisabled(Array.isArray(s.alert_visual_rules_disabled) ? s.alert_visual_rules_disabled : [])
       const list = st?.stations || []
       setSecondaries(
         list.filter((x: { name: string | null }) => x.name !== null)
@@ -167,6 +177,7 @@ export function AdminAlertas() {
         setCampos(camposDe(cur))
         setSettings(s); setGlobalCache(s)
         setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
+        setVisualDisabled(Array.isArray(s.alert_visual_rules_disabled) ? s.alert_visual_rules_disabled : [])
       } else {
         const [ov, station, cur] = await Promise.all([
           fetchWithAuth(`/api/admin/stations/${sel}/alerts`)
@@ -206,7 +217,7 @@ export function AdminAlertas() {
         res = await fetchWithAuth('/api/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...settings, alert_rules_disabled: disabled }),
+          body: JSON.stringify({ ...settings, alert_rules_disabled: disabled, alert_visual_rules_disabled: visualDisabled }),
         })
       } else {
         const th: Record<string, unknown> = {}
@@ -247,6 +258,10 @@ export function AdminAlertas() {
   const isOff = (rule: string) => disabled.includes(rule)
   const toggleRule = (rule: string) =>
     setDisabled((d) => (d.includes(rule) ? d.filter((r) => r !== rule) : [...d, rule]))
+
+  const isVisualOff = (rule: string) => visualDisabled.includes(rule)
+  const toggleVisualRule = (rule: string) =>
+    setVisualDisabled((d) => (d.includes(rule) ? d.filter((r) => r !== rule) : [...d, rule]))
 
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
 
@@ -653,6 +668,53 @@ export function AdminAlertas() {
                   <span className="text-xs text-slate-500">Notifica sismos del SSN/USGS que superen esta magnitud</span>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Cámara: alertas visuales (lo que ve el análisis IA del cielo) y de
+              equipo (sin señal / el análisis fallando). Son globales: la cámara
+              no es por-estación. */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 space-y-3">
+            <p className="text-sm font-medium">📷 Cámara</p>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Toggle enabled={settings.alert_visual_enabled} onChange={(v) => update('alert_visual_enabled', v)} label="Visuales — lo que ve el análisis IA del cielo" />
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm pl-1">
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isVisualOff('sky_storm')} onToggle={() => toggleVisualRule('sky_storm')} />
+                  <span className="text-slate-400">⛈️ Tormenta formándose</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isVisualOff('sky_precipitation')} onToggle={() => toggleVisualRule('sky_precipitation')} />
+                  <span className="text-slate-400">🌧️ Precipitación visible</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RuleGate on={!isVisualOff('sky_visibility')} onToggle={() => toggleVisualRule('sky_visibility')} />
+                  <span className="text-slate-400">🌫️ Visibilidad reducida</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-white/10" />
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Toggle enabled={settings.alert_camera_offline_enabled} onChange={(v) => update('alert_camera_offline_enabled', v)} label="📡 Cámara sin señal" />
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">después de</span>
+                <NumField value={settings.alert_camera_offline_minutes} onChange={(v) => update('alert_camera_offline_minutes', v)} min={5} max={180} step={5} off={!settings.alert_camera_offline_enabled} />
+                <span className="text-xs text-slate-500">min sin fotos</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Toggle enabled={settings.alert_camera_analysis_enabled} onChange={(v) => update('alert_camera_analysis_enabled', v)} label="🤖 Análisis IA fallando" />
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">tras</span>
+                <NumField value={settings.alert_camera_analysis_fails} onChange={(v) => update('alert_camera_analysis_fails', v)} min={1} max={20} off={!settings.alert_camera_analysis_enabled} />
+                <span className="text-xs text-slate-500">intentos seguidos</span>
+              </div>
             </div>
           </div>
         </>
