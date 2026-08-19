@@ -756,7 +756,7 @@ class AlertService:
             (
                 "sky_precipitation",
                 analysis.get("precipitation_visible") is True,
-                f"🌧️ Precipitación visible: se observa lluvia en el horizonte",
+                "🌧️ Precipitación visible: se observa lluvia en el horizonte",
             ),
             (
                 "sky_visibility",

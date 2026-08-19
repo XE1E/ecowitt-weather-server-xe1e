@@ -125,11 +125,23 @@ def test_trend_classification():
 
 
 def test_local_forecast_rising_high():
-    fc = local_forecast(1025.0, 1020.0)
+    # 1032 hPa, no 1025: los umbrales se recalibraron para la CDMX en el commit
+    # 115016d (alta >= 1030 en vez de >= 1022, porque a 2240 m la media local ya es
+    # 1027 y con el umbral estándar casi todos los días salían "altos"). El test se
+    # quedó con el valor viejo y llevaba fallando desde entonces.
+    fc = local_forecast(1032.0, 1027.0)
     assert fc["available"] is True
     assert fc["level"] == "high"
     assert fc["trend"]["code"] in ("rising", "rising_fast")
     assert "mejor" in fc["forecast"].lower() or "buen" in fc["forecast"].lower()
+
+
+def test_local_forecast_cdmx_media_es_normal():
+    """La media local (~1027 hPa) tiene que salir NORMAL, que es justo el punto de la
+    recalibración: con los umbrales estándar habría salido "alta"."""
+    assert local_forecast(1027.0, 1027.0)["level"] == "normal"
+    assert local_forecast(1030.0, 1030.0)["level"] == "high"
+    assert local_forecast(1023.9, 1023.9)["level"] == "low"
 
 
 def test_local_forecast_no_pressure():

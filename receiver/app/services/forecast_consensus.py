@@ -15,7 +15,7 @@ Principios:
 - Las alertas del SMN se muestran siempre que existan
 """
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import openmeteo, weatherapi
