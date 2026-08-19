@@ -162,6 +162,10 @@ export function iconAlerta(clave: string): string {
   if (k.startsWith('battery_')) return 'code-orange'
   if (k.startsWith('sensor_')) return 'not-available'
   if (k === 'aqi_high' || k === 'imeca_high') return 'dust'
+  if (k === 'sky_storm') return 'thunderstorms'
+  if (k === 'sky_precipitation') return 'raindrops'
+  if (k === 'sky_visibility') return 'fog'
+  if (k === 'camera_offline') return 'not-available'
   return 'code-orange'
 }
 
