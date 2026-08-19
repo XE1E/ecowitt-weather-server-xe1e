@@ -221,7 +221,7 @@ class Settings(BaseSettings):
 
     # Cámara del exterior (Tapo C325WB). La cámara vive detrás del NAT de casa y el
     # servidor está en el VPS, así que NO se va a buscar la foto: algo en casa la
-    # EMPUJA con POST /api/camera/upload. Ver docs/internal/PLAN-CAMARA-EXTERIOR.md.
+    # EMPUJA con POST /api/camera/upload. Ver docs/archivo/PLAN-CAMARA-EXTERIOR.md.
     #
     # Token propio y no el del panel de administración: lo va a llevar un script
     # desatendido en una máquina de casa, y si se filtra sólo permite subir fotos.

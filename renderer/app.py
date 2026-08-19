@@ -11,7 +11,7 @@ ESP32-S3 solo baja esta imagen y la pinta (display tonto, sin LVGL).
 La respuesta lleva además la cabecera **`X-Kiosk-Nav`** con las zonas táctiles de esa
 pantalla (rectángulo → página destino), que la propia página publica en el DOM. Es lo
 que permite que el firmware no sepa qué páginas existen: sólo compara el toque con la
-lista que acaba de recibir. Ver `docs/internal/PLAN-KIOSCO-NAVEGACION.md`.
+lista que acaba de recibir. Ver `docs/archivo/PLAN-KIOSCO-NAVEGACION.md`.
 
 El reloj que se ve en la imagen usa la zona horaria del contenedor (env TZ).
 """

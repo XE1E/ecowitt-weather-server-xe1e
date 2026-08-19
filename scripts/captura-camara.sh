@@ -10,7 +10,7 @@
 # TP-Link-- y el servidor vive en un VPS, al otro lado del NAT. Además, el router del
 # sitio no tiene reenvío de puertos, así que el VPS tampoco puede entrar. Alguien
 # dentro de casa tiene que sacar la foto y EMPUJARLA hacia fuera. Ver
-# docs/internal/PLAN-CAMARA-EXTERIOR.md.
+# docs/archivo/PLAN-CAMARA-EXTERIOR.md.
 #
 # Uso:
 #   ./captura-camara.sh              captura y sube (modo normal, silencioso)

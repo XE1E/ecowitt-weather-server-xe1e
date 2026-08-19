@@ -7,7 +7,7 @@ import { PageInfo } from '../components/station/PageInfo'
 
 /**
  * Página propia para la cámara del exterior, no una tarjeta incrustada en otra:
- * decidido en `docs/internal/PLAN-CAMARA-EXTERIOR.md` el 2026-08-05, porque la foto
+ * decidido en `docs/archivo/PLAN-CAMARA-EXTERIOR.md` el 2026-08-05, porque la foto
  * es un contenido con entidad —foto en vivo, análisis del cielo y timelapse del día— y
  * en el kiosco también tiene pantalla propia.
  */

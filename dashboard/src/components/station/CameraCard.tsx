@@ -7,7 +7,7 @@ import { relativeTime } from '../../weather'
  *
  * La cámara vive detrás del NAT de casa y el servidor en el VPS, así que aquí no se
  * habla con la cámara: se lee la última foto que alguien empujó a
- * `POST /api/camera/upload`. Ver `docs/internal/PLAN-CAMARA-EXTERIOR.md`.
+ * `POST /api/camera/upload`. Ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`.
  *
  * Se acordó **foto periódica y no directo 24/7**: un directo serían ~1 TB/mes de
  * subida desde casa y un proceso de vídeo corriendo para siempre, y para un sitio de

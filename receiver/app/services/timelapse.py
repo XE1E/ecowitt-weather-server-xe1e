@@ -3,7 +3,7 @@ Timelapse diario de la cámara del exterior.
 
 `CameraStore` ya archiva cada captura en `<camera_dir>/YYYY-MM-DD/HHMMSS.jpg`; esto
 junta los fotogramas de un día en un **MP4** con ffmpeg. Era la última casilla sin
-marcar de `docs/internal/PLAN-CAMARA-EXTERIOR.md`, que dejó a propósito sin decidir
+marcar de `docs/archivo/PLAN-CAMARA-EXTERIOR.md`, que dejó a propósito sin decidir
 "generarlo en el VPS o en casa": se hace **en el VPS**, porque los fotogramas ya están
 aquí y el otro candidato --la Raspberry Pi de casa-- es un nodo IRLP en producción al
 que no conviene meterle un encode, además de que habría que subir el vídeo por el

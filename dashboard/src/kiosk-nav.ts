@@ -100,7 +100,7 @@ export const STATS_VIEWS: Record<StatsKey, { label: string; ttl: number }> = {
 }
 
 /**
- * Cámara del exterior (Tapo C325WB, ver `docs/internal/PLAN-CAMARA-EXTERIOR.md`).
+ * Cámara del exterior (Tapo C325WB, ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`).
  *
  * El slug se reserva ya aunque la cámara todavía no esté instalada, y la página
  * degrada con gracia mientras tanto. Aquel plan daba por hecho que meter la cámara

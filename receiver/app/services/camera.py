@@ -5,7 +5,7 @@ La cámara (Tapo C325WB) queda en casa **detrás del NAT** y el servidor corre e
 VPS, así que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada
 pocos minutos y lo EMPUJA aquí. Este módulo sólo ve el resultado de ese empujón.
 
-Decisión de fondo (docs/internal/PLAN-CAMARA-EXTERIOR.md): **fotos periódicas, no
+Decisión de fondo (docs/archivo/PLAN-CAMARA-EXTERIOR.md): **fotos periódicas, no
 directo 24/7**. Un directo serían ~1 TB/mes de subida desde casa y un proceso de vídeo
 corriendo para siempre; para un sitio de clima, la foto cada pocos minutos y el
 timelapse dan más y cuestan casi nada.

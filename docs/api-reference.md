@@ -244,7 +244,7 @@ Todos bajo la misma base. Devuelven JSON.
 
 La cámara vive en la red de casa, detrás del NAT, y el servidor en el VPS: no se va a
 buscar la foto, **la empuja** un proceso local (ver
-`docs/internal/PLAN-CAMARA-EXTERIOR.md`). Cadencia acordada: **cada 5 minutos**.
+`docs/archivo/PLAN-CAMARA-EXTERIOR.md`). Cadencia acordada: **cada 5 minutos**.
 
 ```
 POST /api/camera/upload

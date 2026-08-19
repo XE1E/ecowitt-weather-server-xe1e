@@ -1,15 +1,16 @@
 # Plan — Cámara del exterior de la estación
 
-> Escrito el 2026-08-05, actualizado el 2026-08-06. Vive en git.
+> Escrito el 2026-08-05. Cerrado como **✅ TERMINADO Y FUNCIONANDO el 2026-08-19**. Vive
+> en git.
 >
-> **Estado:** cámara comprada, aún no recibida. **Todo el lado del servidor está hecho
-> y desplegado** (endpoints, retención, web y página del kiosco) y probado con una foto
-> real; el script de captura también.
->
-> **BLOQUEADO por el sitio:** hace falta un equipo encendido en esa red que decodifique
-> el H.264 de la cámara, y hoy no hay ninguno —el router no tiene reenvío de puertos y
-> lo único permanente allí es un ESP32, que no puede decodificar vídeo—. Ver *El cuello
-> de botella*. Mientras tanto funciona con el PC cuando esté encendido.
+> **Estado final:** cámara instalada y **en producción desde 2026-08-17** en la
+> Raspberry Pi `stn8952` (ver *Instalado en la Raspberry Pi*), subiendo una foto cada
+> 5 min. Lado del servidor completo: endpoints, retención, web, página del kiosco,
+> **timelapse diario** (2026-08-18) y **análisis del cielo con IA** (2026-08-11).
+> El **2026-08-19** se instaló el router TP-Link Archer C6 en modo Access Point
+> (`192.168.100.251`) y la cámara pasó de Wi-Fi a **ethernet** sin cambio de IP ni de
+> ningún otro parámetro del pipeline. Lo que sigue abierto son sólo las *Decisiones
+> abiertas* del final del documento, ninguna bloqueante.
 
 ## Objetivo
 
@@ -131,20 +132,16 @@ algún día interesa: cadencia rápida de día y lenta de noche, aprovechando qu
 servidor ya conoce el amanecer y el atardecer; ahorraría casi la mitad del volumen sin
 perder nada útil.
 
-## Puesta en marcha (cuando llegue) — pendiente
+## Puesta en marcha — ✅ HECHA (2026-08-17)
 
-Antes de escribir una línea de código:
-
-- [ ] Crear la **cuenta de cámara** en la app Tapo (Configuración → Avanzado).
-- [ ] **Reservar su IP** por DHCP en el router. La URL RTSP lleva la IP dentro; si el
-      router se la cambia, el pipeline se cae sin avisar.
-- [ ] **Cablear PoE** si es posible: quita el adaptador de corriente de la intemperie y
-      saca a la cámara del 2.4 GHz.
-- [ ] Probar el RTSP desde la LAN con VLC o
-      `ffprobe rtsp://usuario:clave@IP:554/stream1`. Si eso responde, el resto es
-      trabajo del servidor.
-- [ ] Decidir el encuadre **como fijo y definitivo**: con timelapse, cualquier
-      reajuste posterior parte la serie en dos.
+- [x] Cuenta de cámara creada en la app Tapo (usuario `climaxe1e`, distinto de la
+      cuenta Tapo).
+- [x] IP reservada: **192.168.100.52**, MAC **ec:75:0c:da:9b:87**. Descubrimiento por
+      MAC además en el script, por si el router no respeta la reserva.
+- [x] Cableada por **ethernet** (primero vía la red Totalplay, y desde el
+      **2026-08-19** por el Archer C6 en modo AP).
+- [x] RTSP probado y respondiendo (`200 OK`, Digest, `realm="TP-LINK IP-Camera"`).
+- [x] Encuadre fijado al horizonte (ver *Orientación*, más abajo).
 
 ## Implementación
 
@@ -213,10 +210,10 @@ Probado de punta a punta contra producción con una foto real de la estación: s
 correcta, rechazo de lo que no es JPEG (400), rechazo sin token (401) y la página del
 kiosco renderizando la imagen encuadrada con su hora de captura.
 
-## El cuello de botella: hace falta un equipo en el sitio — VERIFICADO (2026-08-06)
+## El cuello de botella: hace falta un equipo en el sitio — RESUELTO (2026-08-06)
 
-Éste es **el punto que bloquea el proyecto**, y conviene tenerlo escrito con sus
-razones para no volver a recorrer el camino.
+Fue **el punto que bloqueaba el proyecto** hasta que apareció la Pi `stn8952` (ver
+más abajo); queda escrito con sus razones para no volver a recorrer el camino.
 
 La Tapo sólo entrega vídeo por **RTSP en H.264**, que hay que **decodificar** para
 sacar un JPEG. Todo lo demás está descartado con fuentes:
@@ -257,9 +254,9 @@ molestar a lo que ya corre ahí.
 | SO | Raspbian 10 (buster), armv7l, 871 MB RAM, 101 GB libres |
 | ffmpeg | **Ya estaba instalado** (4.1.11): no se tocó `apt` ni una sola librería |
 | Instalado | `/opt/camara/{captura-camara.sh,camara.env}` + `camara-clima.{service,timer}` |
-| Estado | Timer **instalado y sin activar** hasta que llegue la cámara |
+| Estado | **Activado y en producción desde 2026-08-17** |
 | Impacto medido | Carga antes 0.40, después 0.40. `Nice=10` e `IOSchedulingClass=idle` para no competir con el audio del nodo |
-| IP de la cámara | **192.168.100.150**, fuera del pool DHCP del router (que va de .11 a .100) |
+| IP de la cámara | **192.168.100.52** (la reservada resultó distinta de la .150 prevista aquí), MAC `ec:75:0c:da:9b:87` |
 
 ### Dos cosas que hubo que resolver ahí
 
@@ -282,14 +279,9 @@ gateway de la LAN. No se escribe nada permanente en el nodo IRLP, se recalcula s
 cambia la subred o el gateway, y al desinstalar no queda rastro. Probado borrando la
 ruta a mano: el script la rehízo y subió la foto.
 
-### Qué falta (cuando llegue la cámara)
+### Puesto en marcha — ✅ hecho, los 4 pasos previstos aquí se cumplieron el 2026-08-17
 
-1. Cuenta de cámara en la app Tapo y **fijarle la IP 192.168.100.150**.
-2. Rellenar `CAMERA_USER` y `CAMERA_PASS` en `/opt/camara/camara.env`.
-3. Probar: `/opt/camara/captura-camara.sh -v`
-4. Activar: `systemctl enable --now camara-clima.timer`
-
-Para desinstalarlo todo: `systemctl disable --now camara-clima.timer`,
+Para desinstalarlo todo (por si hiciera falta en el futuro): `systemctl disable --now camara-clima.timer`,
 `rm /etc/systemd/system/camara-clima.*`, `rm -rf /opt/camara`.
 
 ## Puesta en marcha del script en Windows (2026-08-06)

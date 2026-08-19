@@ -1999,7 +1999,7 @@ async def get_daily_rain(days: int = 7, station: Optional[str] = None):
 
 # ── Cámara del exterior ──────────────────────────────────────────────────────
 # La cámara está detrás del NAT de casa y el servidor en el VPS, así que la foto se
-# EMPUJA hacia aquí. Ver docs/internal/PLAN-CAMARA-EXTERIOR.md y services/camera.py.
+# EMPUJA hacia aquí. Ver docs/archivo/PLAN-CAMARA-EXTERIOR.md y services/camera.py.
 _timelapse = TimelapseService(
     base_dir=settings.camera_dir,
     fps=settings.camera_timelapse_fps,

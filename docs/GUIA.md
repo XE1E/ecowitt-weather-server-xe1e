@@ -430,7 +430,7 @@ así que sus periodos largos saldrían vacíos. Esas celdas llevan a la página 
 
 La cámara (Tapo C325WB) vive **detrás del NAT de casa** y el servidor en el VPS, así
 que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada 5 min y
-lo **empuja**. Ver `docs/internal/PLAN-CAMARA-EXTERIOR.md`.
+lo **empuja**. Ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`.
 
 ##### Arquitectura del flujo de captura
 

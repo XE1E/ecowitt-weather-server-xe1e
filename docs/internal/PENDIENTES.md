@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-18.
+> Última actualización: 2026-08-19.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -126,7 +126,7 @@ Nadie grafica ese campo hoy, así que no corre prisa. Dos salidas:
 - **Recalcular** con un `to()` de Flux sobre el campo `vpd` anterior a esa fecha,
   igual que se hizo con la presión histórica (ver sección 6). Backup antes.
 
-## 2. Display de consola — fase 2 (firmware) — diferido
+## 2. Display de consola — ✅ HECHO (cerrado 2026-08-19)
 Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola física,
 1024×600). **Plan detallado + decisiones:** `ecowitt-display-kiosk-xe1e/docs/PLAN-CONSOLA-XE1E.md`.
 **Fase inmediata HECHA y verificada (2026-07-25):**
@@ -137,19 +137,23 @@ Servidor ya listo: `GET /api/display.jpg?page=consola` (réplica de la consola f
 - [x] **Firmware** (`ecowitt-display-kiosk-xe1e`): barra de 6 pestañas (la 6ª → consola
       full‑screen `?page=consola`); tocar la consola en cualquier parte → **regresa a la
       página 1**. Flasheado (COM5) y funcionando.
-- En curso: **ajustes visuales** de la consola.
-- Futuro: consola como home + zonas de toque por bloque (pendiente de definir).
+- [x] **Ajustes visuales**, dados por buenos.
+- **Cerrado por decisión (2026-08-19):** "consola como home + zonas de toque por bloque"
+  se deja fuera de alcance por ahora, no queda como pendiente activo.
 
-## 2.b Cámara del exterior — plan escrito, esperando hardware
-**Tapo C325WB comprada el 2026-08-05, aún sin recibir.** Plan completo, comparativa
-de modelos y decisiones: **`docs/internal/PLAN-CAMARA-EXTERIOR.md`**.
+## 2.b Cámara del exterior — ✅ HECHO Y EN PRODUCCIÓN (cerrado 2026-08-19)
+**Tapo C325WB, en producción desde 2026-08-17.** Plan completo, comparativa de
+modelos y decisiones (ya cerrado como terminado): **`docs/archivo/PLAN-CAMARA-EXTERIOR.md`**.
 
-Lo esencial: se integra por **RTSP** (exige crear una "cuenta de cámara" en la app
-Tapo), que es **sólo de red local**, así que la cámara queda tras el NAT de casa y el
-VPS no puede ir a buscarla — algo en casa tiene que empujar hacia fuera, y **no se
-abren puertos hacia la cámara**. Se acordó **foto cada 5-10 min + timelapse diario**
-en vez de directo 24/7, que serían ~1 TB/mes de subida. Añadirla como página del
-kiosco **toca también el firmware**, que tiene cableado el número de pestañas.
+Resumen de lo esencial, ya resuelto: se integra por **RTSP** (con "cuenta de
+cámara" propia de la app Tapo), que es **sólo de red local**, así que un equipo de
+casa (la Pi `stn8952`) empuja la foto hacia el VPS — **nunca se abrieron puertos
+hacia la cámara**. Quedó en **foto cada 5 min + timelapse diario** (no directo
+24/7). Pese a lo que decía esta entrada, añadirla como página del kiosco **no
+tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
+`PLAN-KIOSCO-NAVEGACION.md`). El **2026-08-19** se instaló el Archer C6 como AP y
+la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
+`docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
 
 ## 2.c Timelapse diario — ✅ HECHO (2026-08-18)
 
@@ -235,7 +239,7 @@ con `humidex_days` (≥ 30), tiene celda propia en la consola con riel, color po
 en palabras, y muestra el máximo del día cuando no hay valor vivo. La web dejó de convertirlo
 a °F. De paso entró "noche más cálida" (máximo de las mínimas) en los récords.
 
-## 5c. Consola — tres mejoras APLAZADAS por espacio (2026-08-08)
+## 5c. Consola — tres mejoras — ✅ HECHO / cerrado (2026-08-19)
 Salieron de una ronda de propuestas; se hicieron las dos primeras (alertas en la celda y
 próximas horas) y estas tres se dejaron para pensarlas, porque las tres pelean por píxeles
 en celdas ya ajustadas y el operador prefirió no forzarlas:
@@ -245,12 +249,10 @@ en celdas ya ajustadas y el operador prefirió no forzarlas:
    **conmutar el dato**: idea del operador. De noche, con la lectura viva en cero, la cifra
    grande pasa a ser el máximo del día y el renglón de la unidad o del nivel dice "MÁXIMO",
    las dos cosas en blanco puro; al amanecer vuelven solas. Cero píxeles de sitio nuevo.
-2. **Progreso del día** en la celda del sol y la luna: un arco entre amanecer y atardecer
-   con la posición de ahora, o sea cuánta luz queda. No necesita ningún dato nuevo; el
-   problema es que esa celda ya va justa (el disco lunar de 64 px más las dos horas piden
-   casi todo el interior, cuenta hecha en el código).
-3. **Sparkline de 24 h** en EXT y PRES. Es la que más moderniza el aspecto y la única que
-   **no tiene hueco**: habría que quitar o achicar algo de esas dos celdas.
+2. ~~**Progreso del día**~~ en la celda del sol y la luna — **cerrado por decisión
+   (2026-08-19):** se deja fuera de alcance, la celda no tiene hueco para el arco.
+3. ~~**Sparkline de 24 h**~~ en EXT y PRES — **cerrado por decisión (2026-08-19):** sin
+   hueco sin achicar otra cosa de esas celdas, no se persigue por ahora.
 
 ## 6. Limpiar historial de presión falso (servidor) — ✅ HECHO (2026-07-25)
 La presión relativa de la principal (WS2910) del 2026-07-19 al 2026-07-24 estaba
@@ -263,7 +265,7 @@ se reconstruyeron los resúmenes `weather_daily` de esos días con
 absoluta (~790 hPa) del 07-24 22:42-22:44Z. Resultado: presión histórica real
 (~1024-1032 hPa). El GW1100 se dejó igual (usa la altitud de su propia consola).
 
-## 7. Uniformar la iconografía — EN MARCHA (2026-08-18)
+## 7. Uniformar la iconografía — ✅ HECHO (cerrado 2026-08-19)
 
 Meter iconos **en todo** y **más grandes**. El inventario que traía esta sección estaba
 viejo: decía "hay mucho sin explotar (viento por intensidad, presión, fases lunares…)"
@@ -317,22 +319,18 @@ claro el porqué antes de volver a proponerlo.
       primer día y no estaba en la tira), gotas --huecas para la probabilidad y macizas
       para el acumulado, el mismo dibujo diciendo dos cosas--, UV y polvo para el IMECA.
 
-### Lo que sigue pendiente
+### Cerrado por decisión (2026-08-19) — quedan fuera de alcance por ahora
 
-- [ ] **La tira de pestañas del kiosco usa emoji** (☀️ 📍 🏠 📅 📈 🖥️). Sustituirlos por
+- **La tira de pestañas del kiosco usa emoji** (☀️ 📍 🏠 📅 📈 🖥️). Sustituirlos por
       glifos teñidos es posible ya (la infraestructura está), pero el kiosco se
-      **renderiza a JPEG** y ahí conviene mirar el resultado antes: bajar
-      `/api/display.jpg?page=<slug>` y verlo.
-- [ ] **`ConsoleReplica`**: ya usa `MeteoGlyph` (no son todos SVG a mano como decía esta
+      **renderiza a JPEG** y habría que mirar el resultado antes. No se persigue por ahora.
+- **`ConsoleReplica`**: ya usa `MeteoGlyph` (no son todos SVG a mano como decía esta
       sección), pero podría usar las familias graduadas nuevas --barómetro por nivel en
-      PRES, Beaufort en la celda de viento--. Cuidado: sus celdas van muy justas de
-      píxeles y varias de sus rarezas son **gusto deliberado**, así que esto se decide
-      mirando el render, no leyendo el código.
-- [ ] **Tamaños "más grandes"**: la escala de `ICON` sigue en 32/48/64/96/140. Si se
-      agranda hay que actualizar la tabla de `docs/CONVENCIONES.md`.
-- [ ] `cardinal()` está **duplicado**: exportado en `weather.ts:334` y redefinido dentro
-      de `StationSummaryTable.tsx:75`. Los dos con la misma fórmula, así que es dedupe
-      trivial.
+      PRES, Beaufort en la celda de viento--. Sus celdas van muy justas de píxeles y
+      varias de sus rarezas son **gusto deliberado**; se deja como está.
+- **Tamaños "más grandes"**: la escala de `ICON` se queda en 32/48/64/96/140.
+- `cardinal()` sigue **duplicado** (`weather.ts:334` y `StationSummaryTable.tsx:75`,
+      misma fórmula) — dedupe trivial pero de bajo impacto, se deja para otra ronda.
 
 ## 9. Kiosco — celda LLUVIA con los 3 datos de precipitación
 Hoy la celda LLUVIA de la réplica de consola (`ConsoleReplica`, fila 2 columna 3)

@@ -251,6 +251,6 @@ Guardar todos los análisis para generar estadísticas de cielo a lo largo del t
 ## Referencias
 
 - Análisis implementado: `receiver/app/services/sky_analyzer.py`
-- Documentación de cámara: `docs/internal/PLAN-CAMARA-EXTERIOR.md`
+- Documentación de cámara: `docs/archivo/PLAN-CAMARA-EXTERIOR.md`
 - Sistema de alertas: `receiver/app/services/alerts.py`
 - Pronóstico consensus: `receiver/app/services/forecast_consensus.py`
