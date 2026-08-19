@@ -19,7 +19,14 @@ Medido en producción el 2026-08-18 (VPS ARM del free tier de Oracle): 237 captu
 
 Dónde vive el vídeo:
     <camera_dir>/timelapse/YYYY-MM-DD.mp4    el vídeo del día
+    <camera_dir>/timelapse/YYYY-MM-DD.jpg    su cartel (un fotograma del mediodía)
     <camera_dir>/timelapse/YYYY-MM-DD.json   con cuántos fotogramas se usaron
+
+El cartel existe porque un `<video>` sin `poster` se dibuja como un rectángulo NEGRO
+hasta que alguien le da al play --y con `preload="metadata"` ni siquiera carga el primer
+fotograma--, así que la tarjeta parecía rota. Se saca del propio MP4 y no de los
+fotogramas originales: así se puede generar también para un día cuyas fotos ya purgó la
+cámara, y por construcción se parece a lo que se va a reproducir.
 
 Los vídeos van FUERA de las carpetas de día a propósito. Así la poda de fotogramas
 (`CameraStore._prune`, 7 días) no se los lleva, y el timelapse se convierte en lo que
@@ -121,6 +128,9 @@ class TimelapseService:
     def meta_path(self, date_str: str) -> str:
         return os.path.join(self.out_dir, f"{_valid_date(date_str)}.json")
 
+    def poster_path(self, date_str: str) -> str:
+        return os.path.join(self.out_dir, f"{_valid_date(date_str)}.jpg")
+
     def day_dir(self, date_str: str) -> str:
         return os.path.join(self.base, _valid_date(date_str))
 
@@ -169,6 +179,7 @@ class TimelapseService:
             "frames_used": usados,
             # Han llegado capturas nuevas desde el último encode: el vídeo de HOY se
             # queda corto durante el día, y esto es lo que hace que se regenere.
+            "poster": os.path.exists(self.poster_path(date_str)),
             "stale": listo and n > usados,
             "generating": date_str in _generando,
             "enough_frames": n >= self.min_frames,
@@ -183,7 +194,7 @@ class TimelapseService:
                     # splitext y no nombre[:-4]: ".json" son CINCO caracteres, así que
                     # recortar cuatro dejaba "2026-08-18.j" y el día se ignoraba.
                     base, ext = os.path.splitext(nombre)
-                    if ext not in (".mp4", ".json", ""):
+                    if ext not in (".mp4", ".json", ".jpg", ""):
                         continue
                     try:
                         datetime.strptime(base, "%Y-%m-%d")
@@ -219,6 +230,12 @@ class TimelapseService:
 
         st = self.status(date_str)
         if _ya_esta(st):
+            # El vídeo está al día pero puede faltarle el cartel: los que se montaron
+            # antes de que existiera, o un fallo suelto al generarlo. Se rellena sin
+            # volver a codificar, que es lo caro.
+            if st["video"] and not st["poster"]:
+                await self._poster(date_str)
+                return self.status(date_str)
             return st
         if not st["enough_frames"]:
             raise TimelapseError(
@@ -233,6 +250,7 @@ class TimelapseService:
             _generando.add(date_str)
             try:
                 usados = await self._encode(date_str)
+                await self._poster(date_str)
             finally:
                 _generando.discard(date_str)
         logger.info("timelapse %s: %d fotogramas", date_str, usados)
@@ -313,6 +331,52 @@ class TimelapseService:
                 except OSError:
                     pass
 
+    async def _poster(self, date_str: str) -> bool:
+        """
+        Saca un fotograma del MEDIO del vídeo y lo deja como cartel.
+
+        Del medio y no del principio porque el primero es del amanecer --oscuro, y un
+        cartel oscuro no se distingue del rectángulo negro que se quiere evitar--,
+        mientras que la mitad del día cae cerca del mediodía.
+
+        Nunca levanta: el vídeo es lo valioso y ya está escrito. Sin cartel el
+        reproductor se ve como antes, que es exactamente el estado del que se viene.
+        """
+        video = self.video_path(date_str)
+        if not os.path.exists(video):
+            return False
+        meta = self._meta(date_str) or {}
+        fps = int(meta.get("fps") or self.fps)
+        usados = int(meta.get("frames") or 0)
+        medio = (usados / max(1, fps)) / 2.0 if usados else 0.0
+
+        tmp = self.poster_path(date_str) + ".tmp.jpg"
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            # `-ss` ANTES de `-i` para que busque sin decodificar todo lo anterior.
+            "-ss", f"{medio:.2f}", "-i", video,
+            "-frames:v", "1", "-q:v", "4",
+            tmp,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            _, err = await proc.communicate()
+            if proc.returncode != 0 or not os.path.exists(tmp) or os.path.getsize(tmp) == 0:
+                logger.warning("no se pudo sacar el cartel de %s: %s", date_str,
+                               err.decode(errors="replace").strip()[:200])
+                return False
+            os.replace(tmp, self.poster_path(date_str))
+            return True
+        except (OSError, ValueError) as e:
+            logger.warning("no se pudo sacar el cartel de %s: %s", date_str, e)
+            return False
+        finally:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+
     def prune(self) -> int:
         """Borra los vídeos más viejos que la retención. Devuelve cuántos quitó."""
         if self.retention_days <= 0:
@@ -322,7 +386,7 @@ class TimelapseService:
         try:
             for nombre in os.listdir(self.out_dir):
                 base, ext = os.path.splitext(nombre)
-                if ext not in (".mp4", ".json"):
+                if ext not in (".mp4", ".json", ".jpg"):
                     continue
                 try:
                     dia = datetime.strptime(base, "%Y-%m-%d").date()
@@ -341,11 +405,11 @@ class TimelapseService:
         return quitados
 
     def disk_bytes(self) -> int:
-        """Cuánto ocupan los vídeos guardados (para el panel)."""
+        """Cuánto ocupan los vídeos y sus carteles (para el panel)."""
         total = 0
         try:
             for nombre in os.listdir(self.out_dir):
-                if nombre.endswith(".mp4"):
+                if nombre.endswith((".mp4", ".jpg")):
                     try:
                         total += os.path.getsize(os.path.join(self.out_dir, nombre))
                     except OSError:

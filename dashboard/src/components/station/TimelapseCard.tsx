@@ -21,6 +21,7 @@ interface Dia {
   bytes: number
   seconds: number
   frames_used: number
+  poster: boolean
   stale: boolean
   generating: boolean
   enough_frames: boolean
@@ -213,6 +214,11 @@ export function TimelapseCard() {
           // nuevo, que se lee como que la selección no funcionó.
           key={sel ?? ''}
           src={`/api/camera/timelapse/${sel}.mp4`}
+          // Sin cartel el reproductor es un rectángulo NEGRO hasta que alguien le da al
+          // play --con `preload="metadata"` ni siquiera carga el primer fotograma-- y la
+          // tarjeta parece rota. El servidor lo saca del medio del vídeo, o sea cerca del
+          // mediodía; si por lo que sea no existe, responde 404 y se ve como antes.
+          poster={dia?.poster ? `/api/camera/timelapse/${sel}.jpg` : undefined}
           controls
           loop
           playsInline

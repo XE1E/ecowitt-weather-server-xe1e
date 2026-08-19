@@ -2458,6 +2458,27 @@ async def timelapse_video(date: str):
     raise HTTPException(status_code=202, detail="Generando el vídeo; vuelve a pedirlo en un momento")
 
 
+@app.get("/api/camera/timelapse/{date}.jpg")
+async def timelapse_poster(date: str):
+    """
+    Cartel del vídeo de ese día: lo usa el `poster` del `<video>` para no enseñar un
+    rectángulo negro. 404 si aún no hay vídeo --el reproductor entonces se comporta
+    como antes, que es el estado del que se viene--.
+    """
+    try:
+        ruta = _timelapse.poster_path(date)
+    except TimelapseError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not os.path.exists(ruta):
+        raise HTTPException(status_code=404, detail="Sin cartel para ese día")
+    return FileResponse(
+        ruta,
+        media_type="image/jpeg",
+        # El cartel de un día cerrado no cambia; el de hoy se rehace con el vídeo.
+        headers={"Cache-Control": "max-age=3600"},
+    )
+
+
 @app.post("/api/camera/timelapse/{date}")
 async def timelapse_regenerate(date: str, authorization: Optional[str] = Header(default=None)):
     """Rehace el vídeo de un día aunque ya exista (botón del panel)."""

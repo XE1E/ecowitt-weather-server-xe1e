@@ -226,6 +226,45 @@ def test_force_rehace_aunque_este_al_dia(tmp_path):
     assert st["video"] is True
 
 
+# ---------- cartel (poster) ----------
+def test_sin_video_no_hay_cartel(tmp_path):
+    st = _svc(tmp_path).status("2026-08-18")
+    assert st["poster"] is False
+
+
+@sin_ffmpeg
+def test_el_encode_deja_cartel(tmp_path):
+    """Un `<video>` sin `poster` sale negro hasta que le dan al play."""
+    _dia(tmp_path, "2026-08-18", 6)
+    svc = _svc(tmp_path)
+    st = asyncio.run(svc.ensure("2026-08-18"))
+    assert st["poster"] is True
+    ruta = svc.poster_path("2026-08-18")
+    assert os.path.getsize(ruta) > 0
+    with open(ruta, "rb") as f:               # firma JPEG
+        assert f.read(3) == bytes([0xFF, 0xD8, 0xFF])
+    assert not [n for n in os.listdir(svc.out_dir) if n.endswith(".tmp.jpg")]
+
+
+@sin_ffmpeg
+def test_el_cartel_se_rellena_sin_recodificar(tmp_path):
+    """Los vídeos de antes de que existiera el cartel se curan solos."""
+    _dia(tmp_path, "2026-08-18", 6)
+    svc = _svc(tmp_path)
+    asyncio.run(svc.ensure("2026-08-18"))
+    os.remove(svc.poster_path("2026-08-18"))
+    mtime = os.path.getmtime(svc.video_path("2026-08-18"))
+
+    st = asyncio.run(svc.ensure("2026-08-18"))
+    assert st["poster"] is True
+    assert os.path.getmtime(svc.video_path("2026-08-18")) == mtime   # no recodificó
+
+
+def test_cartel_con_fecha_invalida(tmp_path):
+    with pytest.raises(TimelapseError):
+        _svc(tmp_path).poster_path("../../etc/passwd")
+
+
 # ---------- retención ----------
 def test_prune_borra_los_viejos_y_deja_los_nuevos(tmp_path):
     svc = _svc(tmp_path, retention_days=30)
@@ -236,12 +275,16 @@ def test_prune_borra_los_viejos_y_deja_los_nuevos(tmp_path):
     for f in (viejo, nuevo):
         with open(svc.video_path(f), "wb") as fh:
             fh.write(b"mp4")
+        with open(svc.poster_path(f), "wb") as fh:
+            fh.write(bytes([0xFF, 0xD8, 0xFF]) + b" jpg")
         with open(svc.meta_path(f), "w", encoding="utf-8") as fh:
             json.dump({"frames": 1}, fh)
 
-    assert svc.prune() == 2                      # el mp4 y el json del viejo
+    assert svc.prune() == 3                      # mp4, jpg y json del viejo
     assert not os.path.exists(svc.video_path(viejo))
+    assert not os.path.exists(svc.poster_path(viejo))
     assert os.path.exists(svc.video_path(nuevo))
+    assert os.path.exists(svc.poster_path(nuevo))
 
 
 def test_prune_desactivado_no_borra(tmp_path):
