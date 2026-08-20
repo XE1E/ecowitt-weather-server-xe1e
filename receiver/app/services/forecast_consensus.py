@@ -334,15 +334,36 @@ def _merge_daily(
     om: Optional[Dict[str, Any]],
     wa: Optional[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Combina pronósticos diarios."""
+    """
+    Combina pronósticos diarios.
+
+    Antes ignoraba `wa` por completo -- lo recibía y nunca lo tocaba, a pesar de
+    lo que dice el docstring del módulo. A diferencia de `_merge_hourly`, aquí NO
+    se funden en un solo número: para un día completo "el más conservador" dice
+    menos que por hora, y el consumidor (la comparativa del dashboard) quiere
+    mostrar CADA fuente por separado, igual que ya hace con el SMN. Así que
+    Open-Meteo sigue siendo la base (7 días, sin sufijo) y WeatherAPI se agrega
+    con prefijo `wa_` sólo en los días que cubre (su plan gratuito da 3).
+    """
     days: List[Dict[str, Any]] = []
 
-    # Similar a hourly, pero con menos detalle
+    wa_by_date: Dict[str, Dict[str, Any]] = {}
+    if wa and "daily" in wa:
+        d = wa["daily"]
+        for i, date in enumerate(d.get("time", [])):
+            wa_by_date[date] = {
+                "code": d["weather_code"][i] if i < len(d.get("weather_code", [])) else None,
+                "temp_max": d["temperature_2m_max"][i] if i < len(d.get("temperature_2m_max", [])) else None,
+                "temp_min": d["temperature_2m_min"][i] if i < len(d.get("temperature_2m_min", [])) else None,
+                "precip_prob": d["precipitation_probability_max"][i] if i < len(d.get("precipitation_probability_max", [])) else None,
+            }
+
     if om and "daily" in om:
         d = om["daily"]
         for i, date in enumerate(d.get("time", [])):
             if i >= 7:
                 break
+            wa_day = wa_by_date.get(date)
             days.append({
                 "date": date,
                 "code": d["weather_code"][i] if i < len(d.get("weather_code", [])) else 0,
@@ -352,6 +373,10 @@ def _merge_daily(
                 "precip_sum": d["precipitation_sum"][i] if i < len(d.get("precipitation_sum", [])) else 0,
                 "sunrise": d["sunrise"][i] if i < len(d.get("sunrise", [])) else None,
                 "sunset": d["sunset"][i] if i < len(d.get("sunset", [])) else None,
+                "wa_code": wa_day["code"] if wa_day else None,
+                "wa_temp_max": wa_day["temp_max"] if wa_day else None,
+                "wa_temp_min": wa_day["temp_min"] if wa_day else None,
+                "wa_precip_prob": wa_day["precip_prob"] if wa_day else None,
             })
 
     return days

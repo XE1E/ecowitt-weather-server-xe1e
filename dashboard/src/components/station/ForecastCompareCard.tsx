@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { WeatherIcon } from '../WeatherIcon'
 import { useUnits } from '../../units'
-import { ForecastResult } from '../../forecast'
+import { ForecastResult, wmoToIcon } from '../../forecast'
+import { useStationData } from '../../station-data'
 
 // Descripción de cielo del SMN → ícono meteocons (versión compacta).
 function skyIcon(sky: string | null): string {
@@ -24,9 +25,10 @@ function skyIcon(sky: string | null): string {
 interface SmnDay { tmax: number | null; tmin: number | null; prob_precip: number | null; sky: string | null }
 interface SmnData { municipio: string; days: SmnDay[]; stale?: boolean }
 
-// Comparativa compacta del pronóstico de HOY: Open-Meteo (modelo) vs SMN (oficial).
+// Comparativa compacta del pronóstico de HOY: Open-Meteo vs WeatherAPI vs SMN (oficial).
 export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | null }) {
   const u = useUnits()
+  const { consensus } = useStationData()
   const [smn, setSmn] = useState<SmnData | null>(null)
   // El webservice de CONAGUA se cae seguido; hay que poder DECIRLO en vez de
   // dejar la columna con valores vacíos que parecen un pronóstico real.
@@ -46,6 +48,12 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
 
   const om = forecast?.days?.[0]
   const sd = smn?.days?.[0]
+  // WeatherAPI llega por /api/forecast/consensus (ya en el contexto de la página,
+  // se refresca solo): forecast_consensus.py lo agrega día a día con prefijo
+  // `wa_`, SIN fundirlo con Open-Meteo -- cada fuente en su propia columna, igual
+  // que el SMN. Sólo cubre hoy + 2 días más (su plan gratuito).
+  const waDay = consensus?.daily?.[0]
+  const waAvailable = waDay?.wa_code != null
   if (!om && !sd) return null
 
   const T = (c?: number | null) => (c == null ? '--' : `${Math.round(u.tempN(c))}°`)
@@ -76,18 +84,23 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
     </div>
   )
 
+  const waIcon = waAvailable ? wmoToIcon(waDay!.wa_code as number).icon : 'not-available'
+
   return (
     <div className="card">
       <p className="card-title">Pronóstico de hoy · comparativa</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Col label="Open-Meteo" icon={om?.icon ?? 'not-available'} alt="" max={om?.tempMax} min={om?.tempMin} prob={om?.precipProb} />
+        <Col label="WeatherAPI" icon={waIcon} alt=""
+          max={waDay?.wa_temp_max} min={waDay?.wa_temp_min} prob={waDay?.wa_precip_prob}
+          nota={!waAvailable ? (consensus ? 'WeatherAPI no disponible' : 'cargando…') : undefined} />
         <Col label="SMN oficial" icon={sd ? skyIcon(sd.sky) : 'not-available'} alt={sd?.sky ?? ''}
           max={sd?.tmax} min={sd?.tmin} prob={sd?.prob_precip}
           nota={!sd ? (smnErr ? 'SMN no disponible' : 'cargando…') : undefined} />
       </div>
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[11px] text-slate-500">
-          Modelo global vs. oficial (SMN)
+          Dos modelos globales vs. oficial (SMN)
           {smn?.stale && <span className="text-amber-400/80"> · SMN de la última publicación</span>}
         </span>
         <Link to="/pro/pronostico" className="text-xs text-blue-400 hover:text-blue-300">Ver pronóstico →</Link>

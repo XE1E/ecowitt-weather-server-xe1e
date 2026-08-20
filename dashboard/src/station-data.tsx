@@ -45,6 +45,12 @@ export interface ConsensusForecast {
     temp_max: number | null
     temp_min: number | null
     precip_prob: number
+    // WeatherAPI, sólo en los días que cubre su plan gratuito (3): por separado,
+    // no fundido con Open-Meteo -- ver forecast_consensus.py::_merge_daily.
+    wa_code?: number | null
+    wa_temp_max?: number | null
+    wa_temp_min?: number | null
+    wa_precip_prob?: number | null
   }>
   alerts: Array<{
     type: string

@@ -45,7 +45,7 @@ export interface ForecastResult {
  * se usa para el pronóstico HORARIO, a las 3 de la madrugada se mostraba un sol.
  * Todos estos iconos tienen pareja `-night` en la galería.
  */
-function wmoToIcon(code: number, isDay = true): { icon: string; label: string } {
+export function wmoToIcon(code: number, isDay = true): { icon: string; label: string } {
   const s = isDay ? 'day' : 'night'
   if (code === 0) return { icon: `clear-${s}`, label: 'Despejado' }
   if (code === 1 || code === 2) return { icon: `partly-cloudy-${s}`, label: 'Parcialmente nublado' }
