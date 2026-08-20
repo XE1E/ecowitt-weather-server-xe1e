@@ -2380,7 +2380,7 @@ async def camera_analysis_validation():
         # Extraer datos de la hora actual
         hourly = forecast.get("hourly", {})
         times = hourly.get("time", [])
-        now = datetime.now().strftime("%Y-%m-%dT%H:00")
+        now = _openmeteo_now_str(forecast)
         try:
             idx = times.index(now)
         except ValueError:
@@ -2583,6 +2583,21 @@ async def get_almanac_data():
         return {"available": False, "reason": "error"}
 
 
+def _openmeteo_now_str(forecast: dict) -> str:
+    """
+    "YYYY-MM-DDTHH:00" de AHORA en la zona que usó Open-Meteo para las horas de
+    ESTE pronóstico. Con `timezone=auto` el `hourly.time` viene en hora LOCAL sin
+    sufijo (p. ej. "2026-08-19T14:00", ni "Z" ni offset), y la respuesta trae
+    `utc_offset_seconds` para ese sitio -- se usa ESE, no la zona del contenedor,
+    para no depender de que `TZ` en el .env coincida con la lat/lon pedida (el
+    default de docker-compose.yml es `TZ=UTC`; sólo coincide hoy porque el .env
+    de este despliegue lo fija a America/Mexico_City).
+    """
+    offset_s = forecast.get("utc_offset_seconds") or 0
+    local_now = datetime.now(timezone.utc) + timedelta(seconds=offset_s)
+    return local_now.strftime("%Y-%m-%dT%H:00")
+
+
 def _apply_temperature_bias(forecast: dict, current_temp: Optional[float]) -> dict:
     """
     Corrige las temperaturas del pronóstico usando el bias actual.
@@ -2606,13 +2621,24 @@ def _apply_temperature_bias(forecast: dict, current_temp: Optional[float]) -> di
     if not times or not temps:
         return forecast
 
+    # `hourly.time` viene en hora LOCAL sin sufijo (`timezone=auto`), así que
+    # `.replace("Z", "+00:00")` no encuentra nada que reemplazar y
+    # `datetime.fromisoformat(...).timestamp()` interpretaba ese naive datetime
+    # con la zona del PROCESO -- correcto sólo porque el .env de este despliegue
+    # fija `TZ=America/Mexico_City` igual que la lat/lon pedida; con el
+    # `TZ=UTC` por defecto de docker-compose.yml la resta quedaría desfasada
+    # exactamente el offset del sitio. Se ancla explícitamente al
+    # `utc_offset_seconds` que la propia respuesta declara, sin depender de la
+    # zona del contenedor.
+    offset_s = forecast.get("utc_offset_seconds") or 0
     now_ts = datetime.now(timezone.utc).timestamp()
 
     closest_idx = 0
     closest_diff = float("inf")
     for i, t in enumerate(times):
         try:
-            t_ts = datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
+            t_local_naive_ts = datetime.fromisoformat(t).replace(tzinfo=timezone.utc).timestamp()
+            t_ts = t_local_naive_ts - offset_s
             diff = abs(t_ts - now_ts)
             if diff < closest_diff:
                 closest_diff = diff
