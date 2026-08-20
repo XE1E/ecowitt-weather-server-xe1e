@@ -173,6 +173,13 @@ export function TimelapseCard() {
       )
     }
 
+    // `sel` arranca en null y lo fija el efecto de arriba UN render después de que
+    // llega `info` (setState no es síncrono): en ese hueco `dia` es null y sin este
+    // guard se caía al `<video>` de más abajo con `sel` todavía null, pidiendo
+    // literalmente `/api/camera/timelapse/null.mp4` (400 en la consola, se
+    // autocorregía en el siguiente render pero deja ese aviso de sobra).
+    if (!dia) return <div className="h-64 rounded-xl bg-white/5 animate-pulse" />
+
     if (dia && !dia.video) {
       if (!dia.enough_frames) {
         return (
