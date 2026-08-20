@@ -37,7 +37,7 @@ Tu trabajo es describir lo que VES en la imagen para complementar los datos de
 sensores. Sé específico y conciso. Responde SOLO en el formato JSON indicado.
 """
 
-_USER_PROMPT = """\
+_USER_PROMPT_BASE = """\
 Analiza esta imagen del cielo y responde en JSON con esta estructura exacta:
 
 {
@@ -66,9 +66,69 @@ OJO CON EL ANOCHECER Y LA NOCHE: al atardecer una capa de nubes se ve GRIS OSCUR
 PLOMO o casi negra --eso es cielo CUBIERTO, no despejado; no confundas oscuridad con
 cielo limpio--. Si de verdad es de noche y no distingues nubes, usa "night" e indica lo
 que veas (luces, luna, estrellas).
+"""
 
+_USER_PROMPT_STATION_HEADER = """\
+
+DATOS EN VIVO DE LA ESTACIÓN (medidos por sensores, no por la cámara):
+{station_block}
+Estos datos son la VERDAD MEDIDA y pesan más que tu impresión visual, sobre todo para
+precipitación: la cámara puede no distinguir llovizna, un frente fuera de encuadre, o luz
+que hace ver un cielo más despejado de lo que está. Reglas:
+- Si `lluvia ahora` es mayor que 0 mm/h, está lloviendo YA, aunque no se vea con claridad
+  en la imagen: pon `precipitation_visible: true`, `sky_condition` acorde ("rainy" o
+  "stormy") y el `forecast_hint` NO puede decir algo como "sin cambios significativos" o
+  "sin riesgo de lluvia" -- contradiría un hecho medido.
+- Si en cambio la estación no reporta lluvia, básate normalmente en lo que ves.
+- Usa el resto de los datos (viento, humedad, base de nubes) como contexto para el
+  `forecast_hint`, no los repitas tal cual en la `description` -- la `description` es de
+  lo que SE VE, el `forecast_hint` puede apoyarse en los sensores.
+"""
+
+_USER_PROMPT_FOOTER = """
 Responde SOLO el JSON, sin explicaciones adicionales.
 """
+
+
+def _build_station_block(station_data: Optional[dict]) -> str:
+    """Formatea las lecturas en vivo relevantes para el prompt, en español y con
+    unidades. Sólo incluye lo que llegó y aporta -- viento en calma o sin ráfaga no
+    suma nada al análisis visual."""
+    if not station_data:
+        return ""
+    partes = []
+    rain_rate = station_data.get("rain_rate")
+    if rain_rate is not None:
+        partes.append(f"- lluvia ahora: {rain_rate:.1f} mm/h")
+    rain_daily = station_data.get("rain_daily")
+    if rain_daily is not None:
+        partes.append(f"- lluvia acumulada hoy: {rain_daily:.1f} mm")
+    temp = station_data.get("temperature_outdoor")
+    humidity = station_data.get("humidity_outdoor")
+    if temp is not None and humidity is not None:
+        partes.append(f"- temperatura/humedad exterior: {temp:.1f} °C, {humidity:.0f} %")
+    wind = station_data.get("wind_speed")
+    gust = station_data.get("wind_gust")
+    if wind is not None:
+        extra = f" (ráfaga {gust:.1f} km/h)" if gust and gust > (wind or 0) else ""
+        partes.append(f"- viento: {wind:.1f} km/h{extra}")
+    cloud_base = station_data.get("cloud_base")
+    if cloud_base is not None:
+        partes.append(f"- base de nubes estimada: {cloud_base:.0f} m")
+    if not partes:
+        return ""
+    return "\n".join(partes) + "\n"
+
+
+def _build_user_prompt(station_data: Optional[dict] = None) -> str:
+    bloque = _build_station_block(station_data)
+    if not bloque:
+        return _USER_PROMPT_BASE + _USER_PROMPT_FOOTER
+    return (
+        _USER_PROMPT_BASE
+        + _USER_PROMPT_STATION_HEADER.format(station_block=bloque)
+        + _USER_PROMPT_FOOTER
+    )
 
 
 @dataclass
@@ -129,6 +189,7 @@ async def _analyze_anthropic(
     api_key: str,
     model: str,
     timeout: float,
+    station_data: Optional[dict] = None,
 ) -> SkyAnalysis:
     """Analiza usando Claude Vision (Anthropic)."""
     image_b64 = base64.standard_b64encode(image_data).decode("ascii")
@@ -148,7 +209,7 @@ async def _analyze_anthropic(
                             "data": image_b64,
                         },
                     },
-                    {"type": "text", "text": _USER_PROMPT},
+                    {"type": "text", "text": _build_user_prompt(station_data)},
                 ],
             }
         ],
@@ -212,6 +273,7 @@ async def _analyze_gemini(
     api_key: str,
     model: str,
     timeout: float,
+    station_data: Optional[dict] = None,
 ) -> SkyAnalysis:
     """Analiza usando Gemini Vision (Google)."""
     image_b64 = base64.standard_b64encode(image_data).decode("ascii")
@@ -220,7 +282,7 @@ async def _analyze_gemini(
         "contents": [
             {
                 "parts": [
-                    {"text": f"{_SYSTEM_PROMPT}\n\n{_USER_PROMPT}"},
+                    {"text": f"{_SYSTEM_PROMPT}\n\n{_build_user_prompt(station_data)}"},
                     {
                         "inline_data": {
                             "mime_type": "image/jpeg",
@@ -333,6 +395,7 @@ async def analyze_sky(
     anthropic_model: Optional[str] = None,
     gemini_model: Optional[str] = None,
     timeout: float = 45.0,
+    station_data: Optional[dict] = None,
 ) -> SkyAnalysis:
     """
     Analiza una imagen del cielo usando el proveedor configurado.
@@ -345,6 +408,9 @@ async def analyze_sky(
         anthropic_model: Modelo de Anthropic (default: claude-sonnet-4-20250514)
         gemini_model: Modelo de Gemini (default: gemini-2.0-flash)
         timeout: Timeout en segundos
+        station_data: lecturas en vivo de la estación (rain_rate, temperature_outdoor,
+            etc. -- ver `_build_station_block`) para que el modelo no contradiga con el
+            texto un dato ya medido, como lluvia cayendo que la imagen no deja ver clara.
 
     Returns:
         SkyAnalysis con los resultados del análisis
@@ -357,10 +423,10 @@ async def analyze_sky(
     try:
         if resolved == "anthropic":
             model = anthropic_model or DEFAULT_MODELS["anthropic"]
-            return await _analyze_anthropic(image_data, anthropic_api_key, model, timeout)
+            return await _analyze_anthropic(image_data, anthropic_api_key, model, timeout, station_data)
         else:
             model = gemini_model or DEFAULT_MODELS["gemini"]
-            return await _analyze_gemini(image_data, gemini_api_key, model, timeout)
+            return await _analyze_gemini(image_data, gemini_api_key, model, timeout, station_data)
 
     except httpx.TimeoutException:
         logger.warning("Timeout analizando imagen del cielo (%s)", resolved)

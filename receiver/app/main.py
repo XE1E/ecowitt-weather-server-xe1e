@@ -2119,6 +2119,10 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             provider=settings.camera_analysis_provider,
             anthropic_model=settings.camera_analysis_model_anthropic,
             gemini_model=settings.camera_analysis_model_gemini,
+            # Lecturas en vivo de la PRINCIPAL, para que el modelo no contradiga con el
+            # texto lo que la propia estación ya midió (típicamente lluvia cayendo que
+            # la imagen no deja ver clara). Es la misma fuente que /api/current.
+            station_data=latest_by_station.get(None),
         )
         analysis_dict = analysis.to_dict()
         # Se registra SIEMPRE el resultado del intento (éxito o error) para que el
