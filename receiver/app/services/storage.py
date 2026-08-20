@@ -501,10 +501,24 @@ class InfluxDBStorage:
         self, hours: int = 2, station: Optional[str] = None
     ) -> Optional[float]:
         """
-        Lluvia acumulada en las últimas N horas, integrando rain_rate.
+        Lluvia acumulada en las últimas N horas, EXACTA: diferencia del contador
+        acumulativo `rain_total` entre el primer y el último dato de la ventana.
 
-        rain_rate es mm/h; con lecturas cada ~1 min, cada muestra representa
-        ~1/60 de hora. Flux hace el integral con la función `integral(unit: 1h)`.
+        ANTES esto integraba `rain_rate` (mm/h) con `integral(unit: 1h)` de Flux.
+        `rain_rate` es una tasa que la propia consola ya "estira" a partir de
+        volteos discretos del balancín, y con lluvia a rachas --picos de
+        intensidad de un minuto que no se sostienen todo el minuto-- la integral
+        sobreestimaba, notablemente en tormentas cortas e intensas (verificado
+        2026-08-19: un evento de 7.3 mm según `rain_daily`, el conteo real del
+        balancín, integraba a 8.0 mm). `rain_total` en cambio es el MISMO conteo
+        exacto del balancín que usa `rain_daily`, así que su diferencia en la
+        ventana coincide con la consola en vez de aproximarla.
+
+        `rain_total` sólo se reinicia una vez al año (a 0 en año nuevo); si la
+        ventana cruza ese instante la diferencia saldría negativa -- caso raro
+        en el que se usa el valor final tal cual (lo acumulado desde el
+        reinicio), que es la mejor aproximación sin guardar el punto exacto del
+        corte.
         """
         try:
             station_filter = _station_filter(station)
@@ -513,14 +527,25 @@ class InfluxDBStorage:
                 |> range(start: -{hours}h)
                 |> filter(fn: (r) => r["_measurement"] == "weather")
                 {station_filter}
-                |> filter(fn: (r) => r["_field"] == "rain_rate")
-                |> integral(unit: 1h)
+                |> filter(fn: (r) => r["_field"] == "rain_total")
+                |> sort(columns: ["_time"])
             '''
+            primero: Optional[float] = None
+            ultimo: Optional[float] = None
             for table in self.query_api.query(q):
                 for record in table.records:
                     val = record.get_value()
-                    return round(val, 1) if val is not None else None
-            return 0.0
+                    if val is None:
+                        continue
+                    if primero is None:
+                        primero = val
+                    ultimo = val
+            if ultimo is None or primero is None:
+                return 0.0
+            delta = ultimo - primero
+            if delta < 0:
+                delta = ultimo
+            return round(delta, 1)
         except Exception as e:
             logger.error(f"Error calculating rain for last {hours}h: {e}")
             return None
