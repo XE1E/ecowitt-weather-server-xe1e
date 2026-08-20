@@ -269,7 +269,12 @@ async def air_quality_watchdog():
                     pass
                 imeca_val = None
                 try:
-                    im = await imeca.get_imeca(lat, lon)
+                    # Sin `pressure_hpa` esto caía a 1 atm (ver `imeca.molar_volume`):
+                    # a los ~780 hPa de la CDMX eso subestima el IMECA lo bastante
+                    # como para no disparar "Mala"/"Muy mala" cuando sí tocaba --el
+                    # mismo bug que ya se había corregido en los otros dos
+                    # call-sites (`/api/airquality/imeca` y svitrix), pero no aquí.
+                    im = await imeca.get_imeca(lat, lon, pressure_hpa=_station_pressure_hpa())
                     if im and im.get("available"):
                         imeca_val = im.get("imeca")
                 except Exception:
@@ -2361,10 +2366,16 @@ async def camera_analysis_validation():
 
     # Obtener pronóstico de Open-Meteo y extraer hora actual
     try:
+        # epaper=True: el conjunto horario NORMAL (`_HOURLY` en openmeteo.py) no
+        # trae `cloud_cover`, sólo el ampliado para el e-paper. Sin esto,
+        # `hourly.get("cloud_cover", [0])[idx]` indexaba ese `[0]` de relleno con
+        # cualquier hora que no fuera la 00:00 -> IndexError, atrapado por el
+        # except de abajo, y el endpoint devolvía "sin pronóstico" TODO el día.
         forecast = await openmeteo.get_forecast(
             settings.cwop_latitude,
             settings.cwop_longitude,
-            days=1
+            days=1,
+            epaper=True,
         )
         # Extraer datos de la hora actual
         hourly = forecast.get("hourly", {})
@@ -2376,9 +2387,11 @@ async def camera_analysis_validation():
             idx = 0 if times else -1
 
         if idx >= 0:
+            codes = hourly.get("weather_code", [])
+            clouds = hourly.get("cloud_cover", [])
             forecast_current = {
-                "weather_code": hourly.get("weather_code", [None])[idx],
-                "cloud_cover": hourly.get("cloud_cover", [0])[idx],
+                "weather_code": codes[idx] if idx < len(codes) else None,
+                "cloud_cover": clouds[idx] if idx < len(clouds) else 0,
             }
         else:
             forecast_current = None
