@@ -114,10 +114,14 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
   // Spread pequeño (<2°C) indica aire saturado, alta probabilidad de niebla/neblina.
   const dewSpread = dewPoint != null ? temp - dewPoint : null
 
-  // Tendencia de presión: negativo = bajando = mal tiempo aproximándose
+  // Tendencia de presión: negativo = bajando = mal tiempo aproximándose.
+  // Mismos cortes que `forecaster.classify_trend` en el backend (-1.0 / -3.5),
+  // calibrados para CDMX con test propio -- antes este archivo tenía su propio
+  // juego (-2 / -4) y un mismo delta_3h podía leerse "bajando" aquí y "estable"
+  // en el pronóstico local o el consenso del backend.
   const pDelta = ctx.pressureDelta3h ?? null
-  const pressureFalling = pDelta != null && pDelta < -2
-  const pressureFallingFast = pDelta != null && pDelta < -4
+  const pressureFalling = pDelta != null && pDelta < -1.0
+  const pressureFallingFast = pDelta != null && pDelta < -3.5
 
   // ─── PRECIPITACIÓN: datos de la estación tienen prioridad ───
   if (rain > 0) {

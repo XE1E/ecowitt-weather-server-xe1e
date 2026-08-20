@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from . import openmeteo, weatherapi
+from . import forecaster, openmeteo, weatherapi
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,17 @@ def pressure_forecast(
     Una caída rápida de presión casi siempre indica lluvia inminente.
     Esto lo detecta ANTES que cualquier modelo externo.
 
+    La clasificación de tendencia usa `forecaster.classify_trend` -- la misma que
+    expone `/api/forecast/local`, con test propio y calibrada para CDMX (ver
+    `forecaster.py` y `test_weewx_features.py::test_trend_classification`). Antes
+    este módulo tenía SU PROPIO juego de umbrales (-3/-5/-7 hPa/3h, el doble de
+    laxo), así que el mismo `delta_3h` podía salir "estable" aquí y "subiendo" en
+    el barómetro local -- confirmado en vivo el 2026-08-20 con delta_3h=2.2 hPa.
+    Se mantienen aquí sólo los cortes MÁS FINOS (-5, -7) para graduar
+    `hours_to_rain` dentro de "falling_fast", no para decidir el trend.
+
     Retorna:
-    - trend: 'falling_fast', 'falling', 'stable', 'rising', 'rising_fast'
+    - trend: 'falling_fast', 'falling', 'steady', 'rising', 'rising_fast'
     - delta_3h: cambio en hPa en las últimas 3 horas
     - delta_1h: cambio en hPa en la última hora (si disponible)
     - storm_likely: True si la caída sugiere tormenta inminente
@@ -109,49 +118,44 @@ def pressure_forecast(
     result["delta_3h"] = round(delta_3h, 1)
 
     if pressure_1h_ago is not None:
-        delta_1h = current_pressure - pressure_1h_ago
-        result["delta_1h"] = round(delta_1h, 1)
+        result["delta_1h"] = round(current_pressure - pressure_1h_ago, 1)
 
-    # Clasificar tendencia (umbrales calibrados: -3 hPa/3h es caída significativa)
-    if delta_3h <= -7:
-        result["trend"] = "falling_fast"
+    trend_code = forecaster.classify_trend(delta_3h)["code"]
+    result["trend"] = trend_code
+
+    if trend_code == "falling_fast":
         result["storm_likely"] = True
-        result["hours_to_rain"] = 0.5
         result["confidence"] = "high"
-        result["message"] = "Caída muy rápida de presión. Tormenta inminente (0-1h)."
-    elif delta_3h <= -5:
-        result["trend"] = "falling_fast"
-        result["storm_likely"] = True
-        result["hours_to_rain"] = 1.5
-        result["confidence"] = "high"
-        result["message"] = "Caída rápida de presión. Lluvia probable en 1-2 horas."
-    elif delta_3h <= -3:
-        result["trend"] = "falling"
+        if delta_3h <= -7:
+            result["hours_to_rain"] = 0.5
+            result["message"] = "Caída muy rápida de presión. Tormenta inminente (0-1h)."
+        elif delta_3h <= -5:
+            result["hours_to_rain"] = 1.5
+            result["message"] = "Caída rápida de presión. Lluvia probable en 1-2 horas."
+        else:
+            result["hours_to_rain"] = 2.5
+            result["message"] = "Caída rápida de presión. Posible lluvia en pocas horas."
+    elif trend_code == "falling":
         result["storm_likely"] = True
         result["hours_to_rain"] = 3
         result["confidence"] = "medium"
         result["message"] = "Presión bajando. Posible lluvia en 2-4 horas."
-    elif delta_3h < 3:
-        result["trend"] = "stable"
+    elif trend_code == "steady":
         result["confidence"] = "medium"
         result["message"] = "Presión estable. Sin cambios significativos esperados."
-    elif delta_3h < 5:
-        result["trend"] = "rising"
+    elif trend_code == "rising":
         result["confidence"] = "medium"
         result["message"] = "Presión subiendo. Tiempo mejorando."
-    else:
-        result["trend"] = "rising_fast"
+    else:  # rising_fast
         result["confidence"] = "high"
         result["message"] = "Presión subiendo rápido. Cielos despejando."
 
     # Si además la presión de 1h muestra aceleración, aumentar confianza
-    if pressure_1h_ago is not None:
-        delta_1h = current_pressure - pressure_1h_ago
-        if delta_3h < -3 and delta_1h < -1.5:
-            result["confidence"] = "high"
-            if result["hours_to_rain"]:
-                result["hours_to_rain"] = max(0.5, result["hours_to_rain"] - 0.5)
-            result["message"] += " La caída se acelera."
+    if result["storm_likely"] and result["delta_1h"] is not None and result["delta_1h"] < -1.5:
+        result["confidence"] = "high"
+        if result["hours_to_rain"] is not None:
+            result["hours_to_rain"] = max(0.5, result["hours_to_rain"] - 0.5)
+        result["message"] += " La caída se acelera."
 
     return result
 
@@ -301,8 +305,11 @@ def _merge_hourly(
                 code = om_code
                 consensus = "open-meteo"
 
-            # Probabilidad: promedio (no el máximo)
-            prob = round((om_prob or 0) + (wa_prob or 0)) // 2 if wa_prob is not None else (om_prob or 0)
+            # Probabilidad: promedio (no el máximo).
+            # OJO: `round(a + b) // 2` (como estaba antes) NO es lo mismo que
+            # `round((a + b) / 2)` -- la división entera trunca hacia abajo y
+            # sesga el promedio ~0.5 pp a la baja en sumas impares.
+            prob = round(((om_prob or 0) + wa_prob) / 2) if wa_prob is not None else (om_prob or 0)
 
             # Temperatura: promedio si ambas disponibles
             if om_temp is not None and wa_temp is not None:
