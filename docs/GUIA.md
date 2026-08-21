@@ -805,6 +805,16 @@ mientras la flecha de la celda dice el sentido. Notas de implementación:
   lado *por dentro* del `viewBox`: el contenedor no lleva sangría propia o los dos
   márgenes se suman y el riel sale más corto que el histograma de LLUVIA.
 
+**Etiqueta REL/ABS sobre el barómetro**, en PRES y en la REMOTA de presión: dice si la
+lectura de esa celda es la corregida a nivel del mar o el crudo del aparato. El receiver
+sobrescribe `pressure_relative` con el cálculo a nivel del mar **sólo si** la estación
+tiene altitud configurada (`station_altitude_m`/`altitude_m`) y llegó la absoluta; si no,
+ese campo se queda con el crudo, indistinguible de `pressure_absolute` a esta altura
+(~2250 m). El receiver **no expone un flag** que diga cuál pasó, así que `pressureKind`
+(`weather.ts`) lo infiere comparando las dos: una diferencia de esa magnitud (~250 hPa
+aquí) sólo la explica la corrección → `REL`; casi iguales → `ABS`. Sin absoluta para
+comparar se asume `REL`, porque así se llama el campo. Umbral de corte: **15 hPa**.
+
 **Avisos de alerta en la propia celda.** La consola pide `/api/alerts` cada minuto y
 señala la alerta viva de dos formas a la vez: tiñe de rojo (`--alarma`, rojo puro) el
 **glifo de identidad** de la celda afectada —o su rótulo si no tiene glifo— y dibuja un
@@ -908,6 +918,29 @@ arranca en 0 como todos los demás, y uno que empezara en 20 mentiría sobre lo 
 ROCÍO y SENSACIÓN llevan el **rótulo arriba** —los tres de la fila caen en la misma línea— y
 el **valor centrado** en el hueco que queda debajo (`margin: auto 0`), que es el que el
 humidex gasta en su riel. Centrar la celda entera bajaba también el rótulo.
+
+**Caritas de confort de humedad** (😖 🙂 😄 😕 🥵) en HUMEDAD, INTERIOR y JARDÍN, una por
+celda con su propia lectura de RH%. A diferencia del HUMIDEX, aquí **no se combina con la
+temperatura**: no hay un organismo que defina cortes técnicos para la humedad relativa sola
+como sí los hay para HUMIDEX o UV, así que `humidityComfortEmoji`/`humidityComfortLabel`
+(`weather.ts`) usan **cinco tramos parejos** alrededor de la banda de confort central,
+la misma tabla para las tres celdas: <30 muy seco, 30-44 seco, 45-59 confort, 60-69 húmedo,
+70+ muy húmedo. Viven junto a `humidexLabel` a propósito, para que ningún consumidor futuro
+acabe usando cortes distintos para el mismo número. El `title` del elemento lleva la
+etiqueta en palabras (se ve al pasar el mouse; en pantalla táctil no hay hover, así que ahí
+la carita es la única pista).
+
+Cada celda la coloca en un hueco distinto porque cada una tiene un layout distinto debajo:
+- **HUMEDAD** (estación principal): a la derecha del valor, entre éste y la flecha de
+  tendencia/aviso —es la única de las tres con flecha, así que es la única con ese hueco—.
+- **INTERIOR**: sin flecha (el interior no la necesita, ver arriba), así que baja hasta
+  cerca del borde inferior de la celda.
+- **JARDÍN** (CH1/WN31): igual que INTERIOR pero centrada en el hueco entre el rótulo
+  «CH1» de arriba y la pila del WN31 de abajo, porque ahí sí hay algo debajo.
+
+La de JARDÍN lee `chHum` cuando el canal CH1 está presente y si no cae a
+`remote.humidity_indoor` (variable `sHum`); las otras dos leen `humidity_outdoor` y
+`humidity_indoor` de la estación principal directamente.
 
 **Dos tipografías**, las dos de la familia DSEG (OFL) en `dashboard/public/fonts/`:
 **DSEG7** de siete segmentos para las cifras y **DSEG14** de catorce para el rumbo
