@@ -359,6 +359,22 @@ export function humidityComfortLabel(rh: number): string {
   return 'Muy húmedo'
 }
 
+/**
+ * REL o ABS según lo que de verdad hay en `pressure_relative`: el receiver la
+ * sobrescribe con el cálculo a nivel del mar SOLO si esa estación tiene altitud
+ * configurada (`station_altitude_m`/`altitude_m`) y llegó la absoluta; si no, el
+ * campo se queda con el crudo del aparato, que a esta altura (~2250 m) es
+ * indistinguible de la absoluta. No hay un flag del servidor que diga cuál pasó,
+ * así que se infiere comparando las dos: una diferencia de esa magnitud (~250
+ * hPa aquí) sólo la explica la corrección; si son casi iguales, es que no se
+ * aplicó. Sin absoluta para comparar, se asume REL --el campo se llama así--.
+ */
+export function pressureKind(relative: number | null | undefined, absolute: number | null | undefined): 'REL' | 'ABS' | null {
+  if (relative == null) return null
+  if (absolute == null) return 'REL'
+  return Math.abs(relative - absolute) > 15 ? 'REL' : 'ABS'
+}
+
 /** Cardinal direction (Spanish) from degrees. */
 export function cardinal(deg: number): string {
   return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]

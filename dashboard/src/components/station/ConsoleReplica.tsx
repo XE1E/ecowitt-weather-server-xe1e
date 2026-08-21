@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { beaufort, deriveCondition, historicValue, humidexLabel, humidityComfortEmoji, humidityComfortLabel, moonIllumination, uvLabel } from '../../weather'
+import { beaufort, deriveCondition, historicValue, humidexLabel, humidityComfortEmoji, humidityComfortLabel, moonIllumination, pressureKind, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -1820,6 +1820,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
             <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#8b5cf6')} title="presión" />
           </div>
+          {/* REL/ABS pegado al borde de arriba del barómetro (que aquí cae en y≈27,
+              ver la nota de arriba sobre el `bottom:30`): dice si esta lectura es la
+              corregida a nivel del mar o el crudo del aparato. Ver `pressureKind`. */}
+          {(() => {
+            const kind = pressureKind(data?.pressure_relative, data?.pressure_absolute)
+            return kind && (
+              <div style={{ position: 'absolute', top: 14, left: 12, width: 46, textAlign: 'center',
+                            color: 'var(--w)', fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: 1 }}>
+                {kind}
+              </div>
+            )
+          })()}
           {/* Triángulo de aviso A LA IZQUIERDA de la flecha de tendencia. Van juntos a
               propósito: los dos hablan de lo mismo --cómo está esta magnitud-- y ese es el
               único sitio de la celda con hueco a media altura.
@@ -2631,6 +2643,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
             <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#8b5cf6')} title="presión" />
           </div>
+          {/* Mismo REL/ABS que PRES, mismo criterio: aquí el barómetro cuelga de
+              `bottom:10` así que su borde de arriba cae en y≈47 (celda de ~103 px de
+              alto útil, ver JARDÍN/INTERIOR) y la etiqueta va justo encima. */}
+          {(() => {
+            const kind = pressureKind(remote?.pressure_relative, remote?.pressure_absolute)
+            return kind && (
+              <div style={{ position: 'absolute', top: 35, left: 12, width: 46, textAlign: 'center',
+                            color: 'var(--w)', fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: 1 }}>
+                {kind}
+              </div>
+            )
+          })()}
           {/* Aviso de esta celda, con el mismo sitio y tamaño que en EXT, HUMEDAD y PRES:
               a la izquierda de la flecha y a 30 px. Aquí la lectura SÍ estorbaba de verdad y
               hubo que correrla --ver el `paddingRight` de abajo--: a diferencia de PRES, en
