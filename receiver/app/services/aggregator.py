@@ -214,6 +214,36 @@ def daily_et0(row: Dict[str, Any], lat: float) -> Optional[float]:
     return round(et0_hargreaves(row["temp_min"], row["temp_max"], mid_temp(row), lat, doy), 2)
 
 
+def rain_daily_total(rows: List[Dict[str, Any]], epsilon: float = 0.05) -> Optional[float]:
+    """
+    Total de lluvia del día a partir de la serie CRUDA de `rain_daily`, no de su
+    máximo a secas.
+
+    El contador de la consola Ecowitt se reinicia a medianoche LOCAL, pero el
+    sondeo (cada ~60 s) no está sincronizado con ese instante: la primera lectura
+    de la ventana de "hoy" puede llegar unos segundos después de medianoche
+    mientras la consola AÚN no ha aplicado su reinicio, así que sigue cargando el
+    acumulado de AYER (visto en vivo: 2026-08-20T06:00:01Z todavía marcaba el 7.3
+    de la víspera; el reinicio a 0.0 no llegó hasta 06:01:01Z). Tomar `max()` de
+    toda la ventana hereda ese acumulado viejo como si fuera de hoy, y se queda
+    así hasta que la lluvia real del día lo supere -- por eso "hoy" podía salir
+    idéntico a "ayer" en el histograma de la consola.
+
+    La corrección: ubicar el ÚLTIMO reinicio (una caída del contador) dentro de la
+    ventana y quedarse con el máximo sólo de ahí en adelante. De paso cubre
+    reinicios de verdad a media jornada (p. ej. un apagón de la consola), que un
+    `max()` simple también habría mezclado con el acumulado previo.
+    """
+    vals = [(r.get("_time"), r["rain_daily"]) for r in rows if r.get("rain_daily") is not None]
+    if not vals:
+        return None
+    reset_at = 0
+    for i in range(1, len(vals)):
+        if vals[i][1] < vals[i - 1][1] - epsilon:
+            reset_at = i
+    return max(v for _, v in vals[reset_at:])
+
+
 def vector_mean_dir(rows: List[Dict[str, Any]], dir_key: str = "wind_direction",
                     weight_key: Optional[str] = "wind_speed") -> Optional[float]:
     """Dirección dominante (media vectorial de rumbos, opcionalmente ponderada)."""
@@ -486,6 +516,21 @@ async def compute_and_store_day(
         wd = vector_mean_dir(wrows)
         if wd is not None:
             fields["wind_dir"] = wd
+    except Exception:
+        pass
+    # Total de lluvia del día, con el reinicio de medianoche ya filtrado (ver
+    # `rain_daily_total`): el `max()` que hace `flatten_stats` a partir de
+    # `get_daily_stats` no distingue el acumulado de ayer colado en el primer
+    # sondeo de hoy, así que se recalcula aquí con la serie cruda.
+    try:
+        rrows = await storage.query(
+            start=start_iso, stop=stop_iso,
+            fields=["rain_daily"],
+            station=station
+        )
+        rt = rain_daily_total(rrows)
+        if rt is not None:
+            fields["rain_total"] = round(rt, 1)
     except Exception:
         pass
     date_str = day.strftime("%Y-%m-%d")
