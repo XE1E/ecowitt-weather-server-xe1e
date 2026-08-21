@@ -4,6 +4,7 @@ import { useUnits } from '../../units'
 import { beaufort, deriveCondition, historicValue, humidexLabel, humidityComfortEmoji, humidityComfortLabel, moonIllumination, pressureKind, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
+import moonPhoto from '../../assets/moon.png'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
 // integrado del GW1100 (*_indoor) como el WN32 exterior (*_outdoor). Antes había
 // aquí una copia local que solo tenía los _indoor.
@@ -133,75 +134,6 @@ function decNum(s: string): ReactNode {
   )
 }
 
-// Opacidad de las manchas, LA MISMA en la cara iluminada y en la de sombra: es la misma
-// luna y el mismo terreno, así que la única diferencia entre las dos caras tiene que ser
-// la luz que reciben, no lo manchadas que están. Ver la nota larga junto a la capa de la
-// sombra, en `MoonGlyph`, para por qué compensar una respecto a la otra salía mal.
-const OP_MARES = 0.78
-
-// Mapa de manchas, en coordenadas normalizadas (-1..1 sobre el radio) y con su radio
-// en la misma escala. Pretenden evocar los mares lunares: Mare Imbrium arriba a la
-// izquierda, Oceanus Procellarum a la izquierda, Mare Serenitatis y Tranquillitatis
-// al centro-derecha, etc. A 74 px no cabe el detalle real, pero la distribución y
-// densidad dan la impresión correcta. Vive fuera del componente porque ahora la
-// dibujan DOS capas, la de la cara iluminada y la de la sombra, y las dos tienen que
-// usar la misma lista o el relieve no coincidiría a los lados del terminador.
-const MARES: readonly (readonly [number, number, number, number])[] = [
-  // UNA SOLA MASA CONECTADA del noroeste al centro, no un anillo. En la Luna real los
-  // mares no rodean el disco: se apinan arriba y a la izquierda, y todo el sur es
-  // tierra alta clara. El primer intento los repartio en corro alrededor del centro y
-  // el resultado fue un donut negro con el medio claro, que no se parece a nada.
-  //
-  // Los circulos van MUY solapados a proposito --se pisan casi la mitad-- porque lo que
-  // se busca es que se fundan en una mancha de borde irregular. Separados, y con el
-  // desenfoque pequeno que pide el detalle fino, se cuentan uno a uno y parecen lunares.
-  [-0.30, -0.30, 0.26, 1.00],
-  [-0.22, -0.24, 0.18, 1.00],
-  [-0.14, -0.36, 0.20, 1.00],
-  [0.02, -0.28, 0.18, 0.95],
-  [0.15, -0.19, 0.16, 0.95],
-  [-0.40, -0.10, 0.20, 0.95],
-  [-0.15, -0.13, 0.18, 0.95],
-  [-0.32, 0.07, 0.18, 0.90],
-  [-0.01, -0.07, 0.15, 0.90],
-
-  // Mare Crisium, al ESTE y aislado del resto, como en la Luna. Es el que garantiza
-  // que un cuarto creciente ensene un rasgo con peso y no solo motas.
-  [0.52, -0.26, 0.15, 1.00],
-  [0.58, -0.17, 0.10, 0.95],
-
-  // Mares medianos: Fecunditatis y Nectaris al sureste, Nubium al sur. Mas flojos que
-  // los grandes --la Luna tampoco los tiene igual de oscuros-- y sin llegar a tocarse
-  // con la masa principal.
-  [0.34, 0.10, 0.13, 0.80],
-  [0.20, 0.26, 0.11, 0.75],
-  [-0.18, 0.30, 0.14, 0.80],
-  [-0.28, 0.24, 0.11, 0.75],
-
-  // Mare Frigoris: en la Luna es un arco largo y estrecho pegado al norte.
-  [-0.06, -0.54, 0.09, 0.60],
-  [0.12, -0.50, 0.08, 0.55],
-
-  // TIERRAS ALTAS: anchas y flojas. Son variacion suave del terreno, no crateres; a
-  // radio pequeno y peso alto es cuando el disco parece picado de viruelas.
-  [0.30, -0.42, 0.11, 0.35],
-  [0.40, 0.34, 0.11, 0.32],
-  [0.06, 0.44, 0.12, 0.35],
-  [-0.44, 0.36, 0.10, 0.32],
-  [0.14, 0.06, 0.10, 0.28],
-
-  // LIMBO, la vuelta completa. Solo para que el canto no se vea liso y el disco se lea
-  // como bola; el escorzo las comprime contra el borde.
-  [0.00, -0.80, 0.12, 0.28],
-  [0.62, -0.52, 0.11, 0.28],
-  [0.80, 0.10, 0.11, 0.28],
-  [0.56, 0.58, 0.11, 0.28],
-  [0.04, 0.80, 0.12, 0.28],
-  [-0.58, 0.58, 0.11, 0.28],
-  [-0.80, 0.06, 0.11, 0.28],
-  [-0.62, -0.54, 0.11, 0.28],
-] as const
-
 // Dibuja la luna con la iluminación real (terminador elíptico correcto).
 function MoonGlyph({ size = 42, illum, waxing }:
   { size?: number; illum?: number; waxing?: boolean }) {
@@ -231,34 +163,6 @@ function MoonGlyph({ size = 42, illum, waxing }:
   // cálculo local devuelve un float que nunca da 0 exacto; el almanaque, en cambio,
   // REDONDEA a entero, así que 0 es alcanzable. Sin luz no se dibuja luz.
   const oscura = ilum < 1
-  // Las manchas, a la opacidad que se le pida. La misma función para las dos caras: lo
-  // ÚNICO que cambia entre ellas es cuánto se marcan.
-  // ESCORZO ESFÉRICO. Una mancha cerca del limbo no se ve más pequeña: se ve aplastada
-  // EN LA DIRECCIÓN RADIAL, porque ahí la superficie se aleja girando. Dibujarlas como
-  // círculos las convertía en pegatinas sobre un disco plano, y es justo lo que delata
-  // que no es una esfera.
-  //
-  // Para cada mancha: `d` es su distancia al centro (0 en medio, 1 en el limbo) y el
-  // factor de compresión es sqrt(1 - d²), que es la proyección de una esfera sobre el
-  // plano. Se aplica al semieje RADIAL (rx) y se deja intacto el tangencial (ry), con
-  // la elipse girada para que su eje x apunte al centro.
-  //
-  // Suelo de 0.25: en el borde el factor tiende a cero y la mancha se volvería una
-  // raya invisible. Con el suelo se sigue notando que hay algo, que es lo que se quiere.
-  const mares = (op: number) => MARES.map(([cx, cy, r, peso], i) => {
-    const d = Math.min(1, Math.hypot(cx, cy))
-    const k = Math.max(0.25, Math.sqrt(1 - d * d))
-    const ang = (Math.atan2(cy, cx) * 180) / Math.PI
-    // El peso propio de cada mancha sobre la opacidad base. Tope en 0.9: a 1 la mancha
-    // sería negro puro y perdería el color de la luna por debajo, que es lo que hace
-    // que un mar siga pareciendo terreno y no un agujero.
-    const alfa = Math.min(0.9, op * peso)
-    return (
-      <ellipse key={i} cx={cx * R} cy={cy * R} rx={k * r * R} ry={r * R}
-        transform={`rotate(${ang} ${cx * R} ${cy * R})`}
-        fill={`rgba(0,0,0,${alfa})`} />
-    )
-  })
   return (
     // flexShrink 0: sin él, en una fila que se pasa de ancho flex encoge el disco en vez
     // de respetar `size`, y pasa calladamente --se pidieron 76 px y se dibujaron 63,
@@ -317,49 +221,32 @@ function MoonGlyph({ size = 42, illum, waxing }:
         </radialGradient>
         <clipPath id={`disco-${uid}`}><circle r={R} /></clipPath>
         <clipPath id={`luzclip-${uid}`}><path d={oscura ? '' : litPath} /></clipPath>
-        {/* Manchas DESENFOCADAS: a canto vivo eran seis burbujas de compás. Con ~1.3 px de
-            difuminado a tamaño de consola se funden entre ellas y leen como terreno.
-            El desenfoque va antes del recorte --SVG aplica el filtro y LUEGO el
-            clip-path-- así que no se sale del disco ni cruza el terminador. */}
-        <filter id={`difu-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
-          {/* El desenfoque hace DOS trabajos y hay que servir a los dos. Tiene que fundir
-              los círculos solapados de un mismo mar --si no, se cuentan uno a uno y
-              parecen lunares-- sin llegar a disolver las manchas más chicas.
-              Estuvo en 0.035 (sigma 1.1 px a 64 px de disco) y se bajó a 0.024 porque
-              entonces había manchas de radio 0.06, o sea 2 px, y se las comía. Ya no las
-              hay: la más pequeña es 0.08. Así que vuelve a subir, a 0.05 (sigma 1.6 px),
-              que es lo que hace falta para que un racimo se lea como una sola mancha de
-              borde irregular. */}
-          <feGaussianBlur stdDeviation={0.05 * R} />
-        </filter>
       </defs>
       {/* La parte en sombra, en gris cálido y no en el casi negro de antes (#1b1b1b): sobre
           el negro de la celda ese tono no se distinguía del fondo, así que no se veía el
           DISCO completo y la fase se leía como una mancha suelta en vez de como una esfera
           parcialmente iluminada. Con el disco visible, el terminador se nota. */}
-      <circle r={R} fill={`url(#sombra-${uid})`} />
-      {/* Manchas de la CARA EN SOMBRA. Antes iban recortadas a la parte iluminada y la
-          sombra quedaba lisa; ahora las llevan las dos, que es lo que se ve en el cielo
-          --el disco entero está manchado, no sólo lo que le da el sol--.
-          Van sobre el disco COMPLETO, no sobre la sombra recortada: la cara iluminada las
-          tapa después con su propio relleno, y así no hay que construir un segundo recorte.
-
-          LA MISMA OPACIDAD EN LAS DOS CARAS (`OP_MARES`). Antes la sombra iba más marcada
-          que la luz --0.35 contra 0.28, luego 0.52 contra 0.44-- para compensar que el gris
-          tiene menos recorrido hasta el negro. Medido sobre el render, esa compensación
-          hacía justo lo contrario: la cara oscura salía con un recorrido del 65 % de su
-          media y la iluminada del 23 %, o sea que la sombra se veía llena de manchas y el
-          creciente casi liso, como si fueran dos superficies distintas.
-          El motivo es que la textura se percibe en RELATIVO, no en absoluto: un mismo
-          α oscurece a B(1-α) en las dos caras, así que la misma opacidad ya da el mismo
-          contraste relativo, y cualquier "compensación" lo desequilibra. */}
-      <g clipPath={`url(#disco-${uid})`} filter={`url(#difu-${uid})`}>{mares(OP_MARES)}</g>
-      {!oscura && <path d={litPath} fill={`url(#luz-${uid})`} />}
-      {/* Manchas de la CARA ILUMINADA, recortadas a ella. Al usar la misma lista que la
-          capa de la sombra, cada mancha continúa al otro lado del terminador: es la misma
-          luna, con una parte alumbrada y otra no. */}
+      {/* FOTO REAL en vez de manchas dibujadas a mano: las de antes (ver historial) nunca
+          pasaban por relieve lunar de verdad, por más que se afinara la mezcla. La textura
+          (cráteres, mares, los rayos de Tycho) va con `mix-blend-mode: multiply` ENCIMA del
+          degradado de color de cada cara: donde la foto es clara, el multiply casi no toca
+          el color de abajo; donde es oscura, lo apaga. Así el color y el relieve esférico
+          los sigue dando el degradado (sombra/luz) y la foto sólo aporta el detalle fino.
+          `isolation: isolate` en cada grupo es necesario: sin un contexto de mezcla propio,
+          el multiply compondría contra lo que hay DETRÁS de todo el SVG en la página (el
+          fondo casi negro de la celda), no contra el degradado que se acaba de pintar, y la
+          luna saldría casi negra entera. */}
+      <g style={{ isolation: 'isolate' }} clipPath={`url(#disco-${uid})`}>
+        <circle r={R} fill={`url(#sombra-${uid})`} />
+        <image href={moonPhoto} x={-R} y={-R} width={2 * R} height={2 * R}
+          preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'multiply' }} />
+      </g>
       {!oscura && (
-        <g clipPath={`url(#luzclip-${uid})`} filter={`url(#difu-${uid})`}>{mares(OP_MARES)}</g>
+        <g style={{ isolation: 'isolate' }} clipPath={`url(#luzclip-${uid})`}>
+          <path d={litPath} fill={`url(#luz-${uid})`} />
+          <image href={moonPhoto} x={-R} y={-R} width={2 * R} height={2 * R}
+            preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'multiply' }} />
+        </g>
       )}
       {!oscura && <path d={litPath} fill={`url(#term-${uid})`} />}
       <circle r={R} fill={`url(#limbo-${uid})`} />
