@@ -155,7 +155,12 @@ export function CamaraPage({ slug }: { slug: string }) {
               descripción del clima (25 px, peso 700) para que se lean como una familia. */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 22px 22px',
             textAlign: 'right',
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 100%)' }}>
+            // Sólido hasta pasado el renglón de texto (10 de padding + 25 de letra + margen) y
+            // SÓLO DESPUÉS de eso empieza a desvanecer. Antes el degradado arrancaba a
+            // desvanecerse desde el primer píxel, así que contra un cielo claro el propio
+            // texto quedaba en la parte ya casi transparente. Ver la nota igual en la banda
+            // de análisis, que tenía el mismo problema al revés.
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.78) 0, rgba(0,0,0,0.78) 42px, rgba(0,0,0,0) 100%)' }}>
             <span style={{ color: '#fff', fontSize: 25, fontWeight: 700 }}>Estación Clima XE1E</span>
           </div>
 
@@ -170,11 +175,19 @@ export function CamaraPage({ slug }: { slug: string }) {
           )}
 
           {/* Banda de análisis del cielo, pegada al pie. Degradado para leerse sobre
-              cualquier cielo, claro u oscuro. */}
+              cualquier cielo, claro u oscuro.
+              SÓLIDO hasta 26px del borde de arriba, y sólo ese margen se desvanece: antes
+              el degradado repartía la opacidad en porcentaje de todo el alto de la banda
+              (0.9 abajo, transparente arriba), y la frase protagonista --lo primero que se
+              lee-- cae justo arriba, en la parte casi transparente. Contra un cielo claro
+              quedaba casi sin fondo. Con el corte en píxeles el sólido cubre el texto
+              entero sin importar cuántos renglones tenga (descripción + apoyo + pronóstico
+              cambian de alto según el análisis), y sólo el margen vacío de arriba --antes
+              del primer carácter-- es el que se funde con la foto. */}
           {hayAnalisis && (
             <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
               padding: '20px 22px 14px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0) 100%)' }}>
+              background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0, rgba(0,0,0,0.92) calc(100% - 26px), rgba(0,0,0,0) 100%)' }}>
               {/* Frase protagonista: lo que se ve, en grande. */}
               {an?.description && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
