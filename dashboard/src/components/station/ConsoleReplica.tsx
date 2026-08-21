@@ -1764,7 +1764,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               Sólo en EXTERIOR: es la única de las dos humedades con flecha de
               tendencia, que es donde se pidió que fuera "de buen tamaño". */}
           {data?.humidity_outdoor != null && (
-            <div style={{ position: 'absolute', top: '50%', right: 56, transform: 'translateY(-50%)', fontSize: 34, lineHeight: 1 }}
+            <div style={{ position: 'absolute', top: 'calc(50% - 3px)', right: 56, transform: 'translateY(-50%)', fontSize: 34, lineHeight: 1 }}
                  title={humidityComfortLabel(data.humidity_outdoor)}>
               {humidityComfortEmoji(data.humidity_outdoor)}
             </div>
@@ -2293,10 +2293,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               como en HUMEDAD --el sitio libre es este, bajo el glifo de ubicación,
               mismo criterio de columna que ya usa la señal RF en EXT.
               top:60 y no top:40: la casita ocupa hasta y≈36 y la celda acaba en
-              y≈103 (misma altura que JARDÍN), así que 60 deja la carita centrada en
-              el hueco libre entre las dos, no pegada al filo de la casita. */}
+              y≈103 (misma altura que JARDÍN); 55 la deja un pelín más arriba que el
+              centro exacto del hueco, que a ojo quedaba mejor que 60. */}
           {data?.humidity_indoor != null && (
-            <div style={{ position: 'absolute', top: 60, right: 8, fontSize: 22, lineHeight: 1 }}
+            <div style={{ position: 'absolute', top: 55, right: 8, fontSize: 22, lineHeight: 1 }}
                  title={humidityComfortLabel(data.humidity_indoor)}>
               {humidityComfortEmoji(data.humidity_indoor)}
             </div>
@@ -2517,12 +2517,12 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               <BatteryGlyph level={data.battery_ch1 ? 1 : 0.08} name="WN31" />
             </div>
           )}
-          {/* Misma carita de confort que INTERIOR, mismo criterio de columna: debajo
-              del rótulo de arriba a la derecha (aquí "CH1" y no una casita), centrada
-              en el hueco que deja hasta el borde de abajo. El rótulo es más corto que
-              la casita (acaba en y≈22 y no en 36), así que sube un poco menos. */}
+          {/* Misma carita de confort que INTERIOR, mismo criterio de columna: pero
+              aquí SÍ hay algo debajo (la pila WN31, `bottom:7`), así que en vez de
+              bajar hasta el borde de la celda se centra en el hueco entre el "CH1"
+              de arriba y esa pila. */}
           {sHum != null && (
-            <div style={{ position: 'absolute', top: 52, right: 10, fontSize: 22, lineHeight: 1 }}
+            <div style={{ position: 'absolute', top: 38, right: 10, fontSize: 22, lineHeight: 1 }}
                  title={humidityComfortLabel(sHum)}>
               {humidityComfortEmoji(sHum)}
             </div>
