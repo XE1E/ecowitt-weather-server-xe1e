@@ -334,6 +334,31 @@ export function humidexLabel(h: number): string {
   return 'Confort'
 }
 
+/**
+ * Carita de confort para el % de humedad relativa SOLO (a diferencia del HUMIDEX,
+ * que combina humedad y temperatura). No hay convención técnica única para esto
+ * --a diferencia de HUMIDEX o UV, que tienen organismo que los define-- así que se
+ * usan cinco tramos parejos alrededor de la banda de confort central (45-60%), la
+ * misma tabla para exterior e interior. Vive junto a `humidexLabel` por la misma
+ * razón: que la consola y cualquier otro consumidor futuro no puedan acabar
+ * usando cortes distintos para el mismo número.
+ */
+export function humidityComfortEmoji(rh: number): string {
+  if (rh < 30) return '😖'
+  if (rh < 45) return '🙂'
+  if (rh < 60) return '😄'
+  if (rh < 70) return '😕'
+  return '🥵'
+}
+
+export function humidityComfortLabel(rh: number): string {
+  if (rh < 30) return 'Muy seco'
+  if (rh < 45) return 'Seco'
+  if (rh < 60) return 'Confort'
+  if (rh < 70) return 'Húmedo'
+  return 'Muy húmedo'
+}
+
 /** Cardinal direction (Spanish) from degrees. */
 export function cardinal(deg: number): string {
   return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]

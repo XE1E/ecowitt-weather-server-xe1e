@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { beaufort, deriveCondition, historicValue, humidexLabel, moonIllumination, uvLabel } from '../../weather'
+import { beaufort, deriveCondition, historicValue, humidexLabel, humidityComfortEmoji, humidityComfortLabel, moonIllumination, uvLabel } from '../../weather'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 // Tipo compartido de la fila del histórico remoto: declara tanto el sensor
@@ -1756,6 +1756,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>
             <TrendGlyph trend={humTrend} />
           </div>
+          {/* Carita de confort de la humedad relativa: va en el hueco que sobra entre
+              el valor (que aquí acaba mucho antes que en EXT, ver la nota de arriba
+              sobre "60 px libres") y el aviso/flecha, que arrancan en right:38. A
+              right:80 queda centrada en ese hueco sin pelearse con ninguno de los
+              dos. Sólo en EXTERIOR: es la única de las dos humedades con flecha de
+              tendencia, que es donde se pidió que fuera "de buen tamaño". */}
+          {data?.humidity_outdoor != null && (
+            <div style={{ position: 'absolute', top: '50%', right: 80, transform: 'translateY(-50%)', fontSize: 34, lineHeight: 1 }}
+                 title={humidityComfortLabel(data.humidity_outdoor)}>
+              {humidityComfortEmoji(data.humidity_outdoor)}
+            </div>
+          )}
           {/* Misma receta que EXT --centrado, mismo cuerpo, unidad a 24, mín/máx abajo
               y los mismos márgenes-- para que las dos se lean como pareja. Antes eran
               pareja en vertical (columna izquierda, filas 1 y 2); ahora lo son en
@@ -2275,6 +2287,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           <div style={{ position: 'absolute', top: 6, right: 8 }}>
             <HouseGlyph filled />
           </div>
+          {/* Carita de confort de la humedad interior, debajo de la casita: esta celda
+              no lleva flecha de tendencia, así que no hay hueco "entre valor y flecha"
+              como en HUMEDAD --el sitio libre es este, bajo el glifo de ubicación,
+              mismo criterio de columna que ya usa la señal RF en EXT. */}
+          {data?.humidity_indoor != null && (
+            <div style={{ position: 'absolute', top: 40, right: 8, fontSize: 22, lineHeight: 1 }}
+                 title={humidityComfortLabel(data.humidity_indoor)}>
+              {humidityComfortEmoji(data.humidity_indoor)}
+            </div>
+          )}
           {/* Lecturas centradas verticalmente */}
           <div className="ctr" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 16, marginTop: 20 }}>
             <span className="gt" style={{ fontSize: 46, fontWeight: 800 }}>
