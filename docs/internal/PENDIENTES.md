@@ -104,6 +104,19 @@ resuelve `%b`/`%B` en inglés. Nuevo servicio `DateFormat` (`lib/services`)
 sustituye esos especificadores por texto literal en español antes de llamar a
 `strftime`. **Verificado en el reloj físico:** ya sale "22 AGO".
 
+**Publicado como `v0.4.0-beta.22` (pre-release, 2026-08-22).** Tag empujado →
+CI compiló, corrió tests/lint/cppcheck, publicó el `.bin` en el flasher web y
+creó el release en GitHub. `CHANGELOG.md` actualizado.
+
+**De paso se corrigió una nota de memoria equivocada: SÍ hay OTA por WiFi.**
+Se creía que este reloj solo se podía flashear por USB. En realidad
+`http://svitrix.local/update` (subida manual de `firmware.bin` desde el
+navegador, `lib/webserver/esp-fs-webserver.cpp`) funciona sin configurar nada
+— se probó en vivo subiendo el `.bin` y el reloj se reflasheó y reinició solo,
+sin cable. Lo que sí sigue sin configurar es el AUTO-check por URL
+(`update_firmware_url`/`/api/doupdate`, sigue siendo no-op). Para la próxima
+actualización, usar `/update` por WiFi en vez de USB.
+
 **Residual, no bloqueante:** no se hizo la prueba de forzar un 503 desde el
 servidor (se descartó por riesgo de afectar datos reales servidos en
 producción). Queda como prueba de rodaje: si la estación se cae alguna vez de
