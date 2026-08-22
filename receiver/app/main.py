@@ -47,6 +47,7 @@ from .services import sky_validation
 from .services import smn
 from .services import svitrix
 from .services import epaper
+from .services import bim32
 from .services import admin as adminsvc
 from .services import settings_store
 from .services import security as secsvc
@@ -1913,6 +1914,41 @@ async def get_epaper_forecast():
         almanac=alm, om=om, stats=stats, p_3h=p_3h,
         ahora=datetime.now(),
     )
+
+
+@app.get("/api/bim32")
+async def get_bim32():
+    """
+    JSON compacto para el firmware BIM32 (`weather.hpp`): combina el dato REAL de la
+    estación (temperatura/humedad/presión/viento, igual que `/api/svitrix`) con el
+    pronóstico diario y horario de Open-Meteo, ya recortado a 5 días / 40 puntos
+    horarios y con los códigos de ícono que `Weather::_convertIcon()` ya sabe
+    interpretar. Sustituye las 2-3 peticiones que el ESP32 hacía directo a
+    Open-Meteo por esta única llamada.
+
+    Sin lectura de la estación se cae al pronóstico de la hora en curso, igual que
+    `/api/epaper/forecast.json` — no se devuelve 503, para no dejar al firmware sin
+    dato con el que refrescar su pantalla.
+    """
+    lat = getattr(settings, "cwop_latitude", 19.380359)
+    lon = getattr(settings, "cwop_longitude", -99.174564)
+    data = latest_by_station.get(None)
+
+    sun_elev = None
+    try:
+        alm = get_almanac(lat, lon)
+        if alm.get("available"):
+            sun_elev = (alm.get("sun") or {}).get("altitude")
+    except Exception as e:
+        logger.error(f"bim32 almanaque: {e}")
+
+    try:
+        om = await openmeteo.get_forecast(lat, lon, days=6, epaper=True)
+    except Exception as e:
+        logger.error(f"bim32 pronostico: {e}")
+        om = {}
+
+    return bim32.build_bim32(data, om, sun_elev=sun_elev)
 
 
 @app.get("/api/smn/municipios")
