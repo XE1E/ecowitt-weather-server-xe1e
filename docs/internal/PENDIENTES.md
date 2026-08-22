@@ -74,61 +74,41 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
 
-## 1b. Svitrix (firmware) — distinguir "sin dato" de "sin conexión" — implementado, falta flashear (2026-08-22)
+## 1b. Svitrix (firmware) — ✅ HECHO Y FLASHEADO (2026-08-22)
 
-Único pendiente de la auditoría de datos que necesita tocar **otro repo**
-(`svitrix-firmware-XE1E`), compilar y flashear el reloj. No urge: el lado del
-servidor ya cubre el caso peligroso.
+Único pendiente de la auditoría de datos que necesitaba tocar **otro repo**
+(`svitrix-firmware-XE1E`), compilar y flashear el reloj.
 
-**Hecho en el firmware (commit local `9d5c019`, NO pusheado ni flasheado
-todavía).** `fetchWeather()` distingue el 503 (y el `current` ausente con HTTP
-200) de un fallo de red real: conserva el último dato, no lo cuenta en
-`weatherFailStreak_` y **sí** refresca `lastWeatherSuccessMs_`, así que la
-estación caída ya no dispara el reinicio a los 15 min. El dato queda marcado
-`weatherData.stale` (expuesto en `/api/weather/data`). De paso, el ícono de
-clima ahora usa el `is_day` que ya emite `/api/svitrix`: el código 1000
-("Sunny"/"Clear" en WeatherAPI) pintaba siempre el sol; de noche pinta la fase
-lunar real (mismo servicio que `MoonApp`). Compila limpio (`pio run -e
-ulanzi`) y pasa `clang-format`.
+**Situación original.** `/api/svitrix` devolvía un `current` con `temp_c`/
+`humidity`/`pressure_mb` en `null` cuando no había ninguna lectura. ArduinoJson
+los convierte a `0.0f` y `weatherData.valid` se marca `true` igual, así que el
+reloj mostraba **0 °C / 0 % / 0 mb como si fueran medidas reales**. El servidor
+ya respondía **503** en ese caso (arreglo previo), pero el firmware trataba ese
+503 igual que un fallo de red: no refrescaba el reloj de auto-recuperación, así
+que una estación caída terminaba en **ciclo de reinicios del ESP32 cada
+~15 min** — peor que mostrar el último dato conocido.
 
-**Pendiente real:** push a origin, decidir si amerita release (tag) y
-**flashear por USB (COM8)** — no hay OTA en este reloj. Y, tal como avisaba
-esta sección antes de implementarlo: **validar forzando un 503 desde el
-servidor** antes de dar el cambio por bueno — un error aquí se manifiesta
-igual que el bug original, como reinicios cada cuarto de hora.
+**Arreglado (commits `9d5c019` y `079d5d4`, pusheados a origin y FLASHEADOS por
+USB/COM8 el 2026-08-22).** `fetchWeather()` distingue el 503 (y el `current`
+ausente con HTTP 200) de un fallo de red real: conserva el último dato, no lo
+cuenta en `weatherFailStreak_` y **sí** refresca `lastWeatherSuccessMs_` — ya
+no reinicia por esa vía. El dato queda marcado `weatherData.stale` (expuesto en
+`/api/weather/data`, **verificado en vivo**: `"stale":false` con la estación
+arriba). De paso, el ícono de clima usa el `is_day` que ya emite `/api/svitrix`
+(también verificado, `"isDay":1`): el código 1000 pintaba siempre el sol; de
+noche pinta la fase lunar real (mismo servicio que `MoonApp`).
 
-**Situación.** `/api/svitrix` devolvía un `current` con `temp_c`/`humidity`/
-`pressure_mb` en `null` cuando no había ninguna lectura. ArduinoJson los convierte
-a `0.0f` y `weatherData.valid` se marca `true` igual, así que el reloj mostraba
-**0 °C / 0 % / 0 mb como si fueran medidas reales** — y en invierno un 0 °C en la
-CDMX es lo bastante verosímil como para no notarlo.
+**Bonus del mismo repo, mismo día:** los meses salían en **inglés** ("AUG") en
+la app de Fecha porque el libc del ESP32 no trae locale es_MX y `strftime`
+resuelve `%b`/`%B` en inglés. Nuevo servicio `DateFormat` (`lib/services`)
+sustituye esos especificadores por texto literal en español antes de llamar a
+`strftime`. **Verificado en el reloj físico:** ya sale "22 AGO".
 
-**Ya hecho (servidor).** Ahora responde **503** en ese caso. Pero solo en ese: el
-firmware reinicia el ESP32 tras `max(5 × intervalo, 15 min)` sin un HTTP 200
-(`DataFetcher.cpp:150-156`, `ESP.restart()`), así que devolver error mientras la
-estación está caída lo dejaría en **ciclo de reinicios cada 15 minutos**, que es
-peor que mostrar un dato viejo. Con lectura disponible —aunque sea vieja— se sigue
-sirviendo.
-
-**Lo que falta (firmware).** Que distinga *"el servidor respondió pero no tiene
-dato"* de *"no pude hablar con el servidor"*:
-
-- Hoy ya trata aparte el caso de `current` ausente (*"data error — keep last
-  value, leave health/retry untouched"*), pero **tampoco** actualiza
-  `lastWeatherSuccessMs_`, así que por esa vía acabaría reiniciando igual.
-- La idea: ante un 503 (o un `current` ausente) conservar el último valor, **no**
-  contarlo como fallo de red y **sí** refrescar el reloj de auto-recuperación —
-  el servidor está vivo, el problema es la estación. Y marcar el dato como no
-  fresco en pantalla en vez de mostrarlo como actual.
-
-**Cuidado al probarlo:** equivocarse aquí se manifiesta como un reloj que se
-reinicia solo cada cuarto de hora. Conviene validar con el servidor devolviendo
-503 a propósito antes de dar por bueno el cambio.
-
-Relacionado y también del firmware: `/api/svitrix` ya emite `is_day`, pero el
-firmware elige el icono solo por `code` (`Apps_NativeApps.cpp:433`,
-`getWeatherConditionIcon`). Usarlo permitiría distinguir el sol de la luna de
-madrugada. Ese sí es un cambio pequeño y sin riesgo.
+**Residual, no bloqueante:** no se hizo la prueba de forzar un 503 desde el
+servidor (se descartó por riesgo de afectar datos reales servidos en
+producción). Queda como prueba de rodaje: si la estación se cae alguna vez de
+forma natural, ahí se confirma que el reloj aguanta sin reiniciarse. La lógica
+ya se revisó por código y compila/pasa lint limpio.
 
 ## 1c. Histórico de `vpd` en dos unidades — decidir
 
