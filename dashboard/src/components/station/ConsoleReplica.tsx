@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useStationData } from '../../station-data'
 import { useUnits } from '../../units'
-import { beaufort, deriveCondition, historicValue, humidexLabel, humidityComfortEmoji, humidityComfortLabel, moonIllumination, pressureKind, uvLabel } from '../../weather'
+import { beaufort, deriveCondition, historicValue, humidexLabel, moonIllumination, pressureKind, uvLabel } from '../../weather'
+import { useHumidityComfort } from '../../hooks/useHumidityComfort'
 import { WeatherIcon } from '../WeatherIcon'
 import { MeteoGlyph } from '../MeteoGlyph'
 import moonPhoto from '../../assets/moon.png'
@@ -1182,6 +1183,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const sTemp = hasCh1 ? chTemp : remote?.temperature_indoor
   const sHum = hasCh1 ? chHum : remote?.humidity_indoor
 
+  // Caritas de confort de humedad, con histéresis propia por celda (ver el hook):
+  // EXTERIOR y JARDÍN comparten tabla (sensación térmica), INTERIOR usa la de
+  // ASHRAE 55, más estricta.
+  const extComfort = useHumidityComfort(data?.humidity_outdoor, 'exterior')
+  const intComfort = useHumidityComfort(data?.humidity_indoor, 'interior')
+  const jardinComfort = useHumidityComfort(sHum, 'exterior')
+
   // Marcador de dirección del viento. Recorre la ELIPSE: antes giraba sobre un
   // CÍRCULO, así que en el N sobresalía del óvalo y en el E quedaba flotando muy
   // adentro. Ahora la punta va sobre el óvalo INTERIOR (posición paramétrica) y el giro
@@ -1650,10 +1658,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               rocen el triángulo de aviso si llega a encenderse, que es el caso raro.
               Sólo en EXTERIOR: es la única de las dos humedades con flecha de
               tendencia, que es donde se pidió que fuera "de buen tamaño". */}
-          {data?.humidity_outdoor != null && (
+          {extComfort && (
             <div style={{ position: 'absolute', top: 'calc(50% - 3px)', right: 56, transform: 'translateY(-50%)', fontSize: 34, lineHeight: 1 }}
-                 title={humidityComfortLabel(data.humidity_outdoor)}>
-              {humidityComfortEmoji(data.humidity_outdoor)}
+                 title={extComfort.label}>
+              {extComfort.emoji}
             </div>
           )}
           {/* Misma receta que EXT --centrado, mismo cuerpo, unidad a 24, mín/máx abajo
@@ -2194,10 +2202,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               top:60 y no top:40: la casita ocupa hasta y≈36 y la celda acaba en
               y≈103 (misma altura que JARDÍN); 55 la deja un pelín más arriba que el
               centro exacto del hueco, que a ojo quedaba mejor que 60. */}
-          {data?.humidity_indoor != null && (
+          {intComfort && (
             <div style={{ position: 'absolute', top: 55, right: 8, fontSize: 22, lineHeight: 1 }}
-                 title={humidityComfortLabel(data.humidity_indoor)}>
-              {humidityComfortEmoji(data.humidity_indoor)}
+                 title={intComfort.label}>
+              {intComfort.emoji}
             </div>
           )}
           {/* Lecturas centradas verticalmente */}
@@ -2420,10 +2428,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               aquí SÍ hay algo debajo (la pila WN31, `bottom:7`), así que en vez de
               bajar hasta el borde de la celda se centra en el hueco entre el "CH1"
               de arriba y esa pila. */}
-          {sHum != null && (
+          {jardinComfort && (
             <div style={{ position: 'absolute', top: 38, right: 10, fontSize: 22, lineHeight: 1 }}
-                 title={humidityComfortLabel(sHum)}>
-              {humidityComfortEmoji(sHum)}
+                 title={jardinComfort.label}>
+              {jardinComfort.emoji}
             </div>
           )}
           {/* Lecturas centradas verticalmente */}

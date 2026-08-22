@@ -922,13 +922,23 @@ humidex gasta en su riel. Centrar la celda entera bajaba también el rótulo.
 **Caritas de confort de humedad** (😖 🙂 😄 😕 🥵) en HUMEDAD, INTERIOR y JARDÍN, una por
 celda con su propia lectura de RH%. A diferencia del HUMIDEX, aquí **no se combina con la
 temperatura**: no hay un organismo que defina cortes técnicos para la humedad relativa sola
-como sí los hay para HUMIDEX o UV, así que `humidityComfortEmoji`/`humidityComfortLabel`
-(`weather.ts`) usan **cinco tramos parejos** alrededor de la banda de confort central,
-la misma tabla para las tres celdas: <30 muy seco, 30-44 seco, 45-59 confort, 60-69 húmedo,
-70+ muy húmedo. Viven junto a `humidexLabel` a propósito, para que ningún consumidor futuro
-acabe usando cortes distintos para el mismo número. El `title` del elemento lleva la
-etiqueta en palabras (se ve al pasar el mouse; en pantalla táctil no hay hover, así que ahí
-la carita es la única pista).
+como sí los hay para HUMIDEX o UV, así que `HUMIDITY_COMFORT_BANDS` (`weather.ts`) usa **dos
+tablas** de cinco tramos, no una: HUMEDAD y JARDÍN comparten la de sensación térmica exterior
+(bochorno/desecación) y INTERIOR usa la de ASHRAE 55, más estricta porque ahí se respira el
+aire y hay riesgo de moho:
+- **Exterior/Jardín**: <25 muy seco, 25-39 seco, 40-60 confort, 61-75 húmedo, 76+ muy húmedo.
+- **Interior**: <30 muy seco, 30-39 seco, 40-59 confort, 60-69 húmedo, 70+ muy húmedo.
+
+Viven junto a `humidexLabel` a propósito, para que ningún consumidor futuro acabe usando
+cortes distintos para el mismo número. El `title` del elemento lleva la etiqueta en palabras
+(se ve al pasar el mouse; en pantalla táctil no hay hover, así que ahí la carita es la única
+pista).
+
+La categoría lleva **histéresis de 1 punto** (`useHumidityComfort`, `hooks/`): una lectura
+que ronda justo un corte no hace parpadear la carita en cada actualización, porque hay que
+alejarse del corte ese punto para subir de categoría y alejarse otro tanto por el otro lado
+para volver a bajar. El estado (última categoría mostrada) es propio de cada celda —EXTERIOR,
+INTERIOR y JARDÍN no se pisan entre sí—.
 
 Cada celda la coloca en un hueco distinto porque cada una tiene un layout distinto debajo:
 - **HUMEDAD** (estación principal): a la derecha del valor, entre éste y la flecha de

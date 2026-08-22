@@ -334,29 +334,39 @@ export function humidexLabel(h: number): string {
   return 'Confort'
 }
 
-/**
- * Carita de confort para el % de humedad relativa SOLO (a diferencia del HUMIDEX,
- * que combina humedad y temperatura). No hay convención técnica única para esto
- * --a diferencia de HUMIDEX o UV, que tienen organismo que los define-- así que se
- * usan cinco tramos parejos alrededor de la banda de confort central (45-60%), la
- * misma tabla para exterior e interior. Vive junto a `humidexLabel` por la misma
- * razón: que la consola y cualquier otro consumidor futuro no puedan acabar
- * usando cortes distintos para el mismo número.
- */
-export function humidityComfortEmoji(rh: number): string {
-  if (rh < 30) return '😖'
-  if (rh < 45) return '🙂'
-  if (rh < 60) return '😄'
-  if (rh < 70) return '😕'
-  return '🥵'
+export type HumidityComfortKind = 'exterior' | 'interior'
+
+export interface HumidityComfortBand {
+  /** Límite superior (exclusivo) del tramo; el último tramo usa Infinity. */
+  max: number
+  emoji: string
+  label: string
 }
 
-export function humidityComfortLabel(rh: number): string {
-  if (rh < 30) return 'Muy seco'
-  if (rh < 45) return 'Seco'
-  if (rh < 60) return 'Confort'
-  if (rh < 70) return 'Húmedo'
-  return 'Muy húmedo'
+/**
+ * Carita de confort para el % de humedad relativa SOLO (a diferencia del HUMIDEX,
+ * que combina humedad y temperatura). A diferencia de HUMIDEX o UV, no hay un
+ * organismo único que defina cortes para la humedad relativa sola, así que EXTERIOR
+ * y JARDÍN usan los tramos de sensación térmica (bochorno/desecación) e INTERIOR usa
+ * los de ASHRAE 55 (más estrictos: ahí se respira el aire y hay riesgo de moho).
+ * Viven junto a `humidexLabel` por la misma razón: que la consola y cualquier otro
+ * consumidor futuro no puedan acabar usando cortes distintos para el mismo número.
+ */
+export const HUMIDITY_COMFORT_BANDS: Record<HumidityComfortKind, HumidityComfortBand[]> = {
+  exterior: [
+    { max: 25, emoji: '😖', label: 'Muy seco' },
+    { max: 40, emoji: '🙂', label: 'Seco' },
+    { max: 61, emoji: '😄', label: 'Confort' },
+    { max: 76, emoji: '😕', label: 'Húmedo' },
+    { max: Infinity, emoji: '🥵', label: 'Muy húmedo' },
+  ],
+  interior: [
+    { max: 30, emoji: '😖', label: 'Muy seco' },
+    { max: 40, emoji: '🙂', label: 'Seco' },
+    { max: 60, emoji: '😄', label: 'Confort' },
+    { max: 70, emoji: '😕', label: 'Húmedo' },
+    { max: Infinity, emoji: '🥵', label: 'Muy húmedo' },
+  ],
 }
 
 /**
