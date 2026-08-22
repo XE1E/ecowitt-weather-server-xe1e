@@ -1823,7 +1823,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               tamaño sube en la misma proporción --48/71 = 44/65-- y el sitio se corre 2 px
               arriba y a la izquierda, que son las 3 unidades de aire nuevas. Resultado: las
               gotas se ven exactamente donde y como estaban, pero sin recortarse. */}
-          <div style={{ position: 'absolute', top: 14, left: 10, overflow: 'visible' }}>
+          <div style={{ position: 'absolute', top: 14, left: 4, overflow: 'visible' }}>
             <MeteoGlyph name="raindrops" size={48} color={alertaCol('lluvia', '#38bdf8')}
               title={lloviendo ? 'lluvia' : 'sin lluvia'} outline={!lloviendo} />
           </div>
@@ -1855,8 +1855,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
           )}
           {/* Las tres cifras arrancan pegadas al borde de arriba (sin marginTop
               negativo, que era para compensar el rótulo que ya no está) y sangradas por
-              la izquierda para dejarle su hueco a la gota. */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 8, paddingLeft: 48, paddingRight: 4 }}>
+              la izquierda para dejarle su hueco a la gota.
+
+              Con 24H/TASA en dos enteros y MES en tres, las tres cifras no cabían: se
+              recortaban contra el borde derecho. El sobrante era pequeño (medio dígito,
+              ~12 px sobre 309 de ancho útil), así que en vez de tocar el tamaño de la
+              fuente se pegan los dos bordes: la gota sube de left:10 a left:4 y este
+              padding baja de 48 a 42 en la misma proporción (mismo margen relativo con
+              el borde de la gota que ya se veía bien), el padding derecho pasa de 4 a 0
+              y el gap entre las tres columnas de 8 a 4. Se recuperan 18 px. */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 4, paddingLeft: 42, paddingRight: 0 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--w)', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>24 H</div>
               <div className="gr seg" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginTop: 7 }}>
