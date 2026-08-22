@@ -74,11 +74,28 @@ Nomenclatura se queda: **Principal = WS2910**, **Remota = GW1100**.
       (`main.py::_detect_sensors_detail`) se **auto-revierte** — al haber interior otra
       vez, la presión vuelve a esa fila. Sin cambio.
 
-## 1b. Svitrix (firmware) — distinguir "sin dato" de "sin conexión" — diferido
+## 1b. Svitrix (firmware) — distinguir "sin dato" de "sin conexión" — implementado, falta flashear (2026-08-22)
 
 Único pendiente de la auditoría de datos que necesita tocar **otro repo**
 (`svitrix-firmware-XE1E`), compilar y flashear el reloj. No urge: el lado del
 servidor ya cubre el caso peligroso.
+
+**Hecho en el firmware (commit local `9d5c019`, NO pusheado ni flasheado
+todavía).** `fetchWeather()` distingue el 503 (y el `current` ausente con HTTP
+200) de un fallo de red real: conserva el último dato, no lo cuenta en
+`weatherFailStreak_` y **sí** refresca `lastWeatherSuccessMs_`, así que la
+estación caída ya no dispara el reinicio a los 15 min. El dato queda marcado
+`weatherData.stale` (expuesto en `/api/weather/data`). De paso, el ícono de
+clima ahora usa el `is_day` que ya emite `/api/svitrix`: el código 1000
+("Sunny"/"Clear" en WeatherAPI) pintaba siempre el sol; de noche pinta la fase
+lunar real (mismo servicio que `MoonApp`). Compila limpio (`pio run -e
+ulanzi`) y pasa `clang-format`.
+
+**Pendiente real:** push a origin, decidir si amerita release (tag) y
+**flashear por USB (COM8)** — no hay OTA en este reloj. Y, tal como avisaba
+esta sección antes de implementarlo: **validar forzando un 503 desde el
+servidor** antes de dar el cambio por bueno — un error aquí se manifiesta
+igual que el bug original, como reinicios cada cuarto de hora.
 
 **Situación.** `/api/svitrix` devolvía un `current` con `temp_c`/`humidity`/
 `pressure_mb` en `null` cuando no había ninguna lectura. ArduinoJson los convierte
