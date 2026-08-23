@@ -1950,14 +1950,19 @@ async def get_bim32():
 
     # Análisis visual de la cámara (ver sky_analyzer.py): a diferencia del índice de
     # claridad solar, sí distingue nubes de noche. Se descarta si está viejo (cámara
-    # caída, cuota de la API agotada) para no clavar una lectura obsoleta.
+    # caída, cuota de la API agotada) para no clavar una lectura obsoleta. Ojo: el
+    # análisis corre en SU PROPIO intervalo (camera_analysis_interval_min), más lento
+    # que las capturas de foto -- usar camera_stale_seconds (pensado para la foto)
+    # lo descartaba casi siempre justo al borde del intervalo. Dos intervalos de
+    # margen (mínimo 20 min) cubre esa cadencia más una reintento/latencia de la API.
+    analysis_stale_seconds = max(settings.camera_analysis_interval_min * 60 * 2, 1200)
     sky_analysis = _camera.get_analysis()
     if sky_analysis:
         try:
             analyzed_at = datetime.fromisoformat(sky_analysis.get("analyzed_at", ""))
             if analyzed_at.tzinfo is None:
                 analyzed_at = analyzed_at.replace(tzinfo=timezone.utc)
-            if (datetime.now(timezone.utc) - analyzed_at).total_seconds() > settings.camera_stale_seconds:
+            if (datetime.now(timezone.utc) - analyzed_at).total_seconds() > analysis_stale_seconds:
                 sky_analysis = None
         except (ValueError, TypeError):
             sky_analysis = None
