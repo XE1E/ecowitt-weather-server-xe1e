@@ -8,7 +8,13 @@ usan los íconos de OpenWeatherMap). Este endpoint reempaqueta:
 
 - El dato REAL de la estación (temperatura/humedad/presión/viento) para
   `current`, igual que `svitrix.py` — pero sin calidad del aire ni IMECA, que
-  BIM32 no usa.
+  BIM32 no usa (esa la trae del BME680 local, por su propia fuente de confort).
+- El ícono/descripción de `current` prioriza el análisis visual de la cámara
+  (`sky_analyzer.py`, vía `_camera.get_analysis()` en `main.py`) sobre el
+  índice de claridad solar de `svitrix._condition()`: de noche no hay
+  radiación que medir y ese índice siempre cae en "Despejado", mientras que la
+  cámara sí distingue nubes con poca luz. La lluvia medida por la estación
+  sigue mandando siempre sobre ambos.
 - El pronóstico de Open-Meteo para `daily` (5 días) y `hourly` (muestreo cada
   3 h, hasta 40 puntos), ya recortado y con los mismos nombres de campo que el
   firmware espera.
@@ -54,6 +60,14 @@ _DESCRIPCION_ES: Dict[int, str] = {
     9: "Chubascos", 10: "Lluvia", 11: "Tormenta", 13: "Nieve", 50: "Niebla",
 }
 
+# sky_condition del análisis visual de la cámara (ver sky_analyzer.py) -> el mismo
+# vocabulario de 8 valores. "night"/"unknown" quedan fuera a propósito: significan
+# que el modelo no pudo distinguir nada, así que se cae al criterio solar de abajo.
+_SKY_CONDITION_A_ICONO: Dict[str, int] = {
+    "clear": 1, "partly_cloudy": 2, "mostly_cloudy": 4, "overcast": 4,
+    "foggy": 50, "rainy": 10, "stormy": 11,
+}
+
 
 def _num(v: Any) -> Optional[float]:
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
@@ -75,9 +89,18 @@ def _en(arr: Optional[List[Any]], i: int) -> Any:
     return arr[i] if arr and i < len(arr) else None
 
 
-def _current_de_estacion(d: Dict[str, Any], sun_elev: Optional[float]) -> Dict[str, Any]:
-    cond = svitrix._condition(d, sun_elev)
-    icon = _WEATHERAPI_A_ICONO.get(cond["code"], 1)
+def _current_de_estacion(d: Dict[str, Any], sun_elev: Optional[float],
+                         sky_analysis: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    rr = _num(d.get("rain_rate"))
+    icon = None
+    if not (rr and rr > 0):
+        # Sin lluvia medida (que manda siempre, ver svitrix._condition): preferir lo
+        # que la cámara vio sobre el índice de claridad solar, que de noche no tiene
+        # con qué juzgar nubosidad y siempre cae en "Despejado".
+        icon = _SKY_CONDITION_A_ICONO.get((sky_analysis or {}).get("sky_condition"))
+    if icon is None:
+        cond = svitrix._condition(d, sun_elev)
+        icon = _WEATHERAPI_A_ICONO.get(cond["code"], 1)
     return {
         "temp_c": round(_num(d.get("temperature_outdoor")), 1),
         "humidity": round(_num(d.get("humidity_outdoor")) or 0),
@@ -157,13 +180,18 @@ def _hourly(om: Dict[str, Any], maximo: int = 40) -> List[Dict[str, Any]]:
 
 
 def build_bim32(data: Optional[Dict[str, Any]], om: Optional[Dict[str, Any]],
-                sun_elev: Optional[float] = None) -> Dict[str, Any]:
+                sun_elev: Optional[float] = None,
+                sky_analysis: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """JSON compacto para `Weather::update()`. Función pura: quien llama reúne
-    los datos (mismo patrón que `epaper.build_forecast_json`)."""
+    los datos (mismo patrón que `epaper.build_forecast_json`).
+
+    `sky_analysis` es el último resultado de `sky_analyzer.analyze_sky()` (ya
+    filtrado por antigüedad por quien llama) -- ver `_current_de_estacion`.
+    """
     d = data or {}
     om = om or {}
     hay_estacion = _num(d.get("temperature_outdoor")) is not None
-    current = _current_de_estacion(d, sun_elev) if hay_estacion else _current_de_pronostico(om)
+    current = _current_de_estacion(d, sun_elev, sky_analysis) if hay_estacion else _current_de_pronostico(om)
     return {
         "current": current,
         "daily": _daily(om),

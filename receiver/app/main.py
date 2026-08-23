@@ -1948,7 +1948,21 @@ async def get_bim32():
         logger.error(f"bim32 pronostico: {e}")
         om = {}
 
-    return bim32.build_bim32(data, om, sun_elev=sun_elev)
+    # Análisis visual de la cámara (ver sky_analyzer.py): a diferencia del índice de
+    # claridad solar, sí distingue nubes de noche. Se descarta si está viejo (cámara
+    # caída, cuota de la API agotada) para no clavar una lectura obsoleta.
+    sky_analysis = _camera.get_analysis()
+    if sky_analysis:
+        try:
+            analyzed_at = datetime.fromisoformat(sky_analysis.get("analyzed_at", ""))
+            if analyzed_at.tzinfo is None:
+                analyzed_at = analyzed_at.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - analyzed_at).total_seconds() > settings.camera_stale_seconds:
+                sky_analysis = None
+        except (ValueError, TypeError):
+            sky_analysis = None
+
+    return bim32.build_bim32(data, om, sun_elev=sun_elev, sky_analysis=sky_analysis)
 
 
 @app.get("/api/smn/municipios")
