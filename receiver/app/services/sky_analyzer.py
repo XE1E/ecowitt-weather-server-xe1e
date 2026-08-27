@@ -414,7 +414,7 @@ async def analyze_sky(
     gemini_model: Optional[str] = None,
     timeout: float = 75.0,
     station_data: Optional[dict] = None,
-    max_retries: int = 1,
+    max_retries: int = 2,
 ) -> SkyAnalysis:
     """
     Analiza una imagen del cielo usando el proveedor configurado.
@@ -434,8 +434,11 @@ async def analyze_sky(
             etc. -- ver `_build_station_block`) para que el modelo no contradiga con el
             texto un dato ya medido, como lluvia cayendo que la imagen no deja ver clara.
         max_retries: reintentos ante error TRANSITORIO (timeout o 5xx del proveedor),
-            con una pausa corta entre uno y otro. Un 429 (cuota agotada) o un 4xx real
-            no se reintentan -- no se arreglan solos y sólo gastarían cuota de más.
+            con una pausa corta entre uno y otro. Subido de 1 a 2 el mismo día: un solo
+            reintento no bastaba contra una racha de "high demand" de Gemini que duró
+            varios minutos (7 503 de 8 intentos en 15 min, verificado en vivo). Un 429
+            (cuota agotada) o un 4xx real no se reintentan -- no se arreglan solos y
+            sólo gastarían cuota de más.
 
     Returns:
         SkyAnalysis con los resultados del análisis
