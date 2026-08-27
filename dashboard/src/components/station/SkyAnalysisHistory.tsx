@@ -185,16 +185,28 @@ export function SkyAnalysisHistory({ selected, onSelect, onDaysChange }: SkyAnal
                 repartidas por igual entre sí: la cámara sólo captura de día (hoy
                 06:00-00:00, configurable en Admin), así que el hueco nocturno se ve
                 como hueco en vez de estirar las muestras reales para tapar el día
-                entero -- que es lo que hacía la versión anterior con `flex-1`. */}
+                entero -- que es lo que hacía la versión anterior con `flex-1`.
+                El ANCHO de cada barra es el tiempo hasta la siguiente muestra (topado
+                a 30 min), así que se tocan entre sí durante la captura normal -misma
+                lectura sólida que antes- y sólo un hueco real (cámara caída un buen
+                rato) se nota como espacio en blanco en vez de una barra gigante. */}
             <div className="h-24 relative bg-white/[0.02] rounded-lg px-2 pt-2 pb-0">
               {dayData.entries.map((entry, i) => {
-                const leftPct = (minutosDelDia(entry.ts) / 1440) * 100
+                const minutos = minutosDelDia(entry.ts)
+                const siguiente = dayData.entries[i + 1]
+                const anterior = dayData.entries[i - 1]
+                const gapMin = siguiente
+                  ? minutosDelDia(siguiente.ts) - minutos
+                  : anterior
+                    ? minutos - minutosDelDia(anterior.ts)
+                    : 5
+                const anchoPct = (Math.min(Math.max(gapMin, 1), 30) / 1440) * 100
                 const height = Math.max(2, entry.coverage)
                 return (
                   <div
                     key={i}
-                    className={`absolute bottom-0 w-[3px] -ml-px ${colorCobertura(entry.coverage)} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
-                    style={{ left: `${leftPct}%`, height: `${height}%` }}
+                    className={`absolute bottom-0 rounded-t ${colorCobertura(entry.coverage)} opacity-80 hover:opacity-100 transition-opacity`}
+                    style={{ left: `${minutos / 1440 * 100}%`, width: `${anchoPct}%`, height: `${height}%` }}
                     title={`${new Date(entry.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}: ${entry.coverage}% - ${CONDITION_ES[entry.condition] || entry.condition}`}
                   />
                 )

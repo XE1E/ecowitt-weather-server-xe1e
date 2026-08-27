@@ -5,7 +5,7 @@ import { CameraCard } from '../components/station/CameraCard'
 import { TimelapseCard } from '../components/station/TimelapseCard'
 import { SkyAnalysisHistory } from '../components/station/SkyAnalysisHistory'
 import { PageInfo } from '../components/station/PageInfo'
-import { DayCalendar, toISO } from '../components/DayCalendar'
+import { DayCalendar } from '../components/DayCalendar'
 
 /**
  * Página propia para la cámara del exterior, no una tarjeta incrustada en otra:
@@ -28,7 +28,6 @@ export function CameraPage() {
     [diasTimelapse, diasHistorial],
   )
   const ordenados = useMemo(() => Array.from(disponibles).sort(), [disponibles])
-  const hoyISO = toISO(new Date())
 
   const paso = useCallback((delta: number) => {
     if (!ordenados.length) return
@@ -64,19 +63,9 @@ export function CameraPage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          {disponibles.has(hoyISO) && (
-            <button
-              onClick={() => setSelected(hoyISO)}
-              className={`rounded-lg px-3 py-2 sm:py-1.5 text-xs font-medium transition border ${
-                selected === hoyISO
-                  ? 'bg-sky-600/30 border-sky-500/50 text-slate-100'
-                  : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
-              }`}
-            >
-              Hoy
-            </button>
-          )}
-
+          {/* El botón del calendario ya muestra "hoy"/"ayer"/fecha según el día
+              elegido (ver `fmtDia`), así que un botón "Hoy" aparte era el mismo
+              texto dos veces cuando el día activo era hoy. */}
           <DayCalendar selected={selected} available={disponibles} onSelect={setSelected} />
 
           <button
