@@ -75,12 +75,6 @@ function colorCobertura(pct: number): string {
   return pct > 80 ? 'bg-slate-400' : pct > 50 ? 'bg-sky-400' : pct > 20 ? 'bg-sky-300' : 'bg-emerald-400'
 }
 
-/** Minutos desde medianoche, en hora LOCAL del navegador. */
-function minutosDelDia(ts: string): number {
-  const t = new Date(ts)
-  return t.getHours() * 60 + t.getMinutes()
-}
-
 export interface SkyAnalysisHistoryProps {
   selected: string | null
   onSelect: (iso: string) => void
@@ -181,32 +175,18 @@ export function SkyAnalysisHistory({ selected, onSelect, onDaysChange }: SkyAnal
           {/* Gráfica de barras de cobertura */}
           <div className="mb-4">
             <p className="text-xs text-slate-500 mb-2">Cobertura de nubes durante el día</p>
-            {/* Cada barra en su hora REAL (posición absoluta sobre un riel de 24h), no
-                repartidas por igual entre sí: la cámara sólo captura de día (hoy
-                06:00-00:00, configurable en Admin), así que el hueco nocturno se ve
-                como hueco en vez de estirar las muestras reales para tapar el día
-                entero -- que es lo que hacía la versión anterior con `flex-1`.
-                El ANCHO de cada barra es el tiempo hasta la siguiente muestra (topado
-                a 30 min), así que se tocan entre sí durante la captura normal -misma
-                lectura sólida que antes- y sólo un hueco real (cámara caída un buen
-                rato) se nota como espacio en blanco en vez de una barra gigante. */}
-            <div className="h-24 relative bg-white/[0.02] rounded-lg px-2 pt-2 pb-0">
+            {/* Barras parejas (una por muestra, ancho automático, pegadas entre sí):
+                apariencia original. No van por su hora real -eso comprimía y
+                desdibujaba la lectura-, así que el rótulo de abajo es sólo referencia
+                de inicio/fin, no un eje de tiempo estricto. */}
+            <div className="h-24 flex items-end gap-px bg-white/[0.02] rounded-lg p-2">
               {dayData.entries.map((entry, i) => {
-                const minutos = minutosDelDia(entry.ts)
-                const siguiente = dayData.entries[i + 1]
-                const anterior = dayData.entries[i - 1]
-                const gapMin = siguiente
-                  ? minutosDelDia(siguiente.ts) - minutos
-                  : anterior
-                    ? minutos - minutosDelDia(anterior.ts)
-                    : 5
-                const anchoPct = (Math.min(Math.max(gapMin, 1), 30) / 1440) * 100
                 const height = Math.max(2, entry.coverage)
                 return (
                   <div
                     key={i}
-                    className={`absolute bottom-0 rounded-t ${colorCobertura(entry.coverage)} opacity-80 hover:opacity-100 transition-opacity`}
-                    style={{ left: `${minutos / 1440 * 100}%`, width: `${anchoPct}%`, height: `${height}%` }}
+                    className={`flex-1 ${colorCobertura(entry.coverage)} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
+                    style={{ height: `${height}%` }}
                     title={`${new Date(entry.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}: ${entry.coverage}% - ${CONDITION_ES[entry.condition] || entry.condition}`}
                   />
                 )
