@@ -14,6 +14,7 @@ o se puede forzar con `CAMERA_ANALYSIS_PROVIDER`.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -364,6 +365,23 @@ DEFAULT_MODELS = {
 }
 
 
+def _es_transitorio(error: str) -> bool:
+    """Errores que vale la pena reintentar de inmediato: timeout, o el proveedor
+    respondiendo que está saturado (5xx). Un 429 (cuota agotada) o un 4xx de
+    verdad -- API key mala, request rechazada -- no se arreglan reintentando en
+    el acto, así que se dejan pasar para el siguiente ciclo programado.
+    """
+    if error == "Timeout":
+        return True
+    if error.startswith("API error: "):
+        try:
+            code = int(error.rsplit(": ", 1)[1])
+        except ValueError:
+            return False
+        return 500 <= code < 600
+    return False
+
+
 def resolve_provider(
     provider: Provider,
     anthropic_key: Optional[str],
@@ -394,8 +412,9 @@ async def analyze_sky(
     provider: Provider = "auto",
     anthropic_model: Optional[str] = None,
     gemini_model: Optional[str] = None,
-    timeout: float = 45.0,
+    timeout: float = 75.0,
     station_data: Optional[dict] = None,
+    max_retries: int = 1,
 ) -> SkyAnalysis:
     """
     Analiza una imagen del cielo usando el proveedor configurado.
@@ -407,10 +426,16 @@ async def analyze_sky(
         provider: "auto" (default), "anthropic", o "gemini"
         anthropic_model: Modelo de Anthropic (default: claude-sonnet-4-20250514)
         gemini_model: Modelo de Gemini (default: gemini-2.0-flash)
-        timeout: Timeout en segundos
+        timeout: Timeout en segundos. Subido de 45 a 75 el 2026-08-26: con
+            `gemini-flash-lite-latest` (nivel gratuito más ligero) el 82% de los
+            fallos observados en 72h eran timeout, no error del proveedor -- la
+            respuesta llegaba, sólo que tarde.
         station_data: lecturas en vivo de la estación (rain_rate, temperature_outdoor,
             etc. -- ver `_build_station_block`) para que el modelo no contradiga con el
             texto un dato ya medido, como lluvia cayendo que la imagen no deja ver clara.
+        max_retries: reintentos ante error TRANSITORIO (timeout o 5xx del proveedor),
+            con una pausa corta entre uno y otro. Un 429 (cuota agotada) o un 4xx real
+            no se reintentan -- no se arreglan solos y sólo gastarían cuota de más.
 
     Returns:
         SkyAnalysis con los resultados del análisis
@@ -420,20 +445,31 @@ async def analyze_sky(
     if resolved is None:
         return SkyAnalysis(error="No hay API key configurada para el análisis")
 
-    try:
-        if resolved == "anthropic":
-            model = anthropic_model or DEFAULT_MODELS["anthropic"]
-            return await _analyze_anthropic(image_data, anthropic_api_key, model, timeout, station_data)
-        else:
-            model = gemini_model or DEFAULT_MODELS["gemini"]
-            return await _analyze_gemini(image_data, gemini_api_key, model, timeout, station_data)
+    model = (anthropic_model or DEFAULT_MODELS["anthropic"]) if resolved == "anthropic" \
+        else (gemini_model or DEFAULT_MODELS["gemini"])
 
-    except httpx.TimeoutException:
-        logger.warning("Timeout analizando imagen del cielo (%s)", resolved)
-        return SkyAnalysis(error="Timeout", provider=resolved)
-    except Exception as e:
-        logger.error("Error analizando imagen del cielo (%s): %s", resolved, e)
-        return SkyAnalysis(error=str(e)[:200], provider=resolved)
+    intentos = max(1, max_retries + 1)
+    resultado: Optional[SkyAnalysis] = None
+    for intento in range(intentos):
+        try:
+            if resolved == "anthropic":
+                resultado = await _analyze_anthropic(image_data, anthropic_api_key, model, timeout, station_data)
+            else:
+                resultado = await _analyze_gemini(image_data, gemini_api_key, model, timeout, station_data)
+        except httpx.TimeoutException:
+            logger.warning("Timeout analizando imagen del cielo (%s), intento %d/%d", resolved, intento + 1, intentos)
+            resultado = SkyAnalysis(error="Timeout", provider=resolved, model=model)
+        except Exception as e:
+            logger.error("Error analizando imagen del cielo (%s): %s", resolved, e)
+            return SkyAnalysis(error=str(e)[:200], provider=resolved, model=model)
+
+        if resultado.error is None or not _es_transitorio(resultado.error):
+            return resultado
+        if intento < intentos - 1:
+            logger.info("Reintentando análisis del cielo (%s) tras: %s", resolved, resultado.error)
+            await asyncio.sleep(3)
+
+    return resultado
 
 
 # ─────────────────────────────────────────────────────────────────────────────
