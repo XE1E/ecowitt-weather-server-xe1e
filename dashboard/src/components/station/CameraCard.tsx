@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Camera, RefreshCw, AlertTriangle, Cloud, CloudRain, TrendingUp } from 'lucide-react'
+import { Camera, RefreshCw, AlertTriangle, Cloud, CloudRain, TrendingUp, CheckCircle2 } from 'lucide-react'
 import { relativeTime } from '../../weather'
 
 /**
@@ -35,6 +35,25 @@ interface Estado {
   stale?: boolean
   bytes?: number
   analysis?: SkyAnalysis
+}
+
+interface Trend {
+  coverage_trend: 'increasing' | 'decreasing' | 'stable'
+  coverage_delta: number
+  coverage_icon: string
+  development_trend: 'intensifying' | 'weakening' | 'stable'
+  precip_appearing: boolean
+  summary: string
+  icon: string
+  samples: number
+  span_minutes: number
+}
+
+interface Validation {
+  validated: boolean
+  match?: 'exact' | 'close' | 'differ' | 'conflict'
+  confidence?: number
+  summary?: string
 }
 
 const SKY_CONDITION_ES: Record<string, string> = {
@@ -89,12 +108,28 @@ export function CameraCard({ ocultarSiVacia = false }: {
   const [falloRed, setFalloRed] = useState(false)
   const [imgCargando, setImgCargando] = useState(true)
 
+  // Tendencia (nowcasting) y validación vs pronóstico: viven en `/api/camera/analysis`
+  // y `/api/camera/analysis/validation` -- ninguno de los dos va en `/api/camera/status`,
+  // así que van en peticiones aparte, igual que hace `SkyAnalysisCard` en Inicio.
+  const [tendencia, setTendencia] = useState<Trend | null>(null)
+  const [validacion, setValidacion] = useState<Validation | null>(null)
+
   const consultar = useCallback(() => {
     fetch('/api/camera/status')
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { setSt(j); setFalloRed(j == null) })
       .catch(() => setFalloRed(true))
       .finally(() => setCargando(false))
+
+    fetch('/api/camera/analysis')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setTendencia(j?.trend ?? null))
+      .catch(() => setTendencia(null))
+
+    fetch('/api/camera/analysis/validation')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setValidacion)
+      .catch(() => setValidacion(null))
   }, [])
 
   useEffect(() => {
@@ -241,6 +276,47 @@ export function CameraCard({ ocultarSiVacia = false }: {
             <div className="flex items-center gap-2 mt-2 text-amber-400 text-base">
               <CloudRain className="w-5 h-5" />
               Precipitación visible en el horizonte
+            </div>
+          )}
+
+          {/* Tendencia (nowcasting): ¿la cobertura de nubes sube o baja en los
+              últimos minutos? Antes sólo vivía en "Estado del cielo" (Inicio). */}
+          {tendencia && (
+            <div className="mt-3 p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">{tendencia.icon}</span>
+                <span className="text-base font-medium text-violet-200">{tendencia.summary}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-400">
+                <span>Cobertura: {tendencia.coverage_icon} {tendencia.coverage_delta > 0 ? '+' : ''}{tendencia.coverage_delta}%</span>
+                {tendencia.span_minutes > 0 && <span>· últimos {tendencia.span_minutes} min</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Validación: ¿lo que ve la cámara coincide con lo que dicen los modelos
+              de pronóstico ahora mismo? Antes sólo vivía en "Estado del cielo" (Inicio). */}
+          {validacion?.validated && (
+            <div className={`mt-3 p-2.5 rounded-lg border flex items-center gap-2 ${
+              validacion.match === 'exact' || validacion.match === 'close'
+                ? 'bg-emerald-500/10 border-emerald-500/20'
+                : validacion.match === 'conflict'
+                ? 'bg-amber-500/10 border-amber-500/20'
+                : 'bg-slate-500/10 border-slate-500/20'
+            }`}>
+              <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
+                validacion.match === 'exact' || validacion.match === 'close'
+                  ? 'text-emerald-400'
+                  : validacion.match === 'conflict'
+                  ? 'text-amber-400'
+                  : 'text-slate-400'
+              }`} />
+              <div>
+                <p className="text-base">{validacion.summary}</p>
+                <p className="text-sm text-slate-500">
+                  Confianza: {Math.round((validacion.confidence || 0) * 100)}%
+                </p>
+              </div>
             </div>
           )}
 

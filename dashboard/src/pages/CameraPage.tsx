@@ -1,9 +1,11 @@
-import { Camera } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Camera, ChevronLeft, ChevronRight } from 'lucide-react'
 import { LOCATION } from '../config'
 import { CameraCard } from '../components/station/CameraCard'
 import { TimelapseCard } from '../components/station/TimelapseCard'
 import { SkyAnalysisHistory } from '../components/station/SkyAnalysisHistory'
 import { PageInfo } from '../components/station/PageInfo'
+import { DayCalendar, toISO } from '../components/DayCalendar'
 
 /**
  * Página propia para la cámara del exterior, no una tarjeta incrustada en otra:
@@ -12,6 +14,34 @@ import { PageInfo } from '../components/station/PageInfo'
  * en el kiosco también tiene pantalla propia.
  */
 export function CameraPage() {
+  // Fecha compartida entre Timelapse e Histórico de análisis: antes cada tarjeta
+  // tenía su propio selector, así que ver el vídeo de un día Y su gráfica de
+  // cobertura juntos exigía elegir la fecha dos veces. Cada tarjeta sigue
+  // reportando sus PROPIOS días disponibles (pueden diferir: fotogramas y análisis
+  // se podan por separado), y el selector navega la unión de ambos.
+  const [selected, setSelected] = useState<string | null>(null)
+  const [diasTimelapse, setDiasTimelapse] = useState<string[]>([])
+  const [diasHistorial, setDiasHistorial] = useState<string[]>([])
+
+  const disponibles = useMemo(
+    () => new Set([...diasTimelapse, ...diasHistorial]),
+    [diasTimelapse, diasHistorial],
+  )
+  const ordenados = useMemo(() => Array.from(disponibles).sort(), [disponibles])
+  const hoyISO = toISO(new Date())
+
+  const paso = useCallback((delta: number) => {
+    if (!ordenados.length) return
+    const idx = selected ? ordenados.indexOf(selected) : -1
+    const base = idx === -1 ? (delta > 0 ? -1 : ordenados.length) : idx
+    const nuevo = Math.max(0, Math.min(ordenados.length - 1, base + delta))
+    setSelected(ordenados[nuevo])
+  }, [ordenados, selected])
+
+  const idxActual = selected ? ordenados.indexOf(selected) : -1
+  const puedeAtras = idxActual > 0
+  const puedeAdelante = idxActual !== -1 && idxActual < ordenados.length - 1
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
@@ -23,9 +53,46 @@ export function CameraPage() {
 
       <CameraCard />
 
-      <TimelapseCard />
+      {!!ordenados.length && (
+        <div className="flex items-center justify-center gap-1.5 mt-4">
+          <button
+            onClick={() => paso(-1)}
+            disabled={!puedeAtras}
+            className="p-2 rounded-lg text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Día anterior"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
 
-      <SkyAnalysisHistory />
+          {disponibles.has(hoyISO) && (
+            <button
+              onClick={() => setSelected(hoyISO)}
+              className={`rounded-lg px-3 py-2 sm:py-1.5 text-xs font-medium transition border ${
+                selected === hoyISO
+                  ? 'bg-sky-600/30 border-sky-500/50 text-slate-100'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              Hoy
+            </button>
+          )}
+
+          <DayCalendar selected={selected} available={disponibles} onSelect={setSelected} />
+
+          <button
+            onClick={() => paso(1)}
+            disabled={!puedeAdelante}
+            className="p-2 rounded-lg text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Día siguiente"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      <TimelapseCard selected={selected} onSelect={setSelected} onDaysChange={setDiasTimelapse} />
+
+      <SkyAnalysisHistory selected={selected} onSelect={setSelected} onDaysChange={setDiasHistorial} />
 
       <PageInfo>
         <p>

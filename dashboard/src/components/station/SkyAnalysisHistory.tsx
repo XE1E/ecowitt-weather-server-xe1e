@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
-import { BarChart3, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BarChart3 } from 'lucide-react'
 
 /**
  * Histórico de análisis del cielo.
  * Muestra una gráfica de cobertura de nubes del día seleccionado.
+ *
+ * Fecha CONTROLADA desde `CameraPage`, que la comparte con `TimelapseCard`: un solo
+ * calendario mueve las dos tarjetas a la vez, en vez de cada una con el suyo.
  */
 
 interface DayInfo {
@@ -35,8 +38,8 @@ interface DayData {
 
 const CONDITION_ES: Record<string, string> = {
   clear: 'Despejado',
-  partly_cloudy: 'Parc. nublado',
-  mostly_cloudy: 'May. nublado',
+  partly_cloudy: 'Parcialmente nublado',
+  mostly_cloudy: 'Mayormente nublado',
   overcast: 'Cubierto',
   foggy: 'Neblina',
   rainy: 'Lluvia',
@@ -44,42 +47,84 @@ const CONDITION_ES: Record<string, string> = {
   night: 'Noche',
 }
 
-export function SkyAnalysisHistory() {
+/**
+ * Mismo color para "condición observada" que para su franja de cobertura
+ * equivalente en la gráfica de barras (clear/partly/mostly/overcast), y colores
+ * propios para las condiciones que no son de cobertura (niebla, lluvia, tormenta,
+ * noche), para que no parezcan un punto más de la misma escala.
+ */
+const CONDITION_COLOR: Record<string, string> = {
+  clear: 'bg-emerald-400',
+  partly_cloudy: 'bg-sky-300',
+  mostly_cloudy: 'bg-sky-400',
+  overcast: 'bg-slate-400',
+  foggy: 'bg-indigo-300',
+  rainy: 'bg-blue-500',
+  stormy: 'bg-violet-500',
+  night: 'bg-slate-600',
+}
+
+const COBERTURA_LEYENDA = [
+  { color: 'bg-emerald-400', label: '≤ 20%' },
+  { color: 'bg-sky-300', label: '20–50%' },
+  { color: 'bg-sky-400', label: '50–80%' },
+  { color: 'bg-slate-400', label: '> 80%' },
+]
+
+function colorCobertura(pct: number): string {
+  return pct > 80 ? 'bg-slate-400' : pct > 50 ? 'bg-sky-400' : pct > 20 ? 'bg-sky-300' : 'bg-emerald-400'
+}
+
+/** Minutos desde medianoche, en hora LOCAL del navegador. */
+function minutosDelDia(ts: string): number {
+  const t = new Date(ts)
+  return t.getHours() * 60 + t.getMinutes()
+}
+
+export interface SkyAnalysisHistoryProps {
+  selected: string | null
+  onSelect: (iso: string) => void
+  /** Reporta hacia arriba qué fechas tienen análisis, para el calendario compartido. */
+  onDaysChange: (dates: string[]) => void
+}
+
+export function SkyAnalysisHistory({ selected, onSelect, onDaysChange }: SkyAnalysisHistoryProps) {
   const [days, setDays] = useState<DayInfo[]>([])
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [dayData, setDayData] = useState<DayData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cargandoDia, setCargandoDia] = useState(false)
 
   // Cargar lista de días disponibles
   useEffect(() => {
     fetch('/api/camera/analysis/history')
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.days?.length) {
-          setDays(data.days)
-          setSelectedDate(data.days[0].date)
-        }
-      })
-      .catch(() => {})
+      .then(data => setDays(data?.days ?? []))
+      .catch(() => setDays([]))
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    onDaysChange(days.map((d) => d.date))
+  }, [days, onDaysChange])
+
+  // Selección inicial (sólo si nadie ha elegido fecha todavía): el día con análisis
+  // más reciente.
+  useEffect(() => {
+    if (selected || !days.length) return
+    onSelect(days[0].date)
+  }, [days, selected, onSelect])
+
   // Cargar datos del día seleccionado
   useEffect(() => {
-    if (!selectedDate) return
+    if (!selected) return
     setDayData(null)
-    fetch(`/api/camera/analysis/history?date=${selectedDate}`)
+    setCargandoDia(true)
+    fetch(`/api/camera/analysis/history?date=${selected}`)
       .then(r => r.ok ? r.json() : null)
       .then(setDayData)
-      .catch(() => {})
-  }, [selectedDate])
-
-  const navDay = useCallback((delta: number) => {
-    if (!selectedDate || !days.length) return
-    const idx = days.findIndex(d => d.date === selectedDate)
-    const newIdx = Math.max(0, Math.min(days.length - 1, idx - delta))
-    setSelectedDate(days[newIdx].date)
-  }, [selectedDate, days])
+      .catch(() => setDayData(null))
+      .finally(() => setCargandoDia(false))
+  }, [selected])
 
   if (loading) return null
   if (!days.length) {
@@ -97,43 +142,25 @@ export function SkyAnalysisHistory() {
     )
   }
 
-  const currentIdx = days.findIndex(d => d.date === selectedDate)
-  const canPrev = currentIdx < days.length - 1
-  const canNext = currentIdx > 0
-
   return (
     <div className="card mt-4">
-      <p className="card-title flex items-center gap-2">
+      <p className="card-title mb-3 flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-violet-400" />
         Histórico de análisis
+        {dayData && <span className="text-xs font-normal text-slate-500">· {dayData.count} análisis</span>}
       </p>
 
-      {/* Selector de fecha */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => navDay(1)}
-          disabled={!canPrev}
-          className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-slate-400" />
-          <span className="font-medium">{selectedDate}</span>
-          {dayData && (
-            <span className="text-xs text-slate-500">({dayData.count} análisis)</span>
-          )}
-        </div>
-        <button
-          onClick={() => navDay(-1)}
-          disabled={!canNext}
-          className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
+      {cargandoDia && <div className="h-40 rounded-xl bg-white/5 animate-pulse" />}
 
-      {dayData && (
+      {!cargandoDia && selected && !dayData && (
+        // `selected` puede venir de un día que SÍ tiene timelapse pero no análisis
+        // guardado (p.ej. la cámara estuvo caída ese día): no es "cargando".
+        <div className="h-40 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-sm text-slate-400">
+          Sin análisis guardado para este día.
+        </div>
+      )}
+
+      {!cargandoDia && dayData && (
         <>
           {/* Estadísticas del día */}
           <div className="grid grid-cols-3 gap-2 mb-4">
@@ -154,17 +181,20 @@ export function SkyAnalysisHistory() {
           {/* Gráfica de barras de cobertura */}
           <div className="mb-4">
             <p className="text-xs text-slate-500 mb-2">Cobertura de nubes durante el día</p>
-            <div className="h-24 flex items-end gap-px bg-white/[0.02] rounded-lg p-2">
+            {/* Cada barra en su hora REAL (posición absoluta sobre un riel de 24h), no
+                repartidas por igual entre sí: la cámara sólo captura de día (hoy
+                06:00-00:00, configurable en Admin), así que el hueco nocturno se ve
+                como hueco en vez de estirar las muestras reales para tapar el día
+                entero -- que es lo que hacía la versión anterior con `flex-1`. */}
+            <div className="h-24 relative bg-white/[0.02] rounded-lg px-2 pt-2 pb-0">
               {dayData.entries.map((entry, i) => {
+                const leftPct = (minutosDelDia(entry.ts) / 1440) * 100
                 const height = Math.max(2, entry.coverage)
-                const color = entry.coverage > 80 ? 'bg-slate-400' :
-                              entry.coverage > 50 ? 'bg-sky-400' :
-                              entry.coverage > 20 ? 'bg-sky-300' : 'bg-emerald-400'
                 return (
                   <div
                     key={i}
-                    className={`flex-1 ${color} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
-                    style={{ height: `${height}%` }}
+                    className={`absolute bottom-0 w-[3px] -ml-px ${colorCobertura(entry.coverage)} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
+                    style={{ left: `${leftPct}%`, height: `${height}%` }}
                     title={`${new Date(entry.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}: ${entry.coverage}% - ${CONDITION_ES[entry.condition] || entry.condition}`}
                   />
                 )
@@ -174,6 +204,16 @@ export function SkyAnalysisHistory() {
               <span>00:00</span>
               <span>12:00</span>
               <span>24:00</span>
+            </div>
+
+            {/* Leyenda: qué % de cobertura representa cada color de barra. */}
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+              {COBERTURA_LEYENDA.map((l) => (
+                <span key={l.label} className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
+                  {l.label}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -186,8 +226,9 @@ export function SkyAnalysisHistory() {
                 .map(([cond, count]) => (
                   <span
                     key={cond}
-                    className="px-2 py-1 text-xs rounded-full bg-white/[0.05] text-slate-300"
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-full bg-white/[0.05] text-slate-300"
                   >
+                    <span className={`w-2 h-2 rounded-full ${CONDITION_COLOR[cond] || 'bg-slate-500'}`} />
                     {CONDITION_ES[cond] || cond}: {count}
                   </span>
                 ))}

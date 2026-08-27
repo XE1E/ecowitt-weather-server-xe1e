@@ -12,6 +12,9 @@ import { Clapperboard, Download, RefreshCw } from 'lucide-react'
  * en el servidor cuando se pide: el endpoint responde 202 y esta tarjeta se queda
  * sondeando hasta que aparece, porque el encode tarda segundos y dejar la petición
  * colgada daría una espera muda.
+ *
+ * Fecha CONTROLADA desde `CameraPage`, que la comparte con `SkyAnalysisHistory`: un
+ * solo calendario mueve las dos tarjetas a la vez, en vez de cada una con el suyo.
  */
 
 interface Dia {
@@ -47,23 +50,16 @@ function fmtBytes(b: number): string {
   return mb < 1 ? `${Math.round(b / 1024)} KB` : `${mb.toFixed(1)} MB`
 }
 
-/** "18 ago" / "hoy" / "ayer" */
-function fmtDia(iso: string): string {
-  const hoy = new Date()
-  const f = new Date(iso + 'T12:00:00')
-  const dif = Math.round(
-    (new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime() -
-      new Date(f.getFullYear(), f.getMonth(), f.getDate()).getTime()) / 86400000,
-  )
-  if (dif === 0) return 'hoy'
-  if (dif === 1) return 'ayer'
-  return f.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+export interface TimelapseCardProps {
+  selected: string | null
+  onSelect: (iso: string) => void
+  /** Reporta hacia arriba qué fechas tienen fotogramas, para el calendario compartido. */
+  onDaysChange: (dates: string[]) => void
 }
 
-export function TimelapseCard() {
+export function TimelapseCard({ selected, onSelect, onDaysChange }: TimelapseCardProps) {
   const [info, setInfo] = useState<Respuesta | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [sel, setSel] = useState<string | null>(null)
   const [generando, setGenerando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const sondeos = useRef(0)
@@ -85,15 +81,20 @@ export function TimelapseCard() {
 
   useEffect(() => { consultar() }, [consultar])
 
-  // Selección inicial: el día más reciente que ya tenga vídeo; si ninguno lo tiene,
-  // el más reciente con fotogramas suficientes (se generará al pedirlo).
   useEffect(() => {
-    if (sel || !info?.days?.length) return
-    const conVideo = info.days.find((d) => d.video)
-    setSel((conVideo ?? info.days.find((d) => d.enough_frames) ?? info.days[0]).date)
-  }, [info, sel])
+    onDaysChange(info?.days?.map((d) => d.date) ?? [])
+  }, [info, onDaysChange])
 
-  const dia = info?.days?.find((d) => d.date === sel) ?? null
+  // Selección inicial (sólo si nadie ha elegido fecha todavía): el día más reciente
+  // que ya tenga vídeo; si ninguno lo tiene, el más reciente con fotogramas
+  // suficientes (se generará al pedirlo).
+  useEffect(() => {
+    if (selected || !info?.days?.length) return
+    const conVideo = info.days.find((d) => d.video)
+    onSelect((conVideo ?? info.days.find((d) => d.enough_frames) ?? info.days[0]).date)
+  }, [info, selected, onSelect])
+
+  const dia = info?.days?.find((d) => d.date === selected) ?? null
 
   // Sólo los datos que deben re-disparar el sondeo, extraídos aparte a propósito: el
   // objeto `dia` sale de `info`, así que cambia de identidad en CADA consulta y usarlo
@@ -173,12 +174,19 @@ export function TimelapseCard() {
       )
     }
 
-    // `sel` arranca en null y lo fija el efecto de arriba UN render después de que
-    // llega `info` (setState no es síncrono): en ese hueco `dia` es null y sin este
-    // guard se caía al `<video>` de más abajo con `sel` todavía null, pidiendo
-    // literalmente `/api/camera/timelapse/null.mp4` (400 en la consola, se
-    // autocorregía en el siguiente render pero deja ese aviso de sobra).
-    if (!dia) return <div className="h-64 rounded-xl bg-white/5 animate-pulse" />
+    if (!dia) {
+      // `selected` puede venir de un día que SÍ existe en el histórico de análisis
+      // pero no aquí (fotogramas ya podados, u otra fuente): no es "cargando", es
+      // que esta tarjeta no tiene nada para esa fecha.
+      return (
+        <div className="h-40 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col items-center justify-center text-center px-6">
+          <p className="text-slate-300 font-semibold">Sin fotogramas para este día</p>
+          <p className="text-sm text-slate-500 mt-1">
+            Los fotogramas se conservan {info.frames_retention_days} días; puede que ya se hayan podado.
+          </p>
+        </div>
+      )
+    }
 
     if (dia && !dia.video) {
       if (!dia.enough_frames) {
@@ -219,13 +227,13 @@ export function TimelapseCard() {
           // La clave fuerza a React a rehacer el elemento al cambiar de día: reusarlo
           // deja el primer fotograma del vídeo anterior congelado hasta que carga el
           // nuevo, que se lee como que la selección no funcionó.
-          key={sel ?? ''}
-          src={`/api/camera/timelapse/${sel}.mp4`}
+          key={selected ?? ''}
+          src={`/api/camera/timelapse/${selected}.mp4`}
           // Sin cartel el reproductor es un rectángulo NEGRO hasta que alguien le da al
           // play --con `preload="metadata"` ni siquiera carga el primer fotograma-- y la
           // tarjeta parece rota. El servidor lo saca del medio del vídeo, o sea cerca del
           // mediodía; si por lo que sea no existe, responde 404 y se ve como antes.
-          poster={dia?.poster ? `/api/camera/timelapse/${sel}.jpg` : undefined}
+          poster={dia?.poster ? `/api/camera/timelapse/${selected}.jpg` : undefined}
           controls
           loop
           playsInline
@@ -239,8 +247,8 @@ export function TimelapseCard() {
               {dia.stale && <span className="text-slate-400"> · le faltan las últimas de hoy</span>}
             </span>
             <a
-              href={`/api/camera/timelapse/${sel}.mp4`}
-              download={`timelapse-${sel}.mp4`}
+              href={`/api/camera/timelapse/${selected}.mp4`}
+              download={`timelapse-${selected}.mp4`}
               className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors"
             >
               <Download className="w-3.5 h-3.5" /> Descargar
@@ -253,32 +261,9 @@ export function TimelapseCard() {
 
   return (
     <div className="card mt-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <p className="card-title mb-0 flex items-center gap-2">
-          <Clapperboard className="w-5 h-5 text-sky-400" /> Timelapse del día
-        </p>
-        {!!info?.days?.length && info.ffmpeg && info.enabled && (
-          <div className="flex flex-wrap gap-1.5">
-            {info.days.slice(0, 10).map((d) => (
-              <button
-                key={d.date}
-                onClick={() => setSel(d.date)}
-                title={`${d.frames} capturas${d.video ? '' : ' · sin vídeo todavía'}`}
-                className={`rounded-lg px-2 py-1 text-xs transition border ${
-                  d.date === sel
-                    ? 'bg-sky-600/30 border-sky-500/50 text-slate-100'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                }`}
-              >
-                {fmtDia(d.date)}
-                {/* Un punto para los días que aún no tienen vídeo: así se ve antes de
-                    pulsar que ése habrá que montarlo. */}
-                {!d.video && <span className="ml-1 text-amber-400/70">•</span>}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <p className="card-title mb-3 flex items-center gap-2">
+        <Clapperboard className="w-5 h-5 text-sky-400" /> Timelapse del día
+      </p>
 
       {cuerpo()}
     </div>
