@@ -81,7 +81,10 @@ function minutosDelDia(ts: string): number {
   return t.getHours() * 60 + t.getMinutes()
 }
 
-const HORAS_EJE = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '24:00']
+const HORAS_EJE = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '00:00']
+
+const MIN_POR_FRANJA = 15
+const FRANJAS_POR_DIA = 1440 / MIN_POR_FRANJA
 
 export interface SkyAnalysisHistoryProps {
   selected: string | null
@@ -183,33 +186,33 @@ export function SkyAnalysisHistory({ selected, onSelect, onDaysChange }: SkyAnal
           {/* Gráfica de barras de cobertura */}
           <div className="mb-4">
             <p className="text-xs text-slate-500 mb-2">Cobertura de nubes durante el día</p>
-            {/* Barras en su hora real (posición absoluta sobre un riel de 24h), pero
-                todas del MISMO ancho -el intervalo de captura del día, calculado del
-                propio dato-, así que se tocan entre sí durante la captura normal
-                (misma lectura sólida que antes) y el hueco sin captura -de noche, o
-                una caída real- se ve como hueco en vez de estirarse para taparlo. */}
-            <div className="h-24 relative bg-white/[0.02] rounded-lg px-2 pt-2 pb-0">
-              {(() => {
-                const n = dayData.entries.length
-                const primero = minutosDelDia(dayData.entries[0].ts)
-                const ultimo = minutosDelDia(dayData.entries[n - 1].ts)
-                const intervaloMin = n > 1 ? (ultimo - primero) / (n - 1) : 5
-                const anchoPct = Math.max(0.15, (intervaloMin / 1440) * 100)
-                return dayData.entries.map((entry, i) => {
-                  const height = Math.max(2, entry.coverage)
-                  return (
-                    <div
-                      key={i}
-                      className={`absolute bottom-0 ${colorCobertura(entry.coverage)} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
-                      style={{ left: `${(minutosDelDia(entry.ts) / 1440) * 100}%`, width: `${anchoPct}%`, height: `${height}%` }}
-                      title={`${new Date(entry.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}: ${entry.coverage}% - ${CONDITION_ES[entry.condition] || entry.condition}`}
-                    />
-                  )
+            {/* Misma técnica que la versión original (columnas `flex-1` parejas, sin
+                huecos ni sobreposiciones por cálculo), pero ahora sobre una rejilla FIJA
+                de 96 franjas de 15 min que cubre el día completo: cada franja con
+                muestra pinta su barra, la franja sin captura queda transparente. Así
+                el hueco nocturno se ve como hueco y las barras con dato siguen
+                tocándose entre sí, sin depender de calcular anchos por muestra. */}
+            <div className="h-24 flex items-end gap-px bg-white/[0.02] rounded-lg p-2">
+              {Array.from({ length: FRANJAS_POR_DIA }, (_, franja) => {
+                const desde = franja * MIN_POR_FRANJA
+                const entry = dayData.entries.find((e) => {
+                  const m = minutosDelDia(e.ts)
+                  return m >= desde && m < desde + MIN_POR_FRANJA
                 })
-              })()}
+                if (!entry) return <div key={franja} className="flex-1" />
+                const height = Math.max(2, entry.coverage)
+                return (
+                  <div
+                    key={franja}
+                    className={`flex-1 ${colorCobertura(entry.coverage)} rounded-t opacity-80 hover:opacity-100 transition-opacity`}
+                    style={{ height: `${height}%` }}
+                    title={`${new Date(entry.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}: ${entry.coverage}% - ${CONDITION_ES[entry.condition] || entry.condition}`}
+                  />
+                )
+              })}
             </div>
             <div className="flex justify-between text-xs text-slate-600 mt-1">
-              {HORAS_EJE.map((h) => <span key={h}>{h}</span>)}
+              {HORAS_EJE.map((h, i) => <span key={i}>{h}</span>)}
             </div>
 
             {/* Leyenda: qué % de cobertura representa cada color de barra. */}
