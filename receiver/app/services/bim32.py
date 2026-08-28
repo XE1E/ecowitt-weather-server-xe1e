@@ -29,7 +29,7 @@ internamente el firmware para los tres proveedores existentes (OpenWeatherMap
 y Open-Meteo se pedían con esa unidad; Weatherbit la da así por defecto). La
 estación y Open-Meteo entregan km/h en este servidor, así que aquí se convierte.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from . import svitrix
@@ -197,3 +197,55 @@ def build_bim32(data: Optional[Dict[str, Any]], om: Optional[Dict[str, Any]],
         "daily": _daily(om),
         "hourly": _hourly(om),
     }
+
+
+def build_bim32_history(records: List[Dict[str, Any]], period_minutes: int,
+                        max_slots: int = 24) -> List[Dict[str, Any]]:
+    """
+    Historial exterior (temperatura/humedad/presión) en baldes de
+    `period_minutes`, de más viejo a más nuevo -- reemplaza a
+    `Thingspeak::sendHistory()`/`receiveHistory()` para PWS_XE1E: el ESP32 ya
+    no manda su propia lectura a un canal externo cada `history_period`
+    minutos, este servidor ya tiene el histórico real de la estación en
+    InfluxDB (`records` viene de `storage.query()`, ya ordenado por tiempo
+    ascendente).
+
+    Un balde puede quedar vacío si no hubo lecturas en esa ventana (estación
+    caída un rato, etc.) -- se omite en vez de rellenar con 0, para que el
+    firmware lo distinga de una lectura real (mismo criterio que ya usa
+    `validate.temp()`/`validate.hum()`/`validate.pres()` del lado del ESP32).
+    """
+    if not records or period_minutes <= 0:
+        return []
+
+    period = timedelta(minutes=period_minutes)
+    now = records[-1].get("_time") or datetime.now(timezone.utc)
+
+    buckets: List[List[Dict[str, Any]]] = [[] for _ in range(max_slots)]
+    for r in records:
+        t = r.get("_time")
+        if t is None:
+            continue
+        idx = int((now - t).total_seconds() // period.total_seconds())
+        if 0 <= idx < max_slots:
+            buckets[idx].append(r)
+
+    def _avg(vals: List[Optional[float]], digits: Optional[int]) -> Optional[float]:
+        vals = [v for v in vals if v is not None]
+        if not vals:
+            return None
+        mean = sum(vals) / len(vals)
+        return round(mean, digits) if digits is not None else round(mean)
+
+    out: List[Dict[str, Any]] = []
+    for i in range(max_slots - 1, -1, -1):  # de más viejo (i grande) a más nuevo (i=0)
+        b = buckets[i]
+        if not b:
+            continue
+        out.append({
+            "dt": int((now - period * i - period / 2).timestamp()),
+            "temp_c": _avg([_num(r.get("temperature_outdoor")) for r in b], 1),
+            "humidity": _avg([_num(r.get("humidity_outdoor")) for r in b], None),
+            "pressure_mb": _avg([_num(r.get("pressure_relative")) for r in b], 1),
+        })
+    return out

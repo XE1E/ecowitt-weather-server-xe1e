@@ -1970,6 +1970,27 @@ async def get_bim32():
     return bim32.build_bim32(data, om, sun_elev=sun_elev, sky_analysis=sky_analysis)
 
 
+@app.get("/api/bim32/history")
+async def get_bim32_history(period: int = 30):
+    """
+    Historial exterior (temperatura/humedad/presión) para el firmware BIM32,
+    en baldes de `period` minutos (hasta 24 puntos). Reemplaza el mecanismo de
+    ThingSpeak (Thingspeak::sendHistory/receiveHistory en el firmware): ya no
+    hace falta que el ESP32 mande su propia lectura a un canal externo, este
+    servidor ya tiene el histórico real de la estación.
+    """
+    period = max(1, min(period, 999))
+    try:
+        records = await storage.query(
+            start=f"-{period * 24}m",
+            fields=["temperature_outdoor", "humidity_outdoor", "pressure_relative"],
+        )
+        return {"period_minutes": period, "history": bim32.build_bim32_history(records, period)}
+    except Exception as e:
+        logger.error(f"Error building bim32 history: {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+
+
 @app.get("/api/smn/municipios")
 async def get_smn_municipios():
     """Lista de municipios del SMN (para búsqueda/autocompletar)."""
