@@ -1944,6 +1944,11 @@ async def get_bim32():
 
     try:
         om = await openmeteo.get_forecast(lat, lon, days=6, epaper=True)
+        # Mismo ajuste que ya usa /api/forecast: corrige la temperatura horaria
+        # con el sesgo real de la estación (diferencia entre lo medido ahora y
+        # lo que Open-Meteo predijo para "ahora"), con decay hacia horas
+        # futuras -- antes BIM32 recibía la temperatura cruda de Open-Meteo.
+        om = _apply_temperature_bias(om, (data or {}).get("temperature_outdoor"))
     except Exception as e:
         logger.error(f"bim32 pronostico: {e}")
         om = {}
