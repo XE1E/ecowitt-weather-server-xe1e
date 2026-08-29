@@ -1944,11 +1944,12 @@ async def get_bim32():
 
     try:
         om = await openmeteo.get_forecast(lat, lon, days=6, epaper=True)
-        # Mismo ajuste que ya usa /api/forecast: corrige la temperatura horaria
-        # con el sesgo real de la estación (diferencia entre lo medido ahora y
-        # lo que Open-Meteo predijo para "ahora"), con decay hacia horas
-        # futuras -- antes BIM32 recibía la temperatura cruda de Open-Meteo.
-        om = _apply_temperature_bias(om, (data or {}).get("temperature_outdoor"))
+        # Mismo ajuste que ya usa /api/forecast: corrige temperatura (con decay)
+        # y presión (constante, calibración vs. el barómetro real) usando el
+        # sesgo real de la estación -- antes BIM32 recibía ambas crudas de
+        # Open-Meteo, cuya presión reducida a nivel del mar queda muy por
+        # debajo de la relativa ya calibrada de la estación.
+        om = _apply_temperature_bias(om, (data or {}).get("temperature_outdoor"), (data or {}).get("pressure_relative"))
     except Exception as e:
         logger.error(f"bim32 pronostico: {e}")
         om = {}
@@ -2679,27 +2680,34 @@ def _openmeteo_now_str(forecast: dict) -> str:
     return local_now.strftime("%Y-%m-%dT%H:00")
 
 
-def _apply_temperature_bias(forecast: dict, current_temp: Optional[float]) -> dict:
+def _apply_temperature_bias(forecast: dict, current_temp: Optional[float],
+                            current_pressure: Optional[float] = None) -> dict:
     """
-    Corrige las temperaturas del pronóstico usando el bias actual.
+    Corrige temperatura y presión del pronóstico de Open-Meteo con el bias real
+    de la estación (nombre de la función sin cambiar para no tocar el otro
+    llamador -- ver `/api/forecast` y `/api/bim32`, que la invocan igual).
 
-    El pronóstico de Open-Meteo puede estar varios grados desfasado del microclima
-    local. Esta función calcula la diferencia entre la temperatura medida y la del
-    pronóstico para "ahora", y aplica esa corrección con decay a las próximas horas.
+    Temperatura: el pronóstico puede estar varios grados desfasado del
+    microclima local. Se calcula la diferencia entre la temperatura medida y
+    la del pronóstico para "ahora", y se aplica esa corrección con DECAY a
+    las próximas horas (disminuye 10%/hora, se apaga a las 10h) porque el
+    desfase actual puede no aplicar a horas lejanas -- cambia con la
+    condición del momento.
 
-    Decay: la corrección disminuye conforme se aleja en el tiempo porque el bias
-    actual puede no aplicar a horas futuras (cambios de condición, etc.).
+    Presión: a diferencia de la temperatura, el desfase suele ser un problema
+    de CALIBRACIÓN, no meteorológico -- Open-Meteo reduce a nivel del mar con
+    una fórmula estándar (usa la elevación del punto pedido), mientras que la
+    estación reporta su presión relativa ya calibrada contra el barómetro
+    real del aeropuerto local (`pressure_relative`). Ese desfase no se
+    "resuelve" con las horas, así que se aplica CONSTANTE a todo el
+    horario (sin decay), incluidas horas pasadas.
     """
-    if current_temp is None:
-        return forecast
-
     hourly = forecast.get("hourly")
-    if not hourly or "time" not in hourly or "temperature_2m" not in hourly:
+    if not hourly or "time" not in hourly:
         return forecast
 
     times = hourly["time"]
-    temps = hourly["temperature_2m"]
-    if not times or not temps:
+    if not times:
         return forecast
 
     # `hourly.time` viene en hora LOCAL sin sufijo (`timezone=auto`), así que
@@ -2730,34 +2738,48 @@ def _apply_temperature_bias(forecast: dict, current_temp: Optional[float]) -> di
     if closest_diff > 7200:
         return forecast
 
-    forecast_now_temp = temps[closest_idx]
-    if forecast_now_temp is None:
-        return forecast
-
-    bias = current_temp - forecast_now_temp
-
-    if abs(bias) < 0.5:
-        return forecast
-
-    corrected_temps = list(temps)
-    for i in range(len(corrected_temps)):
-        if corrected_temps[i] is None:
-            continue
-        hours_ahead = i - closest_idx
-        if hours_ahead < 0:
-            continue
-        decay = max(0.0, 1.0 - hours_ahead * 0.10)
-        corrected_temps[i] = round(corrected_temps[i] + bias * decay, 1)
-
     result = dict(forecast)
     result["hourly"] = dict(hourly)
-    result["hourly"]["temperature_2m"] = corrected_temps
-    result["bias_correction"] = {
-        "applied": True,
-        "measured_temp": round(current_temp, 1),
-        "forecast_temp": round(forecast_now_temp, 1),
-        "bias": round(bias, 1),
-    }
+    bias_info: Dict[str, Any] = {}
+
+    temps = hourly.get("temperature_2m")
+    if current_temp is not None and temps:
+        forecast_now_temp = temps[closest_idx]
+        if forecast_now_temp is not None:
+            bias = current_temp - forecast_now_temp
+            if abs(bias) >= 0.5:
+                corrected_temps = list(temps)
+                for i in range(len(corrected_temps)):
+                    if corrected_temps[i] is None or i < closest_idx:
+                        continue
+                    decay = max(0.0, 1.0 - (i - closest_idx) * 0.10)
+                    corrected_temps[i] = round(corrected_temps[i] + bias * decay, 1)
+                result["hourly"]["temperature_2m"] = corrected_temps
+                bias_info["temperature"] = {
+                    "applied": True,
+                    "measured": round(current_temp, 1),
+                    "forecast": round(forecast_now_temp, 1),
+                    "bias": round(bias, 1),
+                }
+
+    pres = hourly.get("pressure_msl")
+    if current_pressure is not None and pres:
+        forecast_now_pres = pres[closest_idx]
+        if forecast_now_pres is not None:
+            bias = current_pressure - forecast_now_pres
+            if abs(bias) >= 1.0:
+                result["hourly"]["pressure_msl"] = [
+                    round(p + bias, 1) if p is not None else None for p in pres
+                ]
+                bias_info["pressure"] = {
+                    "applied": True,
+                    "measured": round(current_pressure, 1),
+                    "forecast": round(forecast_now_pres, 1),
+                    "bias": round(bias, 1),
+                }
+
+    if bias_info:
+        result["bias_correction"] = bias_info
     return result
 
 
@@ -2773,15 +2795,18 @@ async def get_forecast(lat: Optional[float] = None, lon: Optional[float] = None)
 
     Además, corrige las temperaturas horarias usando la diferencia entre la
     lectura actual de la estación y el pronóstico para "ahora". La corrección
-    se aplica con decay (disminuye conforme se aleja en el tiempo).
+    se aplica con decay (disminuye conforme se aleja en el tiempo). Este
+    endpoint no pide `pressure_msl` a Open-Meteo (ver `openmeteo._HOURLY`), así
+    que la corrección de presión no aplica aquí -- sí en `/api/bim32`, que
+    usa el conjunto ampliado.
     """
     try:
         forecast = await openmeteo.get_forecast(
             lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
             lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
         )
-        current_temp = latest_by_station.get(None, {}).get("temperature_outdoor")
-        return _apply_temperature_bias(forecast, current_temp)
+        current = latest_by_station.get(None, {})
+        return _apply_temperature_bias(forecast, current.get("temperature_outdoor"), current.get("pressure_relative"))
     except Exception as e:
         logger.error(f"Error obteniendo pronóstico Open-Meteo: {e}")
         raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico")
