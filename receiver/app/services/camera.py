@@ -521,9 +521,17 @@ class CameraStore:
         candidatas = [e for e in entradas if e.get("condition") != "night"] or entradas
         return max(candidatas, key=lambda e: self._VISIBILITY_RANK.get(e.get("visibility"), -1))
 
-    def frame_path(self, date_str: str, ts_str: str) -> Optional[str]:
-        """Ruta al fotograma archivado (ver `_archive`) que corresponde a un `ts` ISO
-        dentro del día `date_str`, o None si el `ts` no se pudo interpretar."""
+    def frame_path(self, date_str: str, ts_str: str, tolerance_seconds: int = 600) -> Optional[str]:
+        """Ruta al fotograma archivado (ver `_archive`) más cercano a un `ts` ISO
+        dentro del día `date_str`, o None si no hay ninguno dentro de la tolerancia.
+
+        No es una coincidencia exacta a propósito: `ts_str` (p. ej. `analyzed_at`)
+        es el momento en que TERMINÓ el análisis, no el de la captura -- corre en
+        segundo plano y, con reintentos, puede tardar bastante más de un minuto --
+        así que el nombre del fotograma (que sí lleva la hora de captura) casi
+        nunca coincide segundo a segundo. Se busca el más cercano; más allá de la
+        tolerancia se asume que no hay uno que corresponda (podado o inexistente).
+        """
         try:
             datetime.strptime(date_str, "%Y-%m-%d")
         except ValueError:
@@ -532,7 +540,24 @@ class CameraStore:
             ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).astimezone()
         except ValueError:
             return None
-        return os.path.join(self.base, date_str, ts.strftime("%H%M%S") + ".jpg")
+        objetivo = ts.hour * 3600 + ts.minute * 60 + ts.second
+        day_dir = os.path.join(self.base, date_str)
+        try:
+            nombres = [n for n in os.listdir(day_dir) if n.lower().endswith(".jpg")]
+        except OSError:
+            return None
+        mejor, mejor_diff = None, None
+        for nombre in nombres:
+            base = nombre[:-4]
+            if len(base) != 6 or not base.isdigit():
+                continue
+            h, m, s = int(base[0:2]), int(base[2:4]), int(base[4:6])
+            diff = abs((h * 3600 + m * 60 + s) - objetivo)
+            if mejor_diff is None or diff < mejor_diff:
+                mejor, mejor_diff = nombre, diff
+        if mejor is None or mejor_diff > tolerance_seconds:
+            return None
+        return os.path.join(day_dir, mejor)
 
     # ── migración y retención del histórico de análisis ──────────────────────
 
