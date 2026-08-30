@@ -61,6 +61,19 @@ CONFLICT_PAIRS = {
     ("partly_cloudy", "stormy"),
 }
 
+# Nombres en español para armar explicaciones legibles en la UI
+CONDITION_ES = {
+    "clear": "despejado",
+    "partly_cloudy": "parcialmente nublado",
+    "mostly_cloudy": "mayormente nublado",
+    "overcast": "cubierto",
+    "foggy": "neblina",
+    "rainy": "lluvia",
+    "stormy": "tormenta",
+    "night": "de noche",
+    "unknown": "desconocido",
+}
+
 
 def _normalize_condition(cond: str) -> str:
     """Normaliza condición a un conjunto reducido."""
@@ -123,7 +136,8 @@ def validate_analysis(
         - validated: bool (si se pudo validar)
         - match: str (exact/close/differ/conflict)
         - confidence: float (0-1, confianza ajustada)
-        - explanation: str
+        - summary: str (frase corta para la UI)
+        - explanation: str (frase legible con lo que ve la cámara vs. el modelo)
         - camera_condition: str
         - forecast_condition: str
         - details: dict con más info
@@ -145,7 +159,7 @@ def validate_analysis(
         return {"validated": False, "reason": "Pronóstico sin código WMO"}
 
     # Comparar condiciones
-    match_level, explanation = compare_conditions(camera_cond, forecast_wmo)
+    match_level, _detail = compare_conditions(camera_cond, forecast_wmo)
     forecast_cond = WMO_TO_CONDITION.get(forecast_wmo, "unknown")
 
     # Calcular confianza base
@@ -162,30 +176,38 @@ def validate_analysis(
     coverage_diff = abs(camera_coverage - forecast_clouds)
     if coverage_diff > 40:
         confidence *= 0.8
-        explanation += f" | Cobertura difiere: cámara={camera_coverage}%, modelo={forecast_clouds}%"
     elif coverage_diff > 20:
         confidence *= 0.9
 
-    # Generar resumen para UI
+    # Explicación legible en español: qué ve la cámara vs. qué predice el
+    # modelo, en frases completas -- nada de símbolos que haya que descifrar.
+    camera_es = CONDITION_ES.get(camera_cond, camera_cond)
+    forecast_es = CONDITION_ES.get(forecast_cond, forecast_cond)
+
     if match_level == MATCH_EXACT:
-        summary = "✓ Coincide con pronóstico"
-        icon = "✓"
+        summary = "Coincide con el pronóstico"
+        explanation = f"La cámara y el modelo coinciden: {camera_es}"
+    elif camera_cond == "night":
+        summary = "De noche no se puede comparar bien con el pronóstico"
+        explanation = f"El modelo predice {forecast_es}, pero de noche la cámara no distingue bien las nubes"
     elif match_level == MATCH_CLOSE:
-        summary = "≈ Similar al pronóstico"
-        icon = "≈"
+        summary = "Parecido al pronóstico"
+        explanation = f"La cámara ve {camera_es}, el modelo predice {forecast_es} -- son condiciones cercanas"
     elif match_level == MATCH_DIFFER:
-        summary = "? Difiere del pronóstico"
-        icon = "?"
+        summary = "La cámara ve algo distinto al modelo"
+        explanation = f"La cámara ve {camera_es}, el modelo predice {forecast_es}"
     else:
-        summary = "⚠ Discrepa del pronóstico"
-        icon = "⚠"
+        summary = "Contradice al pronóstico"
+        explanation = f"La cámara ve {camera_es}, el modelo predice {forecast_es} -- son condiciones opuestas"
+
+    if coverage_diff > 40:
+        explanation += f" (cobertura de nubes: cámara {camera_coverage}% vs. modelo {forecast_clouds}%)"
 
     return {
         "validated": True,
         "match": match_level,
         "confidence": round(confidence, 2),
         "summary": summary,
-        "icon": icon,
         "explanation": explanation,
         "camera_condition": camera_cond,
         "forecast_condition": forecast_cond,

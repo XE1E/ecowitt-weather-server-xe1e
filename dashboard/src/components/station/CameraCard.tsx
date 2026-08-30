@@ -40,11 +40,9 @@ interface Estado {
 interface Trend {
   coverage_trend: 'increasing' | 'decreasing' | 'stable'
   coverage_delta: number
-  coverage_icon: string
   development_trend: 'intensifying' | 'weakening' | 'stable'
   precip_appearing: boolean
   summary: string
-  icon: string
   samples: number
   span_minutes: number
 }
@@ -54,6 +52,7 @@ interface Validation {
   match?: 'exact' | 'close' | 'differ' | 'conflict'
   confidence?: number
   summary?: string
+  explanation?: string
 }
 
 const SKY_CONDITION_ES: Record<string, string> = {
@@ -283,28 +282,27 @@ export function CameraCard({ ocultarSiVacia = false }: {
               últimos minutos? Antes sólo vivía en "Estado del cielo" (Inicio). */}
           {tendencia && (
             <div className="mt-3 p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">{tendencia.icon}</span>
+              <div className="flex items-center gap-2">
+                <Cloud className="w-5 h-5 text-violet-400 flex-shrink-0" />
                 <span className="text-base font-medium text-violet-200">{tendencia.summary}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-400">
-                <span>Cobertura: {tendencia.coverage_icon} {tendencia.coverage_delta > 0 ? '+' : ''}{tendencia.coverage_delta}%</span>
-                {tendencia.span_minutes > 0 && <span>· últimos {tendencia.span_minutes} min</span>}
-              </div>
+              {tendencia.span_minutes > 0 && (
+                <p className="text-sm text-slate-400 mt-1">últimos {tendencia.span_minutes} min</p>
+              )}
             </div>
           )}
 
           {/* Validación: ¿lo que ve la cámara coincide con lo que dicen los modelos
               de pronóstico ahora mismo? Antes sólo vivía en "Estado del cielo" (Inicio). */}
           {validacion?.validated && (
-            <div className={`mt-3 p-2.5 rounded-lg border flex items-center gap-2 ${
+            <div className={`mt-3 p-2.5 rounded-lg border flex items-start gap-2 ${
               validacion.match === 'exact' || validacion.match === 'close'
                 ? 'bg-emerald-500/10 border-emerald-500/20'
                 : validacion.match === 'conflict'
                 ? 'bg-amber-500/10 border-amber-500/20'
                 : 'bg-slate-500/10 border-slate-500/20'
             }`}>
-              <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
+              <CheckCircle2 className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
                 validacion.match === 'exact' || validacion.match === 'close'
                   ? 'text-emerald-400'
                   : validacion.match === 'conflict'
@@ -312,10 +310,10 @@ export function CameraCard({ ocultarSiVacia = false }: {
                   : 'text-slate-400'
               }`} />
               <div>
-                <p className="text-base">{validacion.summary}</p>
-                <p className="text-sm text-slate-500">
-                  Confianza: {Math.round((validacion.confidence || 0) * 100)}%
-                </p>
+                <p className="text-base font-medium">{validacion.summary}</p>
+                {validacion.explanation && (
+                  <p className="text-sm text-slate-400 mt-0.5">{validacion.explanation}</p>
+                )}
               </div>
             </div>
           )}

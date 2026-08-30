@@ -292,13 +292,10 @@ class CameraStore:
         # Tendencia de cobertura: cambio de >10% es significativo
         if cov_delta > 10:
             cov_trend = "increasing"
-            cov_icon = "↑"
         elif cov_delta < -10:
             cov_trend = "decreasing"
-            cov_icon = "↓"
         else:
             cov_trend = "stable"
-            cov_icon = "→"
 
         # Tendencia de desarrollo (building -> stable -> dissipating)
         dev_order = {"building": 2, "stable": 1, "dissipating": 0, "unknown": 1}
@@ -318,31 +315,26 @@ class CameraStore:
         new_precip = any(h["precip"] for h in new_half)
         precip_appearing = new_precip and not old_precip
 
-        # Generar resumen textual
+        # Generar resumen textual: frase completa, sin íconos/flechas que haya
+        # que descifrar -- ver docs/archivo/PLAN-ANALISIS-CIELO-PRONOSTICO.md.
+        cov_delta_abs = abs(round(cov_delta))
         if precip_appearing:
-            summary = "🌧️ Precipitación aproximándose"
-            icon = "🌧️"
+            summary = "Puede haber empezado a llover: apareció precipitación en las fotos recientes"
         elif cov_trend == "increasing" and dev_trend == "intensifying":
-            summary = "⛈️ Nublándose, posible tormenta"
-            icon = "⛈️"
+            summary = "Nublándose y las nubes se ven más activas: posible tormenta"
         elif cov_trend == "increasing":
-            summary = "☁️ Nublándose"
-            icon = "↑"
+            summary = f"Nublándose: la cobertura de nubes subió {cov_delta_abs}%"
         elif cov_trend == "decreasing":
-            summary = "🌤️ Despejando"
-            icon = "↓"
+            summary = f"Despejando: la cobertura de nubes bajó {cov_delta_abs}%"
         else:
-            summary = "→ Estable"
-            icon = "→"
+            summary = "Sin cambios notables en el cielo"
 
         return {
             "coverage_trend": cov_trend,
             "coverage_delta": round(cov_delta, 1),
-            "coverage_icon": cov_icon,
             "development_trend": dev_trend,
             "precip_appearing": precip_appearing,
             "summary": summary,
-            "icon": icon,
             "samples": len(history),
             "span_minutes": self._history_span_minutes(history),
         }

@@ -13,11 +13,9 @@ import { relativeTime } from '../../weather'
 interface Trend {
   coverage_trend: 'increasing' | 'decreasing' | 'stable'
   coverage_delta: number
-  coverage_icon: string
   development_trend: 'intensifying' | 'weakening' | 'stable'
   precip_appearing: boolean
   summary: string
-  icon: string
   samples: number
   span_minutes: number
 }
@@ -27,7 +25,6 @@ interface Validation {
   match?: 'exact' | 'close' | 'differ' | 'conflict'
   confidence?: number
   summary?: string
-  icon?: string
   explanation?: string
   reason?: string
 }
@@ -196,29 +193,26 @@ export function SkyAnalysisCard() {
       {/* Tendencia (Nowcasting) */}
       {analysis.trend && (
         <div className="mt-3 p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">{analysis.trend.icon}</span>
+          <div className="flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-violet-400 flex-shrink-0" />
             <span className="text-base font-medium text-violet-200">{analysis.trend.summary}</span>
           </div>
-          <div className="flex items-center gap-3 text-sm text-slate-400">
-            <span>Cobertura: {analysis.trend.coverage_icon} {analysis.trend.coverage_delta > 0 ? '+' : ''}{analysis.trend.coverage_delta}%</span>
-            {analysis.trend.span_minutes > 0 && (
-              <span>· últimos {analysis.trend.span_minutes} min</span>
-            )}
-          </div>
+          {analysis.trend.span_minutes > 0 && (
+            <p className="text-sm text-slate-400 mt-1">últimos {analysis.trend.span_minutes} min</p>
+          )}
         </div>
       )}
 
       {/* Validación vs pronóstico */}
       {validation?.validated && (
-        <div className={`mt-3 p-2 rounded-lg border flex items-center gap-2 ${
+        <div className={`mt-3 p-2 rounded-lg border flex items-start gap-2 ${
           validation.match === 'exact' || validation.match === 'close'
             ? 'bg-emerald-500/10 border-emerald-500/20'
             : validation.match === 'conflict'
             ? 'bg-amber-500/10 border-amber-500/20'
             : 'bg-slate-500/10 border-slate-500/20'
         }`}>
-          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
+          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
             validation.match === 'exact' || validation.match === 'close'
               ? 'text-emerald-400'
               : validation.match === 'conflict'
@@ -226,10 +220,10 @@ export function SkyAnalysisCard() {
               : 'text-slate-400'
           }`} />
           <div>
-            <p className="text-base">{validation.summary}</p>
-            <p className="text-sm text-slate-500">
-              Confianza: {Math.round((validation.confidence || 0) * 100)}%
-            </p>
+            <p className="text-base font-medium">{validation.summary}</p>
+            {validation.explanation && (
+              <p className="text-sm text-slate-400 mt-0.5">{validation.explanation}</p>
+            )}
           </div>
         </div>
       )}
