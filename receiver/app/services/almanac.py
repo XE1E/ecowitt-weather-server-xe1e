@@ -63,6 +63,42 @@ def _rise_set(obs, body, horizon: str, center: bool, local_day):
     return _hhmm_local(rise, local_day), _hhmm_local(sett, local_day), rise, sett
 
 
+def _rise_set_current_cycle(obs_now, body, currently_up: bool):
+    """Orto/ocaso del ciclo que CONTIENE "ahora" (si el cuerpo está arriba) o del
+    PRÓXIMO ciclo (si está abajo).
+
+    A diferencia de `_rise_set` (que da "el próximo orto" y "el próximo ocaso"
+    desde MEDIANOCHE local, cada uno por separado), esto siempre devuelve un par
+    coherente: el mismo orto y ocaso describen un solo paso por el cielo. Hace
+    falta para la Luna -- sale ~50 min más tarde cada día, así que la mitad de
+    las veces su ciclo cruza la medianoche, y "el próximo orto desde medianoche"
+    y "el próximo ocaso desde medianoche" terminan siendo de DOS ciclos
+    distintos (el ocaso de esta madrugada cierra el ciclo de ANOCHE, no el que
+    abre el orto de esta noche). El Sol no lo necesita: su ciclo nunca cruza
+    medianoche.
+
+    Sin filtro de día calendario a propósito (a diferencia de `_hhmm_local`):
+    cuando el ciclo cruza medianoche, su ocaso cae, con toda razón, en el día
+    calendario siguiente.
+    """
+    try:
+        if currently_up:
+            rise = obs_now.previous_rising(body, use_center=False)
+            sett = obs_now.next_setting(body, use_center=False)
+        else:
+            rise = obs_now.next_rising(body, use_center=False)
+            sett = obs_now.next_setting(body, use_center=False)
+    except (ephem.AlwaysUpError, ephem.NeverUpError):
+        return None, None
+
+    def _hhmm_any(edate) -> Optional[str]:
+        if edate is None:
+            return None
+        return edate.datetime().replace(tzinfo=timezone.utc).astimezone(_TZ).strftime("%H:%M")
+
+    return _hhmm_any(rise), _hhmm_any(sett)
+
+
 def _moon_phase_name(illum: float, waxing: bool) -> str:
     if illum < 1:
         return "Luna nueva"
@@ -133,7 +169,6 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
 
     # Luna
     moon = ephem.Moon()
-    mr, ms, *_ = _rise_set(obs, moon, "0", False, local_day)
     obs_now = ephem.Observer()
     obs_now.lat, obs_now.lon, obs_now.elevation = str(lat), str(lon), elevation
     obs_now.date = now.astimezone(timezone.utc).replace(tzinfo=None)
@@ -143,6 +178,7 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
     moon.compute(obs_now)
     moon_alt = round(math.degrees(float(moon.alt)), 1)
     moon_dist_km = round(moon.earth_distance * 149597870.7)
+    mr, ms = _rise_set_current_cycle(obs_now, moon, moon_alt > 0)
     try:
         moon_age = round(obs_now.date - ephem.previous_new_moon(obs_now.date), 1)
     except Exception:

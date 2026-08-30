@@ -12,12 +12,18 @@ import { Stars } from 'lucide-react'
  *   - % de iluminación lunar, de `/api/almanac` -- la luna llena "apaga" las
  *     estrellas tenues aunque el cielo esté perfectamente despejado.
  *
+ * "Es de noche" se decide con la ALTITUD SOLAR de `/api/almanac`
+ * (`sun.altitude < 0`), no con `sky_condition === 'night'` de la cámara: en un
+ * sitio con luz urbana la IA describe lo que ve (p. ej. "parcialmente nublado")
+ * aunque sea de noche, y "night" queda para oscuridad casi total -- probado en
+ * vivo el 2026-08-30: de noche, con análisis fresco, `sky_condition` dio
+ * "partly_cloudy" y la tarjeta nunca aparecía.
+ *
  * Se oculta de día, sin análisis reciente (>20 min, el mismo umbral de "foto
  * vieja" que ya usa el resto de la cámara) o sin dato de luna.
  */
 
 interface CamaraNoche {
-  sky_condition?: string
   cloud_coverage_pct?: number
   analyzed_at?: string
 }
@@ -43,6 +49,7 @@ function veredicto(coverage: number, illumination: number): { texto: string; bue
 export function StargazingCard() {
   const [camara, setCamara] = useState<CamaraNoche | null>(null)
   const [illumination, setIllumination] = useState<number | null>(null)
+  const [sunAltitude, setSunAltitude] = useState<number | null>(null)
 
   useEffect(() => {
     let cancel = false
@@ -53,15 +60,20 @@ export function StargazingCard() {
         .catch(() => !cancel && setCamara(null))
       fetch('/api/almanac')
         .then((r) => (r.ok ? r.json() : null))
-        .then((j) => !cancel && setIllumination(typeof j?.moon?.illumination === 'number' ? j.moon.illumination : null))
-        .catch(() => !cancel && setIllumination(null))
+        .then((j) => {
+          if (cancel) return
+          setIllumination(typeof j?.moon?.illumination === 'number' ? j.moon.illumination : null)
+          setSunAltitude(typeof j?.sun?.altitude === 'number' ? j.sun.altitude : null)
+        })
+        .catch(() => { if (!cancel) { setIllumination(null); setSunAltitude(null) } })
     }
     load()
     const i = setInterval(load, 5 * 60 * 1000)
     return () => { cancel = true; clearInterval(i) }
   }, [])
 
-  if (!camara || camara.sky_condition !== 'night' || camara.cloud_coverage_pct == null || illumination == null) return null
+  const esDeNoche = sunAltitude != null && sunAltitude < 0
+  if (!esDeNoche || !camara || camara.cloud_coverage_pct == null || illumination == null) return null
   if (!camara.analyzed_at || Date.now() - new Date(camara.analyzed_at).getTime() > STALE_MS) return null
 
   const v = veredicto(camara.cloud_coverage_pct, illumination)

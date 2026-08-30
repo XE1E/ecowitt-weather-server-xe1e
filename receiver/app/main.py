@@ -2515,23 +2515,6 @@ async def camera_analysis_accuracy(days: int = 30):
     return _camera.get_accuracy_stats(days)
 
 
-@app.get("/api/camera/best/{date}")
-async def camera_best_of_day(date: str):
-    """
-    Metadato de la mejor foto del día (mayor visibilidad reportada, ver
-    `CameraStore.best_of_day`). Se conserva para siempre -- vive en el análisis
-    diario -- aunque la foto en sí ya se haya podado (ver el endpoint `.jpg`).
-    """
-    try:
-        datetime.strptime(date, "%Y-%m-%d")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Formato de fecha inválido (usar YYYY-MM-DD)")
-    entry = _camera.best_of_day(date)
-    if entry is None:
-        raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
-    return entry
-
-
 @app.get("/api/camera/best/{date}.jpg")
 async def camera_best_of_day_jpg(date: str):
     """
@@ -2555,6 +2538,29 @@ async def camera_best_of_day_jpg(date: str):
         # más capturas, así que sólo se cachea un rato corto.
         headers={"Cache-Control": "max-age=600"},
     )
+
+
+@app.get("/api/camera/best/{date}")
+async def camera_best_of_day(date: str):
+    """
+    Metadato de la mejor foto del día (mayor visibilidad reportada, ver
+    `CameraStore.best_of_day`). Se conserva para siempre -- vive en el análisis
+    diario -- aunque la foto en sí ya se haya podado (ver el endpoint `.jpg`).
+
+    Va DESPUÉS de `/api/camera/best/{date}.jpg` a propósito: Starlette prueba las
+    rutas en el orden en que se registran, y `{date}` sin restricción hace match
+    con "2026-08-29.jpg" completo (el punto no rompe el patrón). Registrada antes,
+    esta ruta se comía las peticiones de la foto y respondía 400 "fecha inválida"
+    en vez de dejarlas llegar al endpoint de la imagen.
+    """
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido (usar YYYY-MM-DD)")
+    entry = _camera.best_of_day(date)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
+    return entry
 
 
 @app.get("/api/camera/latest.jpg")

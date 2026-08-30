@@ -31,10 +31,20 @@ function bez(t: number, a: number, b: number, c: number) {
 }
 
 function SkyArc({ rise, set, up, color }: { rise: string | null; set: string | null; up: boolean; color: string }) {
-  const r = toMin(rise), s = toMin(set)
-  const now = new Date().getHours() * 60 + new Date().getMinutes()
+  const r = toMin(rise)
+  const sRaw = toMin(set)
   let f: number | null = null
-  if (r != null && s != null && s > r) f = Math.min(1, Math.max(0, (now - r) / (s - r)))
+  if (r != null && sRaw != null) {
+    // El ciclo puede cruzar medianoche (le pasa a la Luna la mitad de las
+    // veces: sale ~50 min más tarde cada día). Si el ocaso es numéricamente
+    // menor que el orto, es del día siguiente -- se corre 24h para poder
+    // comparar en una sola línea de tiempo, y "ahora" se corre igual si cae en
+    // la madrugada que sigue al orto de anoche.
+    const s = sRaw <= r ? sRaw + 1440 : sRaw
+    let now = new Date().getHours() * 60 + new Date().getMinutes()
+    if (now < r && s > 1440) now += 1440
+    if (s > r) f = Math.min(1, Math.max(0, (now - r) / (s - r)))
+  }
   const showDot = up && f != null
   const x = f != null ? bez(f, 12, 150, 288) : 150
   const y = f != null ? bez(f, 92, 6, 92) : 6
