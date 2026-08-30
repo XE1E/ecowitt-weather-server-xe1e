@@ -235,6 +235,14 @@ falla siempre deja de significar nada, así que nadie mira si lo que rompe es tu
 Ojo para la próxima: **la versión de Ruff está fijada** en el workflow (0.16.2) y las
 reglas en `receiver/ruff.toml`. Subirla debe ser deliberado.
 
+## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — plan escrito
+Ver **`docs/internal/PLAN-RESPALDO-R2.md`**. Diagnóstico y capacidad ya medidos en
+el VPS real (~40 MB/día, ~15 GB/año, dominado por las fotos). El respaldo de
+InfluxDB ya tiene script (`scripts/backup-influx.sh`) pero **las credenciales R2
+no están puestas en el `.env`** — hoy sólo hace copia local. Fotos y vídeos no
+tienen respaldo externo en absoluto. Falta decidir la retención en R2 por
+categoría antes de tocar código (§Decisiones pendientes del plan).
+
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
 dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:

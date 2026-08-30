@@ -37,6 +37,16 @@ interface TafPeriod {
 }
 interface Taf { station?: string; raw?: string; issued?: string; valid_from?: number; valid_to?: number; periods?: TafPeriod[] }
 
+/** Lo que ve la cámara del exterior, para poner junto al METAR de MMMX -- sin
+ * puntaje: el aeropuerto está a varios km de la estación, es comparar a ojo.
+ * Sólo aplica al aeropuerto cercano (MMMX); buscar otro (p. ej. Cancún) no
+ * tendría sentido cruzarlo con la cámara de casa. */
+interface CamaraCielo { sky_condition?: string; cloud_coverage_pct?: number }
+const SKY_CONDITION_ES: Record<string, string> = {
+  clear: 'Despejado', partly_cloudy: 'Parcialmente nublado', mostly_cloudy: 'Mayormente nublado',
+  overcast: 'Cubierto', foggy: 'Neblina', rainy: 'Lluvia', stormy: 'Tormenta', night: 'Noche',
+}
+
 const CARD16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const dir16 = (d: number) => CARD16[Math.round(d / 22.5) % 16]
 
@@ -100,6 +110,7 @@ export function AeronauticaPage() {
   const [metar, setMetar] = useState<Metar | null>(null)
   const [taf, setTaf] = useState<Taf | null>(null)
   const [loading, setLoading] = useState(true)
+  const [camara, setCamara] = useState<CamaraCielo | null>(null)
 
   useEffect(() => {
     let cancel = false
@@ -111,6 +122,20 @@ export function AeronauticaPage() {
       .catch(() => !cancel && setLoading(false))
     return () => { cancel = true }
   }, [icao])
+
+  // Independiente del ICAO buscado: sólo se muestra cuando se ve MMMX (abajo).
+  useEffect(() => {
+    let cancel = false
+    const load = () => {
+      fetch('/api/camera/status')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { const a = j?.analysis; if (!cancel) setCamara(a && !a.error ? a : null) })
+        .catch(() => !cancel && setCamara(null))
+    }
+    load()
+    const i = setInterval(load, 600000)
+    return () => { cancel = true; clearInterval(i) }
+  }, [])
 
   const search = () => {
     const c = query.trim().toUpperCase()
@@ -177,6 +202,12 @@ export function AeronauticaPage() {
                   <Field label="Temp. / Rocío" value={metar.temp_c != null ? `${metar.temp_c}° / ${metar.dewpoint_c ?? '--'}°C` : '--'} />
                   <Field label="Presión (QNH)" value={metar.altimeter_hpa != null ? `${metar.altimeter_hpa} hPa` : '--'} />
                   {decodeWx(metar.wx) && <Field label="Fenómenos" value={decodeWx(metar.wx)!} />}
+                  {icao === 'MMMX' && camara && (
+                    <Field label="Cámara (casa)" value={
+                      `${SKY_CONDITION_ES[camara.sky_condition ?? ''] ?? camara.sky_condition}` +
+                      (camara.cloud_coverage_pct != null ? `, ${camara.cloud_coverage_pct}%` : '')
+                    } />
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 mt-3 font-mono break-all bg-black/20 rounded-lg px-3 py-2">{metar.raw}</p>
               </>
