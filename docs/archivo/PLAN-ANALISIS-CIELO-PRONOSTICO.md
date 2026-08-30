@@ -6,6 +6,13 @@
 > **Estado:** análisis del cielo implementado y funcionando con Gemini (gratis),
 > con sus 5 fases desplegadas y sus decisiones de diseño ya cerradas (ver
 > *Decisiones*, al final).
+>
+> **Nota del 2026-08-29:** la redacción con flechas/íconos que describe este plan
+> (`↑`/`↓`/`→`, `✓`/`≈`/`?`/`⚠`) se reemplazó por frases completas en español, sin
+> símbolos — no se entendían sin leyenda. También se agregó persistencia de la
+> validación (antes se calculaba al vuelo y se descartaba) y un endpoint de % de
+> acierto. Ver `docs/guias/analisis-cielo.md` para el estado actual; este plan
+> queda tal cual como registro histórico de la decisión original.
 
 ## Contexto
 

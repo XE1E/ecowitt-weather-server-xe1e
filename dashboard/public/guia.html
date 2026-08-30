@@ -428,12 +428,14 @@
       <p>El resultado aparece en la <strong>tarjeta "Estado del cielo"</strong> del Inicio: una descripción breve, la condición general y un pronóstico a corto plazo basado en lo que se ve en la foto.</p>
       <p>El sistema detecta <strong>tendencias</strong> comparando las últimas fotos (~1 hora): te dice si se está nublando, despejando, o si viene posible tormenta. También <strong>valida</strong> lo que ve la cámara contra lo que predicen los modelos meteorológicos (Open-Meteo), y te dice si coinciden o hay discrepancia.</p>
       <p>En la página de Cámara hay un <strong>histórico de análisis</strong>: para cada día, una barra por cada análisis —de 00:00 a 24:00— cuya altura es la cobertura de nubes y cuyo color va del verde (despejado) al gris (cubierto), más el promedio, el mínimo y el máximo del día y el recuento de condiciones observadas. Es la curva de cómo se nubló la jornada, y se puede navegar día a día.</p>
-      <p>Ese histórico <strong>se conserva indefinidamente</strong>, aunque las fotos de ese día ya se hayan borrado: ocupa unos pocos kilobytes por día, así que es el registro más barato y más duradero que produce la cámara.</p>
+      <p>Ese histórico <strong>se conserva indefinidamente</strong>, aunque las fotos de ese día ya se hayan borrado: ocupa unos pocos kilobytes por día, así que es el registro más barato y más duradero que produce la cámara. Junto a él, la <strong>mejor foto del día</strong>: la captura con mayor visibilidad reportada esa jornada (sin contar la noche, salvo que el día entero lo haya sido) — no es un juicio estético, es el dato más honesto que ya se estaba guardando.</p>
+      <p>Cada captura analizada guarda también si <strong>coincidió con el pronóstico</strong> de ese momento, y la tarjeta "Precisión del pronóstico" resume qué tan seguido acertó en los últimos 30 días. Antes esa comparación se calculaba al vuelo cada vez que alguien abría el sitio y se descartaba enseguida; ahora queda guardada con cada foto, aunque nadie esté mirando.</p>
       <p>Si activas las <strong>alertas visuales</strong>, recibes aviso por Telegram o correo cuando la IA detecta nubes de tormenta formándose, lluvia aproximándose o visibilidad reducida. Se activan (y cada una se puede apagar por separado) en Admin → Alertas, en la tarjeta "📷 Cámara"; el canal se elige en Admin → Notificaciones.</p>
       <p>Aparte de lo que <em>ve</em>, la cámara también avisa de sí misma: si <strong>deja de mandar fotos</strong> por un rato (no confunde "aún sin configurar" con "se cayó": no avisa hasta que llegó al menos una foto), o si el <strong>análisis de IA lleva varios intentos seguidos fallando</strong> —cuota agotada, timeout—. Se normaliza solo en cuanto vuelve una foto reciente o un análisis exitoso.</p>
 
       <h3>Astronomía</h3>
       <p>Todo se calcula localmente para estas coordenadas, sin servicios externos. Del <strong>Sol</strong>: salida, ocaso, mediodía solar, duración del día y <strong>su cambio respecto a ayer</strong> (el detalle que te deja notar que los días ya se están acortando), más elevación y azimut actuales. De la <strong>Luna</strong>: salida y ocaso, fase, iluminación, edad, distancia y las próximas fases.</p>
+      <p>De noche y con análisis reciente de la cámara, aparece <strong>"¿Buena noche para observar?"</strong>: cruza la cobertura de nubes que ve la cámara en ese momento con el % de iluminación lunar, para avisar si vale la pena salir a ver el cielo o si, aunque esté despejado, la luna va a apagar las estrellas tenues.</p>
       <p>El <strong>almanaque</strong> añade los tres crepúsculos y los planetas visibles con su orto, ocaso, altitud y magnitud. Los crepúsculos no son adorno, cada uno marca algo concreto:</p>
       <div class="tablewrap">
         <table>
@@ -457,6 +459,7 @@
       <h3>Aeronáutica</h3>
       <p>Meteorología para volar, que resulta ser también el mejor contraste independiente para tus lecturas. El <strong>METAR</strong> es la observación del aeropuerto (cada hora) y el <strong>TAF</strong> el pronóstico aeronáutico (~24-30 h). La <strong>categoría de vuelo</strong> resume las condiciones en una palabra: <strong>VFR</strong> (visual, buen tiempo), <strong>MVFR</strong> (marginal), <strong>IFR</strong> y <strong>LIFR</strong> (las peores). El <strong>perfil atmosférico</strong> dibuja las capas de nubes por altitud, el viento y el QNH del reporte.</p>
       <p>Fuente: aviationweather.gov (NOAA), en unidades aeronáuticas —nudos, millas terrestres, hPa— y con las horas ya convertidas a tu zona local.</p>
+      <p>La tarjeta de METAR del Inicio, además, pone junto a las capas de nubes del aeropuerto lo que <strong>ve la cámara del exterior</strong> en ese mismo momento — sin puntaje de acierto a propósito: el aeropuerto está a varios kilómetros de la estación, así que es una comparación a ojo, no una validación.</p>
 
       <h3>Estación remota</h3>
       <p>El detalle completo del GW1100: sus valores actuales con tendencia y sus gráficas por periodo. Útil sobre todo para <strong>comparar dos puntos</strong>: dos sitios cercanos pueden diferir varios grados por sombra, viento o superficie, y esta página lo hace evidente.</p>
@@ -828,7 +831,7 @@
       </div>
     </section>
 
-    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-08-18 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
+    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-08-29 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
 

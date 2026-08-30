@@ -228,15 +228,22 @@ class CameraStore:
     # Cuántos análisis guardar para calcular tendencias (~1 hora con cadencia 5 min)
     HISTORY_SIZE = 12
 
-    def save_analysis(self, analysis: Dict[str, Any]) -> None:
-        """Guarda el análisis del cielo de la última captura y lo agrega al historial."""
+    def save_analysis(self, analysis: Dict[str, Any], validation: Optional[Dict[str, Any]] = None) -> None:
+        """Guarda el análisis del cielo de la última captura y lo agrega al historial.
+
+        `validation` es el resultado de `sky_validation.validate_analysis()` contra el
+        pronóstico de ESTE momento, si se pudo calcular. Se calcula una sola vez aquí
+        --no en el endpoint `/api/camera/analysis/validation`, que sólo corre cuando
+        alguien tiene el dashboard abierto y no garantiza una muestra por captura--
+        para que el histórico diario tenga una serie confiable de aciertos/desacuerdos.
+        """
         os.makedirs(self.base, exist_ok=True)
         tmp = self.latest_analysis + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(analysis, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.latest_analysis)
         self._append_to_history(analysis)
-        self._append_to_daily(analysis)
+        self._append_to_daily(analysis, validation)
 
     def _load_history(self) -> list:
         """Carga el historial de análisis."""
@@ -365,8 +372,9 @@ class CameraStore:
         """Dónde vivía antes: dentro de la carpeta del día. Sólo lo usa la migración."""
         return os.path.join(self.base, date_str, "analysis.json")
 
-    def _append_to_daily(self, analysis: Dict[str, Any]) -> None:
-        """Agrega un análisis al archivo diario correspondiente."""
+    def _append_to_daily(self, analysis: Dict[str, Any], validation: Optional[Dict[str, Any]] = None) -> None:
+        """Agrega un análisis (y su validación contra el pronóstico, si la hay) al
+        archivo diario correspondiente."""
         if analysis.get("error"):
             return
         ts_str = analysis.get("analyzed_at", "")
@@ -393,6 +401,14 @@ class CameraStore:
             "development": analysis.get("development", "unknown"),
             "precip": analysis.get("precipitation_visible", False),
         }
+        # Campos opcionales: sin pronóstico disponible en ese momento, `validation`
+        # llega en None y la entrada se queda sin ellos (no rompe lecturas viejas).
+        if validation and validation.get("validated"):
+            entry["match"] = validation.get("match")
+            entry["forecast_condition"] = validation.get("forecast_condition")
+            forecast_coverage = (validation.get("details") or {}).get("forecast_coverage")
+            if forecast_coverage is not None:
+                entry["forecast_coverage_pct"] = forecast_coverage
         daily.append(entry)
         self._write_daily_analysis(date_str, daily)
 
@@ -438,6 +454,85 @@ class CameraStore:
         except OSError:
             pass
         return out
+
+    def get_accuracy_stats(self, days: int = 30) -> Dict[str, Any]:
+        """Qué tan seguido coincide la cámara con el pronóstico, en los últimos N días.
+
+        Cuenta las entradas diarias que sí trajeron `match` (o sea, las que se
+        pudieron validar contra un pronóstico en el momento de la captura -- ver
+        `_append_to_daily`). Sin datos antiguos con esa marca, el promedio simplemente
+        arranca desde que se activó esta persistencia: no hay migración retroactiva.
+        """
+        limite = (datetime.now().astimezone() - timedelta(days=max(0, days) - 1)).date()
+        conteo = {"exact": 0, "close": 0, "differ": 0, "conflict": 0}
+        dias_con_datos = 0
+        try:
+            nombres = sorted(os.listdir(self.analysis_dir))
+        except OSError:
+            nombres = []
+        for nombre in nombres:
+            base, ext = os.path.splitext(nombre)
+            if ext != ".json":
+                continue
+            try:
+                dia = datetime.strptime(base, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if dia < limite:
+                continue
+            entradas = self.get_daily_analysis(base) or []
+            tuvo_match = False
+            for e in entradas:
+                m = e.get("match")
+                if m in conteo:
+                    conteo[m] += 1
+                    tuvo_match = True
+            if tuvo_match:
+                dias_con_datos += 1
+
+        total = sum(conteo.values())
+        return {
+            "days_requested": days,
+            "days_with_data": dias_con_datos,
+            "total": total,
+            "counts": conteo,
+            "pct": {
+                k: round(v * 100 / total, 1) if total else 0
+                for k, v in conteo.items()
+            },
+        }
+
+    # Mayor a menor: cómo se ordena la visibilidad reportada por el análisis de IA
+    # (ver sky_analyzer.py). "unknown" o cualquier valor no reconocido queda al final.
+    _VISIBILITY_RANK = {"excellent": 4, "good": 3, "moderate": 2, "poor": 1, "very_poor": 0}
+
+    def best_of_day(self, date_str: str) -> Optional[Dict[str, Any]]:
+        """La entrada con mejor visibilidad reportada ese día (excluye la noche,
+        salvo que el día entero haya sido de noche).
+
+        "Mejor" no es un juicio estético -- eso pediría otra pasada de IA sólo para
+        esto, y sin fotos reales para probar el criterio no vale la pena arriesgar
+        el esquema del análisis. Es la métrica más honesta que ya se guarda para
+        "se ve bien y se ve lejos". A empate, gana la primera del día.
+        """
+        entradas = self.get_daily_analysis(date_str) or []
+        if not entradas:
+            return None
+        candidatas = [e for e in entradas if e.get("condition") != "night"] or entradas
+        return max(candidatas, key=lambda e: self._VISIBILITY_RANK.get(e.get("visibility"), -1))
+
+    def frame_path(self, date_str: str, ts_str: str) -> Optional[str]:
+        """Ruta al fotograma archivado (ver `_archive`) que corresponde a un `ts` ISO
+        dentro del día `date_str`, o None si el `ts` no se pudo interpretar."""
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return None
+        try:
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).astimezone()
+        except ValueError:
+            return None
+        return os.path.join(self.base, date_str, ts.strftime("%H%M%S") + ".jpg")
 
     # ── migración y retención del histórico de análisis ──────────────────────
 

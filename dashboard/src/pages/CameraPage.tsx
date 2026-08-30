@@ -3,7 +3,9 @@ import { Camera, ChevronLeft, ChevronRight } from 'lucide-react'
 import { LOCATION } from '../config'
 import { CameraCard } from '../components/station/CameraCard'
 import { TimelapseCard } from '../components/station/TimelapseCard'
+import { BestPhotoCard } from '../components/station/BestPhotoCard'
 import { SkyAnalysisHistory } from '../components/station/SkyAnalysisHistory'
+import { ForecastAccuracyCard } from '../components/station/ForecastAccuracyCard'
 import { PageInfo } from '../components/station/PageInfo'
 import { DayCalendar } from '../components/DayCalendar'
 
@@ -81,7 +83,11 @@ export function CameraPage() {
 
       <TimelapseCard selected={selected} onSelect={setSelected} onDaysChange={setDiasTimelapse} />
 
+      <BestPhotoCard selected={selected} />
+
       <SkyAnalysisHistory selected={selected} onSelect={setSelected} onDaysChange={setDiasHistorial} />
+
+      <ForecastAccuracyCard />
 
       <PageInfo>
         <p>

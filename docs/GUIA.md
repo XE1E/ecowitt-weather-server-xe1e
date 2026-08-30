@@ -674,18 +674,56 @@ de **Cámara**, junto con el histórico diario.
 | Endpoint | Qué |
 |----------|-----|
 | `GET /api/camera/analysis` | Último análisis + tendencia (nowcasting) |
-| `GET /api/camera/analysis/validation` | Validación vs pronóstico de Open-Meteo |
+| `GET /api/camera/analysis/validation` | Validación vs pronóstico de Open-Meteo (calculada al vuelo) |
+| `GET /api/camera/analysis/accuracy?days=30` | % de acierto vs pronóstico de los últimos N días, tabulado sobre lo ya guardado (ver "Persistencia de la validación" abajo) |
 | `GET /api/camera/analysis/history` | Sin params: lista días; con `?date=YYYY-MM-DD`: datos del día |
 | `GET /api/camera/analysis/providers` | Info de proveedores configurados |
+| `GET /api/camera/best/<fecha>` | Metadato de la foto con mejor visibilidad de ese día (se conserva para siempre) |
+| `GET /api/camera/best/<fecha>.jpg` | Esa foto. 404 si el fotograma ya se podó (retención de 7 días, mucho menor que la del análisis) |
 
 **Nowcasting (tendencias):** el sistema guarda los últimos 12 análisis (~1 hora con
-cadencia de 5 min) y calcula tendencias: "↑ Nublándose", "↓ Despejando", "→ Estable",
-"⛈️ Posible tormenta" (cobertura + desarrollo intensificándose), "🌧️ Precipitación
-aproximándose" (lluvia apareció en horizonte).
+cadencia de 5 min) y arma una frase completa con la tendencia: "Nublándose: la
+cobertura de nubes subió 18%", "Despejando: bajó 12%", "Sin cambios notables en el
+cielo", "Nublándose y las nubes se ven más activas: posible tormenta" (cobertura +
+desarrollo intensificándose), "Puede haber empezado a llover: apareció precipitación
+en las fotos recientes". **Hasta 2026-08-29 esto se mostraba con flechas/emoji
+(`↑`/`↓`/`→`, `⛈️`, `🌧️`) sin leyenda** -- se cambió a texto porque nadie tenía claro
+qué significaban, y la flecha de cobertura duplicaba casi la misma información que el
+icono de resumen.
 
 **Validación vs modelos:** compara lo que **ve** la cámara con lo que **predicen** los
-modelos (Open-Meteo) y muestra un indicador de confianza: ✓ Coincide (95%),
-≈ Similar (80%), ? Difiere (60%), ⚠ Discrepa (30%).
+modelos (Open-Meteo) y explica la comparación en una frase, no en un símbolo: "Coincide
+con el pronóstico", "Parecido al pronóstico", "La cámara ve algo distinto al modelo:
+la cámara ve parcialmente nublado, el modelo predice cubierto", "Contradice al
+pronóstico: ... -- son condiciones opuestas". **Hasta 2026-08-29 era un ícono crudo**
+(✓/≈/?/⚠) **y un "Confianza: X%"** sin explicar de qué -- se quitó el `icon` del
+payload (no lo consumía ningún cliente) y el % de confianza dejó de mostrarse como
+dato principal, porque la frase con la explicación real ya dice lo que importa.
+
+**Persistencia de la validación (desde 2026-08-29):** antes esta validación sólo se
+calculaba cuando alguien tenía el dashboard abierto y pedía el endpoint -- sin nadie
+mirando, no quedaba ningún registro. Ahora **cada captura analizada** calcula también
+su validación (en `_analyze_sky_background`, `main.py`) y la guarda junto al resto de
+la entrada diaria: `match`, `forecast_condition`, `forecast_coverage_pct`. Es la base
+de datos para `/api/camera/analysis/accuracy` y para una futura corrección de sesgo
+del pronóstico (pendiente, ver `docs/internal/PENDIENTES.md` §2.e).
+
+**Mejor foto del día:** elegida por mayor visibilidad reportada ese día (excluye las
+tomas de noche salvo que el día entero haya sido de noche) -- no es un juicio
+estético, es la métrica más honesta que ya se guardaba. Se ve en `/pro/camara` junto
+al selector de día que comparten Timelapse e Histórico.
+
+**Cruce con METAR:** la tarjeta de METAR (Homepage y `/pro/aeronautica`, aeropuerto
+MMMX) muestra, junto a sus capas de nubes con altura, lo que ve la cámara en ese mismo
+momento. Sin puntaje de acierto a propósito: el aeropuerto está a varios km de la
+estación, así que es una comparación a ojo, no una validación como la de arriba (que
+sí comparte coordenada con el pronóstico de modelo).
+
+**¿Buena noche para observar? (Astronomía):** de noche, cruza la cobertura de nubes
+de la cámara con el % de iluminación lunar de `/api/almanac` para sugerir si vale la
+pena salir a ver el cielo -- sin pedirle nada nuevo a la IA de visión (detectar
+estrellas habría sido cambiar su esquema y probarlo contra fotos reales antes de
+confiar en él).
 
 **Alertas visuales:** el sistema puede notificar (Telegram/correo) cuando detecta:
 - `sky_storm`: Nubes de tormenta (cumulonimbus) en desarrollo
@@ -714,7 +752,10 @@ Van por Telegram/correo en la categoría "Cámara (sin señal/análisis)".
 **Archivos guardados:**
 - `latest_analysis.json` — último análisis
 - `analysis_history.json` — últimos 12 para tendencias
-- `YYYY-MM-DD/analysis.json` — histórico del día
+- `analysis/YYYY-MM-DD.json` — histórico del día; desde 2026-08-29 cada entrada
+  puede traer también `match`, `forecast_condition` y `forecast_coverage_pct`
+  (ausentes si no había pronóstico disponible en ese instante, o en entradas de
+  antes de esa fecha)
 
 > **Ojo con nginx y las rutas de la API acabadas en `.jpg`.** Las `location` por regex
 > ganan a las de prefijo, así que la regla de estáticos `\.jpg$` se tragaba
@@ -1501,4 +1542,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-08-18.*
+*Última actualización: 2026-08-29.*

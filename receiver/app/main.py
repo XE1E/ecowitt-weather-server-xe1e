@@ -2196,6 +2196,46 @@ def _debe_analizar() -> bool:
     return True
 
 
+async def _current_forecast_wmo_cloudcover() -> Optional[Dict[str, Any]]:
+    """Código WMO y % de nubes que predice Open-Meteo para la hora de AHORA.
+
+    Compartido entre el endpoint `/api/camera/analysis/validation` (validación bajo
+    demanda) y `_analyze_sky_background` (una validación por captura, para el
+    histórico) -- ambos necesitan lo mismo: qué predijo el modelo para este momento.
+    `get_forecast` ya cachea 15 min, así que llamarlo por cada captura (~5 min) no
+    agrega peticiones nuevas a Open-Meteo la mayoría de las veces.
+    """
+    try:
+        # epaper=True: el conjunto horario NORMAL (`_HOURLY` en openmeteo.py) no
+        # trae `cloud_cover`, sólo el ampliado para el e-paper. Sin esto,
+        # `hourly.get("cloud_cover", [0])[idx]` indexaba ese `[0]` de relleno con
+        # cualquier hora que no fuera la 00:00 -> IndexError, atrapado por el
+        # except de abajo, y el endpoint devolvía "sin pronóstico" TODO el día.
+        forecast = await openmeteo.get_forecast(
+            settings.cwop_latitude,
+            settings.cwop_longitude,
+            days=1,
+            epaper=True,
+        )
+        hourly = forecast.get("hourly", {})
+        times = hourly.get("time", [])
+        now = _openmeteo_now_str(forecast)
+        try:
+            idx = times.index(now)
+        except ValueError:
+            idx = 0 if times else -1
+        if idx < 0:
+            return None
+        codes = hourly.get("weather_code", [])
+        clouds = hourly.get("cloud_cover", [])
+        return {
+            "weather_code": codes[idx] if idx < len(codes) else None,
+            "cloud_cover": clouds[idx] if idx < len(clouds) else 0,
+        }
+    except Exception:
+        return None
+
+
 async def _analyze_sky_background(image_data: bytes) -> None:
     """Analiza la imagen del cielo en background y guarda el resultado."""
     try:
@@ -2229,7 +2269,9 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             logger.warning("Análisis del cielo con error (%s): %s -- se conserva el anterior",
                            analysis.provider or "?", analysis.error)
         else:
-            _camera.save_analysis(analysis_dict)
+            forecast_current = await _current_forecast_wmo_cloudcover()
+            validation = sky_validation.validate_analysis(analysis_dict, forecast_current)
+            _camera.save_analysis(analysis_dict, validation=validation)
             logger.info("Análisis del cielo (%s): %s, %d%% nubes",
                         analysis.provider, analysis.sky_condition, analysis.cloud_coverage_pct)
             # Evaluar alertas visuales (tormenta, precipitación visible, visibilidad)
@@ -2446,45 +2488,10 @@ async def camera_analysis_validation():
     if not analysis or analysis.get("error"):
         return {"validated": False, "reason": "Sin análisis disponible"}
 
-    # Obtener pronóstico de Open-Meteo y extraer hora actual
-    try:
-        # epaper=True: el conjunto horario NORMAL (`_HOURLY` en openmeteo.py) no
-        # trae `cloud_cover`, sólo el ampliado para el e-paper. Sin esto,
-        # `hourly.get("cloud_cover", [0])[idx]` indexaba ese `[0]` de relleno con
-        # cualquier hora que no fuera la 00:00 -> IndexError, atrapado por el
-        # except de abajo, y el endpoint devolvía "sin pronóstico" TODO el día.
-        forecast = await openmeteo.get_forecast(
-            settings.cwop_latitude,
-            settings.cwop_longitude,
-            days=1,
-            epaper=True,
-        )
-        # Extraer datos de la hora actual
-        hourly = forecast.get("hourly", {})
-        times = hourly.get("time", [])
-        now = _openmeteo_now_str(forecast)
-        try:
-            idx = times.index(now)
-        except ValueError:
-            idx = 0 if times else -1
-
-        if idx >= 0:
-            codes = hourly.get("weather_code", [])
-            clouds = hourly.get("cloud_cover", [])
-            forecast_current = {
-                "weather_code": codes[idx] if idx < len(codes) else None,
-                "cloud_cover": clouds[idx] if idx < len(clouds) else 0,
-            }
-        else:
-            forecast_current = None
-    except Exception:
-        forecast_current = None
-
-    if not forecast_current or forecast_current.get("weather_code") is None:
-        return {"validated": False, "reason": "No se pudo obtener pronóstico actual"}
-
-    # Validar
+    forecast_current = await _current_forecast_wmo_cloudcover()
     result = sky_validation.validate_analysis(analysis, forecast_current)
+    if not result.get("validated"):
+        return result
 
     # Agregar info del análisis para contexto
     result["analysis"] = {
@@ -2494,6 +2501,60 @@ async def camera_analysis_validation():
     }
 
     return result
+
+
+@app.get("/api/camera/analysis/accuracy")
+async def camera_analysis_accuracy(days: int = 30):
+    """
+    Qué tan seguido coincidió la cámara con el pronóstico en los últimos N días.
+
+    Se arma sobre el `match` que ya se guarda por captura en el histórico diario
+    (ver `CameraStore.save_analysis`) -- no recalcula nada, sólo tabula.
+    """
+    days = max(1, min(days, 365))
+    return _camera.get_accuracy_stats(days)
+
+
+@app.get("/api/camera/best/{date}")
+async def camera_best_of_day(date: str):
+    """
+    Metadato de la mejor foto del día (mayor visibilidad reportada, ver
+    `CameraStore.best_of_day`). Se conserva para siempre -- vive en el análisis
+    diario -- aunque la foto en sí ya se haya podado (ver el endpoint `.jpg`).
+    """
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido (usar YYYY-MM-DD)")
+    entry = _camera.best_of_day(date)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
+    return entry
+
+
+@app.get("/api/camera/best/{date}.jpg")
+async def camera_best_of_day_jpg(date: str):
+    """
+    La foto elegida como mejor del día. 404 si el fotograma ya se podó -- las FOTOS
+    se retienen 7 días por defecto, mucho menos que el análisis que las eligió.
+    """
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido (usar YYYY-MM-DD)")
+    entry = _camera.best_of_day(date)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
+    ruta = _camera.frame_path(date, entry.get("ts", ""))
+    if not ruta or not os.path.exists(ruta):
+        raise HTTPException(status_code=404, detail="La foto ya no está disponible (retención de fotos)")
+    return FileResponse(
+        ruta,
+        media_type="image/jpeg",
+        # Un día cerrado no cambia; el de hoy sí puede cambiar de "mejor" según entren
+        # más capturas, así que sólo se cachea un rato corto.
+        headers={"Cache-Control": "max-age=600"},
+    )
 
 
 @app.get("/api/camera/latest.jpg")

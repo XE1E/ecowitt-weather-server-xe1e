@@ -14,7 +14,29 @@ extraer información sobre el estado del cielo.
 
 ## Dónde se ve
 - **Homepage:** tarjeta "Estado del cielo" con análisis actual + tendencia + validación
-- **Cámara:** histórico diario con gráfica de cobertura y estadísticas
+- **Cámara:** histórico diario con gráfica de cobertura y estadísticas, más "Mejor foto
+  del día" (mayor visibilidad reportada ese día, excluye la noche)
+- **METAR** (Homepage y `/pro/aeronautica`): junto a las capas de nubes del aeropuerto
+  MMMX se muestra qué ve la cámara en ese momento, para comparar a ojo (sin puntaje:
+  son dos sitios distintos)
+- **Astronomía:** tarjeta "¿Buena noche para observar?" cuando es de noche, cruzando la
+  cobertura de nubes de la cámara con el % de iluminación lunar
+
+## Tendencia y validación (redacción 2026-08-29)
+Desde 2026-08-29 ambos bloques son frases completas en español, sin flechas ni
+símbolos (antes: `↑`/`↓`/`→` para la tendencia, `✓`/`≈`/`?`/`⚠` para la validación).
+Ej.: "Nublándose: la cobertura de nubes subió 18%" o "La cámara ve algo distinto al
+modelo: la cámara ve parcialmente nublado, el modelo predice cubierto".
+
+## Precisión del pronóstico (`/pro/camara`)
+Cada captura ahora guarda si coincidió con el pronóstico de ese momento
+(`match`: exact/close/differ/conflict) en el histórico diario -- antes esa
+validación se calculaba al vuelo y se descartaba. `GET
+/api/camera/analysis/accuracy?days=30` tabula el % de acierto de los últimos N
+días; la tarjeta "Precisión del pronóstico" lo muestra como barra apilada. Esta
+persistencia es también la base para una futura corrección de sesgo del
+pronóstico (ver `docs/internal/PENDIENTES.md` §2.e, pendiente hasta acumular
+suficientes semanas de datos).
 
 ## Alertas visuales
 Notifica por Telegram/correo cuando detecta:

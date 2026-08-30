@@ -3,6 +3,7 @@ import { SunMoonDetailCard } from '../components/station/SunMoonDetailCard'
 import { DaylightChart } from '../components/station/DaylightChart'
 import { SkyEventsCard } from '../components/station/SkyEventsCard'
 import { AlmanacCard } from '../components/station/AlmanacCard'
+import { StargazingCard } from '../components/station/StargazingCard'
 import { PageInfo } from '../components/station/PageInfo'
 import { LOCATION } from '../config'
 
@@ -13,6 +14,7 @@ export function AstronomyPage() {
       <p className="text-xs text-slate-400 mb-4">Observaciones del sol, la luna y el cielo para {LOCATION.label}.</p>
 
       <div className="space-y-4">
+        <StargazingCard />
         <SunMoonDetailCard />
         <DaylightChart />
         <AlmanacCard />

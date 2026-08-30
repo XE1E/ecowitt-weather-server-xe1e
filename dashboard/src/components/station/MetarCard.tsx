@@ -15,6 +15,16 @@ interface Metar {
   flight_category?: string | null; clouds?: Cloud[]; wx?: string | null
 }
 
+/** Lo que ve la cámara del exterior AHORA MISMO, para poner junto al METAR --sin
+ * puntaje de acierto: el aeropuerto está a varios km de la estación, así que es
+ * una comparación a ojo, no una validación (ésa ya existe, y es contra el
+ * pronóstico de modelo, que sí comparte la misma coordenada). */
+interface CamaraCielo { sky_condition?: string; cloud_coverage_pct?: number }
+const SKY_CONDITION_ES: Record<string, string> = {
+  clear: 'Despejado', partly_cloudy: 'Parc. nublado', mostly_cloudy: 'May. nublado',
+  overcast: 'Cubierto', foggy: 'Neblina', rainy: 'Lluvia', stormy: 'Tormenta', night: 'Noche',
+}
+
 const CARD16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const dir16 = (d: number) => CARD16[Math.round(d / 22.5) % 16]
 
@@ -54,6 +64,7 @@ export function MetarCard() {
   const u = useUnits()
   const [m, setM] = useState<Metar | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'empty'>('loading')
+  const [camara, setCamara] = useState<CamaraCielo | null>(null)
 
   useEffect(() => {
     let cancel = false
@@ -66,6 +77,23 @@ export function MetarCard() {
           else setState('empty')
         })
         .catch(() => !cancel && setState('empty'))
+    }
+    load()
+    const i = setInterval(load, REFRESH)
+    return () => { cancel = true; clearInterval(i) }
+  }, [])
+
+  useEffect(() => {
+    let cancel = false
+    const load = () => {
+      fetch('/api/camera/status')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (cancel) return
+          const a = j?.analysis
+          setCamara(a && !a.error ? a : null)
+        })
+        .catch(() => !cancel && setCamara(null))
     }
     load()
     const i = setInterval(load, REFRESH)
@@ -180,6 +208,17 @@ export function MetarCard() {
                   <span className="font-medium tabular-nums">{baseStr(c.base).replace(/^ a /, '')}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {/* Lo que ve la cámara de casa, junto al reporte del aeropuerto -- sin
+              puntaje: son dos sitios distintos, es para comparar a ojo. */}
+          {camara && (
+            <div className="flex items-baseline justify-between gap-2 mt-1 pt-1 border-t border-white/5">
+              <span className="text-slate-500">Cámara (casa)</span>
+              <span className="font-medium tabular-nums">
+                {SKY_CONDITION_ES[camara.sky_condition ?? ''] ?? camara.sky_condition}
+                {camara.cloud_coverage_pct != null && `, ${camara.cloud_coverage_pct}%`}
+              </span>
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-19.
+> Última actualización: 2026-08-29.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -164,6 +164,33 @@ tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
 `PLAN-KIOSCO-NAVEGACION.md`). El **2026-08-19** se instaló el Archer C6 como AP y
 la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
 `docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
+
+## 2.e Corrección de sesgo del pronóstico con datos de la cámara — pendiente
+
+Idea derivada de comparar la cámara del exterior con el pronóstico de Open-Meteo
+(§2.b, "Análisis del cielo con IA"): si la cámara ve sistemáticamente más (o menos)
+nubes de las que predice el modelo a cierta hora o época del año, se le podría
+aplicar al pronóstico propio la misma corrección de sesgo que ya se hizo con la
+presión y la temperatura del pronóstico horario (commits `be6d6e7`, `2fc1630`).
+
+**Ya hecho, base para esto (2026-08-29):** cada captura guarda ahora su
+`match`/`forecast_condition`/`forecast_coverage_pct` en el histórico diario
+(`<camera_dir>/analysis/YYYY-MM-DD.json`, ver `CameraStore.save_analysis` /
+`_append_to_daily` en `receiver/app/services/camera.py`, y
+`_current_forecast_wmo_cloudcover` en `main.py`). Antes la validación se
+calculaba al vuelo en cada petición del dashboard y se descartaba, así que no
+había con qué corregir nada. También se añadió `GET
+/api/camera/analysis/accuracy` para tabular el % de acierto (ver
+`docs/guias/analisis-cielo.md`), que sirve de termómetro de si vale la pena la
+corrección antes de construirla.
+
+**Falta:**
+- Dejar pasar unas semanas para acumular muestras suficientes (a ~5 min de
+  cadencia y la ventana diurna configurada, son decenas de comparaciones al día).
+- Diseñar el ajuste con datos reales en mano, no antes: ¿por hora del día?, ¿por
+  estación del año?, ¿un offset fijo de cobertura o algo más fino?
+- No confundir con `GET /api/camera/analysis/validation` (ya existe, sólo informa
+  "la cámara y el modelo dijeron cosas distintas ahora mismo"; no corrige nada).
 
 ## 2.c Timelapse diario — ✅ HECHO (2026-08-18)
 

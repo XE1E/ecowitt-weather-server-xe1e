@@ -234,7 +234,11 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
+| `GET /api/camera/analysis` | Último análisis del cielo + tendencia (nowcasting) |
+| `GET /api/camera/analysis/validation` | Validación en vivo vs pronóstico de Open-Meteo |
+| `GET /api/camera/analysis/accuracy?days=30` | % de acierto vs pronóstico de los últimos N días (ver abajo) |
 | `GET /api/camera/analysis/history` | Días con análisis, o `?date=` para la curva de un día |
+| `GET /api/camera/best/<fecha>` · `GET /api/camera/best/<fecha>.jpg` | Metadato y foto de mejor visibilidad de ese día (ver abajo) |
 | `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
 | `GET /api/camera/timelapse/<fecha>.mp4` | El timelapse de ese día (ver abajo) |
 | `POST /api/camera/timelapse/<fecha>` | Rehace el vídeo del día. **Requiere admin** |
@@ -282,6 +286,38 @@ GET /api/camera/status
 
 Con `available: false` la web oculta la tarjeta de Inicio y el kiosco muestra «sin
 imagen»; con `stale: true` ambos marcan **FOTO ANTIGUA** sobre la propia imagen.
+
+### Precisión del pronóstico y mejor foto del día
+
+Desde 2026-08-29 cada captura analizada guarda también si coincidió con el
+pronóstico de ese instante (antes esto sólo se calculaba al vuelo, en cada visita
+al dashboard, y se descartaba). `GET /api/camera/analysis/accuracy` tabula esos
+datos ya guardados:
+
+```json
+GET /api/camera/analysis/accuracy?days=30
+{
+  "days_requested": 30,
+  "days_with_data": 22,
+  "total": 187,
+  "counts": {"exact": 96, "close": 45, "differ": 34, "conflict": 12},
+  "pct": {"exact": 51.3, "close": 24.1, "differ": 18.2, "conflict": 6.4}
+}
+```
+
+`GET /api/camera/best/<fecha>` elige, de ese día, la entrada con mayor visibilidad
+reportada (excluye la noche salvo que el día entero lo haya sido):
+
+```json
+GET /api/camera/best/2026-08-29
+{"ts": "2026-08-29T15:00:00Z", "condition": "clear", "cloud_type": "clear",
+ "visibility": "excellent", "coverage": 5, "precip": false}
+```
+
+`GET /api/camera/best/<fecha>.jpg` sirve esa foto. El metadato se conserva para
+siempre (vive en el análisis diario), pero la foto puede haberse podado ya --las
+fotos se retienen 7 días por defecto, mucho menos que el análisis-- y entonces
+responde `404`.
 
 ### Timelapse diario
 
