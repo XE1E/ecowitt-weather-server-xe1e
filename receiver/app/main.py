@@ -918,6 +918,9 @@ async def admin_backup_status(authorization: Optional[str] = Header(default=None
         "r2_configured": r2_configured,
         "r2_bucket": settings.r2_bucket if r2_configured else None,
         "backup_api_configured": bool(settings.backup_api_token),
+        # Fotos no tiene retención propia en R2 (ver scripts/backup-camera-fotos.sh):
+        # sigue esta, así que el panel la muestra para no obligar a ir a Cámara.
+        "camera_retention_days": settings.camera_retention_days,
         "categories": backup_status.read_all(settings.backup_status_dir),
     }
 

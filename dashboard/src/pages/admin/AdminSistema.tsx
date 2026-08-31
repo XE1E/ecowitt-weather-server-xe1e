@@ -32,6 +32,7 @@ interface BackupStatus {
   r2_configured: boolean
   r2_bucket: string | null
   backup_api_configured: boolean
+  camera_retention_days: number
   categories: Record<string, BackupCategoryStatus | null>
 }
 
@@ -380,7 +381,8 @@ export function AdminSistema() {
           </div>
         </div>
         <p className="text-xs text-slate-500">
-          Fotos no tiene retención propia en R2: sigue la de Cámara (días que se conservan en el VPS).
+          Fotos no tiene retención propia en R2: sube exactamente los días que existan en el VPS, así
+          que sigue la de Admin → Cámara{backup ? ` (hoy: ${backup.camera_retention_days} días)` : ''}.
           El umbral de aviso de "respaldo desactualizado" está en Alertas → 💾 Respaldo a R2.
         </p>
       </div>
