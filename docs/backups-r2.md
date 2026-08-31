@@ -83,11 +83,12 @@ cuatro categorías.
 
 ```bash
 crontab -e
-# añade (InfluxDB a las 3:15, cámara escalonada detrás para no pisarse):
-15 3 * * * /bin/bash ~/ecowitt-weather-server-xe1e/scripts/backup-influx.sh >> ~/ecowitt-backups/backup.log 2>&1
-20 3 * * * /bin/bash ~/ecowitt-weather-server-xe1e/scripts/backup-camera-fotos.sh >> ~/ecowitt-backups/backup.log 2>&1
-25 3 * * * /bin/bash ~/ecowitt-weather-server-xe1e/scripts/backup-camera-timelapse.sh >> ~/ecowitt-backups/backup.log 2>&1
-30 3 * * * /bin/bash ~/ecowitt-weather-server-xe1e/scripts/backup-camera-analisis.sh >> ~/ecowitt-backups/backup.log 2>&1
+# InfluxDB ya corría a las 3:30 desde antes de este plan; la cámara se agregó
+# escalonada detrás para no pisarse:
+30 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-influx.sh >> ~/ecowitt-backups/backup.log 2>&1
+35 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-fotos.sh >> ~/ecowitt-backups/backup.log 2>&1
+40 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-timelapse.sh >> ~/ecowitt-backups/backup.log 2>&1
+45 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-analisis.sh >> ~/ecowitt-backups/backup.log 2>&1
 ```
 
 ## Retención
