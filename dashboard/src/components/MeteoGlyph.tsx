@@ -170,7 +170,30 @@ const TINTA: Record<string, [number, number, number, number]> = {
  * ellas.
  */
 const RETOQUES: Record<string, (svg: string) => string> = {
-  thermometer: (svg) => svg.replace(/V41\.5469H65C.*?H71V71\.8398/, 'V71.8398'),
+  thermometer: (svg) => svg
+    .replace(/V41\.5469H65C.*?H71V71\.8398/, 'V71.8398')
+    // El mercurio (bulbo "Reservoir" + columna "Value") en rojo FIJO y no en
+    // currentColor: así se lee como un termómetro real sin importar el color
+    // de la celda (naranja de EXT, azul si fuera otra variable). El cristal
+    // ("Glass", más abajo) sigue tiñéndose normal. Mismo rojo que trae de
+    // fábrica la variante `fill` de Meteocons (ver cabecera de este archivo),
+    // no uno de los `--red`/`--alarma` de la consola: esos ya tienen su propio
+    // significado (contorno del reloj / aviso) y reusarlos aquí mezclaría dos
+    // cosas distintas en un mismo color, el mismo error que describe
+    // console-css.ts sobre por qué se separaron esos dos.
+    .replace(/(id="Reservoir"[^>]*?)fill="black"/, '$1fill="#DC2626"')
+    .replace(/(id="Value"[^>]*?)fill="black"/, '$1fill="#DC2626"'),
+  // La carátula de Meteocons no trae relleno: el aro ("Housing") es sólo
+  // contorno y las marcas son líneas, así que hoy se ve el negro de la
+  // consola A TRAVÉS del reloj. Se le agrega un disco blanco FIJO detrás de
+  // todo -- aro, marcas y aguja se siguen tiñendo con currentColor como
+  // siempre, sólo el fondo cambia--. r=37 y no 38.5 (el radio del aro): el
+  // aro lleva stroke-width 3, así que su borde interior cae en ~37; con el
+  // disco al mismo radio que el aro se asomaría por fuera de su propio trazo.
+  barometer: (svg) => svg.replace(
+    '<g id="Barometer">',
+    '<circle cx="64" cy="64" r="37" fill="#fff"/><g id="Barometer">',
+  ),
 }
 
 /** Nombres disponibles como glifo teñible. */
