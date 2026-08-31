@@ -1158,7 +1158,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS y **AWEKAS**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
 | **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
-| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. Enlaces útiles y stack |
+| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
 dejan **en blanco al guardar, se conservan**. Los ajustes se guardan en
@@ -1492,8 +1492,9 @@ docker compose --profile grafana up -d    # credenciales: GRAFANA_ADMIN_* del .e
 `ADMIN_PASSWORD`, `WEB_PORT`, TZ. El resto (alertas, QC, calibración, tokens,
 redes) es preferible dejarlo por defecto y ajustarlo desde el panel.
 
-**Backups:** respaldos periódicos del volumen de InfluxDB, con copia externa a
-**Cloudflare R2** (ver `docs/backups-r2.md`). **Uptime:** monitor externo de
+**Backups:** respaldos periódicos del volumen de InfluxDB, más copia externa
+(fuera del VPS) a **Cloudflare R2** de sensores, fotos, timelapse y análisis del
+cielo, por cron (ver `docs/backups-r2.md`). **Uptime:** monitor externo de
 disponibilidad (ver `uptime-worker/`).
 
 **Persistencia:** los ajustes del panel viven en el volumen `receiver-data`
@@ -1542,4 +1543,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-08-29.*
+*Última actualización: 2026-08-31.*
