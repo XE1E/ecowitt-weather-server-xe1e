@@ -32,9 +32,12 @@ cuántos backups de Influx conservar).
 
 Los scripts corren por cron en el VPS, **fuera** del contenedor, y no pueden leer
 `settings.json` (vive dentro del volumen Docker). Por eso piden las credenciales
-al propio receiver vía `GET /api/backup/r2-credentials`, autenticado con un token
-propio — no el del panel de administración, para que si se filtra sólo permita
-leer estas credenciales.
+al propio receiver vía `GET http://localhost:8080/api/backup/r2-credentials`
+(mismo puerto directo al dashboard que ya usa `docs/DEPLOY.md` para probar la API
+desde el VPS — el `:80`/`:443` los atiende Caddy, que fuerza HTTPS con el
+certificado del dominio real y no sirve para pegarle a "localhost"), autenticado
+con un token propio — no el del panel de administración, para que si se filtra
+sólo permita leer estas credenciales.
 
 Ese token sí va en el `.env` del VPS, porque es lo único que un script fuera del
 contenedor necesita para arrancar la cadena:

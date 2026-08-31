@@ -38,10 +38,12 @@ fetch_r2_config() {
     echo "[backup] BACKUP_API_TOKEN vacío en .env; ver docs/backups-r2.md" >&2
     return 1
   fi
-  # nginx es el único punto público del stack (ver docker-compose.yml) y ya
-  # proxea /api al receiver, así que se llama en localhost sin exponer puertos
-  # nuevos. BACKUP_API_URL permite apuntar a otro host si hiciera falta.
-  base_url="${BACKUP_API_URL:-http://localhost/api/backup/r2-credentials}"
+  # localhost:8080 es el dashboard (nginx) publicado directo en el host, sin
+  # pasar por Caddy (que en :80/:443 fuerza HTTPS con el certificado del
+  # dominio real, no de "localhost") — mismo puerto que ya usa docs/DEPLOY.md
+  # para probar la API desde el propio VPS. BACKUP_API_URL permite apuntar a
+  # otro host si hiciera falta.
+  base_url="${BACKUP_API_URL:-http://localhost:8080/api/backup/r2-credentials}"
   resp="$(curl -fsS --max-time 10 -H "X-Backup-Token: $token" "$base_url")" || {
     echo "[backup] no se pudo contactar $base_url" >&2
     return 1
