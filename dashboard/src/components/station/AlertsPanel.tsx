@@ -28,7 +28,7 @@ export function AlertsPanel() {
   }, [])
 
   return (
-    <div className="card">
+    <div className="card" id="alertas">
       <p className="card-title">Alertas</p>
       {!enabled ? (
         <p className="text-sm text-slate-400">Alertas desactivadas</p>

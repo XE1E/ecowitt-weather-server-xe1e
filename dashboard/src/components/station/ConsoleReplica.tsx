@@ -1405,7 +1405,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               es la coordenada del dato, no el dato. */}
           <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'baseline' }}>
             <span style={{ color: 'var(--w)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>MÍN</span>
-            <span className="gt seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+            <span className="gy seg" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
               {decNum(u.temp(tDay?.min ?? undefined))}
             </span>
             <span style={{ color: 'var(--w)', fontSize: 11, fontWeight: 700 }}>{hhmm(tDay?.min_time)}</span>
@@ -1929,18 +1929,18 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
                 se centra la LÍNEA completa (cifra + unidad). Encogida, la tinta acababa corrida
                 a la derecha --28 px de margen a la izquierda contra 9 a la derecha, medido en la
                 captura-- porque la unidad y el decimal no pesan lo mismo a cada lado. */}
-            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
+            <div className="gy seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
                                              whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
-              {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
+              {decNum(u.temp(data?.dew_point))}<span className="u" style={{ fontSize: 15, color: 'var(--y)' }}>{u.tempU}</span>
             </div>
           </div>
           {/* Rótulo arriba y valor centrado en lo que queda, como ROCÍO. */}
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}
             style={{ padding: '8px 3px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
             <div style={{ color: alertaCol('sensacion', 'var(--w)'), fontSize: 16, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>SENSACIÓN</div>
-            <div className="gt seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
+            <div className="gy seg" style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, margin: 'auto 0',
                                              whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
-              {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--t)' }}>{u.tempU}</span>
+              {decNum(u.temp(data?.feels_like))}<span className="u" style={{ fontSize: 15, color: 'var(--y)' }}>{u.tempU}</span>
             </div>
           </div>
           <div className="cell main" data-nav={CONSOLA_NAV.derivadas}

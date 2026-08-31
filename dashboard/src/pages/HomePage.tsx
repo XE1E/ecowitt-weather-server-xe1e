@@ -16,6 +16,7 @@ import { ExtraSensorsCard } from '../components/station/ExtraSensorsCard'
 import { InteriorCard } from '../components/station/InteriorCard'
 import { RemoteStationCard } from '../components/station/RemoteStationCard'
 import { AlertsPanel } from '../components/station/AlertsPanel'
+import { AlertBanner } from '../components/station/AlertBanner'
 import { RadarCard } from '../components/station/RadarCard'
 import { SkyAnalysisCard } from '../components/station/SkyAnalysisCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
@@ -37,6 +38,7 @@ export function HomePage() {
 
   return (
     <>
+      <AlertBanner />
       <div className="mb-4">
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
