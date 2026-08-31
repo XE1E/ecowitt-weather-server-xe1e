@@ -71,7 +71,11 @@ r2_remote() {
   else
     endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
   fi
-  printf ':s3,provider=Cloudflare,access_key_id=%s,secret_access_key=%s,endpoint=%s:' \
+  # El endpoint va entre comillas simples DENTRO de la connection string: sin
+  # ellas, rclone corta el valor en el primer ":" que encuentra (el de
+  # "https://") y falla con "Custom endpoint `https` was not a valid URI".
+  # Comprobado en el VPS real.
+  printf ":s3,provider=Cloudflare,access_key_id=%s,secret_access_key=%s,endpoint='%s':" \
     "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY" "$endpoint"
 }
 
