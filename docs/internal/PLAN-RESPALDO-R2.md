@@ -120,14 +120,20 @@ endpoint interno (`GET /api/backup/r2-credentials`) protegido con un token propi
 (`backup_api_token`/`BACKUP_API_TOKEN`, el único secreto que sigue viviendo en el
 `.env` — ver docs/backups-r2.md §2).
 
-## Pendiente (fuera de este plan, evaluado y diferido)
+## Vigilancia de cuota del tier gratis de R2 (2026-08-31)
 
-**Vigilar la cuota del tier gratis de Cloudflare R2** (cuánto storage/operaciones
-llevas usados vs. el límite gratis): posible vía la API GraphQL de Analytics de
-Cloudflare, pero requiere un Cloudflare API Token DISTINTO a las claves S3 de R2
-(scope de Account Analytics), que el usuario tendría que crear a mano. Diferido
-2026-08-30 porque al ritmo medido (~15 GB/año) falta mucho para acercarse a un
-tier gratis típico (~10 GB) — no es urgente.
+Se había diferido el 2026-08-30 (no urgente al ritmo medido, ~15 GB/año) pero se
+construyó a pedido explícito el mismo día siguiente. Admin → Sistema → Respaldos
+muestra storage y operaciones Clase A/B del mes en curso vs. el tier gratis, vía la
+API GraphQL de Analytics de Cloudflare (`receiver/app/services/r2_quota.py`) — NO
+la API S3, así que necesita un Cloudflare API Token aparte (scope "Account
+Analytics: Read"). Ver `docs/backups-r2.md` §Uso del tier gratis para cómo crearlo.
+
+Con incertidumbre real al escribirlo: la clasificación de operaciones en Clase
+A/B se hizo desde la documentación pública de Cloudflare, sin poder probarla contra
+la API real todavía — verificar en cuanto haya un token real configurado que los
+números salgan razonables (revisar logs del receiver por avisos de
+`actionType(s) sin clasificar`).
 
 ## Siguiente paso concreto (sólo posible en el VPS real)
 

@@ -55,6 +55,7 @@ from .services.camera import CameraStore
 from .services.timelapse import TimelapseService, TimelapseError
 from .services import sky_analyzer
 from .services import backup_status
+from .services import r2_quota
 
 # Configure logging
 logging.basicConfig(
@@ -923,6 +924,22 @@ async def admin_backup_status(authorization: Optional[str] = Header(default=None
         "camera_retention_days": settings.camera_retention_days,
         "categories": backup_status.read_all(settings.backup_status_dir),
     }
+
+
+@app.get("/api/admin/r2-usage")
+async def admin_r2_usage(authorization: Optional[str] = Header(default=None)):
+    """Uso de R2 del mes en curso vs. el tier gratis (ver services/r2_quota.py).
+
+    Requiere `cloudflare_api_token` (DISTINTO a las claves S3 de R2) — sin él,
+    responde `configured: false` en vez de un error, porque es una función
+    opcional y no todos los que configuran R2 necesitan vigilar la cuota."""
+    _require_admin(authorization)
+    if not (settings.cloudflare_api_token and settings.r2_account_id and settings.r2_bucket):
+        return {"configured": False}
+    usage = await r2_quota.get_r2_usage(
+        settings.r2_account_id, settings.cloudflare_api_token, settings.r2_bucket
+    )
+    return {"configured": True, **usage}
 
 
 @app.get("/api/admin/system-info")

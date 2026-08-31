@@ -21,6 +21,20 @@ interface SysSettings {
   r2_timelapse_retention_days: number
   r2_analisis_retention_days: number
   r2_influx_keep: number
+  cloudflare_api_token: string | null
+  cloudflare_api_token_masked: string | null
+}
+
+interface R2Usage {
+  configured: boolean
+  ok?: boolean
+  error?: string
+  storage_bytes?: number
+  class_a_ops?: number
+  class_b_ops?: number
+  period_start?: string
+  period_end?: string
+  free_tier?: { storage_gb: number; class_a_ops: number; class_b_ops: number }
 }
 
 interface BackupCategoryStatus {
@@ -149,6 +163,8 @@ export function AdminSistema() {
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
   const [backup, setBackup] = useState<BackupStatus | null>(null)
   const [backupLoading, setBackupLoading] = useState(false)
+  const [r2Usage, setR2Usage] = useState<R2Usage | null>(null)
+  const [r2UsageLoading, setR2UsageLoading] = useState(false)
 
   const loadBackupStatus = useCallback(async () => {
     setBackupLoading(true)
@@ -157,6 +173,15 @@ export function AdminSistema() {
       if (r.ok) setBackup(await r.json())
     } catch (e) { console.error(e) }
     setBackupLoading(false)
+  }, [fetchWithAuth])
+
+  const loadR2Usage = useCallback(async () => {
+    setR2UsageLoading(true)
+    try {
+      const r = await fetchWithAuth('/api/admin/r2-usage')
+      if (r.ok) setR2Usage(await r.json())
+    } catch (e) { console.error(e) }
+    setR2UsageLoading(false)
   }, [fetchWithAuth])
 
   const loadLogs = useCallback(async () => {
@@ -190,7 +215,8 @@ export function AdminSistema() {
     }).finally(() => setLoading(false))
     loadLogs()
     loadBackupStatus()
-  }, [fetchWithAuth, loadLogs, loadBackupStatus])
+    loadR2Usage()
+  }, [fetchWithAuth, loadLogs, loadBackupStatus, loadR2Usage])
 
   const handleSave = async () => {
     if (!settings) return
@@ -385,6 +411,64 @@ export function AdminSistema() {
           que sigue la de Admin → Cámara{backup ? ` (hoy: ${backup.camera_retention_days} días)` : ''}.
           El umbral de aviso de "respaldo desactualizado" está en Alertas → 💾 Respaldo a R2.
         </p>
+
+        <div className="h-px bg-white/10" />
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Uso del tier gratis de R2 (opcional)</p>
+            <button onClick={loadR2Usage} disabled={r2UsageLoading} className="text-xs text-sky-400 hover:text-sky-300 disabled:text-slate-500">
+              {r2UsageLoading ? 'Actualizando...' : '↻ Actualizar'}
+            </button>
+          </div>
+          <div className="mb-3">
+            <label className="text-xs text-slate-400 block mb-1">Cloudflare API Token (Account Analytics: Read)</label>
+            <TextField value={settings.cloudflare_api_token} onChange={(v) => update('cloudflare_api_token', v)} placeholder="Distinto a las claves S3 de arriba" type="password" masked={settings.cloudflare_api_token_masked} />
+            <p className="text-xs text-slate-500 mt-1">
+              Se crea en Cloudflare → Mi perfil → API Tokens (alcance "Account Analytics: Read", NO las claves
+              S3 de arriba). Sin esto, esta sección simplemente no muestra nada.
+            </p>
+          </div>
+
+          {r2Usage && !r2Usage.configured && (
+            <p className="text-xs text-slate-500 italic">Sin Cloudflare API Token, no hay uso que mostrar.</p>
+          )}
+          {r2Usage?.configured && r2Usage.ok === false && (
+            <p className="text-xs text-red-400">⚠️ No se pudo consultar: {r2Usage.error}</p>
+          )}
+          {r2Usage?.configured && r2Usage.ok && r2Usage.free_tier && (
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1 text-sm">
+                  <span className="text-slate-500">Storage</span>
+                  <span className="text-slate-300">
+                    {((r2Usage.storage_bytes || 0) / 1024 ** 3).toFixed(2)} / {r2Usage.free_tier.storage_gb} GB
+                  </span>
+                </div>
+                <UsageBar pct={((r2Usage.storage_bytes || 0) / 1024 ** 3 / r2Usage.free_tier.storage_gb) * 100} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="flex items-center justify-between mb-1 text-sm">
+                    <span className="text-slate-500">Operaciones clase A (mes en curso)</span>
+                    <span className="text-slate-300">{(r2Usage.class_a_ops || 0).toLocaleString()} / {r2Usage.free_tier.class_a_ops.toLocaleString()}</span>
+                  </div>
+                  <UsageBar pct={((r2Usage.class_a_ops || 0) / r2Usage.free_tier.class_a_ops) * 100} />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1 text-sm">
+                    <span className="text-slate-500">Operaciones clase B (mes en curso)</span>
+                    <span className="text-slate-300">{(r2Usage.class_b_ops || 0).toLocaleString()} / {r2Usage.free_tier.class_b_ops.toLocaleString()}</span>
+                  </div>
+                  <UsageBar pct={((r2Usage.class_b_ops || 0) / r2Usage.free_tier.class_b_ops) * 100} />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Límites del tier gratis verificados 2026-08-31 — confirma en cloudflare.com/r2/pricing, Cloudflare puede cambiarlos.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Ubicacion y zona horaria */}

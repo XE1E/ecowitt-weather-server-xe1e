@@ -330,6 +330,11 @@ class Settings(BaseSettings):
     # este es por CANTIDAD de archivos y no por días: así era backup-influx.sh
     # desde antes de este plan).
     r2_influx_keep: int = 30
+    # Vigilancia de cuota del tier gratis de R2 (opcional). Token DISTINTO a las
+    # claves S3 de arriba: un Cloudflare API Token con alcance "Account
+    # Analytics: Read", creado en el dashboard de Cloudflare (Mi perfil → API
+    # Tokens). Sin este, el panel simplemente no muestra el uso.
+    cloudflare_api_token: Optional[str] = None
     backup_status_dir: str = "/data/backups"
 
     # Timezone (para sincronización con displays ESP32)

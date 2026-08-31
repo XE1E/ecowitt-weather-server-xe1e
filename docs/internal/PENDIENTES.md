@@ -247,8 +247,11 @@ credenciales de R2 editables desde Admin → Sistema → Respaldos (settings.jso
 - [ ] Instalar `rclone` en el VPS.
 - [ ] Probar los 4 scripts a mano y programar el cron (`docs/backups-r2.md` §4-5).
 
-Diferido (evaluado, no urgente): vigilar cuota del tier gratis de R2 vía la API de
-Cloudflare — necesita un API Token aparte; al ritmo medido (~15 GB/año) no aprieta.
+Vigilancia de cuota del tier gratis de R2: implementada 2026-08-31 (Admin →
+Sistema → Respaldos, requiere un Cloudflare API Token aparte — ver
+`docs/backups-r2.md`). La clasificación de operaciones Clase A/B no se pudo
+probar contra la API real al escribirla; verificar que los números salgan
+razonables en cuanto haya un token configurado.
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación

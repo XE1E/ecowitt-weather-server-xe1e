@@ -128,9 +128,24 @@ Fotos/timelapse/análisis son archivos sueltos: basta con `rclone copy` desde el
 prefijo correspondiente (`camara/fotos/YYYY-MM-DD/`, etc.) de vuelta al volumen del
 contenedor, sin pasar por `tar`.
 
-## Pendiente
+## Uso del tier gratis (opcional)
 
-Vigilar el uso/cuota del tier gratis de Cloudflare R2 requeriría un Cloudflare API
-Token aparte (no las claves S3 de arriba) y la API GraphQL de Analytics de
-Cloudflare — deliberadamente no implementado aún: al ritmo medido (~15 GB/año) falta
-mucho para acercarse a un tier gratis típico. Ver `docs/internal/PLAN-RESPALDO-R2.md`.
+Admin → Sistema → Respaldos también puede mostrar cuánto storage/operaciones llevas
+usados del tier gratis de R2 (vía la API GraphQL de Analytics de Cloudflare, no la
+API S3). Requiere un Cloudflare API Token **distinto** a las claves de arriba:
+
+1. Cloudflare → **Mi perfil → API Tokens → Create Token**.
+2. Alcance: **Account → Account Analytics → Read** (sólo lectura de analytics de
+   la cuenta — no Object Read & Write, ese es el de S3).
+3. Pega el token en Admin → Sistema → Respaldos → *Cloudflare API Token*.
+
+Sin este token, esa sección simplemente no muestra nada (no es un error). Los
+límites del tier gratis que usa como referencia (`services/r2_quota.py`) están
+verificados al escribir esto (2026-08-31) — Cloudflare puede cambiarlos, confirma en
+cloudflare.com/r2/pricing si algo no cuadra.
+
+La clasificación de operaciones en Clase A/B (`_CLASS_A`/`_CLASS_B` en
+`r2_quota.py`) se hizo a partir de la documentación pública de precios de R2, sin
+poder probarla en vivo contra la API real al escribirla — si ves acciones sin
+clasificar, salen advertidas en los logs del receiver (`r2_quota: actionType(s) sin
+clasificar`).

@@ -100,6 +100,7 @@ EDITABLE_KEYS = {
     "r2_timelapse_retention_days",
     "r2_analisis_retention_days",
     "r2_influx_keep",
+    "cloudflare_api_token",
     "telegram_enabled",
     "telegram_bot_token",
     "telegram_chat_id",
@@ -187,6 +188,7 @@ SECRET_KEYS = {
     "r2_access_key_id",
     "r2_secret_access_key",
     "backup_api_token",
+    "cloudflare_api_token",
 }
 
 # Configuración por defecto para una estación
