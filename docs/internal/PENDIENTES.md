@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-31.
+> Última actualización: 2026-08-31 (tarde).
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -257,6 +257,38 @@ puede con las claves S3 — y el usuario prefirió no crear ese token por ahora.
 widget en Admin → Sistema → Respaldos ya existe y no requiere más código: activarlo
 es sólo pegar el token si algún día cambia de opinión. La clasificación de
 operaciones Clase A/B tampoco se pudo probar contra la API real todavía.
+
+## 2.g HDR automático por posición del sol (cámara) — código listo, falta desplegar y calibrar
+
+El usuario reportó (2026-08-31) que en las mañanas el sol entra al encuadre de
+la cámara (mira al sureste, sin posibilidad de girarla) como una bola que
+sobreexpone el aire alrededor — se ve como bruma/nubosidad ligera cerca del
+sol aunque el resto de la imagen esté bien. Se investigó parasol físico
+(descartado: el C325WB es 106°/56° de FOV, tan gran angular que el sol queda
+**dentro** del encuadre, no rozando el lente desde fuera — un parasol no
+puede tapar eso sin recortar la imagen) y WDR/BLC (Tapo no lo llama así; el
+equivalente es **HDR**, sí soportado por este modelo).
+
+**Hecho:** `scripts/camara-hdr-auto.py` — enciende/apaga el HDR vía **pytapo**
+(misma cuenta de cámara del RTSP) según la posición **real** del sol
+(azimut/altura de `GET /api/almanac`, ya lo calcula el servidor con pyephem)
+contra el rumbo fijo de la cámara — no un horario fijo, porque el arco donde
+amanece se mueve mucho en el año. Systemd
+`scripts/systemd/camara-hdr.{service,timer}` (cada 5 min, mismo patrón que
+`camara-clima.*`). Documentado en `docs/guias/camara-hdr-auto.md`, incluye
+cómo calibrar `CAMERA_BEARING_DEG` con fotos reales (no basta un compás).
+
+**Falta:**
+- [ ] Desplegar en la Pi `stn8952` (nodo IRLP en producción,
+      `192.168.100.202:22200`): copiar el script, `pip3 install pytapo`,
+      agregar variables a `camara.env`, instalar el timer. Ver la guía.
+- [ ] Calibrar `CAMERA_BEARING_DEG` (y `CAMERA_TILT_DEG` si hace falta) con
+      fotos reales de una mañana soleada.
+- [ ] Verificar en producción que el halo realmente se reduce con HDR
+      encendido — si no basta, el siguiente paso sería avisarle al análisis
+      del cielo con IA "sol en el encuadre ahora" para que no confunda el
+      halo con nubosidad (no se construyó esto todavía, a propósito: mejor
+      medir primero si el HDR ya resuelve la mayor parte).
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación

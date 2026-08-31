@@ -243,6 +243,7 @@ Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 
 - **[Guía completa](docs/GUIA.md)** — manual de referencia (hardware, arquitectura, cada página, API, operación)
 - [Análisis del cielo con IA](docs/guias/analisis-cielo.md) — cómo funciona, nowcasting, alertas visuales
+- [HDR automático por posición del sol](docs/guias/camara-hdr-auto.md) — mitiga el halo del sol en la cámara del exterior
 - [Referencia de API](docs/api-reference.md)
 - [Despliegue en el VPS](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md)
 - [Configurar el gateway/consola](docs/setup-gateway.md)

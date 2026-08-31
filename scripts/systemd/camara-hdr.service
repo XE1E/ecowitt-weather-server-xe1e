@@ -1,0 +1,18 @@
+[Unit]
+Description=Ajusta el HDR de la camara segun la posicion real del sol
+Documentation=https://github.com/XE1E/ecowitt-weather-server-xe1e
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/camara/camara-hdr-auto.py -e /opt/camara/camara.env
+
+# Mismo nodo IRLP en produccion que camara-clima.service: prioridad baja, esto
+# no debe competir por CPU/disco con el audio en tiempo real.
+Nice=10
+IOSchedulingClass=idle
+
+# Sólo habla con la cámara (LAN) y con /api/almanac (HTTPS, con caché de 10
+# min en el servidor); no hay excusa para tardar.
+TimeoutStartSec=30
