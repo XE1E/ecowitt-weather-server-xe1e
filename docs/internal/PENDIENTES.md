@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-29.
+> Última actualización: 2026-08-31.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -235,23 +235,28 @@ falla siempre deja de significar nada, así que nadie mira si lo que rompe es tu
 Ojo para la próxima: **la versión de Ruff está fijada** en el workflow (0.16.2) y las
 reglas en `receiver/ruff.toml`. Subirla debe ser deliberado.
 
-## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — código listo, falta configurar el VPS
-Ver **`docs/internal/PLAN-RESPALDO-R2.md`** y **`docs/backups-r2.md`**. Las 3
-decisiones de retención/notificación ya se tomaron y el código está escrito: 4
-scripts (`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`),
-credenciales de R2 editables desde Admin → Sistema → Respaldos (settings.json, no
-`.env`), alerta de "respaldo desactualizado" en Admin → Alertas.
+## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — ✅ HECHO Y EN PRODUCCIÓN (2026-08-31)
+Ver **`docs/internal/PLAN-RESPALDO-R2.md`** y **`docs/backups-r2.md`**. 4 scripts
+(`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`)
+corriendo por cron (3:30/35/40/45 am), credenciales de R2 en Admin → Sistema →
+Respaldos (settings.json, no `.env`), alerta de "respaldo desactualizado" en
+Admin → Alertas. **Verificado contra el bucket real:** 2,453 objetos, ~311 MiB
+subidos con éxito en las 4 categorías.
 
-- [ ] Crear bucket + API keys en Cloudflare y ponerlas en Admin.
-- [ ] Generar `BACKUP_API_TOKEN` y ponerlo en `.env` del VPS Y en Admin (mismo valor).
-- [ ] Instalar `rclone` en el VPS.
-- [ ] Probar los 4 scripts a mano y programar el cron (`docs/backups-r2.md` §4-5).
+Bugs reales encontrados y corregidos durante la puesta en marcha (documentados en
+`docs/backups-r2.md` para quien toque esto después): los scripts apuntaban a
+`localhost:80` (Caddy, fuerza HTTPS del dominio real) en vez de `:8080` (dashboard
+directo); el campo Account ID necesitaba aceptar tanto el ID solo como la URL
+completa que Cloudflare muestra pegada a él; rclone necesita el `endpoint` entre
+comillas simples en la connection string (si no, corta el valor en el primer `:`).
 
-Vigilancia de cuota del tier gratis de R2: implementada 2026-08-31 (Admin →
-Sistema → Respaldos, requiere un Cloudflare API Token aparte — ver
-`docs/backups-r2.md`). La clasificación de operaciones Clase A/B no se pudo
-probar contra la API real al escribirla; verificar que los números salgan
-razonables en cuanto haya un token configurado.
+**Vigilancia de cuota del tier gratis de R2: construida pero SIN ACTIVAR** (decisión
+del usuario, 2026-08-31). El Cloudflare API Token que hace falta ("Account
+Analytics: Read") es de TODA la cuenta — no se puede acotar a un bucket como sí se
+puede con las claves S3 — y el usuario prefirió no crear ese token por ahora. El
+widget en Admin → Sistema → Respaldos ya existe y no requiere más código: activarlo
+es sólo pegar el token si algún día cambia de opinión. La clasificación de
+operaciones Clase A/B tampoco se pudo probar contra la API real todavía.
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
