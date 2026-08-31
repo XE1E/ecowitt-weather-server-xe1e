@@ -47,6 +47,8 @@ interface AlertSettings {
   alert_camera_offline_minutes: number
   alert_camera_analysis_enabled: boolean
   alert_camera_analysis_fails: number
+  alert_backup_enabled: boolean
+  alert_backup_stale_hours: number
   telegram_enabled: boolean
   telegram_chat_id: string | null
   email_enabled: boolean
@@ -716,6 +718,21 @@ export function AdminAlertas() {
                 <span className="text-xs text-slate-500">intentos seguidos</span>
               </div>
             </div>
+          </div>
+
+          {/* Respaldo a R2: credenciales y retención se configuran en Sistema →
+              Respaldos; aquí sólo el umbral de "lleva demasiado sin correr". */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 space-y-3">
+            <p className="text-sm font-medium">💾 Respaldo a R2</p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Toggle enabled={settings.alert_backup_enabled} onChange={(v) => update('alert_backup_enabled', v)} label="Respaldo desactualizado" />
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">después de</span>
+                <NumField value={settings.alert_backup_stale_hours} onChange={(v) => update('alert_backup_stale_hours', v)} min={1} max={168} step={1} off={!settings.alert_backup_enabled} />
+                <span className="text-xs text-slate-500">h sin una corrida exitosa (alguna categoría)</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">Credenciales de R2 y retención: Sistema → Respaldos.</p>
           </div>
         </>
       )}

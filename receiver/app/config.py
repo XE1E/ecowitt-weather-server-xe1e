@@ -111,6 +111,12 @@ class Settings(BaseSettings):
     alert_camera_offline_minutes: int = 30
     alert_camera_analysis_enabled: bool = True
     alert_camera_analysis_fails: int = 3
+    # Aviso de respaldo a R2 desactualizado (ver docs/internal/PLAN-RESPALDO-R2.md):
+    # ninguna categoría (sensores/fotos/timelapse/análisis) reportó una corrida
+    # exitosa en más de N horas. 30h por omisión: el cron corre 1/día, así que
+    # cubre un fallo de una sola noche sin avisar en cada corrida normal.
+    alert_backup_enabled: bool = True
+    alert_backup_stale_hours: float = 30.0
 
     # Telegram notifications
     telegram_enabled: bool = False
@@ -301,6 +307,30 @@ class Settings(BaseSettings):
     # ¿La página de cámara aparece en el kiosco? Si es False, la celda de condición de la
     # consola vuelve a llevar al pronóstico y el menú no la lista.
     kiosk_camera_enabled: bool = True
+
+    # Respaldo externo a Cloudflare R2 (ver docs/internal/PLAN-RESPALDO-R2.md y
+    # docs/backups-r2.md). Editable desde Admin y guardado en settings.json, igual
+    # que anthropic_api_key/gemini_api_key. Los scripts scripts/backup-*.sh corren
+    # por cron en el VPS, FUERA del contenedor, y no pueden leer settings.json
+    # (vive dentro del volumen): lo piden vía GET /api/backup/r2-credentials,
+    # autenticado con `backup_api_token` (token propio, no el del panel de admin
+    # — mismo motivo que camera_upload_token: si se filtra, solo permite leer
+    # estas credenciales, no entrar al panel).
+    r2_account_id: Optional[str] = None
+    r2_access_key_id: Optional[str] = None
+    r2_secret_access_key: Optional[str] = None
+    r2_bucket: Optional[str] = None
+    backup_api_token: Optional[str] = None
+    # Retención en R2. Fotos NO tiene ajuste propio: el script sólo respalda las
+    # carpetas de día que existan en el contenedor, así que ya sigue automáticamente
+    # camera_retention_days (arriba). 0 = para siempre.
+    r2_timelapse_retention_days: int = 0
+    r2_analisis_retention_days: int = 0
+    # Cuántos backups de InfluxDB conservar en R2 (a diferencia de los de arriba,
+    # este es por CANTIDAD de archivos y no por días: así era backup-influx.sh
+    # desde antes de este plan).
+    r2_influx_keep: int = 30
+    backup_status_dir: str = "/data/backups"
 
     # Timezone (para sincronización con displays ESP32)
     timezone_offset: int = -6  # UTC offset in hours (e.g., -6 for Mexico City)

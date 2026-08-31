@@ -235,13 +235,20 @@ falla siempre deja de significar nada, así que nadie mira si lo que rompe es tu
 Ojo para la próxima: **la versión de Ruff está fijada** en el workflow (0.16.2) y las
 reglas en `receiver/ruff.toml`. Subirla debe ser deliberado.
 
-## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — plan escrito
-Ver **`docs/internal/PLAN-RESPALDO-R2.md`**. Diagnóstico y capacidad ya medidos en
-el VPS real (~40 MB/día, ~15 GB/año, dominado por las fotos). El respaldo de
-InfluxDB ya tiene script (`scripts/backup-influx.sh`) pero **las credenciales R2
-no están puestas en el `.env`** — hoy sólo hace copia local. Fotos y vídeos no
-tienen respaldo externo en absoluto. Falta decidir la retención en R2 por
-categoría antes de tocar código (§Decisiones pendientes del plan).
+## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — código listo, falta configurar el VPS
+Ver **`docs/internal/PLAN-RESPALDO-R2.md`** y **`docs/backups-r2.md`**. Las 3
+decisiones de retención/notificación ya se tomaron y el código está escrito: 4
+scripts (`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`),
+credenciales de R2 editables desde Admin → Sistema → Respaldos (settings.json, no
+`.env`), alerta de "respaldo desactualizado" en Admin → Alertas.
+
+- [ ] Crear bucket + API keys en Cloudflare y ponerlas en Admin.
+- [ ] Generar `BACKUP_API_TOKEN` y ponerlo en `.env` del VPS Y en Admin (mismo valor).
+- [ ] Instalar `rclone` en el VPS.
+- [ ] Probar los 4 scripts a mano y programar el cron (`docs/backups-r2.md` §4-5).
+
+Diferido (evaluado, no urgente): vigilar cuota del tier gratis de R2 vía la API de
+Cloudflare — necesita un API Token aparte; al ritmo medido (~15 GB/año) no aprieta.
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación

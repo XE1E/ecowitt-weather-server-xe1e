@@ -88,6 +88,18 @@ EDITABLE_KEYS = {
     # Alertas de sismos
     "alert_earthquake_enabled",
     "alert_earthquake_magnitude",
+    # Aviso de respaldo a R2 desactualizado
+    "alert_backup_enabled",
+    "alert_backup_stale_hours",
+    # Respaldo externo a Cloudflare R2 (scripts/backup-*.sh las piden vía API)
+    "r2_account_id",
+    "r2_access_key_id",
+    "r2_secret_access_key",
+    "r2_bucket",
+    "backup_api_token",
+    "r2_timelapse_retention_days",
+    "r2_analisis_retention_days",
+    "r2_influx_keep",
     "telegram_enabled",
     "telegram_bot_token",
     "telegram_chat_id",
@@ -172,6 +184,9 @@ SECRET_KEYS = {
     "camera_upload_token",
     "anthropic_api_key",
     "gemini_api_key",
+    "r2_access_key_id",
+    "r2_secret_access_key",
+    "backup_api_token",
 }
 
 # Configuración por defecto para una estación

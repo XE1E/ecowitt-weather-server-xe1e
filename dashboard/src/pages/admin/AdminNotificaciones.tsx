@@ -38,6 +38,7 @@ const CATEGORIES = [
   { key: 'air', icon: '🌫️', label: 'Calidad aire' },
   { key: 'visual', icon: '👁️', label: 'Visual (cielo)' },
   { key: 'earthquake', icon: '🌋', label: 'Sismos' },
+  { key: 'backup', icon: '💾', label: 'Respaldo a R2' },
 ] as const
 
 const ALL_KEYS = CATEGORIES.map((c) => c.key)

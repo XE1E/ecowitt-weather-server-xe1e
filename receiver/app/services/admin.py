@@ -254,6 +254,17 @@ def public_settings(settings) -> Dict[str, Any]:
         "hass_discovery_prefix": settings.hass_discovery_prefix,
         # Timezone
         "timezone_offset": settings.timezone_offset,
+        # Respaldo externo a R2 (claves enmascaradas)
+        "alert_backup_enabled": settings.alert_backup_enabled,
+        "alert_backup_stale_hours": settings.alert_backup_stale_hours,
+        "r2_account_id": settings.r2_account_id,
+        "r2_access_key_id_masked": mask(settings.r2_access_key_id),
+        "r2_secret_access_key_masked": mask(settings.r2_secret_access_key),
+        "r2_bucket": settings.r2_bucket,
+        "backup_api_token_masked": mask(settings.backup_api_token),
+        "r2_timelapse_retention_days": settings.r2_timelapse_retention_days,
+        "r2_analisis_retention_days": settings.r2_analisis_retention_days,
+        "r2_influx_keep": settings.r2_influx_keep,
     }
 
 

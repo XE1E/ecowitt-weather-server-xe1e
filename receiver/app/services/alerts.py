@@ -24,7 +24,15 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake", "backup"]
+
+# Etiquetas legibles por categoría de respaldo (scripts/backup-*.sh).
+_BACKUP_LABELS = {
+    "influx": "sensores",
+    "fotos": "fotos",
+    "timelapse": "timelapse",
+    "analisis": "análisis del cielo",
+}
 
 
 def _category_for(rule_key: str) -> str:
@@ -59,6 +67,8 @@ def _category_for(rule_key: str) -> str:
         return "air"
     if rule_key.startswith("sky_"):
         return "visual"
+    if rule_key.startswith("backup_"):
+        return "backup"
     return "other"
 
 
@@ -121,6 +131,9 @@ class AlertService:
         # análisis IA fallidos SEGUIDOS (se resetea en cuanto uno sale bien).
         self._camera_offline: bool = False
         self._camera_analysis_fails: int = 0
+        # Estado de "respaldo a R2 desactualizado" por categoría (influx/fotos/
+        # timelapse/analisis) — ver check_backup_stale.
+        self._backup_stale: Dict[str, bool] = {}
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         # sensor -> última vez que reportó, por estación. Con la fecha se puede
@@ -648,6 +661,47 @@ class AlertService:
             self._camera_offline = False
             self._add_to_history("camera_offline", "Cámara sin señal", resolved=True)
             await self._safe_notify("✅ Normalizado — 📷 La cámara volvió a enviar fotos.", category="camera")
+
+    async def check_backup_stale(self, statuses: Dict[str, Optional[Dict[str, Any]]]) -> None:
+        """
+        Avisa si el respaldo a R2 de alguna categoría (sensores/fotos/timelapse/
+        análisis) lleva demasiado sin reportar una corrida exitosa, y cuando se
+        pone al día.
+
+        `statuses` es {categoria: status|None}, con status = {"last_success": iso}
+        leído de los archivos que dejan scripts/backup-*.sh en el volumen
+        compartido (ver services/backup_status.py). Igual que check_camera_offline:
+        None (nunca corrió, típico justo tras configurar R2) no avisa, porque sin
+        una corrida exitosa previa no se puede distinguir "recién configurado" de
+        "roto".
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_backup_enabled", True):
+            return
+        threshold_s = float(getattr(s, "alert_backup_stale_hours", 30.0)) * 3600
+
+        for cat, status in statuses.items():
+            last = status.get("last_success") if status else None
+            if not last:
+                continue
+            try:
+                ts = datetime.fromisoformat(str(last).replace("Z", "+00:00")).replace(tzinfo=None)
+            except ValueError:
+                continue
+            age = (datetime.utcnow() - ts).total_seconds()
+            key = f"backup_{cat}"
+            was_stale = self._backup_stale.get(cat, False)
+            label = _BACKUP_LABELS.get(cat, cat)
+
+            if age > threshold_s and not was_stale:
+                self._backup_stale[cat] = True
+                msg = f"💾 Respaldo de {label} desactualizado: última copia hace {int(age // 3600)} h."
+                self._add_to_history(key, msg, resolved=False)
+                await self._safe_notify(f"⚠️ ALERTA — {msg}", category="backup")
+            elif age <= threshold_s and was_stale:
+                self._backup_stale[cat] = False
+                self._add_to_history(key, f"Respaldo de {label} desactualizado", resolved=True)
+                await self._safe_notify(f"✅ Normalizado — 💾 El respaldo de {label} se puso al día.", category="backup")
 
     async def check_camera_analysis(self, error: Optional[str]) -> None:
         """

@@ -9,6 +9,37 @@ interface SysSettings {
   cwop_latitude: number
   cwop_longitude: number
   alert_station_offline_minutes: number
+  // Respaldo externo a R2 (ver docs/internal/PLAN-RESPALDO-R2.md)
+  r2_account_id: string | null
+  r2_access_key_id: string | null
+  r2_access_key_id_masked: string | null
+  r2_secret_access_key: string | null
+  r2_secret_access_key_masked: string | null
+  r2_bucket: string | null
+  backup_api_token: string | null
+  backup_api_token_masked: string | null
+  r2_timelapse_retention_days: number
+  r2_analisis_retention_days: number
+  r2_influx_keep: number
+}
+
+interface BackupCategoryStatus {
+  last_success: string
+  detail?: string
+}
+
+interface BackupStatus {
+  r2_configured: boolean
+  r2_bucket: string | null
+  backup_api_configured: boolean
+  categories: Record<string, BackupCategoryStatus | null>
+}
+
+const BACKUP_CATEGORY_LABELS: Record<string, string> = {
+  influx: '📊 Sensores (InfluxDB)',
+  fotos: '📷 Fotos',
+  timelapse: '🎞️ Timelapse',
+  analisis: '🔎 Análisis del cielo',
 }
 
 interface SysInfo {
@@ -66,6 +97,33 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
   )
 }
 
+function TextField({ value, onChange, placeholder, type = 'text', masked }: {
+  value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null
+}) {
+  const [show, setShow] = useState(false)
+  const displayValue = value || ''
+  const showMasked = !value && masked
+  const isPw = type === 'password'
+  return (
+    <div className="relative flex-1 min-w-0">
+      <input
+        type={isPw && show ? 'text' : type}
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={showMasked ? `(${masked})` : placeholder}
+        className={`w-full rounded bg-slate-900/50 border border-white/10 px-3 py-1.5 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
+      />
+      {isPw && (
+        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
+          title={show ? 'Ocultar' : 'Mostrar'}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
+          {show ? '🙈' : '👁️'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function timeAgo(iso: string | null): string {
   if (!iso) return 'Nunca'
   const s = Math.max(0, Math.floor((Date.now() - parseServerDate(iso)) / 1000))
@@ -88,6 +146,17 @@ export function AdminSistema() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+  const [backup, setBackup] = useState<BackupStatus | null>(null)
+  const [backupLoading, setBackupLoading] = useState(false)
+
+  const loadBackupStatus = useCallback(async () => {
+    setBackupLoading(true)
+    try {
+      const r = await fetchWithAuth('/api/admin/backup-status')
+      if (r.ok) setBackup(await r.json())
+    } catch (e) { console.error(e) }
+    setBackupLoading(false)
+  }, [fetchWithAuth])
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
@@ -119,7 +188,8 @@ export function AdminSistema() {
       })
     }).finally(() => setLoading(false))
     loadLogs()
-  }, [fetchWithAuth, loadLogs])
+    loadBackupStatus()
+  }, [fetchWithAuth, loadLogs, loadBackupStatus])
 
   const handleSave = async () => {
     if (!settings) return
@@ -224,6 +294,96 @@ export function AdminSistema() {
           </div>
         </div>
       )}
+
+      {/* Respaldo externo a R2 (ver docs/internal/PLAN-RESPALDO-R2.md) */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Respaldos (Cloudflare R2)</h2>
+          <button onClick={loadBackupStatus} disabled={backupLoading} className="text-xs text-sky-400 hover:text-sky-300 disabled:text-slate-500">
+            {backupLoading ? 'Actualizando...' : '↻ Actualizar estado'}
+          </button>
+        </div>
+
+        {backup && (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {Object.entries(BACKUP_CATEGORY_LABELS).map(([cat, label]) => {
+              const st = backup.categories[cat]
+              return (
+                <div key={cat} className="bg-slate-900/40 rounded-lg p-3 text-sm">
+                  <p className="text-slate-300">{label}</p>
+                  <p className={st ? 'text-emerald-400 text-xs mt-1' : 'text-slate-500 text-xs mt-1'}>
+                    {st ? `Última: ${timeAgo(st.last_success)}` : 'Sin respaldos aún'}
+                  </p>
+                  {st?.detail && <p className="text-slate-500 text-xs">{st.detail}</p>}
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {backup && !backup.r2_configured && (
+          <p className="text-xs text-yellow-400">⚠️ Faltan credenciales de R2 abajo — hoy sólo se genera el backup local de InfluxDB.</p>
+        )}
+        {backup && backup.r2_configured && !backup.backup_api_configured && (
+          <p className="text-xs text-yellow-400">⚠️ Falta el Token de API — los scripts de scripts/backup-*.sh no podrán leer estas credenciales.</p>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Account ID</label>
+            <TextField value={settings.r2_account_id} onChange={(v) => update('r2_account_id', v)} placeholder="ID de cuenta de Cloudflare" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Bucket</label>
+            <TextField value={settings.r2_bucket} onChange={(v) => update('r2_bucket', v)} placeholder="ecowitt-backups" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Access Key ID</label>
+            <TextField value={settings.r2_access_key_id} onChange={(v) => update('r2_access_key_id', v)} placeholder="Access Key ID" type="password" masked={settings.r2_access_key_id_masked} />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Secret Access Key</label>
+            <TextField value={settings.r2_secret_access_key} onChange={(v) => update('r2_secret_access_key', v)} placeholder="Secret Access Key" type="password" masked={settings.r2_secret_access_key_masked} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs text-slate-400 block mb-1">Token de API de respaldo</label>
+            <TextField value={settings.backup_api_token} onChange={(v) => update('backup_api_token', v)} placeholder="Genera uno y cópialo también al .env (BACKUP_API_TOKEN)" type="password" masked={settings.backup_api_token_masked} />
+            <p className="text-xs text-slate-500 mt-1">
+              Los scripts de scripts/backup-*.sh corren fuera del contenedor y piden estas credenciales con este token
+              (header <code>X-Backup-Token</code>). Debe estar TAMBIÉN en el <code>.env</code> del VPS — ver docs/backups-r2.md.
+            </p>
+          </div>
+        </div>
+
+        <div className="h-px bg-white/10" />
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Retención timelapse en R2 (días)</label>
+            <input type="number" min="0" value={settings.r2_timelapse_retention_days}
+              onChange={(e) => update('r2_timelapse_retention_days', parseInt(e.target.value) || 0)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+            <p className="text-xs text-slate-500 mt-1">0 = para siempre</p>
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Retención análisis en R2 (días)</label>
+            <input type="number" min="0" value={settings.r2_analisis_retention_days}
+              onChange={(e) => update('r2_analisis_retention_days', parseInt(e.target.value) || 0)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+            <p className="text-xs text-slate-500 mt-1">0 = para siempre</p>
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1">Backups de InfluxDB a conservar en R2</label>
+            <input type="number" min="1" value={settings.r2_influx_keep}
+              onChange={(e) => update('r2_influx_keep', parseInt(e.target.value) || 30)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+            <p className="text-xs text-slate-500 mt-1">por cantidad, no por días</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-500">
+          Fotos no tiene retención propia en R2: sigue la de Cámara (días que se conservan en el VPS).
+          El umbral de aviso de "respaldo desactualizado" está en Alertas → 💾 Respaldo a R2.
+        </p>
+      </div>
 
       {/* Ubicacion y zona horaria */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">

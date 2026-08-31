@@ -54,6 +54,7 @@ from .services import security as secsvc
 from .services.camera import CameraStore
 from .services.timelapse import TimelapseService, TimelapseError
 from .services import sky_analyzer
+from .services import backup_status
 
 # Configure logging
 logging.basicConfig(
@@ -247,6 +248,11 @@ async def station_watchdog():
 
             # Cámara del exterior: sin señal si deja de mandar fotos.
             await alert_service.check_camera_offline(_camera.status())
+
+            # Respaldo a R2: alguna categoría lleva demasiado sin una corrida exitosa.
+            await alert_service.check_backup_stale(
+                backup_status.read_all(settings.backup_status_dir)
+            )
 
         except Exception as e:
             logger.error(f"Watchdog error: {e}")
@@ -897,6 +903,23 @@ def _human_duration(seconds: float) -> str:
     if not d:
         parts.append(f"{m}m")
     return " ".join(parts)
+
+
+@app.get("/api/admin/backup-status")
+async def admin_backup_status(authorization: Optional[str] = Header(default=None)):
+    """Estado de los respaldos a R2 para el panel (Sistema): última corrida
+    exitosa por categoría y si las credenciales de R2 están configuradas."""
+    _require_admin(authorization)
+    r2_configured = bool(
+        settings.r2_bucket and settings.r2_account_id
+        and settings.r2_access_key_id and settings.r2_secret_access_key
+    )
+    return {
+        "r2_configured": r2_configured,
+        "r2_bucket": settings.r2_bucket if r2_configured else None,
+        "backup_api_configured": bool(settings.backup_api_token),
+        "categories": backup_status.read_all(settings.backup_status_dir),
+    }
 
 
 @app.get("/api/admin/system-info")
@@ -2101,6 +2124,41 @@ _camera = CameraStore(
     stale_seconds=settings.camera_stale_seconds,
     analysis_retention_days=settings.camera_analysis_retention_days,
 )
+
+
+@app.get("/api/backup/r2-credentials")
+async def backup_r2_credentials(request: Request):
+    """
+    Credenciales de Cloudflare R2 para scripts/backup-*.sh.
+
+    Esos scripts corren por cron en el VPS, FUERA del contenedor, y las
+    credenciales ahora se configuran desde Admin (settings.json) y no en el
+    .env: por eso las piden aquí en vez de leerlas de un archivo. Autenticación
+    por token propio en `X-Backup-Token`, NO el del panel de administración —
+    mismo motivo que camera_upload_token: si se filtra, sólo permite leer estas
+    credenciales, no entrar al panel ni a nada más.
+
+    Sin `BACKUP_API_TOKEN` configurado responde 503: es una ruta que devuelve
+    secretos, y dejarla abierta "hasta que la configure" expondría R2 a quien
+    sea que la encuentre.
+    """
+    esperado = settings.backup_api_token
+    if not esperado:
+        raise HTTPException(status_code=503, detail="Respaldo a R2 no configurado")
+
+    recibido = request.headers.get("X-Backup-Token") or ""
+    if not secrets.compare_digest(recibido, esperado):
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    return {
+        "r2_account_id": settings.r2_account_id,
+        "r2_access_key_id": settings.r2_access_key_id,
+        "r2_secret_access_key": settings.r2_secret_access_key,
+        "r2_bucket": settings.r2_bucket,
+        "r2_timelapse_retention_days": settings.r2_timelapse_retention_days,
+        "r2_analisis_retention_days": settings.r2_analisis_retention_days,
+        "r2_influx_keep": settings.r2_influx_keep,
+    }
 
 
 @app.post("/api/camera/upload")

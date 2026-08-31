@@ -2,12 +2,14 @@
 
 > Escrito el 2026-08-30. Vive en git.
 >
-> **Estado:** diagnóstico y capacidad medidos en el VPS real. Falta decidir la
-> **política de retención en R2** (§Decisiones pendientes) antes de tocar código.
-> El respaldo de InfluxDB ya tiene script y documentación (`scripts/backup-influx.sh`,
-> `docs/backups-r2.md`) pero **las credenciales R2 no están configuradas** — hoy el
-> cron diario sólo hace copia local. Fotos y vídeos de la cámara no tienen respaldo
-> externo en absoluto.
+> **Estado (2026-08-30): implementado.** Las 3 decisiones pendientes de la primera
+> versión de este plan ya se tomaron (§Decisiones tomadas) y el código está escrito:
+> 4 scripts (`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`),
+> credenciales y retención editables desde Admin → Sistema → Respaldos, alerta de
+> "respaldo desactualizado" en Admin → Alertas. **Falta la parte que sólo puede hacer
+> un humano en el VPS real** (§Siguiente paso concreto): crear el bucket/API keys en
+> Cloudflare, ponerlas en Admin, generar `BACKUP_API_TOKEN` (en ambos lados), instalar
+> `rclone` y programar el cron. Ver `docs/backups-r2.md` para los pasos exactos.
 
 ## Objetivo
 
@@ -90,31 +92,50 @@ solos.
 > proveedores cloud cambian: hay que confirmar contra el panel de Cloudflare al
 > momento de decidir, no contra lo que diga este documento.
 
-## Decisiones pendientes (antes de escribir código)
+## Decisiones tomadas (2026-08-30)
 
-1. **¿Qué retención tiene el respaldo en R2, por categoría?** Ejemplos a elegir
-   entre (no son la única opción):
-   - Fotos: ¿para siempre, o sólo N meses/años? (a diferencia del VPS, que las poda
-     a los 7 días sí o sí).
-   - Timelapse: ¿para siempre, o alinear con lo que ya dura en el VPS (90 días)?
-   - Sensores y análisis del cielo: ya se retienen para siempre en el VPS, así que
-     lo natural es igual para siempre en R2 (es barato, ~0.7 MB/día).
-2. **¿Un solo script (`backup-influx.sh` extendido) o uno nuevo por categoría?**
-   Más simple de operar un solo cron con 2-3 pasos de `rclone sync` adicionales;
-   más aislado (un fallo de fotos no afecta el backup de Influx) si son scripts
-   separados.
-3. **¿Notificar si el respaldo falla?** Hoy `backup-influx.sh` sólo escribe a un
-   log (`~/ecowitt-backups/backup.log`); nadie lo revisa a menos que se acuerde.
-   Se podría enganchar a las alertas de Telegram/correo que ya existen para la
-   cámara (mismo patrón que "cámara sin señal").
+1. **Retención en R2, por categoría:**
+   - Fotos: **7 días, igual que el VPS** (`camera_retention_days`) — sin ajuste
+     propio en R2, el script sólo sube lo que exista hoy en el contenedor.
+   - Timelapse: **para siempre** (como sensores), con retención propia opcional
+     (`r2_timelapse_retention_days`, editable en Admin, 0 = para siempre).
+   - Sensores y análisis del cielo: **para siempre** — análisis también con
+     retención propia opcional (`r2_analisis_retention_days`).
+2. **Un script por categoría** (`scripts/backup-camera-{fotos,timelapse,analisis}.sh`,
+   además de `scripts/backup-influx.sh`), no uno solo extendido: un fallo de fotos
+   no afecta el backup de InfluxDB. Comparten helpers en `scripts/lib-backup.sh`.
+3. **Notificación:** se reutiliza el mismo canal de alertas (Telegram/correo) que
+   ya existe para "cámara sin señal", pero con vigilancia de FRESCURA en vez de
+   push-on-failure: el receiver revisa periódicamente cuándo fue la última corrida
+   exitosa de cada categoría (`AlertService.check_backup_stale`) y avisa si pasa de
+   `alert_backup_stale_hours` (Admin → Alertas, 30h por omisión). Cubre tanto un
+   fallo real como un cron que dejó de correr — lo segundo se le habría escapado a
+   un aviso que sólo dispara desde dentro del script que falló.
 
-## Siguiente paso concreto
+Decisión adicional, no prevista en la primera versión de este plan: las
+credenciales de R2 (y la retención) terminaron siendo **editables desde Admin**
+(Sistema → Respaldos), no solo en el `.env` como se planteó al principio. Como los
+scripts corren fuera del contenedor y no pueden leer `settings.json`, se agregó un
+endpoint interno (`GET /api/backup/r2-credentials`) protegido con un token propio
+(`backup_api_token`/`BACKUP_API_TOKEN`, el único secreto que sigue viviendo en el
+`.env` — ver docs/backups-r2.md §2).
 
-1. Decidir la retención por categoría (punto 1 de arriba) — es lo único que de
-   verdad requiere una decisión humana; el resto es mecánico.
-2. Crear el bucket y las API keys en Cloudflare (`docs/backups-r2.md` §1) y
-   poner las variables en el `.env` del VPS (§2 del mismo doc) — esto por sí solo
-   ya activa el respaldo de InfluxDB que estaba escrito pero apagado.
-3. Extender `scripts/backup-influx.sh` (o agregar un script hermano) con los
-   `rclone sync` de fotos/timelapse/análisis, con los prefijos y la retención
-   decididos en el punto 1.
+## Pendiente (fuera de este plan, evaluado y diferido)
+
+**Vigilar la cuota del tier gratis de Cloudflare R2** (cuánto storage/operaciones
+llevas usados vs. el límite gratis): posible vía la API GraphQL de Analytics de
+Cloudflare, pero requiere un Cloudflare API Token DISTINTO a las claves S3 de R2
+(scope de Account Analytics), que el usuario tendría que crear a mano. Diferido
+2026-08-30 porque al ritmo medido (~15 GB/año) falta mucho para acercarse a un
+tier gratis típico (~10 GB) — no es urgente.
+
+## Siguiente paso concreto (sólo posible en el VPS real)
+
+1. Crear el bucket y las API keys en Cloudflare (`docs/backups-r2.md` §1).
+2. Ponerlas en Admin → Sistema → Respaldos (Account ID, Access Key ID, Secret
+   Access Key, Bucket) — ahí mismo ajustar la retención en R2 si no se quieren los
+   valores por omisión.
+3. Generar `BACKUP_API_TOKEN` y ponerlo EN LOS DOS LADOS: `.env` del VPS y Admin →
+   Sistema → Respaldos (§2 de `docs/backups-r2.md`).
+4. Instalar `rclone` en el VPS (§3 del mismo doc).
+5. Probar los 4 scripts a mano (§4) y programar el cron (§5).

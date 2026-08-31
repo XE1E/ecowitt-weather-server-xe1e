@@ -62,7 +62,7 @@ function timeAgo(iso: string | null): string {
 }
 
 // Nombres de los chips de categoría de alerta y a qué mapea cada clave de regla.
-const ALERT_CHIPS = ['Temperatura', 'Humedad', 'Rocio', 'Sensacion', 'Viento', 'Lluvia', 'Presion', 'Tendencia', 'Sol', 'Offline', 'Bateria', 'Sensor', 'Aire', 'Visual', 'Camara', 'Sismos']
+const ALERT_CHIPS = ['Temperatura', 'Humedad', 'Rocio', 'Sensacion', 'Viento', 'Lluvia', 'Presion', 'Tendencia', 'Sol', 'Offline', 'Bateria', 'Sensor', 'Aire', 'Visual', 'Camara', 'Sismos', 'Respaldo']
 
 function alertChipLabel(key: string): string | null {
   const k = key.includes(':') ? key.split(':')[1] : key   // quita el prefijo de estación
@@ -85,6 +85,7 @@ function alertChipLabel(key: string): string | null {
   if (k.startsWith('sky_')) return 'Visual'
   if (k.startsWith('camera_')) return 'Camara'
   if (k.startsWith('earthquake_')) return 'Sismos'
+  if (k.startsWith('backup_')) return 'Respaldo'
   return null
 }
 
