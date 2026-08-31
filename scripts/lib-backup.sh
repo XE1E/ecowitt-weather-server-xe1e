@@ -63,7 +63,14 @@ fetch_r2_config() {
 # variables que dejó fetch_r2_config.
 r2_remote() {
   local endpoint
-  endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+  # El campo de Admin pide sólo el Account ID, pero Cloudflare lo muestra en el
+  # dashboard pegado al endpoint completo (https://<id>.r2.cloudflarestorage.com)
+  # y es fácil copiar ese en vez del ID solo. Si ya viene como URL, se usa tal cual.
+  if [[ "$R2_ACCOUNT_ID" == http*://* ]]; then
+    endpoint="$R2_ACCOUNT_ID"
+  else
+    endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+  fi
   printf ':s3,provider=Cloudflare,access_key_id=%s,secret_access_key=%s,endpoint=%s:' \
     "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY" "$endpoint"
 }
