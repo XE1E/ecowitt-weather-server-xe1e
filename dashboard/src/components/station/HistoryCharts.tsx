@@ -141,7 +141,7 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
                 <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                 <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#38bdf8" radius={[3, 3, 0, 0]} />
                 <Line yAxisId="r" type="monotone" dataKey="rrate" name="Tasa máx" stroke="#0ea5e9" strokeWidth={2} dot={false} connectNulls />
-                <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#7f00b2" strokeWidth={2} dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

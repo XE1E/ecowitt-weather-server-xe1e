@@ -235,7 +235,7 @@ export function KioskPage() {
               {bigCard('Humedad', L.humidity != null ? `${L.humidity.toFixed(0)}` : '--', '%',
                 `mín ${mn.humidity?.toFixed(0) ?? '--'}% · máx ${mx.humidity?.toFixed(0) ?? '--'}%`, '#2563eb')}
               {bigCard('Presión', L.pressure != null ? `${u.press(L.pressure)}` : '--', u.pressU,
-                `mín ${mn.pressure != null ? u.press(mn.pressure) : '--'} · máx ${mx.pressure != null ? u.press(mx.pressure) : '--'}`, '#8b5cf6')}
+                `mín ${mn.pressure != null ? u.press(mn.pressure) : '--'} · máx ${mx.pressure != null ? u.press(mx.pressure) : '--'}`, '#7f00b2')}
             </div>
             <p className="text-[13px] text-slate-500 mt-2 text-center">
               Actualizado {L.received_at ? relativeTime(L.received_at) : '—'} · mín/máx de hoy
@@ -326,7 +326,7 @@ export function KioskPage() {
               <p className="text-[13px] text-slate-400 mt-1">Humedad</p>
             </div>
             <div className="text-center">
-              <p className="text-[34px] leading-none font-bold" style={{ color: '#8b5cf6' }}>
+              <p className="text-[34px] leading-none font-bold" style={{ color: '#7f00b2' }}>
                 {remote?.pressure_relative != null ? u.press(remote.pressure_relative, 0) : '--'}
               </p>
               <p className="text-[13px] text-slate-400 mt-1">{u.pressU}</p>
@@ -457,7 +457,7 @@ export function KioskPage() {
 
         <div className="grid grid-cols-3 grid-rows-2 gap-4 flex-1">
           <Tile label="Humedad" value={data?.humidity_outdoor != null ? data.humidity_outdoor.toFixed(0) : '--'} unit="%" color="#2563eb" />
-          <Tile label="Presión" value={u.press(data?.pressure_relative, 0)} unit={u.pressU} color="#8b5cf6" />
+          <Tile label="Presión" value={u.press(data?.pressure_relative, 0)} unit={u.pressU} color="#7f00b2" />
           <Tile label="Viento" value={u.wind(data?.wind_speed, 0)} unit={u.windU} sub={data?.wind_direction != null ? `${Math.round(data.wind_direction)}°` : undefined} color="#22c55e" />
           <Tile label="Lluvia hoy" value={u.rain(data?.rain_daily)} unit={u.rainU} color="#38bdf8" />
           <Tile label="Índice UV" value={uv != null ? `${uv}` : '--'} color={uv == null ? '#94a3b8' : uv >= 8 ? '#fca5a5' : uv >= 6 ? '#fdba74' : '#fde047'} />

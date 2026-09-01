@@ -113,7 +113,7 @@ interface RowData {
 const COLORS = {
   temp: '#f97316',
   hum: '#2563eb',
-  press: '#8b5cf6',
+  press: '#7f00b2',
   wind: '#22c55e',
   rain: '#38bdf8',
   solar: '#fcd34d',

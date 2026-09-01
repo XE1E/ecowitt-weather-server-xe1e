@@ -7,7 +7,7 @@ Documento de referencia para uniformizar estilos en todo el dashboard y kiosko.
 | Variable | Color | Hex | Tailwind |
 |----------|-------|-----|----------|
 | Temperatura | Naranja | `#f97316` | `orange-500` |
-| Presión atmosférica | Morado | `#8b5cf6` | `violet-500` |
+| Presión atmosférica | Morado magenta | `#7f00b2` | — |
 | Precipitación | Azul claro | `#38bdf8` | `sky-400` |
 | Humedad | Azul oscuro | `#2563eb` | `blue-600` |
 | Viento | Verde | `#22c55e` | `green-500` |

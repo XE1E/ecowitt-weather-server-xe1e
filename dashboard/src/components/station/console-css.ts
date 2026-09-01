@@ -24,7 +24,7 @@ export const CONSOLE_CSS = `
      de EXT el cambio apenas se notaba, y ademas mezclaba dos significados en un color.
      El de alarma pasa a rojo puro (matiz 0): contra el naranja, el azul y el morado de los
      glifos se distingue de golpe, que es lo unico que se le pide. */
-  .cns{--t:#f97316;--h:#2563eb;--p:#8b5cf6;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;--alarma:#ff1414;
+  .cns{--t:#f97316;--h:#2563eb;--p:#7f00b2;--r:#38bdf8;--v:#22c55e;--y:#ffcf19;--w:#eaeaea;--lbl:#8a8a8a;--red:#ff4128;--alarma:#ff1414;
     /* La remota va en AZUL y no en el gris que tenia. Con el contorno como unica senal de
        grupo --se probo tenir el fondo y no sirve, ver abajo-- el gris #6b7280 era el que
        menos se veia de los cinco en el panel del kiosco, que aplasta los tonos oscuros.
@@ -42,7 +42,7 @@ export const CONSOLE_CSS = `
   .cns .seg14{font-family:'DSEG14','Roboto Condensed',monospace}
   .cns .gt{color:var(--t);text-shadow:0 0 12px rgba(249,115,22,.55)}
   .cns .gh{color:var(--h);text-shadow:0 0 12px rgba(59,130,246,.55)}
-  .cns .gp{color:var(--p);text-shadow:0 0 12px rgba(167,139,250,.55)}
+  .cns .gp{color:var(--p);text-shadow:0 0 12px rgba(186,85,211,.55)}
   .cns .gr{color:var(--r);text-shadow:0 0 12px rgba(56,189,248,.55)}
   .cns .gv{color:var(--v);text-shadow:0 0 12px rgba(34,197,94,.55)}
   .cns .gy{color:var(--y);text-shadow:0 0 12px rgba(255,207,25,.5)}

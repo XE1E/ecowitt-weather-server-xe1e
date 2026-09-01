@@ -6,7 +6,7 @@
 // Colores por variable meteorológica
 export const WEATHER_COLORS = {
   temperature: '#f97316',      // orange-500
-  pressure: '#8b5cf6',         // violet-500
+  pressure: '#7f00b2',         // morado magenta
   precipitation: '#38bdf8',    // sky-400
   humidity: '#2563eb',         // blue-600
   wind: '#22c55e',             // green-500

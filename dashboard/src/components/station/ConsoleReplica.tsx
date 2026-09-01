@@ -1713,7 +1713,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               glifo quedaba un poco alto respecto al hueco que ocupa a la vista. Diez
               píxeles menos de exclusión lo bajan 5, que es lo que le faltaba. */}
           <div style={{ position: 'absolute', top: 0, bottom: 30, left: 12, display: 'flex', alignItems: 'center' }}>
-            <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#8b5cf6')} title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('pres', '#7f00b2')} title="presión" />
           </div>
           {/* REL/ABS pegado al borde de arriba del barómetro (que aquí cae en y≈27,
               ver la nota de arriba sobre el `bottom:30`): dice si esta lectura es la
@@ -2544,7 +2544,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
               las dos muestran presión y ahora se reconocen como pareja sin leer el
               rótulo. Aquí sobra el hueco que allá ocupa el riel de tendencia. */}
           <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-            <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#8b5cf6')} title="presión" />
+            <MeteoGlyph name="barometer" size={46} color={alertaCol('remotaP', '#7f00b2')} title="presión" />
           </div>
           {/* Mismo REL/ABS que PRES, mismo criterio: aquí el barómetro cuelga de
               `bottom:10` así que su borde de arriba cae en y≈47 (celda de ~103 px de
