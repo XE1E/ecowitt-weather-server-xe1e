@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-31 (noche).
+> Última actualización: 2026-09-01.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -528,3 +528,8 @@ en el momento.
   e9e0423, 2eaa95a, 7a82c4a, 69400dc)
 - Página de consola `?page=consola` (commits 544341f, acf7216).
 - Presión relativa por altitud, whitelist de passkey, registro por MAC (ver git).
+- `/api/camera/latest.jpg` acepta HEAD además de GET (commit 108cf26) --
+  faltaba para que AWEKAS aceptara el link de webcam. Además, Cloudflare
+  bloqueaba el fetch de AWEKAS a esa URL (no a un cliente normal) -- solución
+  fue el enlace directo `http://<IP_VPS>:8080/...`, sin pasar por Cloudflare.
+  Detalle en `docs/api-reference.md` → "Cámara del exterior".

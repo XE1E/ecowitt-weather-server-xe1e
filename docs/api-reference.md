@@ -287,6 +287,26 @@ GET /api/camera/status
 Con `available: false` la web oculta la tarjeta de Inicio y el kiosco muestra «sin
 imagen»; con `stale: true` ambos marcan **FOTO ANTIGUA** sobre la propia imagen.
 
+**Enlace de webcam para servicios externos (AWEKAS y similares):** `GET
+/api/camera/latest.jpg` (por el dominio, HTTPS) es correcto y funciona bien con
+cualquier cliente normal (navegador, curl, Python) — verificado. Pero **AWEKAS
+no pudo bajarla** (mostraba su ícono propio de "Imagen no encontrada") mientras
+Cloudflare estuviera de por medio; el servidor de AWEKAS parece toparse con
+algo del proxy de Cloudflare (bloqueo/desafío) que un cliente normal no ve —
+mismo patrón que ya se dio antes con otro proceso automatizado externo
+(`cf-mitigated: challenge`, ver `scripts/captura-camara.sh`). **Solución
+verificada (2026-09-01):** dar el enlace directo al VPS, sin pasar por
+Cloudflare — mismo puerto que ya usa el WS2910 para el push, así que no abre
+nada nuevo:
+
+```
+http://<IP_DEL_VPS>:8080/api/camera/latest.jpg
+```
+
+Si algún día otro servicio externo rechaza el link de la cámara con un error
+parecido, probar primero esta URL directa antes de suponer que el archivo está
+mal — probablemente sea el mismo bloqueo de Cloudflare a fetches server-to-server.
+
 ### Precisión del pronóstico y mejor foto del día
 
 Desde 2026-08-29 cada captura analizada guarda también si coincidió con el
