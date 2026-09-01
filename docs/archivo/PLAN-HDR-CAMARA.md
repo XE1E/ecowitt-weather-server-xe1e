@@ -1,4 +1,47 @@
-# HDR automático por posición del sol (cámara del exterior)
+# HDR automático por posición del sol (cámara del exterior) — CERRADO, bloqueado
+
+> **Estado (2026-08-31): intentado y bloqueado por el firmware/API de la cámara,
+> no por falta de credenciales ni de esfuerzo.** Se investigaron las DOS vías
+> posibles de tocar el HDR/WDR/BLC sin la app, con evidencia real contra la
+> cámara (no supuestos):
+>
+> 1. **`pytapo`** (API propietaria de Tapo): con la versión que trae `setHDR()`
+>    parcheada para correr en el Python 3.7 de la Pi (ver abajo), la
+>    autenticación falla con **"Invalid authentication data" / "Incorrect
+>    device_confirm value"** — probado con la cuenta de cámara (la misma que
+>    usa RTSP y SÍ funciona ahí, verificado con ffmpeg), con `admin` + la
+>    contraseña de la cuenta TP-Link, y con el correo de esa cuenta. Es un bug
+>    de compatibilidad **sin resolver** entre `pytapo` y el firmware del
+>    C325WB — hay un reporte idéntico y sin respuesta del mantenedor en
+>    [pytapo#135](https://github.com/JurajNyiri/pytapo/issues/135) (mismas 3
+>    credenciales probadas, mismo error).
+> 2. **ONVIF** (estándar, estaba pendiente de esta investigación): autentica
+>    perfecto con WS-Security (probado con una implementación propia en
+>    `requests`, sin librerías). Pero `GetImagingSettings` respondió sin error
+>    y sólo expone **Brillo, Saturación, Contraste y Nitidez** — nada de WDR,
+>    BLC ni exposición. El Imaging Service de este modelo es incompleto.
+>
+> **Conclusión: no hay forma de tocar el HDR/WDR/BLC de esta cámara por
+> software sin la app Tapo**, al menos con el firmware actual (ya es la última
+> versión disponible). Se decidió (2026-08-31) dejarlo documentado y pausado en
+> vez de seguir invirtiendo tiempo. El código sigue en el repo
+> (`scripts/camara-hdr-auto.py` + `scripts/systemd/camara-hdr.*`) **sin
+> desplegar/activar** — el cálculo de posición del sol es correcto y
+> reutilizable (p. ej. para avisarle al análisis del cielo con IA "el sol está
+> en el encuadre ahora"), pero la llamada final a `pytapo.setHDR()` no funciona
+> contra esta cámara.
+>
+> **Rastro dejado en la Raspberry Pi (`stn8952`) por esta investigación** (todo
+> inerte, no afecta la captura normal): `pytapo==3.3.38` instalado con 2 líneas
+> parcheadas en `pytapo/media_stream/{tsReader.py,_utils.py}` (sintaxis de
+> Python 3.8+ reescrita a 3.7, con respaldo `.orig` de cada archivo) para poder
+> importarlo en el Python 3.7 de Buster; paquetes `libxml2-dev`/`libxslt1-dev`
+> instalados vía `apt` (primera vez que se tocó `apt` en este equipo — son
+> paquetes de desarrollo estándar, sin relación con audio/IRLP). El
+> `camara-hdr.timer` quedó **deshabilitado**.
+>
+> El resto de este documento es el diseño técnico original, dejado como
+> referencia por si algún día cambia el firmware o la cámara.
 
 ## El problema
 

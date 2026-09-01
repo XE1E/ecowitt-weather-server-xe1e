@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 """
+*** BLOQUEADO, NO DESPLEGAR TAL CUAL (2026-08-31) ***
+La autenticación de pytapo contra esta cámara (C325WB) falla con "Invalid
+authentication data" -- probado con la cuenta de cámara, con admin+contraseña
+de la cuenta TP-Link y con el correo de esa cuenta, los tres con el mismo
+error. Es un bug de compatibilidad sin resolver entre pytapo y el firmware de
+esta cámara (ver docs/archivo/PLAN-HDR-CAMARA.md para la evidencia completa y
+las dos vías descartadas -- pytapo y ONVIF). El cálculo de posición del sol de
+este archivo sigue siendo correcto y reutilizable; sólo la llamada final a
+pytapo.setHDR() no funciona contra esta cámara.
+
 Enciende/apaga el HDR de la cámara Tapo según la posición REAL del sol.
 
 Por qué: la cámara mira a un rumbo fijo y el sol entra en el encuadre como una
@@ -31,8 +41,8 @@ camara.env.example) -- variables CAMERA_HDR_AUTO / CAMERA_BEARING_DEG /
 CAMERA_TILT_DEG / CAMERA_FOV_H_DEG / CAMERA_FOV_V_DEG.
 
 Antes de confiar en esto: CALIBRA CAMERA_BEARING_DEG. Ver
-docs/guias/camara-hdr-auto.md -- un rumbo mal calibrado puede encender el HDR
-a horas que no tocan (o nunca encenderlo). Por eso, sin CAMERA_BEARING_DEG
+docs/archivo/PLAN-HDR-CAMARA.md -- un rumbo mal calibrado puede encender el
+HDR a horas que no tocan (o nunca encenderlo). Por eso, sin CAMERA_BEARING_DEG
 puesto explícitamente, el script NO ADIVINA: se sale sin tocar nada.
 
 Uso:

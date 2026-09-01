@@ -258,7 +258,7 @@ widget en Admin → Sistema → Respaldos ya existe y no requiere más código: 
 es sólo pegar el token si algún día cambia de opinión. La clasificación de
 operaciones Clase A/B tampoco se pudo probar contra la API real todavía.
 
-## 2.g HDR automático por posición del sol (cámara) — código listo, falta desplegar y calibrar
+## 2.g HDR automático por posición del sol (cámara) — ❌ CERRADO, bloqueado por la cámara (2026-08-31)
 
 El usuario reportó (2026-08-31) que en las mañanas el sol entra al encuadre de
 la cámara (mira al sureste, sin posibilidad de girarla) como una bola que
@@ -269,26 +269,31 @@ sol aunque el resto de la imagen esté bien. Se investigó parasol físico
 puede tapar eso sin recortar la imagen) y WDR/BLC (Tapo no lo llama así; el
 equivalente es **HDR**, sí soportado por este modelo).
 
-**Hecho:** `scripts/camara-hdr-auto.py` — enciende/apaga el HDR vía **pytapo**
-(misma cuenta de cámara del RTSP) según la posición **real** del sol
-(azimut/altura de `GET /api/almanac`, ya lo calcula el servidor con pyephem)
-contra el rumbo fijo de la cámara — no un horario fijo, porque el arco donde
-amanece se mueve mucho en el año. Systemd
-`scripts/systemd/camara-hdr.{service,timer}` (cada 5 min, mismo patrón que
-`camara-clima.*`). Documentado en `docs/guias/camara-hdr-auto.md`, incluye
-cómo calibrar `CAMERA_BEARING_DEG` con fotos reales (no basta un compás).
+Se construyó `scripts/camara-hdr-auto.py` — enciende/apaga el HDR según la
+posición **real** del sol (`GET /api/almanac`, ya lo calcula el servidor)
+contra el rumbo fijo de la cámara, en vez de un horario fijo — y se intentó
+desplegar en la Pi `stn8952`. **Bloqueado por la cámara, con evidencia real,
+no por falta de intento:**
 
-**Falta:**
-- [ ] Desplegar en la Pi `stn8952` (nodo IRLP en producción,
-      `192.168.100.202:22200`): copiar el script, `pip3 install pytapo`,
-      agregar variables a `camara.env`, instalar el timer. Ver la guía.
-- [ ] Calibrar `CAMERA_BEARING_DEG` (y `CAMERA_TILT_DEG` si hace falta) con
-      fotos reales de una mañana soleada.
-- [ ] Verificar en producción que el halo realmente se reduce con HDR
-      encendido — si no basta, el siguiente paso sería avisarle al análisis
-      del cielo con IA "sol en el encuadre ahora" para que no confunda el
-      halo con nubosidad (no se construyó esto todavía, a propósito: mejor
-      medir primero si el HDR ya resuelve la mayor parte).
+- **pytapo** (API propietaria): tras parchear la librería para que corriera en
+  el Python 3.7 de esa Pi, la autenticación falla con "Invalid authentication
+  data" / "Incorrect device_confirm value" — probado con la cuenta de cámara
+  (verificada válida por RTSP), con `admin`+contraseña de la cuenta TP-Link, y
+  con el correo de esa cuenta. Es un bug de compatibilidad sin resolver entre
+  `pytapo` y el firmware del C325WB (reporte idéntico y sin respuesta del
+  mantenedor: [pytapo#135](https://github.com/JurajNyiri/pytapo/issues/135)).
+- **ONVIF** (estándar): autentica bien, pero `GetImagingSettings` en esta
+  cámara sólo expone Brillo/Saturación/Contraste/Nitidez — nada de WDR/BLC.
+
+**Conclusión: no hay forma de tocar el HDR/WDR/BLC de esta cámara por software
+sin la app**, con el firmware actual (ya es el último disponible). Detalle
+completo, incluido el rastro dejado en la Pi (pytapo parcheado instalado,
+`libxml2-dev`/`libxslt1-dev` vía apt — primera vez que se tocó apt ahí, ambos
+inertes) en **`docs/archivo/PLAN-HDR-CAMARA.md`**. El código
+(`scripts/camara-hdr-auto.py` + `scripts/systemd/camara-hdr.*`) se queda en el
+repo **sin desplegar/activar** — el cálculo de posición del sol es correcto y
+reutilizable si algún día se retoma (p. ej. para avisarle al análisis del
+cielo con IA "sol en el encuadre ahora", en vez de tocar la cámara).
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
