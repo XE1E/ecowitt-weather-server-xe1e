@@ -177,7 +177,7 @@ app.add_middleware(
         "http://localhost:8080",  # dev/local
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_methods=["GET", "HEAD", "POST", "PUT", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -2655,19 +2655,29 @@ async def camera_best_of_day(date: str):
     return entry
 
 
-@app.get("/api/camera/latest.jpg")
-async def camera_latest():
-    """La última captura. 404 mientras no haya llegado ninguna."""
+@app.api_route("/api/camera/latest.jpg", methods=["GET", "HEAD"])
+async def camera_latest(request: Request):
+    """La última captura. 404 mientras no haya llegado ninguna.
+
+    Acepta HEAD además de GET: varios servicios externos que piden una URL de
+    webcam (p. ej. AWEKAS) validan el enlace con un HEAD antes de aceptarlo, y
+    FastAPI/Starlette NO añade HEAD automáticamente a una ruta declarada sólo
+    con GET -- sin esto, ese HEAD recibía 405 y el servicio externo rechazaba
+    el enlace aunque el GET (lo que hace un navegador) funcionara perfecto."""
     ultima = _camera.latest()
     if ultima is None:
         raise HTTPException(status_code=404, detail="Sin capturas")
     data, cuando = ultima
     return Response(
-        content=data,
+        content=b"" if request.method == "HEAD" else data,
         media_type="image/jpeg",
         # Media cadencia: lo bastante para que un refresco no vuelva a descargarla,
         # lo bastante poco para no servir una foto vieja tras la siguiente captura.
-        headers={"Cache-Control": "max-age=150", "X-Captured-At": cuando},
+        headers={
+            "Cache-Control": "max-age=150",
+            "X-Captured-At": cuando,
+            "Content-Length": str(len(data)),
+        },
     )
 
 

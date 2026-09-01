@@ -232,7 +232,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
 | `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`) |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
-| `GET /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At` |
+| `GET`/`HEAD /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At`. Sirve para enlazarla como webcam en servicios externos (p. ej. AWEKAS) — acepta HEAD porque varios de esos servicios validan el enlace así antes de aceptarlo |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
 | `GET /api/camera/analysis` | Último análisis del cielo + tendencia (nowcasting) |
 | `GET /api/camera/analysis/validation` | Validación en vivo vs pronóstico de Open-Meteo |
