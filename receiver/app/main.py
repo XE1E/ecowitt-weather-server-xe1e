@@ -2656,28 +2656,32 @@ async def camera_best_of_day(date: str):
 
 
 @app.api_route("/api/camera/latest.jpg", methods=["GET", "HEAD"])
-async def camera_latest(request: Request):
+async def camera_latest():
     """La última captura. 404 mientras no haya llegado ninguna.
 
     Acepta HEAD además de GET: varios servicios externos que piden una URL de
     webcam (p. ej. AWEKAS) validan el enlace con un HEAD antes de aceptarlo, y
     FastAPI/Starlette NO añade HEAD automáticamente a una ruta declarada sólo
     con GET -- sin esto, ese HEAD recibía 405 y el servicio externo rechazaba
-    el enlace aunque el GET (lo que hace un navegador) funcionara perfecto."""
+    el enlace aunque el GET (lo que hace un navegador) funcionara perfecto.
+
+    OJO: siempre se devuelve el cuerpo completo, sin fijarse en el método. Un
+    primer intento recortaba el cuerpo a mano para HEAD (content=b"" con
+    Content-Length real) -- se veía bien con el TestClient (no pasa por la red
+    real) pero rompía el framing HTTP de verdad al pasar por Caddy/Cloudflare:
+    anunciaban un Content-Length que nunca llegaba y el cliente se quedaba
+    esperando esos bytes. Recortar el cuerpo en una respuesta HEAD es trabajo
+    del servidor HTTP (uvicorn), no de la app -- dejarlo así es lo correcto."""
     ultima = _camera.latest()
     if ultima is None:
         raise HTTPException(status_code=404, detail="Sin capturas")
     data, cuando = ultima
     return Response(
-        content=b"" if request.method == "HEAD" else data,
+        content=data,
         media_type="image/jpeg",
         # Media cadencia: lo bastante para que un refresco no vuelva a descargarla,
         # lo bastante poco para no servir una foto vieja tras la siguiente captura.
-        headers={
-            "Cache-Control": "max-age=150",
-            "X-Captured-At": cuando,
-            "Content-Length": str(len(data)),
-        },
+        headers={"Cache-Control": "max-age=150", "X-Captured-At": cuando},
     )
 
 
