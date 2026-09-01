@@ -111,6 +111,22 @@ def _moon_phase_name(illum: float, waxing: bool) -> str:
     return "Gibosa creciente" if waxing else "Gibosa menguante"
 
 
+def sun_altitude(lat: float, lon: float, elevation: float = 2240.0,
+                 now: Optional[datetime] = None) -> float:
+    """Altura del sol (grados, negativo bajo el horizonte) AHORA MISMO. Versión
+    ligera de compute_almanac() para cuando sólo hace falta este dato (p. ej.
+    sky_analyzer.py) y no vale la pena calcular orto/ocaso/luna/planetas."""
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    obs = ephem.Observer()
+    obs.lat, obs.lon, obs.elevation = str(lat), str(lon), elevation
+    obs.date = now.astimezone(timezone.utc).replace(tzinfo=None)
+    sun = ephem.Sun()
+    sun.compute(obs)
+    return math.degrees(float(sun.alt))
+
+
 def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
                     now: Optional[datetime] = None) -> Dict[str, Any]:
     now = now or datetime.now(timezone.utc)

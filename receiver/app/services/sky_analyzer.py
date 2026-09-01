@@ -18,6 +18,7 @@ import asyncio
 import base64
 import json
 import logging
+import math
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Optional, Literal
@@ -90,6 +91,19 @@ _USER_PROMPT_FOOTER = """
 Responde SOLO el JSON, sin explicaciones adicionales.
 """
 
+_USER_PROMPT_SUN_GLARE = """
+AVISO DE SOL DIRECTO: el sensor de radiación solar confirma que el sol pega SIN
+OBSTRUCCIÓN de nubes en este momento (radiación medida acorde a lo esperado para un
+cielo despejado a esta altura solar). Con el lente gran angular de esta cámara, el sol
+sin obstrucción satura una porción grande del encuadre -alrededor del disco solar, a
+veces la mayor parte del cielo visible- que sale BLANCO o GRIS CLARO por límite de
+exposición, no porque haya nubes ahí. NO cuentes esa zona saturada/sobreexpuesta como
+nubosidad: busca específicamente textura, sombras o bordes de nube reales en el resto
+de la imagen. Si no encuentras nubes reales en las zonas SIN saturar, reporta
+cloud_coverage_pct bajo y "clear" o "partly_cloudy", aunque buena parte del cuadro se
+vea blanco por la sobreexposición.
+"""
+
 
 def _build_station_block(station_data: Optional[dict]) -> str:
     """Formatea las lecturas en vivo relevantes para el prompt, en español y con
@@ -116,6 +130,8 @@ def _build_station_block(station_data: Optional[dict]) -> str:
     cloud_base = station_data.get("cloud_base")
     if cloud_base is not None:
         partes.append(f"- base de nubes estimada: {cloud_base:.0f} m")
+    if station_data.get("sun_glare_likely"):
+        partes.append("- sol: pegando directo y sin obstrucción de nubes (ver aviso abajo)")
     if not partes:
         return ""
     return "\n".join(partes) + "\n"
@@ -123,13 +139,56 @@ def _build_station_block(station_data: Optional[dict]) -> str:
 
 def _build_user_prompt(station_data: Optional[dict] = None) -> str:
     bloque = _build_station_block(station_data)
+    glare = (station_data or {}).get("sun_glare_likely")
     if not bloque:
         return _USER_PROMPT_BASE + _USER_PROMPT_FOOTER
-    return (
-        _USER_PROMPT_BASE
-        + _USER_PROMPT_STATION_HEADER.format(station_block=bloque)
-        + _USER_PROMPT_FOOTER
-    )
+    prompt = _USER_PROMPT_BASE + _USER_PROMPT_STATION_HEADER.format(station_block=bloque)
+    if glare:
+        prompt += _USER_PROMPT_SUN_GLARE
+    return prompt + _USER_PROMPT_FOOTER
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sol directo vs. nubosidad real (mitiga el halo/sobreexposición del sol en el
+# encuadre -- ver docs/archivo/PLAN-HDR-CAMARA.md para el intento descartado de
+# tocar la cámara, y por qué se optó por esto en su lugar).
+#
+# Curva de radiación de cielo despejado I_clear = I0 * sin(altura)^p, calibrada
+# con datos REALES de esta estación en una mañana confirmada despejada
+# (2026-08-31: radiación subió limpia de 56 a 700 W/m² sin ningún bache, y las
+# fotos de ese rango sólo mostraban sobreexposición, sin nubes reales hasta la
+# tarde). Ajuste por mínimos cuadrados de 6 puntos (7am-12pm): I0≈793, p≈1.39.
+# Un punto ya nublado esa tarde (13:03, cielo con cúmulos reales) dio razón
+# medido/esperado de 0.47, muy por debajo del rango 0.86-1.14 de los puntos
+# despejados -- separación amplia, pero es UN SOLO día de calibración; afinar
+# si con más días el umbral no separa tan limpio.
+# ─────────────────────────────────────────────────────────────────────────────
+_CLEAR_SKY_I0 = 793.0
+_CLEAR_SKY_P = 1.39
+_CLEAR_SKY_MIN_ALTITUDE_DEG = 5.0  # bajo esto, sin(altura) es muy ruidoso
+_CLEAR_SKY_RATIO_THRESHOLD = 0.65
+
+
+def clear_sky_radiation(altitude_deg: float) -> float:
+    """Radiación esperada (W/m²) con cielo despejado a esta altura solar."""
+    if altitude_deg <= 0:
+        return 0.0
+    return _CLEAR_SKY_I0 * math.sin(math.radians(altitude_deg)) ** _CLEAR_SKY_P
+
+
+def sun_glare_likely(altitude_deg: Optional[float], radiation: Optional[float]) -> bool:
+    """True si el sol probablemente pega sin obstrucción de nubes ahora mismo
+    (radiación medida cerca de lo esperado para un cielo despejado a esta altura),
+    condición bajo la cual el lente gran angular de la cámara puede sobreexponer
+    buena parte del encuadre sin que sea nubosidad real."""
+    if altitude_deg is None or radiation is None:
+        return False
+    if altitude_deg < _CLEAR_SKY_MIN_ALTITUDE_DEG:
+        return False
+    esperado = clear_sky_radiation(altitude_deg)
+    if esperado <= 0:
+        return False
+    return (radiation / esperado) >= _CLEAR_SKY_RATIO_THRESHOLD
 
 
 @dataclass

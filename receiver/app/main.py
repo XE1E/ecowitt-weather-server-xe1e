@@ -40,7 +40,7 @@ from .services import forecaster
 from .services import aggregator
 from .services import openmeteo
 from .services import forecast_consensus
-from .services.almanac import get_almanac
+from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import sky_validation
@@ -2317,6 +2317,20 @@ async def _current_forecast_wmo_cloudcover() -> Optional[Dict[str, Any]]:
 async def _analyze_sky_background(image_data: bytes) -> None:
     """Analiza la imagen del cielo en background y guarda el resultado."""
     try:
+        station_data = dict(latest_by_station.get(None) or {})
+        # Sol directo sin obstrucción de nubes: con el lente gran angular de esta
+        # cámara, sobreexpone buena parte del encuadre durante horas (verificado con
+        # fotos reales) sin que sea nubosidad -- ver sky_analyzer.sun_glare_likely()
+        # y docs/archivo/PLAN-HDR-CAMARA.md (por qué no se resuelve tocando la cámara).
+        try:
+            lat = getattr(settings, "cwop_latitude", 19.380359)
+            lon = getattr(settings, "cwop_longitude", -99.174564)
+            altitude = sun_altitude(lat, lon)
+            station_data["sun_glare_likely"] = sky_analyzer.sun_glare_likely(
+                altitude, station_data.get("solar_radiation")
+            )
+        except Exception as e:
+            logger.warning(f"No se pudo calcular sol_glare_likely: {e}")
         analysis = await sky_analyzer.analyze_sky(
             image_data,
             anthropic_api_key=settings.anthropic_api_key,
@@ -2327,7 +2341,7 @@ async def _analyze_sky_background(image_data: bytes) -> None:
             # Lecturas en vivo de la PRINCIPAL, para que el modelo no contradiga con el
             # texto lo que la propia estación ya midió (típicamente lluvia cayendo que
             # la imagen no deja ver clara). Es la misma fuente que /api/current.
-            station_data=latest_by_station.get(None),
+            station_data=station_data,
         )
         analysis_dict = analysis.to_dict()
         # Se registra SIEMPRE el resultado del intento (éxito o error) para que el

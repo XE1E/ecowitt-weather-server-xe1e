@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-08-31 (tarde).
+> Última actualización: 2026-08-31 (noche).
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -292,8 +292,29 @@ completo, incluido el rastro dejado en la Pi (pytapo parcheado instalado,
 inertes) en **`docs/archivo/PLAN-HDR-CAMARA.md`**. El código
 (`scripts/camara-hdr-auto.py` + `scripts/systemd/camara-hdr.*`) se queda en el
 repo **sin desplegar/activar** — el cálculo de posición del sol es correcto y
-reutilizable si algún día se retoma (p. ej. para avisarle al análisis del
-cielo con IA "sol en el encuadre ahora", en vez de tocar la cámara).
+reutilizable si algún día se retoma.
+
+## 2.h Mitigar el halo del sol en el análisis del cielo con IA — ✅ HECHO (2026-08-31)
+
+Pivote de 2.g: en vez de tocar la cámara, se le avisa al modelo de visión. Al revisar
+fotos reales de la mañana del 2026-08-31 salió un dato que cambió el diseño: NO es
+sólo una bola con halo cerca del sol -- de 8am a casi mediodía (sol ya alto, no
+rasante) sale **casi todo el cuadro** en blanco, horas después de que el sol "debería"
+haber salido del encuadre por geometría. La radiación solar medida esa mañana subió
+limpia de 56 a 700 W/m² sin ningún bache (curva de día genuinamente despejado) --
+confirma que el blanco es 100% límite de exposición de la cámara, no niebla real. Con
+eso, **no hizo falta calibrar el rumbo de la cámara**: basta con la radiación medida.
+
+`sky_analyzer.sun_glare_likely(altura_solar, radiacion_medida)` compara la radiación
+contra una curva de "cielo despejado esperado" (`I0 * sin(altura)^p`, ajustada por
+mínimos cuadrados a 6 puntos reales de esa mañana: I0≈793, p≈1.39). Cuando la razón
+medido/esperado pasa el umbral, el prompt de Gemini/Claude recibe un aviso explícito
+de que la zona blanca es sobreexposición, no nube. Altura solar: `almanac.sun_altitude()`
+(pyephem, nuevo helper ligero). Wireado en `main.py::_analyze_sky_background`. 6 tests
+en `tests/test_sky_analyzer.py`, anclados a los datos reales medidos ese día.
+
+Documentado en `docs/guias/analisis-cielo.md`. Pendiente real: la curva es de UN solo
+día calibrado -- revisar si con más mañanas despejadas el umbral sigue separando limpio.
 
 ## 3. Rediseño de Admin + depuración de código — plan escrito
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
