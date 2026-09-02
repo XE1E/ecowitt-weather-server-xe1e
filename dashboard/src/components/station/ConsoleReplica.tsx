@@ -229,31 +229,24 @@ function MoonGlyph({ size = 42, illum, waxing }:
           parcialmente iluminada. Con el disco visible, el terminador se nota. */}
       {/* FOTO REAL en vez de manchas dibujadas a mano: las de antes (ver historial) nunca
           pasaban por relieve lunar de verdad, por más que se afinara la mezcla. La textura
-          (cráteres, mares, los rayos de Tycho) va con `mix-blend-mode: soft-light` ENCIMA
-          del degradado de color de cada cara -- así el color y el relieve esférico los
-          sigue dando el degradado (sombra/luz) y la foto sólo aporta el detalle fino.
+          (cráteres, mares, los rayos de Tycho) va con `mix-blend-mode: multiply` ENCIMA del
+          degradado de color de cada cara: donde la foto es clara, el multiply casi no toca
+          el color de abajo; donde es oscura, lo apaga. Así el color y el relieve esférico
+          los sigue dando el degradado (sombra/luz) y la foto sólo aporta el detalle fino.
           `isolation: isolate` en cada grupo es necesario: sin un contexto de mezcla propio,
-          la mezcla compondría contra lo que hay DETRÁS de todo el SVG en la página (el
+          el multiply compondría contra lo que hay DETRÁS de todo el SVG en la página (el
           fondo casi negro de la celda), no contra el degradado que se acaba de pintar, y la
-          luna saldría casi negra entera.
-          ERA `multiply` (se veía apagada/turbia, 2026-09-01): multiply SÓLO puede oscurecer
-          -el resultado nunca pasa del color del degradado de abajo-, y la textura de la
-          foto (mediana ~45% de brillo dentro del disco, medido) recortaba la cara
-          iluminada a un tono muy por debajo de lo que pintaba el degradado `luz`.
-          `soft-light` sí puede aclarar además de oscurecer (referencia: gris medio, no
-          negro), así que las zonas más claras de la foto (tierras altas) iluminan el
-          degradado en vez de sólo atenuarlo, y el relieve sigue leyéndose porque los
-          mares oscuros lo siguen oscureciendo igual. */}
+          luna saldría casi negra entera. */}
       <g style={{ isolation: 'isolate' }} clipPath={`url(#disco-${uid})`}>
         <circle r={R} fill={`url(#sombra-${uid})`} />
         <image href={moonPhoto} x={-R} y={-R} width={2 * R} height={2 * R}
-          preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'soft-light' }} />
+          preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'multiply' }} />
       </g>
       {!oscura && (
         <g style={{ isolation: 'isolate' }} clipPath={`url(#luzclip-${uid})`}>
           <path d={litPath} fill={`url(#luz-${uid})`} />
           <image href={moonPhoto} x={-R} y={-R} width={2 * R} height={2 * R}
-            preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'soft-light' }} />
+            preserveAspectRatio="xMidYMid slice" style={{ mixBlendMode: 'multiply' }} />
         </g>
       )}
       {!oscura && <path d={litPath} fill={`url(#term-${uid})`} />}
