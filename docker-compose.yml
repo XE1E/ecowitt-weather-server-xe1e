@@ -135,6 +135,10 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/certs:/etc/caddy/certs:ro
+      # rubik.xe1e.net: sitio estático sin relación con la estación, ver Caddyfile.
+      # Ruta ABSOLUTA fuera del repo a propósito -- crear en el VPS con
+      # `mkdir -p /opt/rubik-site` antes del primer `up`.
+      - /opt/rubik-site:/srv/rubik:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

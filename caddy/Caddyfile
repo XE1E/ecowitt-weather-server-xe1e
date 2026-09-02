@@ -29,6 +29,20 @@ clima.xe1e.net {
 	reverse_proxy dashboard:80
 }
 
+# --- Sitio SIN RELACIÓN con la estación, comparte este mismo Caddy/VPS ---
+#
+# Guía estática (HTML/CSS/JS, sin backend) para resolver el cubo Rubik. Vive
+# FUERA del repo a propósito -- /opt/rubik-site en el VPS, no en git -- para no
+# meter contenido ajeno al clima en este repositorio. Requiere su PROPIO Origin
+# Certificate (el de arriba es válido sólo para clima.xe1e.net, no es wildcard):
+#   caddy/certs/rubik-origin.pem / rubik-origin.key (tampoco se versionan)
+rubik.xe1e.net {
+	tls /etc/caddy/certs/rubik-origin.pem /etc/caddy/certs/rubik-origin.key
+	encode gzip
+	root * /srv/rubik
+	file_server
+}
+
 # --- ALTERNATIVA sin Cloudflare (DNS "grey cloud" / solo DNS) ---
 # Si desactivas el proxy de Cloudflare, comenta el bloque de arriba y usa este,
 # que obtiene un certificado Let's Encrypt automático por HTTP-01:
