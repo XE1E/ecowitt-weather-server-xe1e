@@ -14,6 +14,13 @@ de retención en `docs/internal/PLAN-RESPALDO-R2.md`.
 Los cuatro comparten helpers en `scripts/lib-backup.sh` (credenciales, el remote de
 `rclone`, marcar una corrida como exitosa).
 
+Además, `scripts/backup-rubik-site.sh` respalda `/opt/rubik-site` (el sitio estático
+de rubik.xe1e.net, sin relación con la estación — ver `caddy/Caddyfile`) bajo el
+prefijo `rubik-site/` del mismo bucket. Usa las mismas credenciales/helpers, pero
+**no** llama a `mark_backup_success`: no participa del sistema de alerta de
+"respaldo desactualizado" del panel de Admin, porque ese sistema es sólo para las
+categorías de la estación. Si falla, el aviso queda sólo en el log de cron.
+
 ## 1. Crear el bucket y las claves en Cloudflare
 
 1. En el panel de Cloudflare → **R2** → *Create bucket* (p. ej. `ecowitt-backups`).
@@ -71,13 +78,15 @@ Cloudflare) en caliente, con las credenciales que acaban de pedir por API.
 ./scripts/backup-camera-fotos.sh
 ./scripts/backup-camera-timelapse.sh
 ./scripts/backup-camera-analisis.sh
+./scripts/backup-rubik-site.sh
 ```
 
 Cada uno debe terminar con `listo.` y, si subió algo, mostrar `subiendo a R2:` /
 `sincronizando con R2:`. Verifica en el panel de R2 que aparecen los objetos bajo
-`influx/`, `camara/fotos/`, `camara/timelapse/` y `camara/analisis/`. En el panel
-de Admin (Sistema → Respaldos) debe aparecer "Última: hace unos segundos" en las
-cuatro categorías.
+`influx/`, `camara/fotos/`, `camara/timelapse/`, `camara/analisis/` y `rubik-site/`.
+En el panel de Admin (Sistema → Respaldos) debe aparecer "Última: hace unos
+segundos" en las cuatro categorías de la estación (rubik-site no aparece ahí, ver
+nota arriba).
 
 ## 5. Programar con cron
 
@@ -89,6 +98,7 @@ crontab -e
 35 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-fotos.sh >> ~/ecowitt-backups/backup.log 2>&1
 40 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-timelapse.sh >> ~/ecowitt-backups/backup.log 2>&1
 45 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-analisis.sh >> ~/ecowitt-backups/backup.log 2>&1
+50 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-rubik-site.sh >> ~/ecowitt-backups/backup.log 2>&1
 ```
 
 ## Retención
