@@ -32,6 +32,9 @@ _BACKUP_LABELS = {
     "fotos": "fotos",
     "timelapse": "timelapse",
     "analisis": "análisis del cielo",
+    # No es de la estación (ver scripts/backup-rubik-site.sh), pero usa el mismo
+    # mecanismo de "desactualizado" para avisar por Telegram si falla.
+    "rubik": "sitio Rubik",
 }
 
 

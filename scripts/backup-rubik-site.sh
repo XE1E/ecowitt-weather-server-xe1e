@@ -9,6 +9,10 @@
 #
 # Uso:   ./scripts/backup-rubik-site.sh
 # Cron:  ver docs/backups-r2.md
+#
+# SÍ llama a mark_backup_success (categoría "rubik"): aunque el sitio no es de
+# la estación, reusa el mismo aviso por Telegram de "respaldo desactualizado"
+# si el cron deja de correr o rclone falla varios días seguidos.
 
 set -euo pipefail
 
@@ -34,5 +38,6 @@ REMOTE="$(r2_remote)"
 DESTPATH="${R2_BUCKET}/rubik-site"
 echo "[backup-rubik-site] sincronizando $RUBIK_DIR con R2: $DESTPATH/"
 rclone sync "$RUBIK_DIR" "${REMOTE}${DESTPATH}/" --s3-no-check-bucket
+mark_backup_success rubik
 
 echo "[backup-rubik-site] listo."

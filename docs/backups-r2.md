@@ -16,10 +16,10 @@ Los cuatro comparten helpers en `scripts/lib-backup.sh` (credenciales, el remote
 
 Además, `scripts/backup-rubik-site.sh` respalda `/opt/rubik-site` (el sitio estático
 de rubik.xe1e.net, sin relación con la estación — ver `caddy/Caddyfile`) bajo el
-prefijo `rubik-site/` del mismo bucket. Usa las mismas credenciales/helpers, pero
-**no** llama a `mark_backup_success`: no participa del sistema de alerta de
-"respaldo desactualizado" del panel de Admin, porque ese sistema es sólo para las
-categorías de la estación. Si falla, el aviso queda sólo en el log de cron.
+prefijo `rubik-site/` del mismo bucket. Usa las mismas credenciales/helpers y
+también llama a `mark_backup_success rubik`: aunque el sitio no es de la estación,
+reusa el mismo sistema de alerta de "respaldo desactualizado" (Telegram/correo) por
+simplicidad — aparece como categoría `rubik` en Admin → Sistema → Respaldos.
 
 ## 1. Crear el bucket y las claves en Cloudflare
 
@@ -85,8 +85,7 @@ Cada uno debe terminar con `listo.` y, si subió algo, mostrar `subiendo a R2:` 
 `sincronizando con R2:`. Verifica en el panel de R2 que aparecen los objetos bajo
 `influx/`, `camara/fotos/`, `camara/timelapse/`, `camara/analisis/` y `rubik-site/`.
 En el panel de Admin (Sistema → Respaldos) debe aparecer "Última: hace unos
-segundos" en las cuatro categorías de la estación (rubik-site no aparece ahí, ver
-nota arriba).
+segundos" en las cinco categorías (incluida 🧩 Sitio Rubik).
 
 ## 5. Programar con cron
 

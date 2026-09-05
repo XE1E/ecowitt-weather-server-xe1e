@@ -55,6 +55,7 @@ const BACKUP_CATEGORY_LABELS: Record<string, string> = {
   fotos: '📷 Fotos',
   timelapse: '🎞️ Timelapse',
   analisis: '🔎 Análisis del cielo',
+  rubik: '🧩 Sitio Rubik',
 }
 
 interface SysInfo {
