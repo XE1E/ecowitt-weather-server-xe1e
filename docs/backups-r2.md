@@ -73,7 +73,14 @@ Cloudflare) en caliente, con las credenciales que acaban de pedir por API.
 
 ## 4. Probar
 
+> Git no conserva el bit de ejecución si el script se editó/committeó desde Windows.
+> Si al desplegar da `Permission denied`, hace falta `git update-index --chmod=+x
+> scripts/backup-*.sh` (y commitear) además del `chmod +x` local — de lo contrario un
+> clon nuevo lo vuelve a perder. Pasó así del 2026-08-31 al 2026-09-08: cuatro
+> respaldos fallaron en silencio por esto (ver `docs/internal/PENDIENTES.md`).
+
 ```bash
+chmod +x scripts/backup-*.sh
 ./scripts/backup-influx.sh
 ./scripts/backup-camera-fotos.sh
 ./scripts/backup-camera-timelapse.sh

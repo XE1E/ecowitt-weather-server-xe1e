@@ -250,6 +250,17 @@ directo); el campo Account ID necesitaba aceptar tanto el ID solo como la URL
 completa que Cloudflare muestra pegada a él; rclone necesita el `endpoint` entre
 comillas simples en la connection string (si no, corta el valor en el primer `:`).
 
+**Incidente 2026-09-08 — 8 días sin correr por permisos.** Los 4 scripts (más
+`backup-rubik-site.sh`, agregado después) quedaron committeados sin el bit de
+ejecución (`git ls-files -s` mostraba `100644`, no `100755` — se habían
+editado/committeado desde Windows). El cron los invoca con `./scripts/...`, así que
+fallaban con `Permission denied` en silencio desde el 2026-09-01; sólo se notó al
+revisar el repo el 2026-09-08. Fix: `git update-index --chmod=+x` sobre los 6
+scripts afectados (los 5 de respaldo + `captura-camara.sh`, que tenía el mismo
+problema latente) y commit, para que sobreviva a un clon nuevo — un `chmod +x`
+manual en el VPS no se conserva en git y se puede perder en un redeploy futuro. Se
+agregó el aviso a `docs/backups-r2.md` §4.
+
 **Vigilancia de cuota del tier gratis de R2: construida pero SIN ACTIVAR** (decisión
 del usuario, 2026-08-31). El Cloudflare API Token que hace falta ("Account
 Analytics: Read") es de TODA la cuenta — no se puede acotar a un bucket como sí se
