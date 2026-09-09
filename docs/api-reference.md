@@ -570,10 +570,21 @@ Todos los errores siguen el formato:
 
 ## Rate Limiting
 
-No hay rate limiting implementado por defecto. El gateway envía datos cada 60 segundos típicamente.
+Por IP, en memoria (no persiste entre reinicios):
+
+| Endpoint | Límite |
+|----------|--------|
+| `POST /data/report/` (`/data/report`) | 60 peticiones/min — muy holgado para el datalogger real (~1-4/min), pensado como defensa ante flood/DoS |
+| `POST /api/admin/login` | 5 intentos/min — anti-fuerza-bruta |
+
+El resto de endpoints no tiene límite propio.
 
 ---
 
 ## CORS
 
-CORS está habilitado para todos los orígenes (`*`). En producción, considera restringir a tu dominio específico.
+Restringido a orígenes conocidos (`allow_credentials=False`): `https://clima.xe1e.net` en
+producción, más `http://localhost:5173` y `http://localhost:8080` para desarrollo local. La
+API se sirve **mismo-origen** en producción (el dashboard hace de proxy de `/api`), así que
+CORS solo importa para desarrollo/integraciones externas — ajusta `allow_origins` en
+`receiver/app/main.py` si necesitas otro origen.

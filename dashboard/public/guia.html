@@ -390,7 +390,7 @@
 
       <h3>Historia</h3>
       <p>El archivo de la estación. Eliges la granularidad —<strong>día, mes o año</strong>— y comparas temperatura, viento, humedad y punto de rocío, radiación UV y solar, precipitación y presión en gráficas interactivas: pasa el cursor por encima para ver los valores exactos. Al hacer clic en un día o mes de la tabla se abre su detalle.</p>
-      <p>Todo viene de las mediciones que la estación guarda cada minuto, resumidas por periodo. Es decir: no es una muestra ni una estimación, es el registro real comprimido.</p>
+      <p>Todo viene de las mediciones que la estación guarda cada minuto, resumidas por periodo. Es decir: no es una muestra ni una estimación, es el registro real comprimido. El botón <strong>⬇ CSV</strong> descarga la tabla que estés viendo (mes o año), en las unidades que tengas activas.</p>
 
       <h3>Estadísticas</h3>
       <p>Donde el histórico se convierte en conclusiones. Además del resumen del año (máximas, mínimas, lluvia, ráfaga), los promedios mensuales y los récords por categoría con su top 5 y fecha, hay dos cosas que conviene saber leer:</p>
@@ -405,7 +405,7 @@
       <p>El resumen tabular de todas las variables, sin gráficas. Es la vista para cuando quieres <strong>leer un valor exacto</strong> en lugar de interpretar una curva, o para copiar datos.</p>
 
       <h3>Climatología</h3>
-      <p>La diferencia con Historia es de fondo: Historia te muestra <em>qué pasó</em>, y Climatología <em>qué es lo normal</em>. Trae resúmenes de ayer, este mes y este año; el <strong>climograma</strong> (barras de lluvia y líneas de temperatura por mes, la gráfica clásica del clima); los récords por mes; un reporte estilo NOAA con tabla diaria, mensual y anual; y la efeméride «en este día».</p>
+      <p>La diferencia con Historia es de fondo: Historia te muestra <em>qué pasó</em>, y Climatología <em>qué es lo normal</em>. Trae resúmenes de ayer, este mes y este año; el <strong>climograma</strong> (barras de lluvia y líneas de temperatura por mes, la gráfica clásica del clima); los récords por mes; un reporte estilo NOAA con tabla diaria, mensual y anual —descargable en <strong>CSV</strong> con el botón ⬇, para compartirlo con comunidades como Meteoclimatic o con quien lo quiera analizar—; y la efeméride «en este día».</p>
       <div class="callout">
         <p><strong>Ten paciencia con esta página.</strong> La climatología describe comportamientos típicos, y para eso hacen falta años de datos. Esta estación arrancó en julio de 2026, así que hoy el climograma cubre pocos meses y algunos están incompletos. Se enriquece con cada día que pasa.</p>
       </div>
@@ -707,15 +707,30 @@
             <tr><td>Estación caída</td><td>No llegan datos en 15 min</td><td>Revisar luz, internet o el datalogger. Cada estación tiene su propia vigilancia</td></tr>
             <tr><td>Batería baja</td><td>Un sensor lo reporta</td><td>Cambiar las pilas de ese sensor</td></tr>
             <tr><td>Sensor perdido</td><td>Un sensor que antes reportaba dejó de hacerlo</td><td>Suele ser alcance de radio o batería agotada. Se normaliza solo al volver</td></tr>
+            <tr><td>Sensor atascado</td><td>Un sensor sigue reportando, pero repite el mismo valor exacto muchas lecturas seguidas (30 por defecto)</td><td>Suele ser un sensor con el detector dañado o una lectura cacheada por el firmware. Distinto de «sensor perdido»: este no desaparece, se congela</td></tr>
             <tr><td>Calidad del aire</td><td>AQI o IMECA sobre su umbral</td><td>Se revisa cada ~30 min. Es dato externo, no de la estación</td></tr>
+            <tr><td>Sismos</td><td>Magnitud ≥ 6.0, o ≥ 4.0 dentro de 150 km de la estación</td><td>Fuente SSN/USGS. A diferencia de las demás, no se «normaliza»: es un evento puntual, no una condición que se sostiene</td></tr>
             <tr><td>Cámara sin señal</td><td>Sin fotos nuevas por N minutos (30 por defecto)</td><td>Revisar la cámara o la red de casa. No avisa si nunca llegó ninguna foto</td></tr>
             <tr><td>Análisis de cámara fallando</td><td>El análisis de IA lleva N intentos seguidos con error (3 por defecto)</td><td>Suele ser cuota agotada del proveedor o un corte pasajero de su API. Se normaliza solo al volver</td></tr>
           </tbody>
         </table>
       </div>
 
+      <h3>Infraestructura</h3>
+      <p>Estas tres no son del clima: avisan si algo del <strong>servidor mismo</strong> se descompone, para enterarte sin tener que entrar a revisar a mano.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué hacer</th></tr></thead>
+          <tbody>
+            <tr><td>InfluxDB sin escribir</td><td>Varios reportes seguidos fallan al guardarse (5 por defecto)</td><td>Revisar el contenedor de InfluxDB (disco lleno, caído). Mientras tanto, la pantalla sigue mostrando el último dato desde memoria</td></tr>
+            <tr><td>Respaldo a R2 desactualizado</td><td>Alguna categoría (sensores, fotos, timelapse, análisis) lleva más de N horas sin una copia exitosa (30 h por defecto)</td><td>Revisar credenciales de Cloudflare R2 o el cron del respaldo — ver <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/backups-r2.md">docs/backups-r2.md</a></td></tr>
+            <tr><td>Contenedor "unhealthy"</td><td>Docker marca un contenedor del stack como no saludable</td><td>Revisar sus logs (<code>docker compose logs &lt;servicio&gt;</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="callout">
-        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor, cámara (sin señal/análisis) y aire— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
+        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor, cámara (sin señal/análisis), aire, sismo e infraestructura— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
       </div>
     </section>
 
@@ -831,7 +846,7 @@
       </div>
     </section>
 
-    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-08-29 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
+    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-09-09 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
 

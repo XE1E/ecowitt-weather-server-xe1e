@@ -184,7 +184,7 @@ Cada lectura que llega pasa por un **pipeline** (inspirado en WeeWX) antes de
 guardarse:
 
 ```
-parsear → convertir a métrico → calibrar → QC rangos → QC picos → derivar
+parsear → convertir a métrico → calibrar → QC rangos → QC picos → QC estadístico → derivar
         → guardar (InfluxDB) → MQTT → alertas → publicar a redes
 ```
 
@@ -199,9 +199,18 @@ parsear → convertir a métrico → calibrar → QC rangos → QC picos → der
    **salta de forma imposible** respecto a la lectura anterior (glitch del
    sensor). No filtra viento ni lluvia (varían a saltos legítimos) y se omite si
    la lectura previa tiene más de 15 min.
-6. **Variables derivadas:** calcula punto de rocío, sensación térmica, índice de
+6. **Control de calidad — estadístico** (`qc_stats_enabled`, **apagado por
+   omisión**): compara el valor contra la media/desviación histórica de ESA
+   estación (z-score, umbral 5.0 por omisión) usando una caché en memoria
+   refrescada cada hora en segundo plano — nunca consulta InfluxDB en el
+   camino de `/data/report/`. A diferencia de los dos anteriores, **no
+   descarta el dato** (un valor raro puede ser real, p. ej. una ola de
+   calor): solo lo marca, y una alerta separada avisa si la desviación se
+   sostiene varias lecturas seguidas (ver §10). Tarda hasta 1 h en tener
+   historial suficiente tras activarlo.
+7. **Variables derivadas:** calcula punto de rocío, sensación térmica, índice de
    calor, sensación por frío/viento, **humidex** y **base de nubes** (ver §12).
-7. **Guardado:** en InfluxDB, además del **resumen diario** ("Dayfile"): un
+8. **Guardado:** en InfluxDB, además del **resumen diario** ("Dayfile"): un
    registro por día con mín/máx/prom/total y la hora de cada extremo, que hace
    rápidas las consultas de récords y climatología.
 
@@ -1153,12 +1162,12 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
 | **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara»). En secundarias, opción **«a la intemperie»**: trata el sensor integrado (que reporta como *interior*) como **exterior** en todo el sistema (alertas, calibración, página remota, publicación) |
-| **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), más batería baja, sensor perdido, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
+| **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), más batería baja, sensor perdido, **sensor atascado**, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
 | **Calibración** | Toggle global y **por estación** con selector. Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, etiquetado *Exterior* o *Interior* según el «a la intemperie») + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS y **AWEKAS**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
 | **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
-| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
+| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos, **QC estadístico** opt-in — el umbral de z-score y demás ajustes finos solo por `settings.json`, ver §4). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
 dejan **en blanco al guardar, se conservan**. Los ajustes se guardan en
@@ -1196,6 +1205,7 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
+| **Sensor atascado** | un sensor sigue reportando pero repite el mismo valor exacto N lecturas seguidas (default 30) — distinto de «sensor perdido», que es la AUSENCIA del campo |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
 | **Sismos** | magnitud ≥ umbral (default 6.0), cercanos a la estación (≤ 800 km); fuente SSN/USGS |
 | **Visual (cielo)** | tormenta formándose / lluvia visible / visibilidad reducida — ver [Análisis del cielo con IA](#análisis-del-cielo-con-ia) |
@@ -1213,6 +1223,17 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | Tendencia temp (subiendo/bajando) | cambio de temp dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
 | Tendencia presión (subiendo/bajando) | cambio de presión dentro de la ventana ≥ umbral (2 niveles: aviso / fuerte) |
 | **Estación caída** | no llegan datos en N minutos (watchdog propio) |
+
+### Infraestructura (global, no por estación)
+
+No son alertas del clima: avisan si algo del **servidor mismo** se rompe.
+Corren en tareas de fondo, no por cada lectura.
+
+| Alerta | Se dispara cuando… |
+|--------|--------------------|
+| **InfluxDB sin escribir** | N escrituras seguidas fallan (default 5) — la pantalla sigue sirviendo desde el caché en memoria mientras tanto |
+| **Respaldo a R2 desactualizado** | alguna categoría (sensores/fotos/timelapse/análisis) lleva más de N horas sin una copia exitosa (default 30 h) — ver [`docs/backups-r2.md`](backups-r2.md) |
+| **Contenedor Docker "unhealthy"** | el healthcheck nativo de `docker-compose.yml` marca un servicio como no saludable (revisado cada 5 min por `scripts/check-docker-health.sh`, vía cron en el HOST) |
 
 **Telegram:** se crea un bot con @BotFather, se obtiene el `chat_id` y se pega
 token + chat id en el panel (o en `.env`).
