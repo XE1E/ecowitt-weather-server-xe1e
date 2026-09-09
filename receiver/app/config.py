@@ -96,6 +96,12 @@ class Settings(BaseSettings):
     # Avisos de batería baja y de sensor sin contacto
     alert_battery_enabled: bool = True
     alert_sensor_lost_enabled: bool = True
+    # Aviso de sensor "atascado": el mismo valor exacto en muchas lecturas
+    # seguidas (típico de un sensor muerto que ya no cambia). Distinto de
+    # alert_sensor_lost_enabled: ese cubre el sensor que DESAPARECE del
+    # payload; este cubre el que sigue reportando pero congelado.
+    alert_stuck_sensor_enabled: bool = True
+    alert_stuck_sensor_readings: int = 30
     # Avisos de calidad del aire (ICA/AQI e IMECA); se revisan cada ~30 min
     alert_air_enabled: bool = False
     alert_aqi_threshold: float = 100.0
@@ -162,6 +168,18 @@ class Settings(BaseSettings):
     qc_enabled: bool = True
     # Filtro de picos: descarta saltos imposibles entre lecturas consecutivas
     qc_spike_enabled: bool = True
+    # QC estadístico: marca "dudoso" (sin descartar el valor, a diferencia de
+    # qc_enabled/qc_spike_enabled) un campo cuyo z-score contra la media/
+    # desviación histórica de ESA estación (services/stats_cache.py) supera el
+    # umbral. Apagado por omisión: depende de tener suficiente historia real
+    # en InfluxDB para que la media/desviación no salgan de un puñado de días
+    # raros (ver docs/internal/PLAN-OPTIMIZACION-SERVIDOR.md, punto A6).
+    qc_stats_enabled: bool = False
+    qc_stats_z_threshold: float = 5.0
+    qc_stats_window: str = "-30d"
+    qc_stats_refresh_min: int = 60
+    qc_stats_alert_enabled: bool = True
+    qc_stats_alert_readings: int = 5
 
     # Calibración de sensores (offsets se suman; multiplicadores escalan; 1.0 = sin cambio)
     cal_enabled: bool = False

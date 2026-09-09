@@ -76,6 +76,8 @@ EDITABLE_KEYS = {
     "alert_station_offline_minutes",
     "alert_battery_enabled",
     "alert_sensor_lost_enabled",
+    "alert_stuck_sensor_enabled",
+    "alert_stuck_sensor_readings",
     "alert_air_enabled",
     "alert_aqi_threshold",
     "alert_imeca_threshold",
@@ -123,6 +125,12 @@ EDITABLE_KEYS = {
     # Control de calidad
     "qc_enabled",
     "qc_spike_enabled",
+    "qc_stats_enabled",
+    "qc_stats_z_threshold",
+    "qc_stats_window",
+    "qc_stats_refresh_min",
+    "qc_stats_alert_enabled",
+    "qc_stats_alert_readings",
     # Calibración
     "cal_enabled",
     "cal_temp_offset", "cal_humidity_offset",  # globales (compat)

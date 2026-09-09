@@ -104,6 +104,36 @@ def test_sensor_lost_alarm():
     assert rules["sensor_temperature_ch1"][0] is False
 
 
+def test_stuck_sensor_alarm():
+    svc = AlertService(make_settings(alert_stuck_sensor_readings=2), notifier=Collector())
+    r1 = svc.evaluate({"temperature_outdoor": 20.0})
+    assert r1["stuck_temperature_outdoor"][0] is False
+    r2 = svc.evaluate({"temperature_outdoor": 20.0})
+    assert r2["stuck_temperature_outdoor"][0] is False
+    r3 = svc.evaluate({"temperature_outdoor": 20.0})
+    assert r3["stuck_temperature_outdoor"][0] is True
+    assert "temperatura exterior" in r3["stuck_temperature_outdoor"][1]
+    # Cambia de valor -> se reinicia la racha
+    r4 = svc.evaluate({"temperature_outdoor": 20.5})
+    assert r4["stuck_temperature_outdoor"][0] is False
+
+
+def test_stuck_sensor_disabled():
+    svc = AlertService(make_settings(alert_stuck_sensor_enabled=False), notifier=Collector())
+    r = svc.evaluate({"temperature_outdoor": 20.0})
+    assert "stuck_temperature_outdoor" not in r
+
+
+def test_stuck_sensor_absent_resets_streak():
+    # Un sensor que DESAPARECE (lo cubre sensor_lost) no debe arrastrar su
+    # racha de "atascado" si vuelve a reportar con el mismo valor de antes.
+    svc = AlertService(make_settings(alert_stuck_sensor_readings=2), notifier=Collector())
+    svc.evaluate({"temperature_outdoor": 20.0})
+    svc.evaluate({})
+    r = svc.evaluate({"temperature_outdoor": 20.0})
+    assert r["stuck_temperature_outdoor"][0] is False
+
+
 def test_evaluate_temp_thresholds():
     svc = AlertService(make_settings(), notifier=Collector())
     rules = svc.evaluate({"temperature_outdoor": 36})
@@ -273,6 +303,56 @@ def test_influx_write_failing_then_recovery():
     svc2 = AlertService(make_settings(alert_influx_write_fails=3), notifier=c2)
     asyncio.run(svc2.check_influx_write(None))
     assert c2.msgs == []
+
+
+def test_stats_outlier_sustained_then_recovery():
+    c = Collector()
+    svc = AlertService(make_settings(qc_stats_alert_readings=3), notifier=c)
+    flagged = [("temperature_outdoor", 40.0, 8.0)]
+
+    # Dos lecturas dudosas seguidas: todavía no cruza el umbral
+    asyncio.run(svc.check_stats_outlier(flagged))
+    asyncio.run(svc.check_stats_outlier(flagged))
+    assert c.msgs == []
+
+    # Tercera lectura dudosa seguida -> dispara
+    asyncio.run(svc.check_stats_outlier(flagged))
+    assert len(c.msgs) == 1 and "sostenido" in c.msgs[0]
+
+    # Deja de estar marcado -> normaliza
+    asyncio.run(svc.check_stats_outlier([]))
+    assert len(c.msgs) == 2 and "Normalizado" in c.msgs[1]
+
+
+def test_stats_outlier_isolated_reading_does_not_alert():
+    # Una sola lectura rara (rebote de sensor, u hora de una ola de calor
+    # real) no debe avisar -- solo una desviación SOSTENIDA.
+    c = Collector()
+    svc = AlertService(make_settings(qc_stats_alert_readings=3), notifier=c)
+    asyncio.run(svc.check_stats_outlier([("temperature_outdoor", 40.0, 8.0)]))
+    asyncio.run(svc.check_stats_outlier([]))
+    assert c.msgs == []
+
+
+def test_stats_outlier_disabled():
+    c = Collector()
+    svc = AlertService(make_settings(qc_stats_alert_enabled=False, qc_stats_alert_readings=1), notifier=c)
+    asyncio.run(svc.check_stats_outlier([("temperature_outdoor", 40.0, 8.0)]))
+    assert c.msgs == []
+
+
+def test_stats_outlier_isolated_by_station():
+    # La principal (station=None) no debe interferir con el estado de una
+    # secundaria, ni viceversa -- ver el bug de aislamiento corregido en
+    # check_stats_outlier (clave tupla, no prefijo de texto).
+    c = Collector()
+    svc = AlertService(make_settings(qc_stats_alert_readings=2), notifier=c)
+    flagged = [("temperature_outdoor", 40.0, 8.0)]
+
+    asyncio.run(svc.check_stats_outlier(flagged, station="gw1100"))
+    asyncio.run(svc.check_stats_outlier([], station=None))  # principal sin marcados: no interfiere
+    asyncio.run(svc.check_stats_outlier(flagged, station="gw1100"))
+    assert len(c.msgs) == 1 and "gw1100" not in c.msgs[0]  # el mensaje no repite el nombre interno
 
 
 def test_earthquake_big_far_still_alerts():

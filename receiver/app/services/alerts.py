@@ -60,7 +60,7 @@ def _category_for(rule_key: str) -> str:
         return "station"
     if rule_key.startswith("battery_"):
         return "battery"
-    if rule_key.startswith("sensor_"):
+    if rule_key.startswith("sensor_") or rule_key.startswith("stuck_"):
         return "sensor"
     # La cámara COMO EQUIPO (sin señal, análisis fallando): distinta de "visual",
     # que es la interpretación del cielo que la cámara ve.
@@ -89,13 +89,34 @@ SENSOR_FORGET_DAYS = 7
 
 # Reglas que NO usan histéresis (avisan de inmediato):
 #  - gust_high: pico peligroso, no debe esperar.
-#  - sensor_* y battery_*: tienen su propia lógica de presencia/estado.
+#  - sensor_*, stuck_* y battery_*: tienen su propia lógica de presencia/racha
+#    (la persistencia YA está incluida en su umbral de lecturas seguidas; una
+#    espera extra de alert_persist_minutes por encima sería redundante).
 def _persist_exempt(rule_key: str) -> bool:
     return (
         rule_key == "gust_high"
         or rule_key.startswith("sensor_")
+        or rule_key.startswith("stuck_")
         or rule_key.startswith("battery_")
     )
+
+# Campos "suaves" vigilados por "sensor atascado" (mismo conjunto que el
+# filtro de picos en quality.py: temperatura/humedad/presión varían de forma
+# continua, así que un valor bit-a-bit IGUAL muchas lecturas seguidas es
+# sospechoso. Viento y lluvia se excluyen a propósito -- 0 km/h u horas sin
+# lluvia son perfectamente normales, no un sensor muerto).
+_STUCK_FIELD_LABELS = {
+    "temperature_outdoor": "temperatura exterior",
+    "temperature_indoor": "temperatura interior",
+    "temperature_ch1": "canal 1 (WN31)", "temperature_ch2": "canal 2 (WN31)",
+    "temperature_ch3": "canal 3 (WN31)", "temperature_ch4": "canal 4 (WN31)",
+    "temperature_ch5": "canal 5 (WN31)", "temperature_ch6": "canal 6 (WN31)",
+    "temperature_ch7": "canal 7 (WN31)", "temperature_ch8": "canal 8 (WN31)",
+    "humidity_outdoor": "humedad exterior",
+    "humidity_indoor": "humedad interior",
+    "pressure_relative": "presión relativa",
+    "pressure_absolute": "presión absoluta",
+}
 
 # Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
 _SENSOR_PRESENCE = {
@@ -158,6 +179,15 @@ class AlertService:
         # Sensores olvidados en la última evaluación, para que `process` avise.
         self._just_forgotten: List[str] = []
         self.known_batteries: Dict[Optional[str], set] = {}
+        # "Sensor atascado": (último valor, lecturas SEGUIDAS con ese mismo
+        # valor exacto) por (estación, campo). Clave "estacion:campo" (None ->
+        # "" como el resto de namespaces de este archivo). Ver evaluate().
+        self._stuck_state: Dict[str, Tuple[Optional[float], int]] = {}
+        # Lecturas SEGUIDAS con z-score dudoso, por (estación, campo) -- clave
+        # tupla y NO "estacion:campo" concatenado: con la principal (station=
+        # None) el prefijo de namespace es "", y un `startswith("")` habría
+        # hecho match con CUALQUIER estación (ver check_stats_outlier).
+        self._stats_outlier_streak: Dict[Tuple[Optional[str], str], int] = {}
         # Historial POR ESTACIÓN para las tendencias: deque de (datetime, valor).
         # None = principal. Se aísla entre estaciones.
         self._pressure_hist: Dict[Optional[str], deque] = {}
@@ -366,6 +396,31 @@ class AlertService:
                 rules[f"battery_{name}"] = (
                     val is False,
                     f"🔋 Batería baja: {self._sensor_label(name)}",
+                )
+
+        # Sensor atascado: el mismo valor EXACTO muchas lecturas seguidas en un
+        # campo que normalmente varía de forma continua (temperatura/humedad/
+        # presión). Un sensor desconectado desaparece del payload (lo cubre
+        # "sensor perdido" más abajo); este cubre el que sigue "vivo" pero
+        # devuelve siempre el mismo número -- un fallo distinto, típico de un
+        # sensor con el ADC muerto o una lectura cacheada por el firmware.
+        if getattr(self._settings, "alert_stuck_sensor_enabled", True):
+            threshold = max(2, int(getattr(self._settings, "alert_stuck_sensor_readings", 30)))
+            for field, label in _STUCK_FIELD_LABELS.items():
+                skey = f"{station or ''}:{field}"
+                val = data.get(field)
+                if val is None:
+                    # Sensor ausente en esta lectura: no es "atascado", es otra
+                    # cosa (QC lo rechazó o no reportó). Se reinicia la racha
+                    # para no arrastrar un valor viejo si vuelve a aparecer.
+                    self._stuck_state.pop(skey, None)
+                    continue
+                prev_val, streak = self._stuck_state.get(skey, (None, 0))
+                streak = streak + 1 if (prev_val is not None and val == prev_val) else 0
+                self._stuck_state[skey] = (val, streak)
+                rules[f"stuck_{field}"] = (
+                    streak >= threshold,
+                    f"🧊 Sensor atascado: {label} sin cambiar ({val}) en {threshold} lecturas seguidas",
                 )
 
         # Sensor perdido: un sensor visto antes que deja de reportar (por estación).
@@ -777,6 +832,56 @@ class AlertService:
                     "✅ Normalizado — 🗄️ InfluxDB vuelve a aceptar escrituras.", category="backup"
                 )
             self._influx_write_fails = 0
+
+    async def check_stats_outlier(
+        self, flagged: List[Tuple[str, float, float]], station: Optional[str] = None
+    ) -> None:
+        """
+        Avisa si un campo lleva varias lecturas SEGUIDAS con z-score dudoso
+        (ver services/quality.py::stats_check), y cuando vuelve a la
+        normalidad. Se llama tras CADA lectura (con o sin campos marcados),
+        mismo patrón de "N seguidos" que check_camera_analysis/
+        check_influx_write: una lectura rara aislada (rebote de sensor, o una
+        ola de calor real de una sola hora) no debe avisar -- solo una
+        desviación SOSTENIDA contra la media/desviación históricas de esa
+        estación.
+
+        `flagged` es la lista (campo, valor, z_score) que devuelve
+        `stats_check`. `station` aísla el estado por estación (None =
+        principal), igual que el resto de contadores de este archivo.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "qc_stats_alert_enabled", True):
+            return
+        threshold = max(1, int(getattr(s, "qc_stats_alert_readings", 5)))
+        by_field = {f: (v, z) for f, v, z in flagged}
+
+        # Recorre los campos marcados AHORA más los que ya llevaban racha (para
+        # poder normalizar los que dejaron de estarlo), acotado a ESTA estación
+        # por la propia clave tupla (station, field) -- no por prefijo de texto.
+        tracked = {f for (st, f) in self._stats_outlier_streak if st == station}
+        tracked |= set(by_field)
+
+        for field in tracked:
+            skey = (station, field)
+            key = f"stats_outlier_{station or 'principal'}_{field}"
+            if field in by_field:
+                v, z = by_field[field]
+                streak = self._stats_outlier_streak.get(skey, 0) + 1
+                self._stats_outlier_streak[skey] = streak
+                if streak == threshold:
+                    msg = (f"📊 Valor dudoso sostenido: {field} = {v} "
+                           f"(z-score {z}, {threshold} lecturas seguidas)")
+                    self._add_to_history(key, msg, resolved=False, station=station)
+                    await self._safe_notify(f"⚠️ ALERTA — {msg}", category="sensor")
+            else:
+                streak = self._stats_outlier_streak.pop(skey, 0)
+                if streak >= threshold:
+                    self._add_to_history(key, f"Valor dudoso sostenido en {field}",
+                                          resolved=True, station=station)
+                    await self._safe_notify(
+                        f"✅ Normalizado — 📊 {field} volvió a valores esperados.",
+                        category="sensor")
 
     async def _safe_notify(self, text: str, category: Optional[str] = None) -> None:
         try:

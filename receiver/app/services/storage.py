@@ -308,6 +308,59 @@ class InfluxDBStorage:
             logger.error(f"Error getting daily stats: {e}")
             raise
 
+    async def get_field_stddev(
+        self, fields: List[str], window: str = "-30d", station: Optional[str] = None,
+        measurement: str = "weather"
+    ) -> Dict[str, Dict[str, float]]:
+        """
+        Media y desviación estándar por campo sobre una ventana, para el QC
+        estadístico (ver services/quality.py::stats_check y
+        services/stats_cache.py, que es quien llama a esto -- NUNCA se invoca
+        en el camino caliente de /data/report, solo desde una tarea de fondo
+        periódica; ver PLAN-OPTIMIZACION-SERVIDOR.md punto A1 sobre por qué el
+        endpoint de ingesta no debe tocar consultas pesadas de Influx).
+
+        Devuelve {campo: {"mean": float, "stddev": float}}; omite los campos
+        sin datos suficientes en la ventana (stddev() necesita ≥ 2 puntos).
+        """
+        validate_measurement(measurement)
+        validate_flux_time(window, "window")
+        if not fields:
+            return {}
+        field_filter = " or ".join(f'r["_field"] == "{f}"' for f in fields)
+        base = f'''
+            from(bucket: "{self.bucket}")
+            |> range(start: {window})
+            |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+            {_station_filter(station)}
+            |> filter(fn: (r) => {field_filter})
+            |> group(columns: ["_field"])
+        '''
+        try:
+            means: Dict[str, float] = {}
+            for table in self.query_api.query(base + "|> mean()"):
+                for record in table.records:
+                    f = record.values.get("_field")
+                    if f is not None:
+                        means[f] = record.get_value()
+            stddevs: Dict[str, float] = {}
+            for table in self.query_api.query(base + "|> stddev()"):
+                for record in table.records:
+                    f = record.values.get("_field")
+                    if f is not None:
+                        stddevs[f] = record.get_value()
+
+            out: Dict[str, Dict[str, float]] = {}
+            for f in fields:
+                mean, stddev = means.get(f), stddevs.get(f)
+                if mean is None or stddev is None:
+                    continue
+                out[f] = {"mean": mean, "stddev": stddev}
+            return out
+        except Exception as e:
+            logger.error(f"Error getting field stddev: {e}")
+            raise
+
     async def write_daily_summary(
         self, date_str: str, fields: Dict[str, Any], ts: datetime,
         station: Optional[str] = None

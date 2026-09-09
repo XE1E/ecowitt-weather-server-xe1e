@@ -6,6 +6,9 @@ basura (interferencia, sensor sin batería, glitch de firmware) no ensucie las
 gráficas ni dispare alertas falsas. Los valores fuera de rango se ponen a None
 (se omiten) y se registra un aviso; el resto del dato se conserva.
 
+`stats_check` es una capa más suave: no descarta nada, solo SEÑALA un valor
+estadísticamente raro contra el historial de la propia estación (z-score).
+
 Los límites están en unidades métricas. Ojo con la presión en la CDMX (~2240 m):
 la presión RELATIVA viene ya reducida a nivel del mar (~1013 hPa), mientras que
 la ABSOLUTA local es mucho menor (~770 hPa).
@@ -111,6 +114,55 @@ def spike_check(
             len(rejected), ", ".join(f"{k}={c} (prev {p})" for k, c, p in rejected)
         )
     return result, rejected
+
+
+def stats_check(
+    data: Dict[str, Any], station_stats: Optional[Dict[str, Dict[str, float]]], settings,
+) -> Tuple[Dict[str, Any], list]:
+    """
+    QC estadístico: señala (sin descartar) un valor cuyo z-score contra la
+    media/desviación histórica de ESA estación se sale del umbral.
+
+    A diferencia de `quality_check`/`spike_check`, esto NO modifica `data` --
+    un valor físicamente posible pero estadísticamente raro puede ser real
+    (una ola de calor, un frente frío), así que no se pierde el dato: solo se
+    reporta para que las alertas avisen si la desviación se SOSTIENE varias
+    lecturas (ver AlertService.check_stats_outlier).
+
+    `station_stats` viene de services/stats_cache.py (caché en memoria,
+    refrescada en segundo plano) -- NUNCA se consulta InfluxDB aquí, este
+    check corre en el camino caliente de /data/report.
+
+    Devuelve (data SIN CAMBIOS, marcados) -- marcados es lista de
+    (campo, valor, z_score).
+    """
+    if not getattr(settings, "qc_stats_enabled", False):
+        return data, []
+    threshold = float(getattr(settings, "qc_stats_z_threshold", 5.0))
+    flagged = []
+    for field, stat in (station_stats or {}).items():
+        v = data.get(field)
+        if v is None:
+            continue
+        mean, stddev = stat.get("mean"), stat.get("stddev")
+        # stddev casi nulo (serie muy estable, p. ej. interior climatizado):
+        # cualquier variación mínima dispararía un z-score enorme sin ser un
+        # fallo real. Se omite el campo en vez de avisar en falso.
+        if mean is None or not stddev or stddev < 0.05:
+            continue
+        try:
+            z = abs(v - mean) / stddev
+        except TypeError:
+            continue
+        if z >= threshold:
+            flagged.append((field, v, round(z, 1)))
+    if flagged:
+        logger.warning(
+            "QC estadístico: %d valor(es) dudoso(s) (z-score >= %.1f): %s",
+            len(flagged), threshold,
+            ", ".join(f"{k}={v} (z={z})" for k, v, z in flagged)
+        )
+    return data, flagged
 
 
 def quality_check(data: Dict[str, Any], settings) -> Tuple[Dict[str, Any], list]:

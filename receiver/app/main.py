@@ -28,7 +28,8 @@ from .config import settings
 from .services.parser import parse_ecowitt_data, describe_device, resolve_station
 from .services.converter import convert_to_metric, calculate_derived_values, sea_level_pressure
 from .services.calibration import apply_calibration
-from .services.quality import quality_check, spike_check
+from .services.quality import quality_check, spike_check, stats_check
+from .services import stats_cache
 from .services.storage import InfluxDBStorage
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
@@ -219,6 +220,9 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(air_quality_watchdog()))
     # Acumuladores: resumen diario (Dayfile) para récords/climatología
     background_tasks.append(asyncio.create_task(daily_rollup_task()))
+    # Caché de medias/desviaciones para el QC estadístico (no-op si qc_stats_enabled
+    # está apagado, ver stats_refresh_task)
+    background_tasks.append(asyncio.create_task(stats_refresh_task()))
     # Timelapse diario de la cámara (hoy y ayer, más la purga)
     background_tasks.append(asyncio.create_task(timelapse_task()))
 
@@ -404,6 +408,31 @@ async def daily_rollup_task():
             logger.error(f"Refresco de resumen diario falló: {e}")
 
 
+async def stats_refresh_task():
+    """
+    Refresca la caché de medias/desviaciones para el QC estadístico
+    (services/stats_cache.py) cada `qc_stats_refresh_min` minutos, para la
+    principal y cada estación secundaria. No hace nada si `qc_stats_enabled`
+    está apagado (default) -- evita consultas de Influx innecesarias.
+
+    Corre SIEMPRE en segundo plano, nunca en el camino de /data/report (ver
+    A1 en el plan de optimización): el z-score en caliente solo lee esta
+    caché, ya poblada.
+    """
+    if not getattr(settings, "qc_stats_enabled", False):
+        return
+    await asyncio.sleep(60)  # gracia inicial
+    while True:
+        try:
+            window = getattr(settings, "qc_stats_window", "-30d")
+            await stats_cache.refresh(
+                storage, list(settings.secondary_station_map.values()), window=window
+            )
+        except Exception as e:
+            logger.error(f"Refresco de stats QC falló: {e}")
+        await asyncio.sleep(max(5, int(getattr(settings, "qc_stats_refresh_min", 60))) * 60)
+
+
 async def timelapse_task():
     """
     Mantiene el timelapse: refresca el vídeo de HOY según entran capturas, cierra el de
@@ -454,13 +483,17 @@ async def health_check():
 # configured as "/data/report/" or "/data/report" (a common Ecowitt gotcha:
 # without both, a missing trailing slash triggers a 307 redirect that some
 # station firmwares — including WS2910 consoles — do not follow on POST).
-async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set) -> None:
+async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set, stats_flagged: list) -> None:
     """Nunca debe tumbar la ingestión: corre en BackgroundTasks, después de
     responder al datalogger (ver receive_ecowitt_data)."""
     try:
         await alert_service.process(parsed_data, qc_rejected=qc_rejected)
     except Exception as e:
         logger.error(f"Alert processing failed: {e}")
+    try:
+        await alert_service.check_stats_outlier(stats_flagged)
+    except Exception as e:
+        logger.error(f"Stats QC alert failed: {e}")
 
 
 async def _bg_publish_principal(parsed_data: dict) -> None:
@@ -470,7 +503,8 @@ async def _bg_publish_principal(parsed_data: dict) -> None:
         logger.error(f"Public publish failed: {e}")
 
 
-async def _bg_alertas_secundaria(parsed_data: dict, station: str, qc_rejected: set) -> None:
+async def _bg_alertas_secundaria(parsed_data: dict, station: str, qc_rejected: set,
+                                  stats_flagged: list) -> None:
     try:
         scfg = settings_store.get_station_config(settings.settings_file, station)
         if scfg.get("alerts_enabled"):
@@ -479,6 +513,7 @@ async def _bg_alertas_secundaria(parsed_data: dict, station: str, qc_rejected: s
                 thresholds=scfg.get("alert_thresholds") or None,
                 disabled=scfg.get("disabled_rules") or [],
                 qc_rejected=qc_rejected)
+            await alert_service.check_stats_outlier(stats_flagged, station=station)
     except Exception as e:
         logger.error(f"Alert processing (secundaria {station}) failed: {e}")
 
@@ -599,6 +634,10 @@ async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTas
         # imposible y la filtramos": sin esto, cada pico rechazado disparaba un
         # falso "Sensor sin contacto".
         qc_rejected = {f for f, *_ in qc_bad} | {f for f, *_ in spike_bad}
+        # QC estadístico (z-score contra la caché de media/desviación de ESTA
+        # estación, ver services/stats_cache.py): NO modifica parsed_data, solo
+        # marca campos dudosos para que las alertas avisen si se sostiene.
+        _, stats_flagged = stats_check(parsed_data, stats_cache.get(station), settings)
         if settings.output_unit_system == "metric":
             parsed_data = calculate_derived_values(parsed_data)
 
@@ -645,12 +684,13 @@ async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTas
 
             # Alertas (Telegram/correo) y publicación a redes públicas: a
             # BackgroundTasks, corren DESPUÉS de responder al datalogger.
-            background_tasks.add_task(_bg_alertas_principal, parsed_data, qc_rejected)
+            background_tasks.add_task(_bg_alertas_principal, parsed_data, qc_rejected, stats_flagged)
             background_tasks.add_task(_bg_publish_principal, parsed_data)
         else:
             # Estación secundaria: alertas propias solo si están habilitadas en su
             # configuración (Admin → Estaciones → config). Estado por estación.
-            background_tasks.add_task(_bg_alertas_secundaria, parsed_data, station, qc_rejected)
+            background_tasks.add_task(_bg_alertas_secundaria, parsed_data, station, qc_rejected,
+                                       stats_flagged)
 
         return {"status": "success", "message": "Data received"}
 

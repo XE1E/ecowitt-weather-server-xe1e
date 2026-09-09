@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 from app.services.calibration import apply_calibration
-from app.services.quality import quality_check, spike_check
+from app.services.quality import quality_check, spike_check, stats_check
 from app.services.converter import calculate_derived_values, calculate_humidex, calculate_cloud_base
 from app.services.forecaster import local_forecast, classify_trend
 from app.services.publishers import build_cwop_packet, _aprs_lat, _aprs_lon
@@ -42,6 +42,46 @@ def test_calibration_wind_mult_and_humidity_clamp():
     out = apply_calibration({"wind_speed": 10.0, "humidity_outdoor": 95.0}, s)
     assert out["wind_speed"] == 11.0
     assert out["humidity_outdoor"] == 100.0  # clamp a 100
+
+
+# ---------- QC estadístico (z-score) ----------
+def test_stats_check_disabled_by_default():
+    s = SimpleNamespace(qc_stats_enabled=False)
+    stats = {"temperature_outdoor": {"mean": 20.0, "stddev": 2.0}}
+    out, flagged = stats_check({"temperature_outdoor": 40.0}, stats, s)
+    assert out["temperature_outdoor"] == 40.0  # nunca modifica el dato
+    assert flagged == []
+
+
+def test_stats_check_flags_outlier_without_discarding():
+    s = SimpleNamespace(qc_stats_enabled=True, qc_stats_z_threshold=5.0)
+    # media 20, stddev 2 -> 40°C es z=10, muy por encima del umbral 5
+    stats = {"temperature_outdoor": {"mean": 20.0, "stddev": 2.0}}
+    out, flagged = stats_check({"temperature_outdoor": 40.0}, stats, s)
+    assert out["temperature_outdoor"] == 40.0  # se conserva, no se descarta
+    assert flagged == [("temperature_outdoor", 40.0, 10.0)]
+
+
+def test_stats_check_within_normal_range_not_flagged():
+    s = SimpleNamespace(qc_stats_enabled=True, qc_stats_z_threshold=5.0)
+    stats = {"temperature_outdoor": {"mean": 20.0, "stddev": 2.0}}
+    out, flagged = stats_check({"temperature_outdoor": 24.0}, stats, s)  # z=2
+    assert flagged == []
+
+
+def test_stats_check_skips_near_zero_stddev():
+    # Serie casi constante (p. ej. interior climatizado): no debe disparar
+    # por variaciones mínimas, aunque el z-score matemático sea enorme.
+    s = SimpleNamespace(qc_stats_enabled=True, qc_stats_z_threshold=5.0)
+    stats = {"temperature_indoor": {"mean": 22.0, "stddev": 0.01}}
+    out, flagged = stats_check({"temperature_indoor": 22.5}, stats, s)
+    assert flagged == []
+
+
+def test_stats_check_no_cache_yet():
+    s = SimpleNamespace(qc_stats_enabled=True)
+    out, flagged = stats_check({"temperature_outdoor": 999.0}, {}, s)
+    assert flagged == []
 
 
 # ---------- Control de calidad ----------
