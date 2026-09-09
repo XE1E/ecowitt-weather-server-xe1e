@@ -270,7 +270,8 @@ genérico de `/data/report/` — el dato de ESE ciclo se pierde).
       humedad 0 y negativa) y `test_derived_values_zero_humidity_no_crash`
       (extremo a extremo vía `calculate_derived_values`). 157 tests pasan
       (2 nuevos), `ruff` limpio.
-- [ ] Pendiente: desplegar al VPS.
+- [x] Desplegado en el VPS 2026-09-09 (commit `8fc1a32`), confirmado con
+      pushes reales de ambas estaciones sin errores.
 
 ### C4. `calculate_cloud_base` (fórmula de Espy) — revisado 2026-09-09, YA ESTABA HECHA
 
