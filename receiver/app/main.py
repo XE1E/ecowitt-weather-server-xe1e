@@ -2233,6 +2233,35 @@ async def backup_r2_credentials(request: Request):
     }
 
 
+@app.post("/api/admin/docker-health")
+async def report_docker_health(request: Request, body: Dict[str, Any] = Body(...)):
+    """
+    Recibe qué contenedores del stack están "unhealthy" ahora mismo, desde
+    `scripts/check-docker-health.sh` (cron en el HOST, fuera de los
+    contenedores -- ninguno de ellos puede ver a los demás ni tiene acceso al
+    socket de Docker para consultar `docker inspect` sobre sí mismo).
+
+    Autenticación por token propio en `X-Docker-Health-Token`, NO el del panel
+    de administración -- mismo motivo que `backup_api_token`: si se filtra,
+    sólo permite reportar salud de contenedores, no entrar al panel ni a nada
+    más. Sin `DOCKER_HEALTH_API_TOKEN` configurado responde 503.
+    """
+    esperado = settings.docker_health_api_token
+    if not esperado:
+        raise HTTPException(status_code=503, detail="Monitoreo de Docker no configurado")
+
+    recibido = request.headers.get("X-Docker-Health-Token") or ""
+    if not secrets.compare_digest(recibido, esperado):
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    unhealthy = body.get("unhealthy") or []
+    if not isinstance(unhealthy, list):
+        raise HTTPException(status_code=400, detail="'unhealthy' debe ser una lista")
+
+    await alert_service.check_docker_health([str(x) for x in unhealthy])
+    return {"status": "ok"}
+
+
 @app.post("/api/camera/upload")
 async def camera_upload(request: Request):
     """

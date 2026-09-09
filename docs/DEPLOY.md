@@ -233,6 +233,38 @@ seguidos.
 
 ---
 
+## 8c. Monitoreo de salud de los contenedores (healthcheck + Telegram)
+
+`docker-compose.yml` declara `healthcheck` nativo para `receiver`, `influxdb`,
+`dashboard` y `renderer` (Caddy queda fuera a propósito, ver comentario ahí:
+su imagen no trae curl/wget). Docker por sí solo NO reinicia un contenedor
+solo por estar "unhealthy" (eso es cosa de Swarm, no de Compose) — lo que
+sí hace es marcarlo, visible con:
+
+```bash
+docker compose ps    # columna STATUS: "healthy"/"unhealthy"/"starting"
+```
+
+Para enterarte por Telegram sin tener que mirar `docker compose ps` a mano,
+`scripts/check-docker-health.sh` revisa el estado y avisa al receiver (que ya
+sabe mandar Telegram/correo). Requiere un token propio, mismo patrón que
+`BACKUP_API_TOKEN`:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Pon el mismo valor en **dos lugares**: `.env` → `DOCKER_HEALTH_API_TOKEN=...` y
+Admin → Sistema → *Token de API de salud de Docker*. Luego prográmalo en cron
+(cada 5 min alcanza, ya que el propio healthcheck ya espera `retries` intentos
+antes de marcar unhealthy):
+
+```bash
+( crontab -l 2>/dev/null; echo "*/5 * * * * cd $HOME/ecowitt-weather-server-xe1e && ./scripts/check-docker-health.sh >> $HOME/ecowitt-backups/backup.log 2>&1" ) | crontab -
+```
+
+---
+
 ## 9. Simulador de datos (opcional, mientras llega el hardware)
 
 Para ver el dashboard "vivo" antes de tener el WS2910, un script empuja lecturas

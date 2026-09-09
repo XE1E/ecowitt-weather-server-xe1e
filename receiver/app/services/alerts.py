@@ -70,7 +70,8 @@ def _category_for(rule_key: str) -> str:
         return "air"
     if rule_key.startswith("sky_"):
         return "visual"
-    if rule_key.startswith("backup_") or rule_key == "influx_write_failing":
+    if (rule_key.startswith("backup_") or rule_key == "influx_write_failing"
+            or rule_key.startswith("docker_health_")):
         return "backup"
     return "other"
 
@@ -145,6 +146,10 @@ class AlertService:
         # mismo set (invisible en producción, que solo crea una, pero rompía
         # el aislamiento entre tests).
         self._notified_quakes: Set[str] = set()
+        # Contenedores actualmente "unhealthy" según su último reporte (ver
+        # check_docker_health). Se compara contra el reporte anterior para
+        # avisar solo en la TRANSICIÓN, no en cada corrida del cron.
+        self._docker_unhealthy: Set[str] = set()
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         # sensor -> última vez que reportó, por estación. Con la fecha se puede
@@ -1027,6 +1032,34 @@ class AlertService:
 
             if url:
                 await self._safe_notify(f"📍 Más info: {url}", category="earthquake")
+
+    async def check_docker_health(self, unhealthy: List[str]) -> None:
+        """
+        Avisa si algún contenedor del stack pasa a "unhealthy" según su
+        healthcheck nativo de Docker (ver docker-compose.yml), y cuando se
+        recupera. `unhealthy` es la lista de nombres de SERVICIO (no de
+        contenedor) actualmente unhealthy, reportada por
+        `scripts/check-docker-health.sh` -- corre por cron en el HOST, fuera
+        de los contenedores: ninguno de ellos puede verse entre sí ni tiene
+        acceso al socket de Docker. Se llama en CADA corrida del cron (con o
+        sin nombres), igual que check_backup_stale, para poder detectar tanto
+        la caída como la recuperación comparando contra el estado anterior.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_docker_health_enabled", True):
+            return
+        actuales = set(unhealthy)
+
+        for nombre in actuales - self._docker_unhealthy:
+            msg = f"🐳 El contenedor '{nombre}' está unhealthy (ver healthcheck en docker-compose.yml)."
+            self._add_to_history(f"docker_health_{nombre}", msg, resolved=False)
+            await self._safe_notify(f"⚠️ ALERTA — {msg}", category="backup")
+        for nombre in self._docker_unhealthy - actuales:
+            self._add_to_history(f"docker_health_{nombre}", f"Contenedor '{nombre}' unhealthy", resolved=True)
+            await self._safe_notify(
+                f"✅ Normalizado — 🐳 El contenedor '{nombre}' volvió a estar sano.", category="backup")
+
+        self._docker_unhealthy = actuales
 
     # --- Pruebas desde el panel (fuerzan el envío por un canal concreto) ---
     async def send_test_telegram(self) -> None:

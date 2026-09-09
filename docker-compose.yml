@@ -42,6 +42,15 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    # `python3` en vez de curl/wget: la imagen python:3.11-slim no trae
+    # ninguno de los dos por omisión, pero Python sí, siempre.
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   # InfluxDB - Time series database
   influxdb:
@@ -67,6 +76,14 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    # La imagen oficial de InfluxDB trae curl; es el healthcheck que ellos
+    # mismos documentan.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # Grafana - Visualization (optional)
   grafana:
@@ -101,6 +118,13 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    # nginx:alpine trae wget (BusyBox) pero no curl.
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Renderer - Chromium headless que convierte /kiosko?page=N en un JPEG 1024x600
   # para el display ESP32-S3. El ESP32 solo baja la imagen y la pinta (sin LVGL).
@@ -122,10 +146,23 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    # Imagen de Playwright: trae Python (con la que ya corre uvicorn), sin
+    # garantía de curl/wget -- mismo truco que `receiver`.
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # Caddy - Reverse proxy con HTTPS automático (Let's Encrypt) para el dominio.
   # Producción con dominio: docker compose --profile caddy up -d
   # (el dashboard sigue publicado en 8080 para el push HTTP del WS2910 por IP)
+  # Sin healthcheck: su imagen oficial no trae curl/wget, y agregar uno solo
+  # para esto sería una capa extra en una imagen que ya funciona bien --
+  # scripts/check-docker-health.sh igual lo cubre indirectamente, si Caddy se
+  # cae el dashboard deja de responder por :80/:443 y eso sí se nota.
   caddy:
     image: caddy:2
     container_name: ecowitt-caddy

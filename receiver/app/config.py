@@ -122,6 +122,14 @@ class Settings(BaseSettings):
     # blip aislado (p. ej. un redeploy del contenedor).
     alert_influx_write_enabled: bool = True
     alert_influx_write_fails: int = 5
+    # Aviso de contenedor "unhealthy" (docker-compose.yml healthcheck), avisado
+    # por scripts/check-docker-health.sh (cron en el HOST, fuera de los
+    # contenedores) vía POST /api/admin/docker-health.
+    alert_docker_health_enabled: bool = True
+    # Token propio para ese endpoint (no el del panel de admin) -- mismo
+    # motivo que backup_api_token: si se filtra, sólo permite reportar el
+    # estado de salud de contenedores, no entrar al panel ni a nada más.
+    docker_health_api_token: Optional[str] = None
 
     # Telegram notifications
     telegram_enabled: bool = False

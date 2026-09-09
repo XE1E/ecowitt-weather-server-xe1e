@@ -377,3 +377,62 @@ grave de lo que se sospechaba:
       `/api/airquality/imeca` real: pronóstico horario suave (55→56→...→72→
       ...→54), sin saltos bruscos hora a hora — la señal de que el promedio
       móvil de verdad está actuando.
+
+### C6. Migrar Open-Meteo a AIFS/GraphCast — revisado 2026-09-09, SIN HACER
+
+**Sugerencia recibida:** usar los modelos de IA (ECMWF AIFS, GraphCast/Google
+WeatherNext) de Open-Meteo en vez del `best_match` por omisión, para mejorar
+la precisión de lluvias repentinas a 24-48h en el Valle de México.
+
+**Verificado contra la doc oficial de Open-Meteo:** ambos modelos son de
+resolución NATIVA de 6 horas (AIFS) o 6h interpoladas a horaria
+(`google_weathernext2_ensemble`, que además solo actualiza cada 12h y **no
+predice precipitación directamente, la estima** a partir de precipitación
+total + temperatura + nubosidad derivada). Para una tormenta convectiva
+vespertina típica del valle (dura 1-3 h, importa el momento exacto), esto es
+peor que mejor: estos modelos de IA destacan en escala sinóptica de mediano
+plazo (5-10 días), no en nowcasting convectivo de corto plazo — ese terreno
+lo cubren modelos regionales de alta resolución horaria (HRRR, AROME,
+HARMONIE...) que Open-Meteo no ofrece para México.
+
+**Decisión:** no se migra. El código tampoco fija un `models=` explícito
+hoy (usa el `best_match`/`auto` de Open-Meteo), así que ya hereda gratis
+cualquier mejora que Open-Meteo incorpore a su selección automática, sin
+tocar código.
+
+### C7. Healthchecks de Docker + alerta por Telegram — HECHO 2026-09-09
+
+**Sugerencia recibida:** agregar `healthcheck` nativo en `docker-compose.yml`
+(ninguno existía) y enlazarlo al bot de Telegram para avisar si un
+contenedor queda "unhealthy" — un proceso colgado pero vivo no dispara
+`restart: unless-stopped` (que solo reacciona si el proceso termina).
+
+**Plan — HECHO:**
+- [x] `docker-compose.yml`: `healthcheck` en `receiver`/`renderer` (Python
+      `urllib.request` contra su propio `/health` — ninguna de las dos
+      imágenes trae curl/wget garantizado), `influxdb` (`curl`, viene en su
+      imagen oficial) y `dashboard` (`wget`, viene en `nginx:alpine`). Caddy
+      queda fuera a propósito (su imagen no trae curl/wget; si se cae, el
+      dashboard deja de responder por :80/:443 y eso ya se nota solo).
+- [x] Docker/Compose NO reinicia solo por estar unhealthy (eso es de Swarm) —
+      solo lo marca. `AlertService.check_docker_health()` (mismo patrón que
+      `check_backup_stale`: avisa en la transición, normaliza al recuperarse)
+      conectada a un nuevo endpoint `POST /api/admin/docker-health`, con
+      token propio (`DOCKER_HEALTH_API_TOKEN`, mismo patrón que
+      `BACKUP_API_TOKEN`).
+- [x] `scripts/check-docker-health.sh` (nuevo, cron cada 5 min en el HOST):
+      lee el estado de cada contenedor con `docker inspect` y avisa al
+      receiver — corre fuera de los contenedores porque ninguno puede verse
+      entre sí ni tiene acceso al socket de Docker. Marcado `+x` en git desde
+      el commit (la lección de la sesión de hoy con los scripts de backup).
+- [x] Tests nuevos en `test_alerts.py` (caída/recuperación, dos contenedores
+      independientes, alerta desactivada). Smoke test real del endpoint con
+      `TestClient` (401 sin token, 200 con token, 400 si `unhealthy` no es
+      lista) — se descartó después de verificar, no quedó como test
+      permanente (necesitaría mockear `AlertService` para no depender de
+      Telegram real). 178 tests pasan (3 nuevos), `ruff` limpio.
+- [x] Docs: `docs/DEPLOY.md` §8c (setup del token + cron), README (alertas
+      de infraestructura).
+- [ ] Pendiente: desplegar al VPS (requiere ADEMÁS crear el token y
+      configurarlo en Admin → Sistema, y agregar el cron — no se puede
+      verificar en producción solo con el deploy del código).

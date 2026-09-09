@@ -348,6 +348,44 @@ def test_earthquake_not_renotified():
     assert len(c.msgs) == 1
 
 
+def test_docker_health_falla_y_recupera():
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+
+    # Sano -> nada
+    asyncio.run(svc.check_docker_health([]))
+    assert c.msgs == []
+
+    # Se cae 'influxdb' -> avisa (una vez; una segunda corrida con el mismo
+    # unhealthy no repite)
+    asyncio.run(svc.check_docker_health(["influxdb"]))
+    asyncio.run(svc.check_docker_health(["influxdb"]))
+    assert len(c.msgs) == 1 and "influxdb" in c.msgs[0] and "unhealthy" in c.msgs[0]
+
+    # Se recupera -> normaliza
+    asyncio.run(svc.check_docker_health([]))
+    assert len(c.msgs) == 2 and "volvió a estar sano" in c.msgs[1]
+
+
+def test_docker_health_dos_contenedores_independientes():
+    c = Collector()
+    svc = AlertService(make_settings(), notifier=c)
+
+    asyncio.run(svc.check_docker_health(["receiver", "renderer"]))
+    assert len(c.msgs) == 2
+
+    # Solo se recupera uno -> solo un mensaje de normalizado
+    asyncio.run(svc.check_docker_health(["renderer"]))
+    assert len(c.msgs) == 3 and "receiver" in c.msgs[2] and "volvió a estar sano" in c.msgs[2]
+
+
+def test_docker_health_disabled():
+    c = Collector()
+    svc = AlertService(make_settings(alert_docker_health_enabled=False), notifier=c)
+    asyncio.run(svc.check_docker_health(["receiver"]))
+    assert c.msgs == []
+
+
 def test_category_mapping():
     assert _category_for("camera_offline") == "camera"
     assert _category_for("camera_analysis_failing") == "camera"
@@ -370,6 +408,7 @@ def test_category_mapping():
     assert _category_for("uv_high") == "sun"
     assert _category_for("solar_high") == "sun"
     assert _category_for("influx_write_failing") == "backup"
+    assert _category_for("docker_health_receiver") == "backup"
 
 
 def test_all_categories_are_declared():
