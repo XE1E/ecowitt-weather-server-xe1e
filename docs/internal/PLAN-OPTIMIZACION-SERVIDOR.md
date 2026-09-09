@@ -373,4 +373,7 @@ grave de lo que se sospechaba:
       de PM2.5 de una sola hora da índice ~66 ("Regular") promediado en 24h,
       no ~350 ("Peligrosa") como el valor instantáneo del bug anterior. 175
       tests pasan (9 nuevos), `ruff` limpio, `tsc --noEmit` limpio.
-- [ ] Pendiente: desplegar al VPS.
+- [x] Desplegado en el VPS 2026-09-09 (commit `a3e877c`), confirmado contra
+      `/api/airquality/imeca` real: pronóstico horario suave (55→56→...→72→
+      ...→54), sin saltos bruscos hora a hora — la señal de que el promedio
+      móvil de verdad está actuando.
