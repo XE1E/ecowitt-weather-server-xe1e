@@ -5,6 +5,7 @@ import { parseServerDate } from '../../weather'
 interface SysSettings {
   qc_enabled: boolean
   qc_spike_enabled: boolean
+  qc_stats_enabled: boolean
   timezone_offset: number
   cwop_latitude: number
   cwop_longitude: number
@@ -533,8 +534,14 @@ export function AdminSistema() {
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Toggle enabled={settings.qc_enabled} onChange={(v) => update('qc_enabled', v)} label="QC habilitado" />
           <Toggle enabled={settings.qc_spike_enabled} onChange={(v) => update('qc_spike_enabled', v)} label="Filtro de picos" />
+          <Toggle enabled={settings.qc_stats_enabled} onChange={(v) => update('qc_stats_enabled', v)} label="QC estadistico (z-score)" />
         </div>
-        <p className="text-xs text-slate-500 mt-2">Filtra lecturas anomalas (picos, valores fuera de rango) antes de almacenar</p>
+        <p className="text-xs text-slate-500 mt-2">Filtra lecturas anomalas (picos, valores fuera de rango) antes de almacenar. El
+          QC estadistico compara cada lectura contra la media/desviacion historica de la
+          propia estacion (no descarta el dato, solo avisa si se sostiene varias lecturas
+          seguidas); tarda hasta 1 hora en tener suficiente historial tras activarlo. Umbral
+          de z-score, ventana historica y demas ajustes finos solo por ahora en
+          /data/settings.json (qc_stats_*).</p>
       </div>
 
       {/* Logs del sistema */}

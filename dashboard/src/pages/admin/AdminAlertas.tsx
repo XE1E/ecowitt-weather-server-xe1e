@@ -36,6 +36,8 @@ interface AlertSettings {
   alert_station_offline_minutes: number
   alert_battery_enabled: boolean
   alert_sensor_lost_enabled: boolean
+  alert_stuck_sensor_enabled: boolean
+  alert_stuck_sensor_readings: number
   alert_air_enabled: boolean
   alert_aqi_threshold: number
   alert_imeca_threshold: number
@@ -627,6 +629,13 @@ export function AdminAlertas() {
               <div className="h-4 w-px bg-white/10" />
               <Toggle enabled={settings.alert_battery_enabled} onChange={(v) => update('alert_battery_enabled', v)} label="🔋 Bateria baja" />
               <Toggle enabled={settings.alert_sensor_lost_enabled} onChange={(v) => update('alert_sensor_lost_enabled', v)} label="📡 Sensor perdido" />
+              <Toggle enabled={settings.alert_stuck_sensor_enabled} onChange={(v) => update('alert_stuck_sensor_enabled', v)} label="🧊 Sensor atascado" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">tras</span>
+                <NumField value={settings.alert_stuck_sensor_readings} onChange={(v) => update('alert_stuck_sensor_readings', v)}
+                  min={2} max={200} off={!settings.alert_stuck_sensor_enabled} />
+                <span className="text-xs text-slate-500">lecturas iguales seguidas</span>
+              </div>
               <div className="h-4 w-px bg-white/10" />
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-slate-400">⏱️ Sostener</span>
