@@ -88,6 +88,10 @@ EDITABLE_KEYS = {
     # Alertas de sismos
     "alert_earthquake_enabled",
     "alert_earthquake_magnitude",
+    # Sismo LOCAL: dentro de este radio no hace falta llegar a la magnitud de
+    # arriba para avisar (criterio independiente, ver check_earthquake)
+    "alert_earthquake_near_km",
+    "alert_earthquake_near_magnitude",
     # Aviso de respaldo a R2 desactualizado
     "alert_backup_enabled",
     "alert_backup_stale_hours",

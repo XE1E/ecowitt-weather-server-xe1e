@@ -184,11 +184,18 @@ async def _from_usgs(lat, lon, radius_km, min_mag, limit) -> List[Dict[str, Any]
         p = f.get("properties", {})
         g = (f.get("geometry", {}) or {}).get("coordinates", [None, None, None])
         t_ms = p.get("time")
+        # geometry.coordinates es [lon, lat, profundidad] (GeoJSON). A diferencia
+        # de la rama del SSN, esto nunca calculaba distance_km -- el filtro de
+        # "sismo cercano" de check_earthquake (alerts.py) lo necesita siempre,
+        # sin importar qué fuente respondió.
+        qlon, qlat = g[0], g[1]
+        dist = _haversine_km(lat, lon, qlat, qlon) if qlat is not None and qlon is not None else None
         quakes.append({
             "mag": p.get("mag"), "place": _es_place(p.get("place")),
             "time": (t_ms / 1000.0) if t_ms is not None else None,
             "depth_km": g[2] if len(g) > 2 else None,
             "url": p.get("url"),
+            "distance_km": round(dist) if dist is not None else None,
         })
     return quakes
 

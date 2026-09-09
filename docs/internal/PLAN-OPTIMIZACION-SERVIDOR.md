@@ -280,3 +280,49 @@ vieja del código: ya existía completa (`converter.py:239-247`, 125 m/°C de
 spread, clamp a 0 si el spread es negativo), conectada en
 `calculate_derived_values` y en `sky_analyzer.py`, con test propio
 (`test_humidex_and_cloud_base`). Sin cambios.
+
+---
+
+## D. Roadmap (ideas a futuro)
+
+Lista completa de ideas 2026-09-09: UTCI/WBGT, alertas de contingencia
+ambiental (SIMAT), filtro de sismos por distancia, triggers de Home
+Assistant desde el análisis del cielo. Orden de prioridad acordado:
+sismos primero (rápido, bien acotado), luego HA (extiende infra
+existente), UTCI/SIMAT después (necesitan más investigación externa).
+
+### D1. Filtro de sismos por distancia/magnitud ponderada — HECHO 2026-09-09
+
+**Diagnóstico:** `check_earthquake` (alerts.py) ya calculaba `distance_km`
+para sismos del SSN y lo mostraba en el mensaje, pero **no lo usaba para
+filtrar** — solo magnitud global (`alert_earthquake_magnitude`, 6.0 por
+omisión). Además `_from_usgs` (earthquakes.py) **nunca calculaba
+`distance_km`** en absoluto (solo la rama SSN lo hacía), así que el criterio
+de cercanía no podía aplicarse a sismos que llegaran por esa fuente.
+
+**Ojo con el diseño:** un corte de distancia simple sería contraproducente
+para la CDMX — los sismos más dañinos históricamente (1985, 2017) son de
+subducción del Pacífico (Guerrero/Oaxaca, ~300-500 km) y se sienten fuerte
+en la ciudad pese a la distancia, por el suelo del lago. Un filtro de
+"cerca únicamente" los excluiría.
+
+**Plan — HECHO:**
+- [x] Dos criterios independientes en `check_earthquake` (basta uno):
+      general (`alert_earthquake_magnitude`, sin importar distancia — cubre
+      la subducción lejana) O local (`alert_earthquake_near_km`/
+      `alert_earthquake_near_magnitude` — un sismo dentro de ese radio no
+      necesita ser tan grande). Mensaje distingue "SISMO" de "SISMO CERCANO".
+- [x] `_from_usgs` ahora también calcula `distance_km` (antes solo el SSN).
+- [x] Fix de paso: `_notified_quakes` estaba declarado a nivel de CLASE en
+      `AlertService` (no de instancia) — invisible en producción (un solo
+      singleton) pero rompía el aislamiento entre tests. Movido a `__init__`.
+- [x] Settings nuevos: `alert_earthquake_near_km` (150 km), `alert_earthquake_near_magnitude`
+      (4.0) — mismo patrón que `alert_earthquake_magnitude` (solo
+      `settings_store.py` + `getattr`, no están en `config.py`, precedente
+      ya existente para estas alertas).
+- [x] Tests nuevos: 6 en `test_alerts.py` (los 4 casos del filtro + no
+      renotificación + criterio general sin distance_km) y 3 en
+      `test_earthquakes.py` (nuevo archivo: `_haversine_km` + wiring de
+      `distance_km` en `_from_usgs` con un cliente httpx falso). 166 tests
+      pasan (9 nuevos), `ruff` limpio.
+- [ ] Pendiente: desplegar al VPS.

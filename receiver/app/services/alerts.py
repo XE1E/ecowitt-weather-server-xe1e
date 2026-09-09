@@ -139,6 +139,12 @@ class AlertService:
         self._backup_stale: Dict[str, bool] = {}
         # Contador de escrituras a InfluxDB fallidas SEGUIDAS (ver check_influx_write).
         self._influx_write_fails: int = 0
+        # Sismos ya notificados (ver check_earthquake). De instancia y no de
+        # clase: la declaración de abajo (línea ~955) es solo la anotación de
+        # tipo; sin esto, todas las instancias de AlertService compartirían el
+        # mismo set (invisible en producción, que solo crea una, pero rompía
+        # el aislamiento entre tests).
+        self._notified_quakes: Set[str] = set()
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         # sensor -> última vez que reportó, por estación. Con la fecha se puede
@@ -951,12 +957,23 @@ class AlertService:
                     await self._safe_notify(f"✅ Normalizado — {message}", category="visual")
 
     # --- Alertas de sismos ---
-    # Set de sismos ya notificados (por ID o combinación mag+time+place) para no repetir.
-    _notified_quakes: Set[str] = set()
+    # self._notified_quakes se inicializa en __init__ (set de instancia).
 
     async def check_earthquake(self, quakes: List[Dict[str, Any]]) -> None:
         """
         Evalúa sismos y notifica los que superen el umbral configurado.
+
+        Dos criterios independientes (basta con cumplir uno):
+        - General (`alert_earthquake_magnitude`, sin importar distancia dentro
+          del radio de búsqueda de `get_earthquakes`, 800 km por omisión):
+          cubre los sismos de subducción del Pacífico (Guerrero/Oaxaca/Chiapas,
+          ~300-500 km de la CDMX) que SÍ se sienten fuerte en la ciudad pese a
+          la distancia, por el suelo del lago -- un filtro de distancia corto
+          los excluiría, siendo justo los más relevantes históricamente.
+        - Local (`alert_earthquake_near_km`/`alert_earthquake_near_magnitude`):
+          un sismo DENTRO de ese radio no necesita ser tan grande para avisar
+          -- uno M4.5 justo bajo la ciudad se nota más que uno M6 a 400 km.
+          Requiere `distance_km` (no todas las fuentes lo dan siempre).
 
         A diferencia de las alertas meteorológicas que se normalizan, los sismos
         son eventos puntuales: se notifica una vez y no se "resuelve". Para no
@@ -969,15 +986,22 @@ class AlertService:
             return
 
         mag_threshold = float(getattr(s, "alert_earthquake_magnitude", 6.0))
+        near_km = float(getattr(s, "alert_earthquake_near_km", 150.0))
+        near_mag_threshold = float(getattr(s, "alert_earthquake_near_magnitude", 4.0))
 
         for q in quakes:
             mag = q.get("mag")
-            if mag is None or mag < mag_threshold:
+            if mag is None:
+                continue
+            distance = q.get("distance_km")
+
+            is_big = mag >= mag_threshold
+            is_near = distance is not None and distance <= near_km and mag >= near_mag_threshold
+            if not (is_big or is_near):
                 continue
 
             place = q.get("place", "ubicación desconocida")
             depth = q.get("depth_km")
-            distance = q.get("distance_km")
             url = q.get("url", "").strip()
             t = q.get("time")
 
@@ -991,7 +1015,10 @@ class AlertService:
 
             depth_str = f", profundidad {depth:.0f} km" if depth else ""
             dist_str = f", a {distance} km" if distance else ""
-            message = f"🌋 SISMO M{mag} — {place}{depth_str}{dist_str}"
+            # Distingue en el propio mensaje si fue el criterio general o el
+            # local, para que quede claro por qué se notificó uno "chico".
+            etiqueta = "SISMO CERCANO" if (is_near and not is_big) else "SISMO"
+            message = f"🌋 {etiqueta} M{mag} — {place}{depth_str}{dist_str}"
 
             key = f"earthquake_{quake_id}"
             self.active[key] = message

@@ -275,6 +275,79 @@ def test_influx_write_failing_then_recovery():
     assert c2.msgs == []
 
 
+def test_earthquake_big_far_still_alerts():
+    """Un sismo grande (>= umbral general) SIEMPRE avisa, sin importar
+    distancia -- cubre los de subducción del Pacífico (Guerrero/Oaxaca) que
+    se sienten fuerte en la CDMX pese a estar a cientos de km."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0), notifier=c)
+    asyncio.run(svc.check_earthquake([
+        {"mag": 6.2, "place": "Costa de Oaxaca", "time": 111, "distance_km": 420, "url": ""},
+    ]))
+    assert len(c.msgs) == 1 and "SISMO M6.2" in c.msgs[0] and "SISMO CERCANO" not in c.msgs[0]
+
+
+def test_earthquake_small_far_does_not_alert():
+    """Chico y lejos: ni el criterio general ni el local se cumplen."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0,
+                                      alert_earthquake_near_km=150.0,
+                                      alert_earthquake_near_magnitude=4.0), notifier=c)
+    asyncio.run(svc.check_earthquake([
+        {"mag": 4.5, "place": "Lejos", "time": 222, "distance_km": 500, "url": ""},
+    ]))
+    assert c.msgs == []
+
+
+def test_earthquake_small_near_alerts_as_local():
+    """Chico pero cerca (dentro de alert_earthquake_near_km) SÍ avisa, con
+    etiqueta distinta ('SISMO CERCANO') para distinguirlo del criterio general."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0,
+                                      alert_earthquake_near_km=150.0,
+                                      alert_earthquake_near_magnitude=4.0), notifier=c)
+    asyncio.run(svc.check_earthquake([
+        {"mag": 4.5, "place": "Debajo de la ciudad", "time": 333, "distance_km": 20, "url": ""},
+    ]))
+    assert len(c.msgs) == 1 and "SISMO CERCANO M4.5" in c.msgs[0]
+
+
+def test_earthquake_near_but_too_small_does_not_alert():
+    """Cerca pero por debajo incluso del umbral local -> no avisa."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0,
+                                      alert_earthquake_near_km=150.0,
+                                      alert_earthquake_near_magnitude=4.0), notifier=c)
+    asyncio.run(svc.check_earthquake([
+        {"mag": 3.0, "place": "Debajo de la ciudad", "time": 444, "distance_km": 10, "url": ""},
+    ]))
+    assert c.msgs == []
+
+
+def test_earthquake_no_distance_uses_only_general_criterion():
+    """Sin distance_km (fuente que no lo trae) no puede aplicar el criterio
+    local -- pero el general sigue funcionando igual que antes."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0), notifier=c)
+    asyncio.run(svc.check_earthquake([
+        {"mag": 4.5, "place": "Sin coordenadas", "time": 555, "url": ""},
+    ]))
+    assert c.msgs == []
+    asyncio.run(svc.check_earthquake([
+        {"mag": 6.5, "place": "Sin coordenadas", "time": 666, "url": ""},
+    ]))
+    assert len(c.msgs) == 1
+
+
+def test_earthquake_not_renotified():
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0), notifier=c)
+    quake = {"mag": 6.5, "place": "Costa de Oaxaca", "time": 777, "distance_km": 400, "url": ""}
+    asyncio.run(svc.check_earthquake([quake]))
+    asyncio.run(svc.check_earthquake([quake]))
+    assert len(c.msgs) == 1
+
+
 def test_category_mapping():
     assert _category_for("camera_offline") == "camera"
     assert _category_for("camera_analysis_failing") == "camera"
