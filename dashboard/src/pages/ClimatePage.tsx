@@ -103,6 +103,49 @@ export function ClimatePage() {
 
   const hasData = rec && rec.all_time && rec.all_time.days > 0
 
+  // Mismo patrón que HistoryPage.tsx::downloadCsv: en la MISMA unidad que
+  // pantalla (con la unidad en el encabezado), vacío (no 0) si no hay dato.
+  const downloadNoaaCsv = () => {
+    if (!noaa) return
+    const c = (v: number | string | null | undefined) => (v == null ? '' : String(v))
+    let header: string, body: string[]
+    if (noaa.scope === 'month') {
+      header = [
+        'dia', `media_${u.tempU}`, `max_${u.tempU}`, 'hora_max', `min_${u.tempU}`, 'hora_min',
+        `gd_calefaccion_${u.tempU}`, `gd_refrigeracion_${u.tempU}`, `lluvia_${u.rainU}`,
+        `rafaga_${u.windU}`, `et_${u.rainU}`,
+      ].join(',')
+      body = (noaa.days ?? []).map((d) => [
+        d.date, c(d.mean_temp != null ? u.temp(d.mean_temp) : null),
+        c(d.high != null ? u.temp(d.high) : null), c(hhmm(d.high_time)),
+        c(d.low != null ? u.temp(d.low) : null), c(hhmm(d.low_time)),
+        c(d.hdd != null ? u.dTempN(d.hdd).toFixed(1) : null),
+        c(d.cdd != null ? u.dTempN(d.cdd).toFixed(1) : null),
+        c(d.rain != null ? u.rain(d.rain) : null),
+        c(d.gust_max != null ? u.wind(d.gust_max) : null),
+        c(d.et != null ? u.rain(d.et, 2) : null),
+      ].join(','))
+    } else {
+      header = [
+        'mes', `media_${u.tempU}`, `max_${u.tempU}`, `min_${u.tempU}`, `lluvia_${u.rainU}`,
+        'dias_lluvia', `gd_calefaccion_${u.tempU}`, `gd_refrigeracion_${u.tempU}`,
+      ].join(',')
+      body = (noaa.months ?? []).map((m) => [
+        MES_LARGO[m.month - 1], c(m.mean_temp != null ? u.temp(m.mean_temp) : null),
+        c(m.high ? u.temp(m.high.value) : null), c(m.low ? u.temp(m.low.value) : null),
+        c(m.rain_total != null ? u.rain(m.rain_total) : null), c(m.rain_days),
+        c(m.hdd != null ? u.dTempN(m.hdd).toFixed(0) : null),
+        c(m.cdd != null ? u.dTempN(m.cdd).toFixed(0) : null),
+      ].join(','))
+    }
+    const url = URL.createObjectURL(new Blob([[header, ...body].join('\n')], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `noaa_xe1e_${noaa.year}${noaa.scope === 'month' ? '-' + String(noaa.month).padStart(2, '0') : ''}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const row = (label: string, value: string, color = 'text-slate-200') => (
     <><span className="text-slate-400">{label}</span><span className={`text-right ${color}`}>{value}</span></>
   )
@@ -364,6 +407,10 @@ export function ClimatePage() {
           {MES.map((m, i) => (
             <button key={m} onClick={() => setMonth(i + 1)} className={`px-2 py-1 rounded-lg text-xs ${month === i + 1 ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>{m}</button>
           ))}
+          {noaa && (noaa.days?.length || noaa.months?.length) ? (
+            <button onClick={downloadNoaaCsv}
+              className="px-3 py-1 rounded-lg text-xs bg-white/5 text-slate-300 hover:bg-white/10">⬇ CSV</button>
+          ) : null}
         </div>
       </div>
 
