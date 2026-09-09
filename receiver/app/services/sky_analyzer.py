@@ -528,8 +528,13 @@ async def analyze_sky(
         if resultado.error is None or not _es_transitorio(resultado.error):
             return resultado
         if intento < intentos - 1:
-            logger.info("Reintentando análisis del cielo (%s) tras: %s", resolved, resultado.error)
-            await asyncio.sleep(3)
+            # Backoff exponencial (2s, 4s, 8s...) en vez de una espera fija: una
+            # racha de "high demand" del proveedor se recupera mejor dándole más
+            # aire entre intentos sucesivos que insistiendo cada 3s parejo.
+            espera = min(2 ** (intento + 1), 30)
+            logger.info("Reintentando análisis del cielo (%s) tras: %s (espera %ds)",
+                        resolved, resultado.error, espera)
+            await asyncio.sleep(espera)
 
     return resultado
 

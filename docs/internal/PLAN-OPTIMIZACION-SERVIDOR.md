@@ -36,7 +36,9 @@ El análisis de IA del cielo **no** está en este endpoint (vive en
 
 Verificado: 154 tests pasan (7 skipped por falta de ffmpeg local), `ruff`
 limpio en los 3 archivos tocados (`main.py`, `storage.py`, `publishers.py`).
-Pendiente: desplegar al VPS.
+Desplegado en el VPS 2026-09-08 (commit `a460fb2`) y confirmado con un push
+real de la estación: guarda, responde 200 y AWEKAS/CWOP publican después,
+en background, sin errores.
 
 ### A2. `ffmpeg` sin límite de hilos/prioridad
 
@@ -46,10 +48,15 @@ ninguno usa `-threads` ni `nice`/`ionice`. Corre cada 30 min en el mismo
 contenedor/VPS que el receiver vía `asyncio.create_subprocess_exec` (no
 bloquea el event loop, pero compite por CPU).
 
-**Plan:**
-- [ ] Agregar `-threads 2` al comando ffmpeg del encode del timelapse.
-- [ ] Envolver la invocación con `nice -n 19` (Linux/VPS) en los 3 call
-      sites.
+**Plan — HECHO 2026-09-09:**
+- [x] Agregar `-threads 2` (encode) / `-threads 1` (poster) al comando ffmpeg.
+- [x] Envolver la invocación con `nice -n 19` (`nice` viene por defecto en la
+      imagen `python:3.11-slim` del Dockerfile, Debian). El tercer call site
+      (`shutil.which("ffmpeg")`) no ejecuta el binario, no aplica.
+
+Tests de timelapse no se ven afectados: ni CI ni el entorno local instalan
+ffmpeg, así que corren `skipif` en ambos — nada que verificar ahí más allá
+de `py_compile`.
 
 ### A3. Backoff exponencial en llamadas a IA (Gemini/Anthropic)
 
@@ -59,10 +66,10 @@ un retry loop manual (3 intentos, clasifica transitorio vs no en
 (`asyncio.sleep(3)`, línea 532). `tenacity` no está instalado (no aparece
 en `receiver/requirements.txt`).
 
-**Plan:**
-- [ ] Cambiar la espera fija por exponencial (ej. 2s/4s/8s) en el loop
-      existente — no hace falta añadir `tenacity` como dependencia nueva
-      dado que la lógica de clasificación de errores ya es razonable.
+**Plan — HECHO 2026-09-09:**
+- [x] Cambiar la espera fija por exponencial (2s, 4s, 8s..., tope 30s) en el
+      loop existente — no hizo falta añadir `tenacity` como dependencia
+      nueva, la lógica de clasificación de errores ya era razonable.
 
 ### A4. Fallback cuando InfluxDB está caído
 

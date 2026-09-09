@@ -279,7 +279,12 @@ class TimelapseService:
                 f.write(f"file '{frames[-1]}'\n")
 
             cmd = [
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                # nice -19: este encode corre cada 30 min en el mismo VPS que el
+                # receiver (ARM del free tier de Oracle, pocos cores) y no debe
+                # competir por CPU con las peticiones HTTP en curso.
+                "nice", "-n", "19", "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                # -threads 2: sin límite, libx264 usa todos los cores disponibles.
+                "-threads", "2",
                 "-f", "concat", "-safe", "0", "-i", lista,
                 # `-2` mantiene la proporción y fuerza altura par, que h264 exige.
                 "-vf", f"scale={self.width}:-2",
@@ -352,7 +357,8 @@ class TimelapseService:
 
         tmp = self.poster_path(date_str) + ".tmp.jpg"
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "nice", "-n", "19", "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-threads", "1",
             # `-ss` ANTES de `-i` para que busque sin decodificar todo lo anterior.
             "-ss", f"{medio:.2f}", "-i", video,
             "-frames:v", "1", "-q:v", "4",
