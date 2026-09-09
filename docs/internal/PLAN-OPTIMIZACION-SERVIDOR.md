@@ -325,4 +325,6 @@ en la ciudad pese a la distancia, por el suelo del lago. Un filtro de
       `test_earthquakes.py` (nuevo archivo: `_haversine_km` + wiring de
       `distance_km` en `_from_usgs` con un cliente httpx falso). 166 tests
       pasan (9 nuevos), `ruff` limpio.
-- [ ] Pendiente: desplegar al VPS.
+- [x] Desplegado en el VPS 2026-09-09 (commit `0d31d9b`), confirmado
+      pegándole directo a `/api/earthquakes` (dispara `check_earthquake`)
+      sin errores.
