@@ -12,6 +12,7 @@ Redes soportadas:
 - Windy.com (unidades métricas / SI)
 - OpenWeatherMap (Stations API, JSON)
 - AWEKAS (unidades métricas, formato semicolon-delimited)
+- openSenseMap / senseBox (unidades métricas, JSON con sensorId fijo)
 
 Los datos entran en MÉTRICO (°C, km/h, hPa, mm) y aquí se convierten según
 lo que cada protocolo espera.
@@ -236,6 +237,42 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
         return False
 
 
+# ---------- openSenseMap (senseBox) ----------
+async def _opensensemap(client, data, box_id, access_token, sensor_ids) -> bool:
+    """
+    Publica en openSenseMap (senseBox, red ciudadana de datos ambientales de
+    la Universidad de Münster). A diferencia de las demás redes NO hay upsert
+    por nombre de variable: cada sensor de la caja tiene un `_id` fijo que
+    openSenseMap asignó al crearlo (registro manual en su web, no
+    scripteable -- ver docs/internal/PLAN-OPTIMIZACION-SERVIDOR.md, sección
+    B). `sensor_ids` mapea NUESTRO nombre de campo (p. ej.
+    "temperature_outdoor") a ESE sensorId; un campo sin entrada en el mapeo,
+    o sin valor en `data`, simplemente no se manda -- config parcial es
+    válida (p. ej. solo temp+humedad si no se registraron los demás sensores).
+    """
+    if not sensor_ids:
+        logger.warning("openSenseMap sin sensores configurados; omitido")
+        return False
+    payload = [
+        {"sensor": sensor_id, "value": str(round(v, 2) if isinstance(v, float) else v)}
+        for field, sensor_id in sensor_ids.items()
+        if sensor_id and (v := data.get(field)) is not None
+    ]
+    if not payload:
+        return False
+    url = f"https://api.opensensemap.org/boxes/{box_id}/data"
+    try:
+        r = await client.post(url, json=payload, headers={"Authorization": access_token}, timeout=_TIMEOUT)
+        if r.status_code in (200, 201):
+            logger.info("Publicado en openSenseMap (%d sensores)", len(payload))
+            return True
+        logger.warning("openSenseMap respondió %s: %s", r.status_code, r.text[:120])
+        return False
+    except Exception as e:
+        logger.error("Error publicando en openSenseMap: %s", e)
+        return False
+
+
 # ---------- CWOP / APRS-IS ----------
 def _aprs_lat(lat: float) -> str:
     ns = "N" if lat >= 0 else "S"
@@ -352,6 +389,12 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
             tareas["awekas"] = _awekas(
                 client, data, settings.awekas_username, settings.awekas_password,
                 getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None))
+        if (getattr(settings, "opensensemap_enabled", False) and settings.opensensemap_box_id
+                and settings.opensensemap_access_token
+                and _due("opensensemap", getattr(settings, "opensensemap_interval", 1), now)):
+            tareas["opensensemap"] = _opensensemap(
+                client, data, settings.opensensemap_box_id, settings.opensensemap_access_token,
+                getattr(settings, "opensensemap_sensor_ids", None) or {})
 
         results: Dict[str, bool] = {}
         if tareas:

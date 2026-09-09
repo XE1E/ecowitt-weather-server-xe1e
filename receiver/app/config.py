@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 class Settings(BaseSettings):
@@ -259,6 +259,18 @@ class Settings(BaseSettings):
     awekas_latitude: float = 19.380359
     awekas_longitude: float = -99.174564
     awekas_interval: int = 5
+    # openSenseMap (senseBox, Universidad de Münster) -- ver
+    # docs/internal/PLAN-OPTIMIZACION-SERVIDOR.md, sección B. A diferencia de
+    # las demás redes, no hay upsert por nombre: cada variable se manda a un
+    # `sensor_id` fijo que openSenseMap asignó al crear la caja en su web (no
+    # es scripteable, se registra manualmente). `opensensemap_sensor_ids`
+    # mapea NUESTRO nombre de campo (p. ej. "temperature_outdoor") al
+    # sensorId de esa caja; un campo sin entrada simplemente no se publica.
+    opensensemap_enabled: bool = False
+    opensensemap_box_id: Optional[str] = None
+    opensensemap_access_token: Optional[str] = None
+    opensensemap_sensor_ids: Optional[Dict[str, str]] = None
+    opensensemap_interval: int = 1
 
     # Seguridad del endpoint de push /data/report/
     ecowitt_secure_enabled: bool = False        # exige ?token= en la petición

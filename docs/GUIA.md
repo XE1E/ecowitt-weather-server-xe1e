@@ -1164,7 +1164,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara»). En secundarias, opción **«a la intemperie»**: trata el sensor integrado (que reporta como *interior*) como **exterior** en todo el sistema (alertas, calibración, página remota, publicación) |
 | **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), más batería baja, sensor perdido, **sensor atascado**, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
 | **Calibración** | Toggle global y **por estación** con selector. Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, etiquetado *Exterior* o *Interior* según el «a la intemperie») + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
-| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS y **AWEKAS**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
+| **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, **AWEKAS** y **openSenseMap**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
 | **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
 | **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos, **QC estadístico** opt-in — el umbral de z-score y demás ajustes finos solo por `settings.json`, ver §4). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
@@ -1253,9 +1253,18 @@ se activen, con sus credenciales, desde el panel:
 | **OpenWeatherMap** | acceso a su API a cambio |
 | **CWOP / APRS** | entra a MADIS → modelos de NOAA (mayor aporte científico) |
 | **AWEKAS** | red europea con mapa interactivo y estadísticas |
+| **openSenseMap** | red ciudadana de datos ambientales (senseBox, Universidad de Münster) |
 
 Filosofía: aportar a todas las útiles. Cada red usa sus unidades; el servidor
 convierte según el protocolo de cada una.
+
+**openSenseMap es distinta a las demás:** no hay upsert por nombre de
+estación — hay que **crear la senseBox manualmente** en su web (modelo
+"otro", `useAuth` activado) y copiar el `box_id`, el `access_token` y el
+`_id` de cada sensor que registres ahí. El panel (Admin → Publicación) solo
+pega esos IDs; no puede crear la caja ni los sensores por ti. Un campo sin
+`sensorId` configurado simplemente no se publica — puedes empezar con solo
+temperatura/humedad e ir agregando sensores después.
 
 Cada red tiene un **intervalo de envío** configurable en minutos (CWOP recomienda
 10–15 min; `0` = reenviar en cada dato recibido, ~60 s). Así se respeta el ritmo

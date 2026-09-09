@@ -153,6 +153,20 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_air_enabled": settings.alert_air_enabled,
         "alert_aqi_threshold": settings.alert_aqi_threshold,
         "alert_imeca_threshold": settings.alert_imeca_threshold,
+        # Sensor atascado: faltaba aquí igual que las de sismos de abajo --
+        # el toggle/campo del panel existía pero el GET nunca los devolvía,
+        # así que salían siempre en su valor por omisión sin importar lo
+        # guardado. Encontrado y corregido de paso (2026-09-09).
+        "alert_stuck_sensor_enabled": settings.alert_stuck_sensor_enabled,
+        "alert_stuck_sensor_readings": settings.alert_stuck_sensor_readings,
+        # Sismos: el panel (AdminAlertas.tsx) ya tenía el toggle y el umbral
+        # de magnitud, pero este diccionario nunca los exponía -- mismo bug
+        # que el de humedad interior descrito arriba. Encontrado y corregido
+        # de paso (2026-09-09) al auditar este archivo para openSenseMap.
+        "alert_earthquake_enabled": settings.alert_earthquake_enabled,
+        "alert_earthquake_magnitude": settings.alert_earthquake_magnitude,
+        "alert_earthquake_near_km": settings.alert_earthquake_near_km,
+        "alert_earthquake_near_magnitude": settings.alert_earthquake_near_magnitude,
         # Cámara: visuales (análisis del cielo) y de equipo (sin señal / análisis fallando).
         # Faltaban las dos primeras aquí: existían en config.py y las usaba check_sky, pero
         # el panel no podía verlas ni editarlas porque este diccionario no las exponía.
@@ -181,6 +195,7 @@ def public_settings(settings) -> Dict[str, Any]:
         # Control de calidad
         "qc_enabled": settings.qc_enabled,
         "qc_spike_enabled": settings.qc_spike_enabled,
+        "qc_stats_enabled": settings.qc_stats_enabled,
         # Calibración
         "cal_enabled": settings.cal_enabled,
         "cal_temp_offset": settings.cal_temp_offset,
@@ -239,6 +254,11 @@ def public_settings(settings) -> Dict[str, Any]:
         "awekas_latitude": settings.awekas_latitude,
         "awekas_longitude": settings.awekas_longitude,
         "awekas_interval": settings.awekas_interval,
+        "opensensemap_enabled": settings.opensensemap_enabled,
+        "opensensemap_box_id": settings.opensensemap_box_id,
+        "opensensemap_access_token_masked": mask(settings.opensensemap_access_token),
+        "opensensemap_sensor_ids": settings.opensensemap_sensor_ids or {},
+        "opensensemap_interval": settings.opensensemap_interval,
         # Seguridad del endpoint de push
         "ecowitt_secure_enabled": settings.ecowitt_secure_enabled,
         "ecowitt_secure_token_masked": mask(settings.ecowitt_secure_token),

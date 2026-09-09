@@ -156,6 +156,8 @@ EDITABLE_KEYS = {
     "cwop_latitude", "cwop_longitude", "cwop_interval",
     "awekas_enabled", "awekas_username", "awekas_password", "awekas_interval",
     "awekas_latitude", "awekas_longitude",
+    "opensensemap_enabled", "opensensemap_box_id", "opensensemap_access_token",
+    "opensensemap_sensor_ids", "opensensemap_interval",
     # Seguridad del endpoint de push
     "ecowitt_secure_enabled", "ecowitt_secure_token", "ecowitt_ip_allowlist",
     # MQTT / Home Assistant
@@ -200,6 +202,7 @@ SECRET_KEYS = {
     "owm_api_key",
     "cwop_passcode",
     "awekas_password",
+    "opensensemap_access_token",
     "camera_upload_token",
     "anthropic_api_key",
     "gemini_api_key",

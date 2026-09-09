@@ -390,13 +390,47 @@ Authorization: <access_token>          (si useAuth=true)
       verificando en la página de la caja en opensensemap.org que llegan
       los valores.
 
-### Pendiente de decidir antes de implementar
-- ¿Qué variables se publican? (mínimo razonable: temp, humedad, presión,
-  viento, dirección, ráfaga, lluvia horaria, radiación solar, UV — mismo
-  set que ya se manda a Windy/AWEKAS).
-- Nombre/ubicación pública de la caja en el mapa (queda visible a
-  cualquiera en opensensemap.org, a diferencia de WU/PWS que son más
-  privados).
+### Decidido e implementado — HECHO 2026-09-09
+- Variables: **el set completo** (temp, humedad, presión, viento, dirección,
+  ráfaga, lluvia horaria, radiación solar, UV) — mismo que Windy/AWEKAS.
+- Ubicación: **exacta**, igual que Windy/WU (no se redondean coordenadas).
+
+**Implementación:**
+- [x] `_opensensemap()` en `publishers.py`, mismo patrón que `_windy`/`_owm`:
+      arma el array `[{"sensor": sensorId, "value": ...}]` desde
+      `opensensemap_sensor_ids` (mapea NUESTRO nombre de campo, p. ej.
+      `temperature_outdoor`, al `sensorId` que openSenseMap asignó a ESE
+      sensor al crear la caja — no hay upsert por nombre, se registra
+      manualmente en su web). Un campo sin `sensorId` configurado, o sin
+      valor en `data`, no se publica — config parcial es válida.
+- [x] Conectado a `publish_all()`, respetando `_due()` (intervalo propio).
+- [x] Settings nuevos: `opensensemap_enabled`, `opensensemap_box_id`,
+      `opensensemap_access_token` (a `SECRET_KEYS`), `opensensemap_sensor_ids`
+      (`Dict[str, str]`, nuevo tipo de valor para un override — los demás son
+      escalares o listas), `opensensemap_interval`.
+- [x] Admin → Publicación: tarjeta nueva con Box ID, Access Token
+      (enmascarado) y una rejilla de 9 campos (uno por sensorId), mismo
+      patrón `Toggle`/`TextField`/`CfgBadge`/`IntervalField` que las demás
+      redes.
+- [x] **Bug encontrado y corregido de paso** al tocar `admin.py`:
+      `public_settings()` es una lista blanca manual (no un passthrough), y
+      `qc_stats_enabled`/`alert_stuck_sensor_*` (de A6) y
+      `alert_earthquake_*` (de D1, **ya en producción con el toggle
+      activo en el panel**) nunca se habían agregado ahí — el GET
+      `/api/admin/settings` nunca los devolvía, así que esos controles del
+      panel mostraban siempre su valor por omisión sin importar lo guardado.
+      Mismo patrón de bug que el de humedad interior documentado ya en el
+      código (`admin.py` línea ~120). Corregidos los tres.
+- 190 tests pasan (ninguno nuevo — este archivo no tiene tests de las
+  llamadas HTTP a redes, ni las demás lo tienen; solo se prueban las
+  funciones puras como `build_cwop_packet`), `ruff` limpio, `tsc` limpio,
+  `app.main` importa completo.
+
+**Pendiente:** falta que el usuario cree la senseBox en openSenseMap.org
+(manual, no scripteable) y pegue `box_id`/`access_token`/`sensorId`s en el
+panel para poder probar con un POST real contra la API — sin eso, el código
+está listo pero nunca se activa (`opensensemap_enabled` queda en `False` y
+sin `box_id`/`access_token` no hay nada que publicar).
 
 ---
 

@@ -35,7 +35,29 @@ interface PubSettings {
   awekas_latitude: number
   awekas_longitude: number
   awekas_interval: number
+  opensensemap_enabled: boolean
+  opensensemap_box_id: string | null
+  opensensemap_access_token: string | null
+  opensensemap_access_token_masked: string | null
+  opensensemap_sensor_ids: Record<string, string> | null
+  opensensemap_interval: number
 }
+
+// Nuestro nombre de campo (en `data`, ya en métrico) -> etiqueta corta y el
+// sensorId que openSenseMap asignó a ESE sensor al crear la senseBox en su
+// web (no hay upsert por nombre, hay que copiarlo de ahí). Un campo sin
+// sensorId simplemente no se publica -- config parcial es válida.
+const OPENSENSEMAP_FIELDS: [string, string][] = [
+  ['temperature_outdoor', 'Temperatura'],
+  ['humidity_outdoor', 'Humedad'],
+  ['pressure_relative', 'Presión'],
+  ['wind_speed', 'Viento'],
+  ['wind_direction', 'Dirección'],
+  ['wind_gust', 'Ráfaga'],
+  ['rain_hourly', 'Lluvia (h)'],
+  ['solar_radiation', 'Radiación solar'],
+  ['uv_index', 'UV'],
+]
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -151,6 +173,12 @@ export function AdminPublicacion() {
 
   const update = <K extends keyof PubSettings>(key: K, value: PubSettings[K]) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev))
+  }
+
+  const updateSensorId = (field: string, value: string) => {
+    setSettings((prev) => (prev
+      ? { ...prev, opensensemap_sensor_ids: { ...prev.opensensemap_sensor_ids, [field]: value } }
+      : prev))
   }
 
   if (loading || !settings) return <div className="text-slate-400">Cargando...</div>
@@ -327,6 +355,49 @@ export function AdminPublicacion() {
                 />
                 <span className="text-xs text-slate-500">min</span>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* openSenseMap */}
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 lg:col-span-2">
+          <div className="flex items-center gap-3 mb-3">
+            <Toggle enabled={settings.opensensemap_enabled} onChange={(v) => update('opensensemap_enabled', v)} />
+            <span className="text-sm font-medium">openSenseMap</span>
+            {settings.opensensemap_enabled && (
+              <CfgBadge ok={!!settings.opensensemap_box_id
+                && (!!settings.opensensemap_access_token || !!settings.opensensemap_access_token_masked)} />
+            )}
+            <span className="text-xs text-slate-500">(red ciudadana, senseBox)</span>
+            <a href="https://opensensemap.org/" target="_blank" className="text-sky-400 text-xs ml-auto">Crear senseBox →</a>
+          </div>
+          {settings.opensensemap_enabled && (
+            <div className="grid gap-2">
+              <p className="text-xs text-slate-500">
+                Crea la caja desde la web de openSenseMap (modelo "otro", <code>useAuth</code> activado)
+                y pega aquí el <code>box_id</code> y el <code>access_token</code> que te dio. Cada
+                sensor de la caja tiene su propio ID -- cópialo de su página y pégalo abajo; los
+                campos sin ID no se publican.
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Box ID</span>
+                <TextField value={settings.opensensemap_box_id} onChange={(v) => update('opensensemap_box_id', v)} placeholder="ID de la senseBox" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Access Token</span>
+                <TextField value={settings.opensensemap_access_token} onChange={(v) => update('opensensemap_access_token', v)}
+                  placeholder="Access token" type="password" masked={settings.opensensemap_access_token_masked} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {OPENSENSEMAP_FIELDS.map(([field, label]) => (
+                  <div key={field} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 w-24 shrink-0">{label}</span>
+                    <TextField value={settings.opensensemap_sensor_ids?.[field] ?? ''} onChange={(v) => updateSensorId(field, v)}
+                      placeholder="sensorId" />
+                  </div>
+                ))}
+              </div>
+              <IntervalField value={settings.opensensemap_interval} onChange={(v) => update('opensensemap_interval', v)} />
             </div>
           )}
         </div>
