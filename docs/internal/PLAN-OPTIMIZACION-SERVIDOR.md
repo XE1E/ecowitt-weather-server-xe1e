@@ -426,11 +426,19 @@ Authorization: <access_token>          (si useAuth=true)
   funciones puras como `build_cwop_packet`), `ruff` limpio, `tsc` limpio,
   `app.main` importa completo.
 
-**Pendiente:** falta que el usuario cree la senseBox en openSenseMap.org
-(manual, no scripteable) y pegue `box_id`/`access_token`/`sensorId`s en el
-panel para poder probar con un POST real contra la API — sin eso, el código
-está listo pero nunca se activa (`opensensemap_enabled` queda en `False` y
-sin `box_id`/`access_token` no hay nada que publicar).
+**Activado y verificado en producción 2026-09-09.** El usuario creó la
+senseBox ("XE1E Station", `custom`, `outdoor`) y pasó box_id + access_token +
+los 9 sensorId. Como el panel admin está deshabilitado en el VPS
+(`ADMIN_PASSWORD` vacío), se cargó directo en `settings.json` + reinicio del
+receiver (mismo mecanismo que `qc_stats_enabled`). Verificado por DOS vías:
+- Log del receiver: `POST https://api.opensensemap.org/boxes/.../data
+  "HTTP/1.1 201 Created"` + `Publicado en openSenseMap (9 sensores)`.
+- **Consulta directa a la API pública de openSenseMap**
+  (`GET /boxes/{box_id}`, sin credenciales): los 9 sensores muestran
+  `lastMeasurement` con el mismo timestamp y valores que coinciden con la
+  lectura real de la estación (21.1°C, 56% hum., 1026.4 hPa, etc.) — el dato
+  llega y es públicamente visible en el mapa, no solo "creemos que se
+  envió".
 
 ---
 
