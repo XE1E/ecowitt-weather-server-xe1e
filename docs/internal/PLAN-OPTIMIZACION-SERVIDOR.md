@@ -95,6 +95,8 @@ datalogger recibe 500 (`storage.py:106-107` relanza la excepción).
       `BackgroundTasks`. Settings nuevos: `alert_influx_write_enabled`,
       `alert_influx_write_fails` (default 5). Test nuevo
       `test_influx_write_failing_then_recovery`. 155 tests pasan, `ruff` limpio.
+      Desplegado en el VPS 2026-09-09 (commit `3675bee`), confirmado con
+      pushes reales de ambas estaciones (principal y secundaria) sin errores.
 - [ ] (Opcional, baja prioridad, sin hacer) flag explícito de "dato desde
       caché" en `/api/current` cuando falten campos derivados de Influx.
 
