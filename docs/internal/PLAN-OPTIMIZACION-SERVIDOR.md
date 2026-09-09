@@ -216,12 +216,17 @@ estaciones públicas colindantes — depende de una fuente de datos externa
 nueva (openSenseMap u otra), ligada a la decisión pendiente de la sección B
 de este plan. No vale la pena montar esa integración solo para esto.
 
-**Pendiente de verificar en el VPS:** `qc_stats_enabled` queda APAGADO por
-omisión — activarlo requiere que `stats_refresh_task` corra al menos una vez
-(hasta 60 min tras activarlo, o reiniciar el contenedor) antes de que
-`stats_check` tenga caché con la que comparar. Confirmar en producción que
-`get_field_stddev` no es lenta contra el volumen real de InfluxDB (corre en
-segundo plano, pero si tarda minutos convendría espaciar más el refresco).
+**Desplegado y verificado en el VPS 2026-09-09** (`docker compose up -d
+--build --force-recreate receiver dashboard`): los 5 contenedores quedan
+`healthy`, `grep` confirma el código nuevo (`stuck_`, `stats_check`) dentro
+del contenedor, `/health` y `/api/current` responden bien, y la estación
+principal + GW1100 siguieron entrando sin errores nuevos en los logs (el
+único error visto, AWEKAS, es preexistente y no relacionado). `qc_stats_enabled`
+queda APAGADO por omisión — activarlo requiere que `stats_refresh_task`
+corra al menos una vez (hasta 60 min tras activarlo, o reiniciar el
+contenedor) antes de que `stats_check` tenga caché con la que comparar; sigue
+pendiente confirmar que `get_field_stddev` no es lenta contra el volumen real
+de InfluxDB una vez que se active.
 
 ### A7. Exportación CSV en la pestaña Climatología — HECHO 2026-09-09
 
@@ -256,6 +261,10 @@ de descargarse.
       declarada en `package.json` pero no instalada en `node_modules/.bin`
       en esta máquina) — revisar con el lint del proyecto en un entorno con
       `npm ci` completo antes de dar esto por definitivo en CI.
+- [x] **Desplegado y verificado en el VPS 2026-09-09**: `docker compose
+      build` reconstruyó el dashboard sin errores (`tsc && vite build` limpio
+      dentro del contenedor), `/api/climate/noaa` sirve datos reales y `/`
+      responde 200.
 
 ---
 
