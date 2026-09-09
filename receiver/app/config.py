@@ -115,6 +115,19 @@ class Settings(BaseSettings):
     alert_air_enabled: bool = False
     alert_aqi_threshold: float = 100.0
     alert_imeca_threshold: float = 100.0
+    # Avisos de sismos (SSN/USGS, ver AlertService.check_earthquake). Estos
+    # 4 campos NUNCA estuvieron declarados aquí desde que se implementó D1 --
+    # solo se leían con getattr(..., default) y vivían en EDITABLE_KEYS, así
+    # que `apply_overrides` (que hace `if hasattr(settings, key): setattr(...)`)
+    # nunca los aplicaba de verdad: el umbral configurado desde el panel se
+    # guardaba en settings.json pero JAMÁS llegaba a `settings`, ni siquiera
+    # tras reiniciar. Encontrado el 2026-09-09 al agregarlos a
+    # admin.py::public_settings() (AttributeError: acceso directo, no
+    # getattr, tumbaba GET /api/admin/settings con 500).
+    alert_earthquake_enabled: bool = True
+    alert_earthquake_magnitude: float = 6.0
+    alert_earthquake_near_km: float = 150.0
+    alert_earthquake_near_magnitude: float = 4.0
     # Avisos visuales (análisis del cielo con IA). Se evalúan con cada foto.
     # Reglas: sky_storm (cumulonimbus en desarrollo), sky_precipitation (lluvia
     # visible en horizonte), sky_visibility (visibilidad reducida).
