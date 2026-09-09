@@ -135,6 +135,14 @@ Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (p
 
 Requisitos: Docker y Docker Compose en un servidor accesible por internet, y (para HTTPS) un dominio.
 
+**Hardware:** el sitio en vivo corre en un Oracle Cloud `VM.Standard.A1.Flex`
+(ARM) con **2 OCPU / 12 GB RAM** — muy por debajo del límite del *Always
+Free* (hasta 4 OCPU / 24 GB, ver [docs/oracle-vps-setup.md](docs/oracle-vps-setup.md)).
+En operación normal los 5 contenedores (receiver, dashboard, renderer,
+InfluxDB, Caddy) usan en conjunto **~550 MB de RAM** y menos de 1% de CPU;
+el único pico real es el encode diario del timelapse (`ffmpeg`, unos
+segundos). Con 1 OCPU / 2 GB debería alcanzar igual para uso personal.
+
 ```bash
 git clone https://github.com/XE1E/ecowitt-weather-server-xe1e.git
 cd ecowitt-weather-server-xe1e
