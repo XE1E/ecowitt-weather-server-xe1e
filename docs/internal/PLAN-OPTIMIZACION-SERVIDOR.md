@@ -433,6 +433,13 @@ contenedor queda "unhealthy" — un proceso colgado pero vivo no dispara
       Telegram real). 178 tests pasan (3 nuevos), `ruff` limpio.
 - [x] Docs: `docs/DEPLOY.md` §8c (setup del token + cron), README (alertas
       de infraestructura).
-- [ ] Pendiente: desplegar al VPS (requiere ADEMÁS crear el token y
-      configurarlo en Admin → Sistema, y agregar el cron — no se puede
-      verificar en producción solo con el deploy del código).
+- [x] Desplegado en el VPS 2026-09-09 (commits `1b0a1dd` + `437d52d`):
+      token generado y puesto en `.env`, cron instalado (`*/5 * * * *`, sin
+      pisar las líneas existentes), `check-docker-health.sh` probado a mano
+      (200 OK confirmado en logs del receiver). Los 4 servicios con
+      healthcheck quedaron `(healthy)` en `docker compose ps`.
+      **Bug real encontrado y corregido en el camino**: el healthcheck del
+      `dashboard` (`wget ... http://localhost/`) fallaba en bucle
+      ("Connection refused") porque `wget` resuelve `localhost` primero a
+      IPv6 (`::1`) dentro del contenedor `nginx:alpine`, donde nginx no
+      escucha — cambiado a `http://127.0.0.1/` explícito (`437d52d`).
