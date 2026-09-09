@@ -321,33 +321,45 @@ async def _cwop(data, callsign, passcode, lat, lon) -> bool:
 
 async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
     """
-    Publica a todas las redes activas. Devuelve {red: ok} para las intentadas.
-    Nunca lanza excepción (cada red se protege por separado).
+    Publica a todas las redes activas EN PARALELO (antes iban en secuencia:
+    5 redes de 15s de timeout cada una podían sumar hasta ~75-90s en el peor
+    caso si varias fallaban a la vez -- ver PLAN-OPTIMIZACION-SERVIDOR.md, A1).
+    Devuelve {red: ok} para las intentadas. Nunca lanza excepción (cada red se
+    protege por separado, tanto antes como ahora).
     """
-    results: Dict[str, bool] = {}
     now = datetime.utcnow()
+    tareas: Dict[str, Any] = {}  # nombre de red -> coroutine sin arrancar
+
     async with httpx.AsyncClient() as client:
         if (getattr(settings, "wu_enabled", False) and settings.wu_station_id and settings.wu_station_key
                 and _due("wunderground", getattr(settings, "wu_interval", 1), now)):
-            results["wunderground"] = await _wu_like(
+            tareas["wunderground"] = _wu_like(
                 client, "https://rtupdate.wunderground.com/weatherstation/updateweatherstation.php",
                 settings.wu_station_id, settings.wu_station_key, data, "Weather Underground")
         if (getattr(settings, "pws_enabled", False) and settings.pws_station_id and settings.pws_password
                 and _due("pwsweather", getattr(settings, "pws_interval", 5), now)):
-            results["pwsweather"] = await _wu_like(
+            tareas["pwsweather"] = _wu_like(
                 client, "https://pwsupdate.pwsweather.com/api/v1/submitwx",
                 settings.pws_station_id, settings.pws_password, data, "PWSWeather")
         if (getattr(settings, "windy_enabled", False) and settings.windy_api_key
                 and _due("windy", getattr(settings, "windy_interval", 5), now)):
-            results["windy"] = await _windy(client, data, settings.windy_api_key)
+            tareas["windy"] = _windy(client, data, settings.windy_api_key)
         if (getattr(settings, "owm_enabled", False) and settings.owm_api_key
                 and _due("openweathermap", getattr(settings, "owm_interval", 5), now)):
-            results["openweathermap"] = await _owm(client, data, settings.owm_api_key, settings.owm_station_id)
+            tareas["openweathermap"] = _owm(client, data, settings.owm_api_key, settings.owm_station_id)
         if (getattr(settings, "awekas_enabled", False) and settings.awekas_username and settings.awekas_password
                 and _due("awekas", getattr(settings, "awekas_interval", 5), now)):
-            results["awekas"] = await _awekas(
+            tareas["awekas"] = _awekas(
                 client, data, settings.awekas_username, settings.awekas_password,
                 getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None))
+
+        results: Dict[str, bool] = {}
+        if tareas:
+            resueltas = await asyncio.gather(*tareas.values())
+            results = dict(zip(tareas.keys(), resueltas))
+
+    # CWOP usa un socket TCP propio (APRS-IS), no el cliente httpx de arriba;
+    # se queda fuera del gather pero ya no se suma en secuencia a las demás.
     if (getattr(settings, "cwop_enabled", False) and settings.cwop_callsign
             and _due("cwop", getattr(settings, "cwop_interval", 10), now)):
         results["cwop"] = await _cwop(

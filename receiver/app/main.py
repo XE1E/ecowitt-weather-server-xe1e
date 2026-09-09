@@ -5,7 +5,7 @@ Receives weather data from Ecowitt gateways via HTTP POST
 and stores it in InfluxDB.
 """
 
-from fastapi import FastAPI, Request, HTTPException, Header, Response, Body
+from fastapi import FastAPI, Request, HTTPException, Header, Response, Body, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -441,14 +441,49 @@ async def health_check():
 # configured as "/data/report/" or "/data/report" (a common Ecowitt gotcha:
 # without both, a missing trailing slash triggers a 307 redirect that some
 # station firmwares — including WS2910 consoles — do not follow on POST).
+async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set) -> None:
+    """Nunca debe tumbar la ingestión: corre en BackgroundTasks, después de
+    responder al datalogger (ver receive_ecowitt_data)."""
+    try:
+        await alert_service.process(parsed_data, qc_rejected=qc_rejected)
+    except Exception as e:
+        logger.error(f"Alert processing failed: {e}")
+
+
+async def _bg_publish_principal(parsed_data: dict) -> None:
+    try:
+        await publish_all(parsed_data, settings)
+    except Exception as e:
+        logger.error(f"Public publish failed: {e}")
+
+
+async def _bg_alertas_secundaria(parsed_data: dict, station: str, qc_rejected: set) -> None:
+    try:
+        scfg = settings_store.get_station_config(settings.settings_file, station)
+        if scfg.get("alerts_enabled"):
+            await alert_service.process(
+                parsed_data, station=station, label=scfg.get("label") or station,
+                thresholds=scfg.get("alert_thresholds") or None,
+                disabled=scfg.get("disabled_rules") or [],
+                qc_rejected=qc_rejected)
+    except Exception as e:
+        logger.error(f"Alert processing (secundaria {station}) failed: {e}")
+
+
 @app.post("/data/report/")
 @app.post("/data/report")
-async def receive_ecowitt_data(request: Request):
+async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTasks):
     """
     Receive weather data from an Ecowitt station (WS2910 console or gateway).
 
     The station sends data as a form-encoded POST request using the
     Ecowitt protocol (Weather Services -> Customized -> Protocol: Ecowitt).
+
+    Alertas y publicación a redes públicas corren en BackgroundTasks: el
+    datalogger recibe la respuesta en cuanto el dato queda guardado (memoria +
+    InfluxDB), sin esperar a Telegram/correo ni a las 5 redes externas
+    (WU/PWSWeather/Windy/OWM/AWEKAS pueden sumar hasta ~90s de timeouts en el
+    peor caso -- ver docs/internal/PLAN-OPTIMIZACION-SERVIDOR.md, punto A1).
     """
     # Seguridad opcional del endpoint (token en query param + allowlist de IP).
     # La IP real del datalogger llega en X-Real-IP (nginx la fija en /data/report).
@@ -579,36 +614,20 @@ async def receive_ecowitt_data(request: Request):
         # para la principal y, si tienen su flag activo, también para secundarias
         # (estado aislado por estación, umbrales globales por ahora).
         if station is None:
-            # Publish to MQTT (never let this break ingestion)
+            # Publish to MQTT (never let this break ingestion; ya no bloqueante)
             try:
                 mqtt_publisher.publish(parsed_data)
             except Exception as e:
                 logger.error(f"MQTT publish failed: {e}")
 
-            # Evaluate weather alerts (never let this break ingestion)
-            try:
-                await alert_service.process(parsed_data, qc_rejected=qc_rejected)
-            except Exception as e:
-                logger.error(f"Alert processing failed: {e}")
-
-            # Publicar a redes públicas (WU/PWSWeather/Windy/OWM) sin romper ingestión
-            try:
-                await publish_all(parsed_data, settings)
-            except Exception as e:
-                logger.error(f"Public publish failed: {e}")
+            # Alertas (Telegram/correo) y publicación a redes públicas: a
+            # BackgroundTasks, corren DESPUÉS de responder al datalogger.
+            background_tasks.add_task(_bg_alertas_principal, parsed_data, qc_rejected)
+            background_tasks.add_task(_bg_publish_principal, parsed_data)
         else:
             # Estación secundaria: alertas propias solo si están habilitadas en su
             # configuración (Admin → Estaciones → config). Estado por estación.
-            try:
-                scfg = settings_store.get_station_config(settings.settings_file, station)
-                if scfg.get("alerts_enabled"):
-                    await alert_service.process(
-                        parsed_data, station=station, label=scfg.get("label") or station,
-                        thresholds=scfg.get("alert_thresholds") or None,
-                        disabled=scfg.get("disabled_rules") or [],
-                        qc_rejected=qc_rejected)
-            except Exception as e:
-                logger.error(f"Alert processing (secundaria {station}) failed: {e}")
+            background_tasks.add_task(_bg_alertas_secundaria, parsed_data, station, qc_rejected)
 
         return {"status": "success", "message": "Data received"}
 

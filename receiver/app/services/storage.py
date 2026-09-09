@@ -6,6 +6,7 @@ Handles writing and querying weather data in InfluxDB.
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+import asyncio
 import logging
 
 from influxdb_client import InfluxDBClient, Point
@@ -97,8 +98,10 @@ class InfluxDBStorage:
             if timestamp:
                 point.time(timestamp)
 
-            # Write to InfluxDB
-            self.write_api.write(bucket=self.bucket, record=point)
+            # Write to InfluxDB. write_api es SYNCHRONOUS (bloqueante); se saca
+            # del event loop con to_thread para no clavar todo el servidor
+            # mientras dura (red/disco de Influx) dentro de un `async def`.
+            await asyncio.to_thread(self.write_api.write, bucket=self.bucket, record=point)
 
             logger.debug(f"Wrote {len(fields)} fields to InfluxDB")
 

@@ -24,15 +24,19 @@ síncrono dentro del `try` que produce la respuesta HTTP:
 El análisis de IA del cielo **no** está en este endpoint (vive en
 `/api/camera/upload`, ya es async con `asyncio.create_task`).
 
-**Plan:**
-- [ ] Mover `alert_service.process()` y `publish_all()` a `BackgroundTasks`
+**Plan — HECHO 2026-09-09:**
+- [x] Mover `alert_service.process()` y `publish_all()` a `BackgroundTasks`
       nativo de FastAPI (no Celery/Redis — sobra para este volumen, una
       estación reportando ~cada minuto). Responder al datalogger en cuanto
       se guarda en Influx + caché en memoria (`latest_by_station`).
-- [ ] Paralelizar `publish_all()` con `asyncio.gather` en vez de secuencial
+- [x] Paralelizar `publish_all()` con `asyncio.gather` en vez de secuencial
       (reduce el peor caso de ~90s a ~15s aunque quedara algo síncrono).
-- [ ] Verificar que `storage.write()` no bloquee el event loop (envolver en
-      `asyncio.to_thread` si el cliente de InfluxDB es síncrono).
+- [x] `storage.write()` bloqueaba el event loop (cliente de InfluxDB
+      síncrono) — envuelto en `asyncio.to_thread`.
+
+Verificado: 154 tests pasan (7 skipped por falta de ffmpeg local), `ruff`
+limpio en los 3 archivos tocados (`main.py`, `storage.py`, `publishers.py`).
+Pendiente: desplegar al VPS.
 
 ### A2. `ffmpeg` sin límite de hilos/prioridad
 
