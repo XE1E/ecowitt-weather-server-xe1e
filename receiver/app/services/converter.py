@@ -4,7 +4,7 @@ Unit Converter
 Converts Ecowitt data from imperial to metric units.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import math
 
 # Conversion functions
@@ -172,22 +172,25 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
         result.pop(k, None)
 
     if temp is not None and humidity is not None:
+        # Dew point (Magnus formula) -- None si humidity <= 0 (sensor en falla
+        # o calibración mal puesta); humidex y cloud_base dependen de un punto
+        # de rocío válido, así que se omiten junto con él en vez de reventar.
         dew = calculate_dew_point(temp, humidity)
-        # Dew point (Magnus formula)
-        result["dew_point"] = round(dew, 1)
+        if dew is not None:
+            result["dew_point"] = round(dew, 1)
 
-        # Humidex (índice canadiense de bochorno; útil sobre ~20 °C)
-        if temp >= 20:
-            result["humidex"] = round(calculate_humidex(temp, dew), 1)
+            # Humidex (índice canadiense de bochorno; útil sobre ~20 °C)
+            if temp >= 20:
+                result["humidex"] = round(calculate_humidex(temp, dew), 1)
+
+            # Base de nubes estimada (m sobre el suelo), aprox. Espy
+            cb = calculate_cloud_base(temp, dew)
+            if cb is not None:
+                result["cloud_base"] = round(cb)
 
         # Heat index (only valid for temp >= 27°C and humidity >= 40%)
         if temp >= 27 and humidity >= 40:
             result["heat_index"] = round(calculate_heat_index(temp, humidity), 1)
-
-        # Base de nubes estimada (m sobre el suelo), aprox. Espy
-        cb = calculate_cloud_base(temp, dew)
-        if cb is not None:
-            result["cloud_base"] = round(cb)
 
     if temp is not None and wind_speed is not None:
         # Wind chill (only valid for temp <= 10°C and wind >= 4.8 km/h)
@@ -205,8 +208,19 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def calculate_dew_point(temp_c: float, humidity: float) -> float:
-    """Calculate dew point using Magnus formula."""
+def calculate_dew_point(temp_c: float, humidity: float) -> Optional[float]:
+    """
+    Calculate dew point using Magnus formula.
+
+    Devuelve None si humidity <= 0: math.log(humidity/100.0) no está definido
+    para 0 o negativo, y 0.0 es un valor VÁLIDO para quality_check (el rango
+    de humidity_outdoor es (0.0, 100.0) inclusive) -- una falla de sensor del
+    WS69 o una calibración con offset negativo mal puesto llega hasta aquí
+    sin que el QC lo filtre. Sin este guard, `math.log(0)` lanza
+    `ValueError: math domain error` y tumba el reporte completo.
+    """
+    if humidity is None or humidity <= 0:
+        return None
     a = 17.27
     b = 237.7
     alpha = ((a * temp_c) / (b + temp_c)) + math.log(humidity / 100.0)

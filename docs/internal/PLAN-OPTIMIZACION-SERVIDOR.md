@@ -230,3 +230,52 @@ dependen de ellos en conjunto, no a medias).
 - [ ] Pendiente (otra sesión): barrido completo de `datetime.utcnow()` →
       `datetime.now(timezone.utc)`, incluyendo los puntos de normalización
       naive/aware en `alerts.py`.
+
+### C2. Concurrencia segura para `latest_by_station` — revisado 2026-09-09, SIN HACER
+
+**Sugerencia recibida:** proteger `latest_by_station` (dict global en
+memoria) con `asyncio.Lock()` por si hay condiciones de carrera.
+
+**Diagnóstico:** no hay ningún bug activo. `receiver/Dockerfile` corre
+uvicorn con 1 solo worker (un único event loop), no hay ninguna iteración
+sobre el diccionario completo en todo el código (solo `.get(clave)`
+puntuales), y el único patrón lectura-luego-escritura real
+(`receive_ecowitt_data`, leer `prev` línea ~579 y escribir línea ~614) **no
+tiene ningún `await` en medio** — todo el bloque (calibración, QC,
+spike-check, derivados) es síncrono, así que asyncio no puede intercalar
+otra corrutina justo ahí. Sin punto de cesión, no hay carrera posible.
+
+**Decisión:** no se implementa. Agregar un lock no corrige nada hoy, sería
+complejidad especulativa. Si en el futuro se vuelve async algo entre esa
+lectura y esa escritura, hay que revisar esto de nuevo.
+
+### C3. `calculate_dew_point`: `math.log(0)` con humedad 0% — revisado y CORREGIDO 2026-09-09
+
+**Diagnóstico confirmado real:** `quality.py` define el rango de
+`humidity_outdoor` como `(0.0, 100.0)` **inclusive** (`if v < lo or v > hi`
+rechaza), así que una lectura de 0% (falla del sensor WS69, o una
+calibración con offset negativo mal puesto) pasa el QC sin filtrarse y
+llega a `calculate_dew_point(temp, 0.0)`, donde `math.log(0/100)` lanza
+`ValueError: math domain error`. Eso tumbaba el reporte completo (excepción
+no relacionada con InfluxDB, fuera del try/except de A4, cae al 500
+genérico de `/data/report/` — el dato de ESE ciclo se pierde).
+
+**Plan — HECHO:**
+- [x] `calculate_dew_point()` devuelve `None` si `humidity <= 0` en vez de
+      llamar a `math.log` con un valor fuera de dominio.
+- [x] `calculate_derived_values()` omite `dew_point`/`humidex`/`cloud_base`
+      cuando `dew` es `None` (dependen de un punto de rocío válido),
+      `heat_index` sigue calculándose igual (no depende de `dew`).
+- [x] Tests nuevos: `test_dew_point_zero_humidity_no_crash` (unitario,
+      humedad 0 y negativa) y `test_derived_values_zero_humidity_no_crash`
+      (extremo a extremo vía `calculate_derived_values`). 157 tests pasan
+      (2 nuevos), `ruff` limpio.
+- [ ] Pendiente: desplegar al VPS.
+
+### C4. `calculate_cloud_base` (fórmula de Espy) — revisado 2026-09-09, YA ESTABA HECHA
+
+Sugerencia de "completar" esta función resultó estar basada en una versión
+vieja del código: ya existía completa (`converter.py:239-247`, 125 m/°C de
+spread, clamp a 0 si el spread es negativo), conectada en
+`calculate_derived_values` y en `sky_analyzer.py`, con test propio
+(`test_humidex_and_cloud_base`). Sin cambios.

@@ -58,6 +58,17 @@ def test_dew_point_calculation():
     assert abs(dew_point - 16.7) < 0.5
 
 
+def test_dew_point_zero_humidity_no_crash():
+    """
+    humidity=0 es un valor VÁLIDO para quality_check (rango 0.0-100.0
+    inclusive) -- un WS69 en falla o una calibración con offset negativo mal
+    puesto puede mandarlo. math.log(0/100) no está definido: antes esto
+    lanzaba ValueError y tumbaba el reporte completo en /data/report/.
+    """
+    assert calculate_dew_point(25.0, 0.0) is None
+    assert calculate_dew_point(25.0, -5.0) is None  # calibración pudo pasarse de largo
+
+
 def test_feels_like_hot():
     """Test feels like in hot conditions."""
     feels = calculate_feels_like(35.0, 70.0, 5.0)

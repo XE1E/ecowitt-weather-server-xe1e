@@ -116,6 +116,18 @@ def test_derived_values_include_new_fields():
     assert "cloud_base" in out
 
 
+def test_derived_values_zero_humidity_no_crash():
+    """humidity_outdoor=0.0 pasa quality_check sin filtrarse (rango 0.0-100.0
+    inclusive); antes esto tumbaba /data/report/ entero con
+    ValueError: math domain error dentro de calculate_dew_point."""
+    out = calculate_derived_values({"temperature_outdoor": 20.0, "humidity_outdoor": 0.0})
+    assert "dew_point" not in out
+    assert "humidex" not in out
+    assert "cloud_base" not in out
+    # El resto de derivados que no dependen de humedad sigue calculándose
+    assert "feels_like" in out
+
+
 # ---------- Pronóstico local ----------
 def test_trend_classification():
     assert classify_trend(-4.0)["code"] == "falling_fast"
