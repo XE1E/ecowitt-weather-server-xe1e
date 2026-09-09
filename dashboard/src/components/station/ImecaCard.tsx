@@ -150,8 +150,9 @@ export function ImecaCard() {
       )}
 
       <p className="text-[11px] text-slate-600">
-        IMECA <span className="font-semibold">estimado</span> con las tablas oficiales (NADF-009-AIRE-2017) a partir de
-        concentraciones modeladas de {d.source ?? 'Open-Meteo'}. No es la lectura oficial medida por las estaciones del
+        IMECA (nombre de costumbre; la norma vigente lo llama "Índice de Calidad del Aire") <span className="font-semibold">estimado</span> con
+        las tablas oficiales (NADF-009-AIRE-2017) a partir de concentraciones modeladas de {d.source ?? 'Open-Meteo'},
+        con los promedios móviles que exige cada contaminante. No es la lectura oficial medida por las estaciones del
         SIMAT/SEDEMA; úsalo como referencia.
       </p>
     </div>

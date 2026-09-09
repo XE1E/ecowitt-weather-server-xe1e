@@ -32,7 +32,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
 | **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
-| **Calidad del aire** | AQI (WAQI) e **IMECA** estimado (norma NADF-009-AIRE-2017) con medidor y pronóstico |
+| **Calidad del aire** | AQI (WAQI) e **Índice de Calidad del Aire de la CDMX** estimado — norma NADF-009-AIRE-2017, con promedios móviles reales por contaminante (24 h para SO₂/PM10/PM2.5, 8 h para CO); se le sigue diciendo **IMECA** por costumbre, aunque la norma vigente ya no usa ese nombre — con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
 | **Estación remota** | Segunda estación (p. ej. un Ecowitt **GW1100**) que envía al mismo servidor; sus datos se guardan **por separado** y se ven en su propia página, solo lectura: condiciones, tendencias, estadística e histórico |
 | **Consola** | Réplica en pantalla de la consola física Ecowitt (rejilla 3×5) — el mismo componente que se pinta en el kiosco |

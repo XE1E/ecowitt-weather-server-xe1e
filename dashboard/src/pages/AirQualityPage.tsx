@@ -119,10 +119,13 @@ export function AirQualityPage() {
       <PageInfo>
         <p>
           Se muestran dos índices: el <span className="font-semibold">AQI (escala US EPA)</span> vía WAQI/aqicn
-          {aq.station ? ` (estación: ${aq.station})` : ''}, y el <span className="font-semibold">IMECA</span>, el índice
-          oficial de la Ciudad de México, que aquí se <span className="font-semibold">estima</span> con las tablas de la
-          norma NADF-009-AIRE-2017 a partir de concentraciones modeladas (Open-Meteo/CAMS). Ambos resumen los mismos
-          contaminantes (PM2.5, PM10, O₃, NO₂, SO₂, CO) pero con escalas distintas, por eso los números difieren. El
+          {aq.station ? ` (estación: ${aq.station})` : ''}, y el <span className="font-semibold">IMECA</span> —así le
+          sigue diciendo la mayoría por costumbre, aunque desde 2018 la norma vigente de la Ciudad de México
+          (NADF-009-AIRE-2017) lo llama "Índice de Calidad del Aire" y retiró oficialmente el nombre IMECA—, que aquí
+          se <span className="font-semibold">estima</span> con las tablas de esa norma a partir de concentraciones
+          modeladas (Open-Meteo/CAMS), promediadas con la ventana que exige cada contaminante (24 h para SO₂/PM10/
+          PM2.5, 8 h para CO, la hora en curso para O₃/NO₂). Ambos resumen los mismos contaminantes (PM2.5, PM10, O₃,
+          NO₂, SO₂, CO) pero con escalas distintas, por eso los números difieren. El
           {' '}<span className="font-semibold">contaminante dominante</span> es el que marca el nivel. Son datos externos de
           referencia, no medidos por tu estación.{aq.time ? ` Actualizado: ${aq.time}.` : ''}
         </p>

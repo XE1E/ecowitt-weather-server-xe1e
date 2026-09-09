@@ -1,9 +1,15 @@
 """
-IMECA estimado (Índice Metropolitano de la Calidad del Aire).
+Índice de Calidad del Aire de la CDMX (lo que mucha gente sigue llamando
+"IMECA" por costumbre) -- estimado.
 
-Calcula el índice con las tablas oficiales de puntos de corte de la norma
-NADF-009-AIRE-2017 (Ciudad de México) a partir de concentraciones de
-contaminantes obtenidas de Open-Meteo Air Quality (modelo CAMS).
+La norma NADF-009-AIRE-2017 (Ciudad de México) ya NO llama "IMECA" a este
+índice: ese nombre es el del índice ANTERIOR (1986-2018), que esta norma
+deroga explícitamente en su transitorio SEGUNDO. El texto oficial (Gaceta
+Oficial CDMX, 14-nov-2018) lo llama simplemente "Índice de Calidad del
+Aire". Se conserva "IMECA" en la UI como término de búsqueda/costumbre,
+pero el cálculo real y las tablas de puntos de corte son las de esta norma
+vigente, a partir de concentraciones de contaminantes obtenidas de
+Open-Meteo Air Quality (modelo CAMS).
 
 Importante: es un valor ESTIMADO a partir de concentraciones modeladas, no la
 lectura oficial medida por las estaciones del SIMAT/SEDEMA. Se etiqueta como tal.
@@ -11,6 +17,15 @@ lectura oficial medida por las estaciones del SIMAT/SEDEMA. Se etiqueta como tal
 Puntos de corte (Cinf, Csup, Iinf, Isup) por contaminante, en las unidades de la
 norma: ppm para O3/NO2/SO2/CO y µg/m³ para PM10/PM2.5. Índice = interpolación
 lineal por tramos entre esos puntos.
+
+Promedios móviles (norma §6.2, verificada contra el texto oficial): O3 y NO2
+usan la concentración de LA HORA; SO2 y las partículas (PM10/PM2.5) exigen el
+promedio móvil de las últimas 24 h; CO, el de las últimas 8 h. Antes de este
+fix se usaba en los cuatro casos el valor instantáneo de Open-Meteo (bug real:
+un pico de una sola hora se reflejaba de inmediato, cuando la norma pide
+suavizarlo). "Suficiencia de información" (§5): al menos 75% de horas válidas
+en la ventana (6/8 para CO, 18/24 para SO2/PM10/PM2.5) o el contaminante se
+omite ese ciclo, igual que si no hubiera dato.
 """
 import time
 import logging
@@ -46,11 +61,20 @@ TABLE_CO: List[BP] = [
 ]
 TABLE_PM10: List[BP] = [
     (0, 40, 0, 50), (41, 75, 51, 100), (76, 214, 101, 150),
-    (215, 354, 151, 200), (355, 424, 201, 300), (425, 604, 301, 500),
+    (215, 354, 151, 200), (355, 424, 201, 300),
+    # El tramo "Peligrosa" (301-500) NO es una sola recta: la norma le da
+    # pendientes (k) distintas a 425-504 (k=1.2532) y 505-604 (k=1.0000) --
+    # colapsarlo en un solo tramo (como antes) da un índice ~6 puntos distinto
+    # ahí. Solo importa en concentraciones extremas, pero es lo que dice el
+    # Anexo C (Tabla C.5) de la norma.
+    (425, 504, 301, 400), (505, 604, 401, 500),
 ]
 TABLE_PM25: List[BP] = [
     (0.0, 12.0, 0, 50), (12.1, 45.0, 51, 100), (45.1, 97.4, 101, 150),
-    (97.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500),
+    (97.5, 150.4, 151, 200), (150.5, 250.4, 201, 300),
+    # Mismo caso que PM10 (Anexo C, Tabla C.6): 250.5-350.4 (k=0.9910) y
+    # 350.5-500.4 (k=0.6604) tienen pendientes distintas.
+    (250.5, 350.4, 301, 400), (350.5, 500.4, 401, 500),
 ]
 
 # (etiqueta, clave Open-Meteo, peso molecular g/mol o None si ya es µg/m³, tabla)
@@ -63,6 +87,15 @@ POLLUTANTS: List[Tuple[str, str, Optional[float], List[BP]]] = [
     ("CO", "carbon_monoxide", 28.01, TABLE_CO),
 ]
 
+# Ventana de promediación por contaminante (norma §6.2, en HORAS). O3/NO2 no
+# se promedian más allá de la propia hora; SO2/PM10/PM2.5 exigen 24h móvil;
+# CO exige 8h móvil. Ver _moving_avg().
+AVG_WINDOW_H: Dict[str, int] = {
+    "ozone": 1, "nitrogen_dioxide": 1,
+    "sulphur_dioxide": 24, "carbon_monoxide": 8,
+    "pm10": 24, "pm2_5": 24,
+}
+
 RECS = {
     "Buena": "Disfruta las actividades al aire libre.",
     "Regular": "Puedes realizar actividades al aire libre. Las personas muy sensibles pueden considerar reducir el esfuerzo prolongado.",
@@ -70,6 +103,24 @@ RECS = {
     "Muy mala": "Grupos sensibles: eviten salir y el esfuerzo físico al aire libre. Población general: reduzca las actividades al aire libre.",
     "Extremadamente mala": "Toda la población: permanece en interiores con ventanas cerradas y evita el esfuerzo físico al aire libre.",
 }
+
+
+def _moving_avg(values: List[Optional[float]], idx: int, window_h: int) -> Optional[float]:
+    """
+    Promedio móvil de `window_h` horas terminando en `idx` (inclusive), con la
+    "suficiencia de información" que exige la norma (§5): al menos 75% de
+    horas válidas en la ventana (6/8 para 8h, 18/24 para 24h). Sin eso
+    suficiente, devuelve None -- el contaminante se omite ese ciclo en vez de
+    reportar un promedio armado con muy pocos datos.
+    """
+    if idx < 0 or idx >= len(values):
+        return None
+    start = max(0, idx - window_h + 1)
+    span = values[start:idx + 1]
+    valid = [v for v in span if isinstance(v, (int, float))]
+    if len(valid) < max(1, round(0.75 * window_h)):
+        return None
+    return sum(valid) / len(valid)
 
 
 # Constante de los gases en L·hPa/(mol·K), para calcular el volumen molar a la
@@ -177,7 +228,10 @@ async def get_imeca(lat: float, lon: float,
     url = (
         "https://air-quality-api.open-meteo.com/v1/air-quality"
         f"?latitude={lat}&longitude={lon}&current={vars_}&hourly={vars_}"
-        "&timezone=auto&forecast_days=2"
+        # past_days=2: los promedios móviles de la norma (hasta 24h, ver
+        # AVG_WINDOW_H) necesitan horas YA OBSERVADAS antes de "ahora", no
+        # solo el pronóstico -- sin esto no hay de dónde mirar hacia atrás.
+        "&timezone=auto&forecast_days=2&past_days=2"
     )
     try:
         async with httpx.AsyncClient(timeout=12) as client:
@@ -189,30 +243,41 @@ async def get_imeca(lat: float, lon: float,
         return cached["data"] if cached else {"available": False, "error": "fetch_failed"}
 
     cur = j.get("current", {})
-    data = compute_imeca(cur, pressure_hpa)
+    hourly = j.get("hourly", {}) or {}
+    times = hourly.get("time", []) or []
+    now_iso = cur.get("time", "")
+
+    # Índice de "ahora" en el arreglo horario (incluye el pasado, por
+    # past_days): primer tiempo >= now_iso.
+    idx_now = next((i for i, t in enumerate(times) if t >= now_iso), None) if now_iso else None
+
+    def _conc_en(idx: int) -> Dict[str, Optional[float]]:
+        """Concentraciones a la hora `idx`, cada una con la ventana de
+        promedio móvil que exige la norma para ESE contaminante."""
+        return {
+            key: _moving_avg(hourly.get(key) or [], idx, AVG_WINDOW_H.get(key, 1))
+            for _, key, _, _ in POLLUTANTS
+        }
+
+    # Si por lo que sea no se encuentra el índice de "ahora" (respuesta
+    # inesperada de Open-Meteo), se cae al valor instantáneo de `current`
+    # antes que no reportar nada -- nunca debe tumbar la página.
+    data = compute_imeca(_conc_en(idx_now) if idx_now is not None else cur, pressure_hpa)
     if data.get("available"):
         data["time"] = cur.get("time")
         data["source"] = "Open-Meteo (modelo CAMS)"
         # Presión usada para el volumen molar: hace auditable el cálculo de ppm.
         data["pressure_hpa"] = round(pressure_hpa, 1) if pressure_hpa else None
 
-    # Pronóstico por horas (IMECA calculado hora por hora, próximas ~24 h)
-    hourly = j.get("hourly", {})
-    times = hourly.get("time", []) or []
+    # Pronóstico por horas (próximas ~24 h), mismo criterio de promedio móvil.
     forecast = []
-    now_iso = cur.get("time", "")
-    started = False
-    for i, t in enumerate(times):
-        if not started:
-            if t < now_iso:
-                continue
-            started = True
-        row = {k: (hourly.get(k, [None] * len(times))[i]) for _, k, _, _ in POLLUTANTS}
-        r = compute_imeca(row, pressure_hpa)
-        if r.get("available"):
-            forecast.append({"t": t, "imeca": r["imeca"], "category": r["category"]})
-        if len(forecast) >= 24:
-            break
+    if idx_now is not None:
+        for i in range(idx_now, len(times)):
+            r = compute_imeca(_conc_en(i), pressure_hpa)
+            if r.get("available"):
+                forecast.append({"t": times[i], "imeca": r["imeca"], "category": r["category"]})
+            if len(forecast) >= 24:
+                break
     data["forecast"] = forecast
 
     if len(_CACHE) >= _MAX_ENTRIES and key not in _CACHE:

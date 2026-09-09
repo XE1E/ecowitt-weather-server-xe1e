@@ -328,3 +328,49 @@ en la ciudad pese a la distancia, por el suelo del lago. Un filtro de
 - [x] Desplegado en el VPS 2026-09-09 (commit `0d31d9b`), confirmado
       pegándole directo a `/api/earthquakes` (dispara `check_earthquake`)
       sin errores.
+
+### C5. IMECA vs NADF-009-AIRE-2017 — revisado y CORREGIDO 2026-09-09
+
+**Sugerencia recibida:** el README dice "IMECA (norma NADF-009-AIRE-2017)",
+pero esa norma retiró oficialmente el nombre IMECA; y si se calculan
+promedios móviles (24h para PM10/PM2.5), aclarar en el frontend qué se
+muestra.
+
+**Verificado contra el texto oficial** (Gaceta Oficial CDMX, 14-nov-2018,
+PDF de aire.cdmx.gob.mx): confirmado en ambos puntos, y encontrado algo más
+grave de lo que se sospechaba:
+- El nombre oficial es "Índice de Calidad del Aire"; "IMECA" es el índice
+  ANTERIOR (1986-2018), derogado explícitamente (transitorio SEGUNDO).
+- **La norma exige promedios móviles que el código NO calculaba en
+  absoluto**: O3/NO2 → 1h (ok, ya lo hacía), pero SO2/PM10/PM2.5 → **24h
+  móvil** y CO → **8h móvil** (norma §6.2). `get_imeca()` usaba
+  `j["current"]` de Open-Meteo, que **confirmé con la propia doc de
+  Open-Meteo que es instantáneo, no promediado** — un pico de una sola hora
+  se reflejaba de inmediato en vez de suavizarse.
+- Hallazgo menor de paso: las tablas de PM10 y PM2.5 (Anexo C, Tablas C.5/
+  C.6) tienen DOS pendientes distintas en el tramo "Peligrosa" (301-400 y
+  401-500), que el código colapsaba en una sola recta — solo importa en
+  concentraciones extremas.
+
+**Plan — HECHO:**
+- [x] `imeca.py`: nueva `_moving_avg()` con la "suficiencia de información"
+      de la norma §5 (≥75% de horas válidas: 6/8 para CO, 18/24 para
+      SO2/PM10/PM2.5). `get_imeca()` pide `past_days=2` a Open-Meteo (soporta
+      hasta 92, confirmado) para tener horas ya observadas de dónde
+      promediar, y aplica la ventana correcta por contaminante (`AVG_WINDOW_H`)
+      tanto al valor "ahora" como al pronóstico por hora.
+- [x] Tablas `TABLE_PM10`/`TABLE_PM25`: tramo 301-500 dividido en sus dos
+      sub-tramos oficiales con pendiente propia.
+- [x] Terminología: README (`Calidad del aire`), `AirQualityPage.tsx` y
+      `ImecaCard.tsx` ahora dicen "Índice de Calidad del Aire de la CDMX" y
+      aclaran que IMECA es el nombre de costumbre que la norma vigente ya no
+      usa. Etiquetas cortas (tile del kiosco, mini-card) se dejan como
+      "IMECA" a propósito — es como la gente lo busca.
+- [x] Tests nuevos (`test_imeca.py`, no existía antes ningún test de este
+      servicio): `_moving_avg` (ventana completa, insuficiencia de datos,
+      umbral exacto, fuera de rango), tablas PM10/PM2.5 corregidas, y una
+      integración con cliente httpx falso que prueba el caso real: un pico
+      de PM2.5 de una sola hora da índice ~66 ("Regular") promediado en 24h,
+      no ~350 ("Peligrosa") como el valor instantáneo del bug anterior. 175
+      tests pasan (9 nuevos), `ruff` limpio, `tsc --noEmit` limpio.
+- [ ] Pendiente: desplegar al VPS.
