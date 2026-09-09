@@ -39,7 +39,8 @@ def _epa_index(us_aqi: Optional[float]) -> int:
     return 6
 
 
-def _condition(data: Dict[str, Any], sun_elev: Optional[float] = None) -> Dict[str, Any]:
+def _condition(data: Dict[str, Any], sun_elev: Optional[float] = None,
+               cloud_cover: Optional[float] = None) -> Dict[str, Any]:
     """Deriva (text, code) estilo WeatherAPI a partir del dato real de la estación.
     Códigos válidos de WeatherAPI para que el ícono del reloj sea coherente.
 
@@ -57,30 +58,44 @@ def _condition(data: Dict[str, Any], sun_elev: Optional[float] = None) -> Dict[s
         if rr >= 2.5:
             return {"text": "Moderate rain", "code": 1189}
         return {"text": "Light rain", "code": 1183}
+    if sun_elev is not None and sun_elev >= 5.0 and solar is not None:
+        clear_sky = 1361.0 * math.sin(math.radians(sun_elev))
+        kt = solar / clear_sky if clear_sky > 0 else 0.0
+        if kt > 0.65:
+            return {"text": "Sunny", "code": 1000}
+        if kt > 0.35:
+            return {"text": "Partly cloudy", "code": 1003}
+        return {"text": "Cloudy", "code": 1006}
+    # Sol bajo (<5°) o desconocido: la radiación medida ya no sirve para juzgar
+    # nubosidad (se acerca a cero por el ángulo del sol, no por las nubes) --
+    # bug detectado en vivo 2026-09-08: 97% de nubes al atardecer se reportaba
+    # "Despejado" porque esta rama siempre caía en el valor por omisión. El %
+    # de nubes del pronóstico (Open-Meteo) es mucho mejor señal aquí que
+    # cualquier umbral de W/m².
+    if cloud_cover is not None:
+        if cloud_cover < 35:
+            return {"text": "Sunny", "code": 1000}
+        if cloud_cover < 65:
+            return {"text": "Partly cloudy", "code": 1003}
+        return {"text": "Cloudy", "code": 1006}
+    # Sin % de nubes disponible: criterio absoluto de respaldo (peor que el de
+    # arriba, pero mejor que nada si quien llama no lo tiene a mano).
     if solar is not None:
-        if sun_elev is not None and sun_elev >= 5.0:
-            clear_sky = 1361.0 * math.sin(math.radians(sun_elev))
-            kt = solar / clear_sky if clear_sky > 0 else 0.0
-            if kt > 0.65:
-                return {"text": "Sunny", "code": 1000}
-            if kt > 0.35:
-                return {"text": "Partly cloudy", "code": 1003}
-            return {"text": "Cloudy", "code": 1006}
-        # Sin elevación solar conocida: criterio absoluto de respaldo.
         if solar >= 400:
             return {"text": "Sunny", "code": 1000}
         if solar >= 120:
             return {"text": "Partly cloudy", "code": 1003}
         if solar > 5:
             return {"text": "Cloudy", "code": 1006}
-    return {"text": "Clear", "code": 1000}   # noche despejada / sin radiación
+    return {"text": "Clear", "code": 1000}   # sin ninguna señal disponible
 
 
 def build_weatherapi(data: Optional[Dict[str, Any]],
                      aq: Optional[Dict[str, Any]] = None,
                      im: Optional[Dict[str, Any]] = None,
                      lat: float = 19.380359, lon: float = -99.174564,
-                     sun_elev: Optional[float] = None) -> Dict[str, Any]:
+                     sun_elev: Optional[float] = None,
+                     cloud_cover: Optional[float] = None) -> Dict[str, Any]:
     d = data or {}
     tc = _num(d.get("temperature_outdoor"))
     hum = _num(d.get("humidity_outdoor"))
@@ -121,7 +136,7 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
         "precip_in": round(rain_today / 25.4, 2) if rain_today is not None else None,
         "precip_event_mm": round(rain_event, 1) if rain_event is not None else None,
         "rain_rate_mm": round(rain_rate, 1) if rain_rate is not None else None,
-        "condition": _condition(d, sun_elev),
+        "condition": _condition(d, sun_elev, cloud_cover),
         # WeatherAPI lo incluye y el firmware elige el ícono solo por `code`, sin
         # lógica día/noche propia: sin este campo no puede distinguir el sol de la
         # luna y de madrugada mostraba el ícono diurno.

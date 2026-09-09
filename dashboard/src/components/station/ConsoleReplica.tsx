@@ -1030,8 +1030,21 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const cond = (() => {
     if (!data) return { icon: '', label: '', stormApproaching: false, source: 'none' }
 
-    // Contexto extendido para deriveCondition: tendencia de presión
-    const condCtx = { pressureDelta3h: localForecast?.delta_3h }
+    // Contexto extendido para deriveCondition: tendencia de presión + código
+    // WMO de la hora más cercana (respaldo cuando el sensor no puede opinar:
+    // sol bajo o de noche, ver weather.ts).
+    const nowMs = Date.now()
+    let horaCercana: ForecastHour | undefined
+    let mejorDiff = Infinity
+    for (const h of horas) {
+      const diff = Math.abs(new Date(h.time).getTime() - nowMs)
+      if (diff < mejorDiff) { mejorDiff = diff; horaCercana = h }
+    }
+    const condCtx = {
+      pressureDelta3h: localForecast?.delta_3h,
+      forecastCode: mejorDiff < 90 * 60 * 1000 ? horaCercana?.code : undefined,
+      precipProb: mejorDiff < 90 * 60 * 1000 ? horaCercana?.precipProb : undefined,
+    }
     const derived = deriveCondition(data, condCtx)
 
     // Solo tomar storm_approaching del consenso (útil para avisar de tormentas)

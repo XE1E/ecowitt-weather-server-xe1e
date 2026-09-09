@@ -59,6 +59,18 @@ export interface ConditionContext {
  * Convierte un código WMO a Condition para usar con el pronóstico.
  * `isDay` elige la variante diurna o nocturna del icono.
  */
+/**
+ * Nivel de nubosidad aproximado a partir del código WMO del pronóstico, para
+ * las ramas de `deriveCondition` donde el sensor no puede opinar (sol bajo o
+ * de noche). Solo agrupa por nubosidad, no reemplaza a `wmoToCondition` (que
+ * sí distingue lluvia/nieve/tormenta para el pronóstico completo).
+ */
+function _cloudLevelFromWmo(code: number): 'clear' | 'partly' | 'cloudy' {
+  if (code === 0 || code === 1) return 'clear'
+  if (code === 2) return 'partly'
+  return 'cloudy'
+}
+
 export function wmoToCondition(code: number, isDay: boolean): Condition {
   const s = isDay ? 'day' : 'night'
   if (code === 0) return { icon: `clear-${s}`, label: isDay ? 'Despejado' : 'Noche despejada', fx: 'clear', intensity: 0.7 }
@@ -159,9 +171,19 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
     const elev = solarElevation(new Date(), LOCATION.latitude, LOCATION.longitude)
     const kt = clearnessIndex(solar, elev)
 
-    // Sol bajo (<5°): el índice de claridad no es confiable
+    // Sol bajo (<5°): el índice de claridad no es confiable (se acerca a cero
+    // por el ángulo del sol, no por las nubes; bug detectado en vivo
+    // 2026-09-08: 97% de nubes al atardecer se reportaba "Despejado" porque
+    // esta rama solo miraba humedad, que no siempre correlaciona con nubes).
+    // El código WMO del pronóstico es mejor señal aquí que la humedad.
     if (kt === null) {
-      // Con sol bajo, usar humedad como proxy de nubosidad (no pronóstico)
+      if (ctx.forecastCode != null) {
+        const nivel = _cloudLevelFromWmo(ctx.forecastCode)
+        if (nivel === 'cloudy') return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
+        if (nivel === 'partly') return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
+        return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
+      }
+      // Sin pronóstico a mano: humedad como último recurso
       if (humidity >= 85) return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
       if (humidity >= 70) return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
       return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
@@ -191,10 +213,35 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
     return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
   }
 
-  // ─── NOCHE: heurística de humedad + punto de rocío + presión ───
-  // De noche no hay sensor de radiación, usamos humedad y dew spread como proxy
-  // El pronóstico solo se usa para precipitación activa (que ya se detectó arriba)
+  // ─── NOCHE: código WMO del pronóstico, con humedad/rocío de respaldo ───
+  // De noche no hay sensor de radiación. Antes esta rama solo usaba humedad y
+  // dew spread como proxy y podía marcar "Despejado" con cielo cubierto pero
+  // aire seco (mismo bug que en la rama de sol bajo, arriba). El código WMO
+  // del pronóstico es una señal más directa de nubosidad cuando está a mano.
+  if (ctx.forecastCode != null) {
+    const nivel = _cloudLevelFromWmo(ctx.forecastCode)
+    if (nivel === 'cloudy') {
+      return { icon: 'overcast-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.5 }
+    }
+    if (nivel === 'clear') {
+      const changing = pressureFalling
+      return {
+        icon: 'clear-night',
+        label: changing ? 'Noche despejada (cambiando)' : 'Noche despejada',
+        fx: 'clear',
+        intensity: 0.5,
+      }
+    }
+    const changing = pressureFalling && humidity > 70
+    return {
+      icon: 'partly-cloudy-night',
+      label: changing ? 'Noche parcialmente nublada (cambiando)' : 'Noche parcialmente nublada',
+      fx: 'partly-cloudy',
+      intensity: 0.4,
+    }
+  }
 
+  // Sin pronóstico a mano: humedad y dew spread como proxy (última opción)
   const nightCloudy = humidity >= 80 || (dewSpread != null && dewSpread < 5)
   const nightClear = humidity < 65 && (dewSpread == null || dewSpread > 8)
 

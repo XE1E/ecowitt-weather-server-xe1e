@@ -90,7 +90,8 @@ def _en(arr: Optional[List[Any]], i: int) -> Any:
 
 
 def _current_de_estacion(d: Dict[str, Any], sun_elev: Optional[float],
-                         sky_analysis: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                         sky_analysis: Optional[Dict[str, Any]] = None,
+                         cloud_cover: Optional[float] = None) -> Dict[str, Any]:
     rr = _num(d.get("rain_rate"))
     icon = None
     if not (rr and rr > 0):
@@ -99,7 +100,9 @@ def _current_de_estacion(d: Dict[str, Any], sun_elev: Optional[float],
         # con qué juzgar nubosidad y siempre cae en "Despejado".
         icon = _SKY_CONDITION_A_ICONO.get((sky_analysis or {}).get("sky_condition"))
     if icon is None:
-        cond = svitrix._condition(d, sun_elev)
+        # Sin análisis de cámara disponible: % de nubes del pronóstico como
+        # respaldo de svitrix._condition (ver ahí el bug que esto evita).
+        cond = svitrix._condition(d, sun_elev, cloud_cover)
         icon = _WEATHERAPI_A_ICONO.get(cond["code"], 1)
     return {
         "temp_c": round(_num(d.get("temperature_outdoor")), 1),
@@ -191,7 +194,9 @@ def build_bim32(data: Optional[Dict[str, Any]], om: Optional[Dict[str, Any]],
     d = data or {}
     om = om or {}
     hay_estacion = _num(d.get("temperature_outdoor")) is not None
-    current = _current_de_estacion(d, sun_elev, sky_analysis) if hay_estacion else _current_de_pronostico(om)
+    cloud_cover = _num(_en((om.get("hourly") or {}).get("cloud_cover"), 0))
+    current = (_current_de_estacion(d, sun_elev, sky_analysis, cloud_cover)
+               if hay_estacion else _current_de_pronostico(om))
     return {
         "current": current,
         "daily": _daily(om),

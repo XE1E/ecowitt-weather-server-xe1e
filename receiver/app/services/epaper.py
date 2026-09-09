@@ -280,7 +280,8 @@ def build_forecast_json(data: Optional[Dict[str, Any]],
     actual = _hora_actual(horas_hoy, ahora)
 
     # ---- current: base de svitrix (dato real) + lo que el e-paper lee y aquél no emite
-    base = svitrix.build_weatherapi(d, aq, im, lat=lat, lon=lon, sun_elev=sun_elev)
+    base = svitrix.build_weatherapi(d, aq, im, lat=lat, lon=lon, sun_elev=sun_elev,
+                                    cloud_cover=(actual or {}).get("cloud"))
     current = base["current"]
 
     hay_estacion = _num(d.get("temperature_outdoor")) is not None

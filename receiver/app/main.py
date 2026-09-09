@@ -1906,7 +1906,17 @@ async def get_svitrix():
             sun_elev = (alm.get("sun") or {}).get("altitude")
     except Exception as e:
         logger.error(f"svitrix almanac: {e}")
-    return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon, sun_elev=sun_elev)
+    # % de nubes de Open-Meteo (cacheado, ver openmeteo.get_forecast): respaldo
+    # para cuando el sol está bajo o es de noche, donde la radiación medida ya
+    # no distingue nubosidad (ver svitrix._condition).
+    cloud_cover = None
+    try:
+        om = await openmeteo.get_forecast(lat, lon, days=1, epaper=True)
+        cloud_cover = (om.get("hourly") or {}).get("cloud_cover", [None])[0]
+    except Exception as e:
+        logger.error(f"svitrix pronostico (nubes): {e}")
+    return svitrix.build_weatherapi(data, aq, im, lat=lat, lon=lon, sun_elev=sun_elev,
+                                    cloud_cover=cloud_cover)
 
 
 @app.get("/api/epaper/forecast.json")
