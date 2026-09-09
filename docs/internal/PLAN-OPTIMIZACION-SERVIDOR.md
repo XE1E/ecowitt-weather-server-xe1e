@@ -225,7 +225,8 @@ dependen de ellos en conjunto, no a medias).
       ciclo completo (`lifespan` arranque → request → shutdown). Arrancó,
       `/health` respondió 200, cerró sin excepciones ni tareas colgadas.
 - [x] `pytest` (155 tests, 7 skip) y `ruff` sin cambios de resultado.
-- [ ] Pendiente: desplegar al VPS.
+- [x] Desplegado en el VPS 2026-09-09 (commit `4d3e7f9`), arranque limpio y
+      confirmado con pushes reales de ambas estaciones sin errores.
 - [ ] Pendiente (otra sesión): barrido completo de `datetime.utcnow()` →
       `datetime.now(timezone.utc)`, incluyendo los puntos de normalización
       naive/aware en `alerts.py`.
