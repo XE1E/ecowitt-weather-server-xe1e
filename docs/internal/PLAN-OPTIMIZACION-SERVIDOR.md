@@ -100,6 +100,163 @@ datalogger recibe 500 (`storage.py:106-107` relanza la excepción).
 - [ ] (Opcional, baja prioridad, sin hacer) flag explícito de "dato desde
       caché" en `/api/current` cuando falten campos derivados de Influx.
 
+### A5. Tiempo real (SSE) en vez de polling — revisado 2026-09-09, SIN HACER (documentado para decidir)
+
+**Sugerencia recibida:** implementar Server-Sent Events en FastAPI para que
+el dashboard/kiosco reciban el dato en cuanto la estación lo empuja, en vez
+de esperar al siguiente polling.
+
+**Diagnóstico:** confirmado leyendo el código, no hay SSE ni WebSocket en
+ningún lado del repo hoy. El polling actual vive todo en
+`dashboard/src/station-data.tsx:79-135`, un único `StationDataProvider` del
+que cuelgan dashboard, `KioskPage`, `RemoteStationPage` y el resto vía
+`useStationData()`: `/api/current`, `/api/stats/daily`, `/api/history`,
+`/api/compare` cada 60s; `/api/forecast/local` cada 30 min;
+`/api/forecast/consensus` cada 5 min.
+
+**Veredicto: SSE sí, WebSocket no** — el flujo es unidireccional
+servidor→cliente, SSE reconecta solo en el navegador y es HTTP normal (no
+pelea con los proxies como WS). WebSocket sería complejidad de más aquí.
+
+**Matiz sobre el beneficio real:** la estación reporta ~1 vez/min
+(`REFRESH = 60000` en `station-data.tsx`, con el comentario explícito "los
+datos no necesitan ser instantáneos" — decisión previa ya tomada a
+propósito). SSE no adelanta el dato — elimina hasta 60s de espera de
+polling *después* de que el servidor ya lo tiene, y sobre todo elimina que
+cada pestaña/kiosco abierto haga 5 requests cada 60s. Para un kiosco
+siempre encendido es la diferencia entre 1 conexión persistente y
+~7200 requests/día.
+
+**Plan si se implementa (sin hacer):**
+- [ ] Receiver: nuevo `GET /api/stream` (SSE, `?station=` opcional).
+      Fan-out en memoria con un `set` de `asyncio.Queue` por cliente
+      conectado; `receive_ecowitt_data` publica justo después de
+      `latest_by_station[station] = ...` (`main.py:614`). Cubre **solo**
+      `/api/current` — el resto de endpoints (stats, history, compare,
+      forecasts) se queda en polling porque no cambian con cada lectura.
+- [ ] **Caveat a no olvidar:** el fan-out en memoria solo funciona porque
+      uvicorn corre 1 worker (mismo argumento ya usado en A1 para descartar
+      Redis/Arq). Si algún día se escala a >1 worker esto se rompe en
+      silencio — habría que pasar a un pub/sub externo entonces.
+- [ ] nginx (`dashboard/nginx.conf`): el `location ^~ /api` actual hereda
+      `proxy_buffering` on (default) — rompe SSE. Necesita `location`
+      propia para `/api/stream` con `proxy_buffering off;` y cuidado con
+      `proxy_read_timeout` (default 60s) tumbando la conexión en huecos
+      entre lecturas.
+- [ ] Caddy (`caddy/Caddyfile`): tiene `encode gzip` a nivel de sitio —
+      excluir `/api/stream` (gzip bufferea, mata el tiempo real).
+- [ ] Heartbeat: comentario SSE (`: ping\n\n`) cada ~20-30s para que ningún
+      proxy de en medio cierre la conexión por inactividad.
+- [ ] Frontend: en `station-data.tsx`, reemplazar el `setInterval` de
+      `/api/current` por un `EventSource('/api/stream')`; el resto de
+      `useEffect`s de polling se queda igual.
+
+### A6. QC estadístico avanzado (z-score) y sensor "atascado" — HECHO 2026-09-09
+
+**Sugerencia recibida:** filtros estadísticos automáticos en el receiver
+(desviación estándar histórica, validación cruzada con estaciones públicas
+colindantes) para marcar un dato como "anómalo" antes de guardarlo — ejemplo
+dado: sensor exterior reportando 80°C en la CDMX.
+
+**Diagnóstico:** ese ejemplo exacto YA se filtraba antes de tocar nada —
+`quality_check` (`quality.py:20-40`, límites físicos fijos) y `spike_check`
+(picos entre lecturas consecutivas) ya lo cubrían, por partida doble. Lo que
+faltaba de verdad era: (1) umbrales que aprendan del historial real de CADA
+estación en vez de límites fijos hardcodeados, y (2) detectar un sensor
+"vivo" pero congelado (mismo valor exacto lectura tras lectura), un fallo
+distinto al que ya cubre "sensor sin contacto" (que detecta la AUSENCIA del
+campo, no un valor repetido).
+
+**Plan — HECHO:**
+- [x] **Sensor atascado** (`alerts.py`): nueva regla `stuck_<campo>` para los
+      campos "suaves" (temperatura/humedad/presión — viento y lluvia NO,
+      porque calma/sequía prolongadas son normales). Cuenta lecturas SEGUIDAS
+      con el mismo valor exacto por (estación, campo); dispara a partir de
+      `alert_stuck_sensor_readings` (30 por omisión) y se resetea si el valor
+      cambia o el sensor desaparece del payload (eso ya lo cubre
+      "sensor perdido", no debe duplicarse). Exenta de la histéresis general
+      (`alert_persist_minutes`): la racha ya ES la persistencia.
+- [x] **QC estadístico** (z-score, `qc_stats_enabled`, apagado por omisión):
+      nuevo `services/stats_cache.py` con una caché en memoria de
+      media/desviación por campo y estación, refrescada por una tarea de
+      fondo (`stats_refresh_task`, cada `qc_stats_refresh_min` — 60 min por
+      omisión) que SÍ consulta InfluxDB (`storage.get_field_stddev`, nuevo
+      método con `mean()`/`stddev()` de Flux) — pero nunca en el camino de
+      `/data/report`, para no repetir el problema que resolvió A1. En
+      caliente, `quality.py::stats_check` solo LEE la caché (sin I/O) y
+      calcula el z-score; si supera `qc_stats_z_threshold` (5.0 por omisión)
+      lo marca, pero **no descarta el valor** — a diferencia de
+      `quality_check`/`spike_check`, un valor raro pero estadísticamente
+      alejado puede ser real (una ola de calor), así que no se pierde. Un
+      campo con desviación casi nula (p. ej. interior climatizado) se omite
+      del check para no disparar por ruido mínimo.
+- [x] **Alerta del QC estadístico** (`AlertService.check_stats_outlier`,
+      mismo patrón de "N lecturas SEGUIDAS" que `check_camera_analysis`/
+      `check_influx_write`): una lectura dudosa aislada no avisa, solo una
+      desviación sostenida (`qc_stats_alert_readings`, 5 por omisión).
+      Aislado por estación con clave TUPLA `(station, field)` — con texto
+      concatenado (`"estacion:campo"`) la principal (prefijo vacío) habría
+      hecho match por `startswith("")` con cualquier estación; se detectó y
+      corrigió antes de escribir los tests.
+- [x] Settings nuevos: `alert_stuck_sensor_enabled`/`_readings`,
+      `qc_stats_enabled`, `qc_stats_z_threshold`, `qc_stats_window`,
+      `qc_stats_refresh_min`, `qc_stats_alert_enabled`/`_readings` — editables
+      desde el panel (`settings_store.EDITABLE_KEYS`).
+- [x] Tests nuevos: 5 en `test_weewx_features.py` (`stats_check`: no
+      modifica el dato, marca outliers, ignora rango normal, omite stddev
+      casi nulo, tolera caché vacía) y 7 en `test_alerts.py` (sensor
+      atascado: dispara/desactivado/resetea con ausencia; QC estadístico:
+      sostenido+normaliza/aislado no avisa/desactivado/aislamiento por
+      estación). 190 tests pasan (7 skipped por falta de ffmpeg local),
+      `ruff` limpio en los 7 archivos tocados. `app.main` importa completo
+      sin errores (verificado en runtime, no solo `py_compile`).
+
+**Sin hacer (queda fuera de A6 a propósito):** validación cruzada con
+estaciones públicas colindantes — depende de una fuente de datos externa
+nueva (openSenseMap u otra), ligada a la decisión pendiente de la sección B
+de este plan. No vale la pena montar esa integración solo para esto.
+
+**Pendiente de verificar en el VPS:** `qc_stats_enabled` queda APAGADO por
+omisión — activarlo requiere que `stats_refresh_task` corra al menos una vez
+(hasta 60 min tras activarlo, o reiniciar el contenedor) antes de que
+`stats_check` tenga caché con la que comparar. Confirmar en producción que
+`get_field_stddev` no es lenta contra el volumen real de InfluxDB (corre en
+segundo plano, pero si tarda minutos convendría espaciar más el refresco).
+
+### A7. Exportación CSV en la pestaña Climatología — HECHO 2026-09-09
+
+**Sugerencia recibida:** botón de exportación masiva a `.csv`/`.xlsx` en
+Climatología/Historia para compartir datos con comunidades como
+Meteoclimatic o investigadores.
+
+**Diagnóstico:** `HistoryPage.tsx` (pestaña Historia) YA tenía exportación
+CSV (día/mes/año, en la misma unidad que la pantalla, con la unidad en el
+encabezado) y el botón reutilizable `⬇ CSV` de `HistoryCharts.tsx`. Lo que
+faltaba era la pestaña **Climatología** (`ClimatePage.tsx`): la tabla del
+"Reporte climatológico (estilo NOAA)" (`/api/climate/noaa`) no tenía forma
+de descargarse.
+
+**Plan — HECHO:**
+- [x] `downloadNoaaCsv` en `ClimatePage.tsx`, mismo patrón que
+      `HistoryPage.tsx::downloadCsv`: exporta en la unidad activa
+      (`u.tempU`/`u.windU`/`u.rainU` en el encabezado), vacío (no 0) si no
+      hay dato. Cubre las DOS vistas de la tabla: diaria (`noaa.days`, vista
+      mensual) y mensual (`noaa.months`, vista anual) — mismas columnas que
+      se ven en pantalla.
+    - Botón `⬇ CSV` junto al selector de año/mes, mismo estilo que el ya
+      existente en Historia; solo aparece si hay datos que exportar.
+- [x] `.xlsx` descartado a propósito (confirmado con el usuario): no había
+      ninguna librería de hojas de cálculo en `dashboard/package.json` y
+      agregar una (SheetJS/exceljs) solo para esto no se justifica — CSV ya
+      es el formato que Meteoclimatic/investigadores esperan para datos
+      crudos, y abre bien en Excel/LibreOffice/pandas/R.
+- [x] Verificado: `npx tsc --noEmit` limpio (sin errores de tipos).
+      `eslint` no se pudo correr en este entorno (`npx` trae 10.x, que
+      necesita `eslint.config.*` y el proyecto usa `.eslintrc` de la 8.x
+      declarada en `package.json` pero no instalada en `node_modules/.bin`
+      en esta máquina) — revisar con el lint del proyecto en un entorno con
+      `npm ci` completo antes de dar esto por definitivo en CI.
+
 ---
 
 ## B. Integración con openSenseMap
