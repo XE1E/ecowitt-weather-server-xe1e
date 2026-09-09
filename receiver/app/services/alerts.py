@@ -418,9 +418,14 @@ class AlertService:
                 prev_val, streak = self._stuck_state.get(skey, (None, 0))
                 streak = streak + 1 if (prev_val is not None and val == prev_val) else 0
                 self._stuck_state[skey] = (val, streak)
+                # El nombre del sensor va ANTES de los dos puntos (y no
+                # "Sensor atascado: {label}...") porque el aviso de
+                # normalización en `process()` conserva solo lo anterior a
+                # los dos puntos -- si el label queda después, "Normalizado"
+                # sale genérico y no dice cuál sensor se recuperó.
                 rules[f"stuck_{field}"] = (
                     streak >= threshold,
-                    f"🧊 Sensor atascado: {label} sin cambiar ({val}) en {threshold} lecturas seguidas",
+                    f"🧊 Sensor atascado ({label}): sin cambiar ({val}) en {threshold} lecturas seguidas",
                 )
 
         # Sensor perdido: un sensor visto antes que deja de reportar (por estación).

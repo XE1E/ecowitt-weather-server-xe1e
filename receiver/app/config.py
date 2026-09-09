@@ -100,8 +100,17 @@ class Settings(BaseSettings):
     # seguidas (típico de un sensor muerto que ya no cambia). Distinto de
     # alert_sensor_lost_enabled: ese cubre el sensor que DESAPARECE del
     # payload; este cubre el que sigue reportando pero congelado.
+    #
+    # 30 (default original) generaba falsos positivos reales en producción
+    # 2026-09-09: temperature_ch1 (WN31) tuvo una racha de 92 lecturas
+    # idénticas seguidas en 48h sin estar roto -- varió normalmente el resto
+    # del tiempo (18.6-21.8°C). temperature_indoor/humidity_indoor son del
+    # mismo tipo: espacios estables donde el valor redondeado a 0.1 puede no
+    # moverse durante 1-1.5+ h sin que el sensor falle. 240 (~4h a 1
+    # lectura/min) queda con margen cómodo sobre el máximo observado (92) y
+    # sigue detectando un sensor REALMENTE muerto en menos de medio día.
     alert_stuck_sensor_enabled: bool = True
-    alert_stuck_sensor_readings: int = 30
+    alert_stuck_sensor_readings: int = 240
     # Avisos de calidad del aire (ICA/AQI e IMECA); se revisan cada ~30 min
     alert_air_enabled: bool = False
     alert_aqi_threshold: float = 100.0

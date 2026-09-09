@@ -1205,7 +1205,7 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Estación caída** | no llegan datos en N minutos |
 | **Batería baja** | un sensor (WN31/WS69/consola) reporta batería baja |
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
-| **Sensor atascado** | un sensor sigue reportando pero repite el mismo valor exacto N lecturas seguidas (default 30) — distinto de «sensor perdido», que es la AUSENCIA del campo |
+| **Sensor atascado** | un sensor sigue reportando pero repite el mismo valor exacto N lecturas seguidas (default 240, ~4 h) — distinto de «sensor perdido», que es la AUSENCIA del campo |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
 | **Sismos** | magnitud ≥ umbral (default 6.0), cercanos a la estación (≤ 800 km); fuente SSN/USGS |
 | **Visual (cielo)** | tormenta formándose / lluvia visible / visibilidad reducida — ver [Análisis del cielo con IA](#análisis-del-cielo-con-ia) |

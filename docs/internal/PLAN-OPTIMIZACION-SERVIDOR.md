@@ -241,6 +241,41 @@ estadístico, 0 falsos positivos.** `get_field_stddev` no mostró lentitud
 perceptible (la primera corrida de `stats_refresh_task` no generó errores ni
 demoras visibles en el arranque).
 
+**Falsos positivos reales de "sensor atascado" — encontrados y corregidos
+2026-09-09 (mismo día).** Unas horas después de desplegar A6, empezaron a
+llegar alertas de sensor atascado para `temperature_indoor`,
+`humidity_indoor` y `temperature_ch1` (WN31). Diagnóstico con datos crudos de
+InfluxDB (no supuesto):
+- `temperature_ch1` llevaba **65+ minutos seguidos en exactamente 21.8°C**
+  (en curso al momento de revisar). Pero en las 48 h previas ese mismo canal
+  varió con normalidad entre 18.6 y 21.8°C (ciclo diario), y ya había tenido
+  una racha natural de **92 lecturas idénticas seguidas** sin estar roto —
+  el sensor funciona bien, solo que en un espacio estable el valor
+  redondeado a 0.1° puede no moverse en 1-1.5+ h.
+- `temperature_indoor`/`humidity_indoor` son del mismo tipo (interior,
+  climáticamente estable) — por eso NUNCA disparó en `temperature_outdoor`/
+  `humidity_outdoor`/presión (expuestos a viento/sol, jamás se quedan quietos
+  tanto tiempo, confirmado en la ventana de 20 min de A6 de arriba).
+- El umbral por omisión (`alert_stuck_sensor_readings=30`, ~30 min) era
+  simplemente demasiado agresivo para sensores de interior/canales WN31 en
+  espacios cerrados.
+
+**Fix:**
+- [x] Subido el default a **240** lecturas (~4 h), con margen cómodo sobre
+      el máximo observado (92) — sigue detectando un sensor REALMENTE muerto
+      en menos de medio día. `config.py`, panel (`AdminAlertas.tsx`, tope del
+      campo subido de 200 a 1000), `docs/GUIA.md` y `guia.html` actualizados
+      con el nuevo número.
+- [x] Bug de paso encontrado y corregido: el mensaje de "✅ Normalizado" no
+      decía QUÉ sensor se recuperó -- `process()` conserva solo lo anterior a
+      los dos puntos del mensaje de alerta, y el nombre del sensor iba
+      DESPUÉS ("Sensor atascado: {label}..."). Reordenado a
+      "Sensor atascado ({label}): ..." para que la normalización sí lo
+      identifique.
+- 190 tests pasan, `ruff` limpio, `npx tsc --noEmit` limpio. Ningún test
+  dependía del valor 30 por defecto (los que fijan el umbral lo hacen
+  explícito con `alert_stuck_sensor_readings=N`).
+
 ### A7. Exportación CSV en la pestaña Climatología — HECHO 2026-09-09
 
 **Sugerencia recibida:** botón de exportación masiva a `.csv`/`.xlsx` en

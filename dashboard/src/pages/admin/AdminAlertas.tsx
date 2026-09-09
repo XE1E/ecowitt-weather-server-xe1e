@@ -633,7 +633,7 @@ export function AdminAlertas() {
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-slate-400">tras</span>
                 <NumField value={settings.alert_stuck_sensor_readings} onChange={(v) => update('alert_stuck_sensor_readings', v)}
-                  min={2} max={200} off={!settings.alert_stuck_sensor_enabled} />
+                  min={2} max={1000} off={!settings.alert_stuck_sensor_enabled} />
                 <span className="text-xs text-slate-500">lecturas iguales seguidas</span>
               </div>
               <div className="h-4 w-px bg-white/10" />
