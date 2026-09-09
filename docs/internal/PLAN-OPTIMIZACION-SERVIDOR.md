@@ -224,9 +224,22 @@ principal + GW1100 siguieron entrando sin errores nuevos en los logs (el
 único error visto, AWEKAS, es preexistente y no relacionado). `qc_stats_enabled`
 queda APAGADO por omisión — activarlo requiere que `stats_refresh_task`
 corra al menos una vez (hasta 60 min tras activarlo, o reiniciar el
-contenedor) antes de que `stats_check` tenga caché con la que comparar; sigue
-pendiente confirmar que `get_field_stddev` no es lenta contra el volumen real
-de InfluxDB una vez que se active.
+contenedor) antes de que `stats_check` tenga caché con la que comparar.
+
+**`qc_stats_enabled` ACTIVADO en producción 2026-09-09** (vía `settings.json`
++ reinicio del receiver — el panel admin está deshabilitado en el VPS,
+`ADMIN_PASSWORD` vacío en `.env`, preexistente y sin relación con esto).
+Antes de activarlo se validó la media/desviación reales de -30d con una
+consulta directa a InfluxDB (mismo cálculo que `get_field_stddev`):
+temp. exterior 18.85±4.20°C (principal) / 19.25±3.68°C (gw1100), humedad
+exterior 65.7±19.4% (banda z=5 prácticamente inerte, cabe en ~3.4σ), presión
+relativa 1028.1±1.97 hPa, temp. interior 24.48±1.35°C — todo dentro de lo
+esperable, sin indicios de que fuera a disparar con el clima normal.
+Verificado con 20 min de observación tras activar (~40 lecturas de ambas
+estaciones, 4 checkpoints de 5 min sobre los logs): **0 avisos de QC
+estadístico, 0 falsos positivos.** `get_field_stddev` no mostró lentitud
+perceptible (la primera corrida de `stats_refresh_task` no generó errores ni
+demoras visibles en el arranque).
 
 ### A7. Exportación CSV en la pestaña Climatología — HECHO 2026-09-09
 
