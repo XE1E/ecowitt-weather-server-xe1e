@@ -91,6 +91,9 @@ EDITABLE_KEYS = {
     # Aviso de respaldo a R2 desactualizado
     "alert_backup_enabled",
     "alert_backup_stale_hours",
+    # Aviso de InfluxDB sin aceptar escrituras
+    "alert_influx_write_enabled",
+    "alert_influx_write_fails",
     # Respaldo externo a Cloudflare R2 (scripts/backup-*.sh las piden vía API)
     "r2_account_id",
     "r2_access_key_id",

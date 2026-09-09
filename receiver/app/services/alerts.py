@@ -70,7 +70,7 @@ def _category_for(rule_key: str) -> str:
         return "air"
     if rule_key.startswith("sky_"):
         return "visual"
-    if rule_key.startswith("backup_"):
+    if rule_key.startswith("backup_") or rule_key == "influx_write_failing":
         return "backup"
     return "other"
 
@@ -137,6 +137,8 @@ class AlertService:
         # Estado de "respaldo a R2 desactualizado" por categoría (influx/fotos/
         # timelapse/analisis) — ver check_backup_stale.
         self._backup_stale: Dict[str, bool] = {}
+        # Contador de escrituras a InfluxDB fallidas SEGUIDAS (ver check_influx_write).
+        self._influx_write_fails: int = 0
         # Sensores vistos alguna vez, POR ESTACIÓN (para "sensor perdido").
         # None = principal. Aísla la detección entre estaciones.
         # sensor -> última vez que reportó, por estación. Con la fecha se puede
@@ -733,6 +735,37 @@ class AlertService:
                     "✅ Normalizado — 🤖 El análisis de la cámara volvió a funcionar.", category="camera"
                 )
             self._camera_analysis_fails = 0
+
+    async def check_influx_write(self, error: Optional[str]) -> None:
+        """
+        Avisa si la escritura a InfluxDB lleva varios intentos SEGUIDOS
+        fallando (contenedor caído, disco lleno, etc.), y cuando se recupera.
+        Se llama tras cada intento de `storage.write()` (ver receive_ecowitt_data
+        en main.py), con o sin error -- mismo patrón que check_camera_analysis.
+
+        Un dato perdido puntual (un solo fallo) no avisa: el caché en memoria
+        (`latest_by_station`) ya sirve `/api/current` sin tocar Influx, así
+        que lo único en juego es el histórico de ESE punto -- no vale la pena
+        una alerta por un blip aislado (p. ej. un redeploy del contenedor).
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_influx_write_enabled", True):
+            return
+        threshold = max(1, int(getattr(s, "alert_influx_write_fails", 5)))
+
+        if error:
+            self._influx_write_fails += 1
+            if self._influx_write_fails == threshold:
+                msg = f"🗄️ InfluxDB lleva {threshold} escrituras seguidas fallando: {error[:150]}"
+                self._add_to_history("influx_write_failing", msg, resolved=False)
+                await self._safe_notify(f"⚠️ ALERTA — {msg}", category="backup")
+        else:
+            if self._influx_write_fails >= threshold:
+                self._add_to_history("influx_write_failing", "Escritura a InfluxDB fallando", resolved=True)
+                await self._safe_notify(
+                    "✅ Normalizado — 🗄️ InfluxDB vuelve a aceptar escrituras.", category="backup"
+                )
+            self._influx_write_fails = 0
 
     async def _safe_notify(self, text: str, category: Optional[str] = None) -> None:
         try:

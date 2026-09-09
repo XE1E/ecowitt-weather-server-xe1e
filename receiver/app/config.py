@@ -117,6 +117,11 @@ class Settings(BaseSettings):
     # cubre un fallo de una sola noche sin avisar en cada corrida normal.
     alert_backup_enabled: bool = True
     alert_backup_stale_hours: float = 30.0
+    # Aviso de InfluxDB sin aceptar escrituras (ver services/storage.py write()):
+    # N intentos SEGUIDOS fallando antes de avisar, para no disparar por un
+    # blip aislado (p. ej. un redeploy del contenedor).
+    alert_influx_write_enabled: bool = True
+    alert_influx_write_fails: int = 5
 
     # Telegram notifications
     telegram_enabled: bool = False

@@ -84,12 +84,19 @@ promedio de 10min), cada uno en su propio try/except
 está caído al llegar un reporte, se pierde ese punto puntual y el
 datalogger recibe 500 (`storage.py:106-107` relanza la excepción).
 
-**Plan:**
-- [ ] Agregar una alerta de "InfluxDB no responde" cuando fallen escrituras
-      repetidas, mismo patrón que las alertas existentes de "respaldo
-      desactualizado" o "sensor perdido".
-- [ ] (Opcional, baja prioridad) flag explícito de "dato desde caché" en
-      `/api/current` cuando falten campos derivados de Influx.
+**Plan — HECHO 2026-09-09 (parte obligatoria):**
+- [x] Alerta de "InfluxDB no responde" — `AlertService.check_influx_write()`
+      en `alerts.py`, mismo patrón que `check_camera_analysis` (N fallos
+      SEGUIDOS antes de avisar, normaliza al recuperarse). Conectada en
+      `main.py` tras cada intento de `storage.write()`: si falla, se llama
+      directo (NO por `BackgroundTasks` — esa rama re-lanza y termina en un
+      500 armado por un exception handler, que nunca ejecuta tareas en segundo
+      plano agregadas antes de la excepción); si escribe bien, sí va por
+      `BackgroundTasks`. Settings nuevos: `alert_influx_write_enabled`,
+      `alert_influx_write_fails` (default 5). Test nuevo
+      `test_influx_write_failing_then_recovery`. 155 tests pasan, `ruff` limpio.
+- [ ] (Opcional, baja prioridad, sin hacer) flag explícito de "dato desde
+      caché" en `/api/current` cuando falten campos derivados de Influx.
 
 ---
 

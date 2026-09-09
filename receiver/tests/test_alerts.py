@@ -245,6 +245,36 @@ def test_camera_analysis_failing_then_recovery():
     assert len(c.msgs) == 2
 
 
+def test_influx_write_failing_then_recovery():
+    c = Collector()
+    svc = AlertService(make_settings(alert_influx_write_fails=3), notifier=c)
+
+    # Dos fallos: todavía no cruza el umbral
+    asyncio.run(svc.check_influx_write("connection refused"))
+    asyncio.run(svc.check_influx_write("connection refused"))
+    assert c.msgs == []
+
+    # Tercer fallo -> dispara (y un cuarto no repite)
+    asyncio.run(svc.check_influx_write("connection refused"))
+    asyncio.run(svc.check_influx_write("connection refused"))
+    assert len(c.msgs) == 1 and "3 escrituras seguidas fallando" in c.msgs[0]
+
+    # Una escritura exitosa -> normaliza y resetea el contador
+    asyncio.run(svc.check_influx_write(None))
+    assert len(c.msgs) == 2 and "vuelve a aceptar escrituras" in c.msgs[1]
+
+    # Dos fallos más no vuelven a disparar (contador reseteado, no llega a 3)
+    asyncio.run(svc.check_influx_write("connection refused"))
+    asyncio.run(svc.check_influx_write("connection refused"))
+    assert len(c.msgs) == 2
+
+    # Una sola escritura exitosa sin fallos previos no dispara "recuperación"
+    c2 = Collector()
+    svc2 = AlertService(make_settings(alert_influx_write_fails=3), notifier=c2)
+    asyncio.run(svc2.check_influx_write(None))
+    assert c2.msgs == []
+
+
 def test_category_mapping():
     assert _category_for("camera_offline") == "camera"
     assert _category_for("camera_analysis_failing") == "camera"
@@ -266,6 +296,7 @@ def test_category_mapping():
     assert _category_for("temp_drop") == "temp"
     assert _category_for("uv_high") == "sun"
     assert _category_for("solar_high") == "sun"
+    assert _category_for("influx_write_failing") == "backup"
 
 
 def test_all_categories_are_declared():

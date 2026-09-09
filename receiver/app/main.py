@@ -601,7 +601,17 @@ async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTas
         latest_by_station[station] = parsed_data.copy()
 
         # Write to InfluxDB
-        await storage.write(parsed_data)
+        try:
+            await storage.write(parsed_data)
+        except Exception as e:
+            # Directo, NO por background_tasks: esta rama re-lanza y termina en
+            # el 500 del except general de abajo -- FastAPI solo adjunta las
+            # tareas en curso a una respuesta que SÍ se retorna normal, nunca a
+            # la que arma un handler de excepción, así que una tarea agregada
+            # aquí jamás llegaría a correr.
+            await alert_service.check_influx_write(str(e))
+            raise
+        background_tasks.add_task(alert_service.check_influx_write, None)
 
         logger.info(
             f"Stored data from {describe_device(parsed_data)} - "
