@@ -56,7 +56,9 @@ bloquea el event loop, pero compite por CPU).
 
 Tests de timelapse no se ven afectados: ni CI ni el entorno local instalan
 ffmpeg, así que corren `skipif` en ambos — nada que verificar ahí más allá
-de `py_compile`.
+de `py_compile`. Desplegado en el VPS 2026-09-09 (commit `a72dac2`),
+confirmado `nice` presente en el contenedor (`/usr/bin/nice`, viene con
+Debian/`python:3.11-slim`).
 
 ### A3. Backoff exponencial en llamadas a IA (Gemini/Anthropic)
 
