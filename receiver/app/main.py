@@ -21,6 +21,7 @@ import re
 import secrets
 import shutil
 import time
+from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 
 from .config import settings
@@ -158,11 +159,98 @@ except Exception as _e:
 # llamada, así que hay que volver a barrer para que también filtren.
 _install_redaction()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Arranque y apagado del receiver (reemplaza `@app.on_event`, deprecado por
+    Starlette). Referencia objetos de módulo (storage, alert_service,
+    mqtt_publisher, _camera) y las tareas de fondo (station_watchdog, etc.)
+    definidos MÁS ABAJO en este archivo -- válido en Python porque el cuerpo
+    de esta función solo se ejecuta cuando arranca la app, momento en el que
+    el módulo ya se terminó de importar por completo.
+    """
+    logger.info("Starting Ecowitt Weather Station Receiver")
+    logger.info(f"InfluxDB URL: {settings.influxdb_url}")
+    logger.info(f"Output unit system: {settings.output_unit_system}")
+    logger.info(
+        f"Alerts: {'enabled' if settings.alerts_enabled else 'disabled'}"
+        f"{' (Telegram)' if settings.telegram_enabled else ''}"
+    )
+    logger.info(
+        f"MQTT: {'enabled' if settings.mqtt_enabled else 'disabled'}"
+        f"{' (HA discovery)' if settings.hass_discovery else ''}"
+    )
+    mqtt_publisher.connect()
+
+    # Repopulate the in-memory latest reading from InfluxDB so /api/current
+    # survives restarts (shows the last stored value instead of "no data").
+    # Se restaura la principal (None) y cada estación secundaria configurada.
+    try:
+        last = await storage.get_latest()
+        if last:
+            latest_by_station[None] = last
+            logger.info("Loaded last primary reading from InfluxDB into memory")
+        for name in set(settings.secondary_station_map.values()):
+            last_s = await storage.get_latest(station=name)
+            if last_s:
+                latest_by_station[name] = last_s
+                logger.info(f"Loaded last reading for station '{name}' from InfluxDB")
+    except Exception as e:
+        logger.warning(f"Could not preload last reading: {e}")
+
+    # Cargar ajustes editables persistidos (panel admin) y aplicarlos
+    try:
+        overrides = settings_store.load_overrides(settings.settings_file)
+        if overrides:
+            adminsvc.apply_overrides(settings, alert_service, overrides)
+            logger.info(f"Applied {len(overrides)} saved setting(s) from {settings.settings_file}")
+    except Exception as e:
+        logger.warning(f"Could not load saved settings: {e}")
+
+    # Tareas de fondo (loops infinitos): se guardan para poder cancelarlas
+    # ordenadamente en el shutdown, algo que el `on_event` anterior no hacía
+    # -- morían de golpe junto con el proceso, sin graceful shutdown real.
+    background_tasks = []
+    # Vigilante de estación caída (solo si las alertas están activas)
+    if settings.alerts_enabled:
+        background_tasks.append(asyncio.create_task(station_watchdog()))
+    # Vigilante de calidad del aire (se auto-guarda con los flags; permite
+    # activarlo desde el panel sin reiniciar)
+    background_tasks.append(asyncio.create_task(air_quality_watchdog()))
+    # Acumuladores: resumen diario (Dayfile) para récords/climatología
+    background_tasks.append(asyncio.create_task(daily_rollup_task()))
+    # Timelapse diario de la cámara (hoy y ayer, más la purga)
+    background_tasks.append(asyncio.create_task(timelapse_task()))
+
+    # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
+    # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
+    # que quedara en el sitio viejo. Va en el arranque y no bajo demanda porque corre
+    # contrarreloj contra esa poda, y es idempotente: no encuentra nada la segunda vez.
+    try:
+        movidos = _camera.migrate_daily_analysis()
+        if movidos:
+            logger.info(f"Análisis del cielo: {movidos} día(s) migrados fuera de la carpeta del día")
+    except Exception as e:
+        logger.warning(f"No se pudo migrar el histórico de análisis: {e}")
+
+    yield
+
+    # Shutdown: cancela los loops infinitos ANTES de cerrar las conexiones que
+    # usan, para que un `docker stop`/reinicio del VPS no los deje a medias.
+    logger.info("Shutting down Ecowitt Weather Station Receiver")
+    for task in background_tasks:
+        task.cancel()
+    await asyncio.gather(*background_tasks, return_exceptions=True)
+    storage.close()
+    mqtt_publisher.close()
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Ecowitt Weather Station Receiver",
     description="Receives and stores weather data from Ecowitt gateways",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS middleware. La API se sirve mismo-origen (el dashboard hace de proxy de
@@ -350,81 +438,6 @@ async def timelapse_task():
         except Exception as e:
             logger.error(f"Tarea de timelapse falló: {e}")
         await asyncio.sleep(1800)  # 30 min
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize connections on startup."""
-    logger.info("Starting Ecowitt Weather Station Receiver")
-    logger.info(f"InfluxDB URL: {settings.influxdb_url}")
-    logger.info(f"Output unit system: {settings.output_unit_system}")
-    logger.info(
-        f"Alerts: {'enabled' if settings.alerts_enabled else 'disabled'}"
-        f"{' (Telegram)' if settings.telegram_enabled else ''}"
-    )
-    logger.info(
-        f"MQTT: {'enabled' if settings.mqtt_enabled else 'disabled'}"
-        f"{' (HA discovery)' if settings.hass_discovery else ''}"
-    )
-    mqtt_publisher.connect()
-
-    # Repopulate the in-memory latest reading from InfluxDB so /api/current
-    # survives restarts (shows the last stored value instead of "no data").
-    # Se restaura la principal (None) y cada estación secundaria configurada.
-    try:
-        last = await storage.get_latest()
-        if last:
-            latest_by_station[None] = last
-            logger.info("Loaded last primary reading from InfluxDB into memory")
-        for name in set(settings.secondary_station_map.values()):
-            last_s = await storage.get_latest(station=name)
-            if last_s:
-                latest_by_station[name] = last_s
-                logger.info(f"Loaded last reading for station '{name}' from InfluxDB")
-    except Exception as e:
-        logger.warning(f"Could not preload last reading: {e}")
-
-    # Cargar ajustes editables persistidos (panel admin) y aplicarlos
-    try:
-        overrides = settings_store.load_overrides(settings.settings_file)
-        if overrides:
-            adminsvc.apply_overrides(settings, alert_service, overrides)
-            logger.info(f"Applied {len(overrides)} saved setting(s) from {settings.settings_file}")
-    except Exception as e:
-        logger.warning(f"Could not load saved settings: {e}")
-
-    # Vigilante de estación caída (solo si las alertas están activas)
-    if settings.alerts_enabled:
-        asyncio.create_task(station_watchdog())
-
-    # Vigilante de calidad del aire (se auto-guarda con los flags; permite
-    # activarlo desde el panel sin reiniciar)
-    asyncio.create_task(air_quality_watchdog())
-
-    # Acumuladores: resumen diario (Dayfile) para récords/climatología
-    asyncio.create_task(daily_rollup_task())
-
-    # Timelapse diario de la cámara (hoy y ayer, más la purga)
-    asyncio.create_task(timelapse_task())
-
-    # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
-    # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
-    # que quedara en el sitio viejo. Va en el arranque y no bajo demanda porque corre
-    # contrarreloj contra esa poda, y es idempotente: no encuentra nada la segunda vez.
-    try:
-        movidos = _camera.migrate_daily_analysis()
-        if movidos:
-            logger.info(f"Análisis del cielo: {movidos} día(s) migrados fuera de la carpeta del día")
-    except Exception as e:
-        logger.warning(f"No se pudo migrar el histórico de análisis: {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
-    logger.info("Shutting down Ecowitt Weather Station Receiver")
-    storage.close()
-    mqtt_publisher.close()
 
 
 @app.get("/health")

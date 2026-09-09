@@ -1,10 +1,10 @@
 # Plan — Optimización del servidor y nueva integración (openSenseMap)
 
 > Vive en git, sobrevive cambios de PC. Iniciado 2026-09-08.
-> Dos frentes de trabajo de la misma sesión: (A) cuatro sugerencias de
-> optimización revisadas contra el código real, (B) investigación para
-> publicar datos en openSenseMap. Se van marcando como `[x]` conforme se
-> implementan.
+> Tres frentes de la misma sesión: (A) cuatro sugerencias de optimización
+> revisadas contra el código real, (B) investigación para publicar datos en
+> openSenseMap, (C) sugerencias sueltas de code review revisadas después. Se
+> van marcando como `[x]` conforme se implementan.
 
 ## A. Optimizaciones internas
 
@@ -183,3 +183,49 @@ Authorization: <access_token>          (si useAuth=true)
 - Nombre/ubicación pública de la caja en el mapa (queda visible a
   cualquiera en opensensemap.org, a diferencia de WU/PWS que son más
   privados).
+
+---
+
+## C. Sugerencias sueltas de code review
+
+### C1. Migrar a `lifespan` + `datetime.utcnow()` — revisado 2026-09-09
+
+**Sugerencia recibida:** migrar `station_watchdog` y demás tareas de fondo al
+patrón `lifespan` de FastAPI (en vez de `@app.on_event`, deprecado), y
+corregir `datetime.utcnow()` (deprecado desde Python 3.12).
+
+**Diagnóstico:**
+- `lifespan`: válido y con problema real — `main.py` arrancaba 4 tareas de
+  fondo (`station_watchdog`, `air_quality_watchdog`, `daily_rollup_task`,
+  `timelapse_task`) con `asyncio.create_task` dentro de
+  `@app.on_event("startup")`, y el `shutdown` **no las cancelaba**: morían
+  de golpe con el proceso, sin graceful shutdown real.
+- `datetime.utcnow()`: 16 usos en 8 archivos, pero el Dockerfile usa
+  `python:3.11-slim` — el deprecation warning es de Python 3.12, así que
+  **hoy no se emite ningún warning** en producción. Además varios puntos de
+  `alerts.py` (`get_history`, `check_backup_stale`, lo que alimenta
+  `check_station`) dependen A PROPÓSITO de que sean naive
+  (`.replace(tzinfo=None)` para poder comparar). Cambiar los 16 usos sin
+  tocar esos puntos de normalización rompería con `TypeError` en cuanto
+  corriera el watchdog de estación.
+
+**Decisión (con el usuario):** hacer `lifespan` ahora; dejar el barrido de
+`datetime.utcnow()` pendiente para otra sesión (no es urgente, y merece un
+cambio cuidadoso que toque los 16 usos + los `.replace(tzinfo=None)` que
+dependen de ellos en conjunto, no a medias).
+
+**Plan — HECHO 2026-09-09:**
+- [x] `main.py`: reemplazados `@app.on_event("startup"/"shutdown")` por
+      `@asynccontextmanager async def lifespan(app)` + `FastAPI(lifespan=...)`.
+      Mismo contenido de arranque, y el shutdown ahora cancela las 4 tareas
+      (`task.cancel()` + `asyncio.gather(..., return_exceptions=True)`)
+      antes de cerrar InfluxDB/MQTT.
+- [x] Verificado en runtime (no solo `py_compile`): smoke test desechable con
+      `starlette.testclient.TestClient` como context manager, que dispara el
+      ciclo completo (`lifespan` arranque → request → shutdown). Arrancó,
+      `/health` respondió 200, cerró sin excepciones ni tareas colgadas.
+- [x] `pytest` (155 tests, 7 skip) y `ruff` sin cambios de resultado.
+- [ ] Pendiente: desplegar al VPS.
+- [ ] Pendiente (otra sesión): barrido completo de `datetime.utcnow()` →
+      `datetime.now(timezone.utc)`, incluyendo los puntos de normalización
+      naive/aware en `alerts.py`.
