@@ -494,3 +494,30 @@ del título en `GaugeFrame.tsx` de `font-semibold` a `font-bold`.
       (mock de `/api/current` y demás endpoints): las 12 carátulas
       muestran su título en negritas y las agujas están correctamente
       centradas en reposo.
+
+## Novena ronda: selector de 4 vías en Punto de rocío — 2026-09-09
+
+Retomando la captura de referencia compartida antes (gauge "точка росы" con
+5 radio buttons en ruso), se tradujo el texto: точка росы (punto de rocío),
+по ощущению (sensación térmica, aparece DOS veces en la captura -- se trata
+como una sola opción real), с учетом ветра (con efecto del viento / wind
+chill), индекс влажности (índice de humedad / humidex). Confirmado con el
+usuario: son 4 opciones distintas, no 5.
+
+Se implementó `DewPointToggle` en `InstrumentosPage.tsx` (mismo patrón que
+`ExtIntToggle` pero en grid 2x2 -- 4 etiquetas en una sola fila no caben en
+el ancho de 200px del medidor):
+
+- [x] Estado `dewSource: 'dew' | 'feels' | 'wind' | 'humidex'`, mapeado a
+      los campos ya existentes en `WeatherData`: `dew_point`, `feels_like`,
+      `wind_chill`, `humidex` respectivamente. El título del medidor se
+      queda fijo en "Punto de rocío" (igual que Temperatura/Humedad no
+      cambian de título al alternar exterior/interior).
+- El campo `heat_index` (índice de calor, "sensación" pero solo por
+  humedad, sin viento) queda disponible pero SIN usar -- sería la 5ª
+  opción si el duplicado de la captura resultara no ser un error de la
+  skin original; no se agregó porque no hay forma de confirmarlo.
+- Verificado con Playwright (mock de 4 valores distintos): las 4 opciones
+  alternan el valor mostrado en el LCD correctamente (9.2 / 17.0 / 15.5 /
+  20.3 para punto de rocío / sensación / con viento / índice de humedad).
+  `tsc --noEmit` limpio.

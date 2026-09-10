@@ -31,6 +31,32 @@ function ExtIntToggle({ name, value, onChange }: { name: string; value: 'out' | 
   )
 }
 
+// Selector de 4 vías para Punto de rocío -- como en la captura de referencia
+// (точка росы / por ощущению / с учетом ветра / индекс влажности; el
+// original repite "por ощущению" dos veces, así que aquí solo se implementan
+// las 4 variantes distintas). Mismo patrón visual que ExtIntToggle pero en
+// grid 2x2: 4 etiquetas en una fila se saldrían del ancho del medidor (200px).
+type DewSource = 'dew' | 'feels' | 'wind' | 'humidex'
+const DEW_SOURCE_OPTIONS: { value: DewSource; label: string }[] = [
+  { value: 'dew', label: 'Punto de rocío' },
+  { value: 'feels', label: 'Sensación' },
+  { value: 'wind', label: 'Con viento' },
+  { value: 'humidex', label: 'Índice humedad' },
+]
+function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: DewSource) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-400">
+      {DEW_SOURCE_OPTIONS.map((opt) => (
+        <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+          <input type="radio" name="dew-source" className="accent-sky-500"
+            checked={value === opt.value} onChange={() => onChange(opt.value)} />
+          {opt.label}
+        </label>
+      ))}
+    </div>
+  )
+}
+
 export function InstrumentosPage() {
   const { data } = useStationData()
   const u = useUnits()
@@ -38,6 +64,14 @@ export function InstrumentosPage() {
   const [rose, setRose] = useState<Rose | null>(null)
   const [tempSource, setTempSource] = useState<'out' | 'in'>('out')
   const [humSource, setHumSource] = useState<'out' | 'in'>('out')
+  const [dewSource, setDewSource] = useState<DewSource>('dew')
+
+  const dewRaw = data ? (
+    dewSource === 'dew' ? data.dew_point
+      : dewSource === 'feels' ? data.feels_like
+      : dewSource === 'wind' ? data.wind_chill
+      : data.humidex
+  ) : undefined
 
   useEffect(() => {
     fetch('/api/wind/rose?start=-7d').then((r) => (r.ok ? r.json() : null)).then(setRose).catch(() => {})
@@ -71,11 +105,14 @@ export function InstrumentosPage() {
             <ExtIntToggle name="temp-source" value={tempSource} onChange={setTempSource} />
           </div>
 
-          <AnalogGauge title="Punto de rocío" size={g}
-            value={data ? u.tempN(data.dew_point ?? NaN) : null}
-            min={u.tempN(-10)} max={u.tempN(30)} majorStep={10} midStep={5} minorStep={1}
-            unit={u.tempU} decimals={1}
-            zones={zonesIn([[-10, 5, '#38bdf8'], [5, 18, '#22c55e'], [18, 30, '#f59e0b']], u.tempN)} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Punto de rocío" size={g}
+              value={dewRaw != null ? u.tempN(dewRaw) : null}
+              min={u.tempN(-10)} max={u.tempN(30)} majorStep={10} midStep={5} minorStep={1}
+              unit={u.tempU} decimals={1}
+              zones={zonesIn([[-10, 5, '#38bdf8'], [5, 18, '#22c55e'], [18, 30, '#f59e0b']], u.tempN)} />
+            <DewPointToggle value={dewSource} onChange={setDewSource} />
+          </div>
 
           <div className="flex flex-col items-center">
             <AnalogGauge title="Humedad" size={g}
