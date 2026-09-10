@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { SevenSegmentDisplay } from './SevenSegmentDisplay'
 
 // Medidor analógico estilo "instrumento físico" (bisel metálico, carátula crema,
 // zonas de color, aguja, pantalla LCD) -- inspirado en el aspecto clásico de los
@@ -53,18 +54,27 @@ export function AnalogGauge({
   const cx = size / 2
   const cy = size / 2
   const R = size / 2 - 5              // bisel exterior
-  const faceR = R - size * 0.045      // carátula
+  const faceR = R - size * 0.075      // carátula -- bisel más grueso que antes (0.045)
   // Radios relativos a faceR: el anillo de marcas/números vive pegado al
-  // borde (0.68-0.92) para dejar TODO el centro-arriba libre para el título
+  // borde (0.60-0.92) para dejar TODO el centro-arriba libre para el título
   // -- si no, el título choca con el número que cae arriba (bearing 0 es
   // siempre el punto medio del rango, así que casi siempre hay un tick ahí).
   const zoneR = faceR * 0.92
   const tickOuterR = faceR * 0.84
   const tickMajorInnerR = faceR * 0.735
-  const tickMinorInnerR = faceR * 0.785
+  const tickMinorInnerR = faceR * 0.80
   const labelR = faceR * 0.60
   const titleR = faceR * 0.20
   const needleR = zoneR - 1
+
+  // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
+  // media carátula -- si no, choca con los números de las esquinas inferiores
+  // (bearing 135°/225°, los más próximos al hueco de abajo, caen justo en esa
+  // zona media). Ver docs/internal/plan-medidores-analogicos.md.
+  const lcdW = size * 0.30
+  const lcdH = size * 0.115
+  const lcdX = cx - lcdW / 2
+  const lcdY = cy + size * 0.05
 
   const hasValue = value != null && !Number.isNaN(value)
   const v = hasValue ? Math.min(max, Math.max(min, value as number)) : min
@@ -98,8 +108,8 @@ export function AnalogGauge({
           <stop offset="100%" stopColor="#444" />
         </radialGradient>
         <radialGradient id={`glass-${uid}`} cx="32%" cy="24%" r="55%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.07" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
         <filter id={`shadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -111,12 +121,10 @@ export function AnalogGauge({
       {/* Ranura entre bisel y carátula -- separación visible del borde metálico */}
       <circle cx={cx} cy={cy} r={faceR + size * 0.012} fill="none" stroke="#00000055" strokeWidth={size * 0.01} />
       <circle cx={cx} cy={cy} r={faceR} fill={`url(#face-${uid})`} stroke="#00000030" strokeWidth={1} />
-      {/* Reflejo de cristal (glass) sobre la carátula */}
-      <circle cx={cx} cy={cy} r={faceR} fill={`url(#glass-${uid})`} />
 
       {[45, 135, 225, 315].map((b) => {
-        const p = pt(cx, cy, R - size * 0.02, b)
-        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.013} fill="#7a7a7a" stroke="#f0f0f0" strokeWidth={0.6} />
+        const p = pt(cx, cy, R - size * 0.025, b)
+        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.015} fill="#7a7a7a" stroke="#f0f0f0" strokeWidth={0.6} />
       })}
 
       {zones.map((z, i) => (
@@ -154,27 +162,15 @@ export function AnalogGauge({
         {title.toUpperCase()}
       </text>
 
-      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
-        transform={`rotate(${needleAngle} ${cx} ${cy})`}>
-        <polygon
-          points={`${cx - size * 0.014},${cy + size * 0.07} ${cx + size * 0.014},${cy + size * 0.07} ${cx},${cy - needleR}`}
-          fill="#c0392b" filter={`url(#shadow-${uid})`} />
-      </g>
-      <circle cx={cx} cy={cy} r={size * 0.035} fill={`url(#hub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
+      {/* Pantalla LCD (dígitos de 7 segmentos) -- va ANTES que la aguja para
+          que esta pinte por encima, no al revés. */}
+      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <SevenSegmentDisplay
+        text={hasValue ? value!.toFixed(decimals) : '--'}
+        x={lcdX + lcdW * 0.06} y={lcdY + lcdH * 0.1} width={lcdW * 0.88} height={lcdH * 0.8} />
 
-      {/* Pantalla LCD: marco recesado (sombra interior simulada con un rect
-          más oscuro debajo, desplazado) + tinte verdoso clásico de LCD real */}
-      <rect x={cx - size * 0.185 - 1} y={cy + faceR * 0.32 - 1} width={size * 0.37 + 2} height={size * 0.135 + 2}
-        rx={3} fill="#5c5c50" />
-      <rect x={cx - size * 0.185} y={cy + faceR * 0.32} width={size * 0.37} height={size * 0.135}
-        rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
-      <text x={cx} y={cy + faceR * 0.32 + size * 0.0685} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.095} fontWeight={700} fill="#28331f" letterSpacing={0.5}
-        fontFamily="ui-monospace, monospace">
-        {hasValue ? value!.toFixed(decimals) : '--'}
-      </text>
-
-      <text x={cx} y={cy + faceR * 0.32 + size * 0.135 + size * 0.07} textAnchor="middle"
+      <text x={cx} y={lcdY + lcdH + size * 0.065} textAnchor="middle"
         fontSize={size * 0.05} fill="#6b6656" fontFamily="ui-sans-serif, system-ui">
         {unit}
       </text>
@@ -185,6 +181,20 @@ export function AnalogGauge({
           {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '–'}
         </text>
       )}
+
+      {/* Aguja: más gruesa y con forma ancha->angosta (base 0.05*size, punta
+          en cero). Va DESPUÉS del LCD para pintarse por encima. */}
+      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
+        transform={`rotate(${needleAngle} ${cx} ${cy})`}>
+        <polygon
+          points={`${cx - size * 0.026},${cy + size * 0.08} ${cx + size * 0.026},${cy + size * 0.08} ${cx},${cy - needleR}`}
+          fill="#c0392b" filter={`url(#shadow-${uid})`} />
+      </g>
+      <circle cx={cx} cy={cy} r={size * 0.038} fill={`url(#hub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
+
+      {/* Reflejo de cristal: va AL FINAL, por encima de todo (aguja incluida)
+          -- es el vidrio que cubre el instrumento completo. */}
+      <circle cx={cx} cy={cy} r={faceR} fill={`url(#glass-${uid})`} />
     </svg>
   )
 }

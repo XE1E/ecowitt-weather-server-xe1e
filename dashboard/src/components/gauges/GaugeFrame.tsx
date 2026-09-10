@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
 // (WindRose) solo para esta página sería trabajo extra sin beneficio real,
 // y perdería la adaptación clara/oscuro que ya tiene.
 export function GaugeFrame({ title, size = 200, children }: { title: string; size?: number; children: ReactNode }) {
-  const pad = size * 0.09
+  const pad = size * 0.11
   return (
     <div className="flex flex-col items-center" style={{ width: size }}>
       <div

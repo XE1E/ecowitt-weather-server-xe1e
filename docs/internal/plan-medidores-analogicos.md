@@ -281,6 +281,59 @@ importar.
   sombra interior de una ventana LCD real.
 - Remaches del bisel con highlight/sombra propios (antes un solo color).
 
+## Segunda ronda de correcciones — 2026-09-09
+
+Feedback del usuario tras ver el resultado con datos reales en producción:
+más subdivisiones de escala, el LCD encimado con los números, la aguja
+detrás del LCD, agujas más gruesas, bisel más grueso, y si se podían
+simular dígitos LCD de 7 segmentos de verdad (no solo una fuente
+monoespaciada).
+
+- [x] **Más divisiones/subdivisiones**: `minorStep` de cada medidor en
+      `InstrumentosPage.tsx` reducido a la mitad o más (4-5 subdivisiones
+      por marca mayor, antes 1-2).
+- [x] **LCD encimado con los números — corregido reposicionando, no
+      agrandando el hueco**: el LCD vivía a media carátula
+      (`cy + faceR*0.32`), que coincide justo con donde caen los números
+      de las esquinas inferiores (bearing 135°/225°, los más cercanos al
+      hueco de abajo). Se movió pegado al centro (`cy + size*0.05`, justo
+      debajo del cubo de la aguja) y se angostó (`0.30×size` en vez de
+      `0.37×size`), dejando margen real contra esas esquinas.
+- [x] **Aguja detrás del LCD — orden de pintado**: en SVG el orden del
+      marcado determina qué queda encima. El LCD se movió ANTES que la
+      aguja en el JSX (antes iba después), y el reflejo de cristal se
+      movió al final de todo (es el vidrio que cubre el instrumento
+      completo, aguja incluida).
+- [x] **Agujas más gruesas, forma ancha→angosta**: base casi duplicada
+      (`size*0.026` de semi-ancho, antes `0.014`), sigue afilando a un
+      punto en la punta.
+- [x] **Bisel más grueso**: `faceR = R - size*0.075` (antes `0.045`) en
+      `AnalogGauge`/`CompassGauge`; `GaugeFrame` (rosa de vientos) subido
+      de `0.09` a `0.11` para que combine.
+- [x] **Dígitos LCD de 7 segmentos de verdad**: nuevo
+      `SevenSegmentDisplay.tsx` -- cada dígito son 7 `<line>` (segmentos
+      a-g) con extremos redondeados; los segmentos APAGADOS se dibujan
+      también, en un verde "fantasma" apenas visible, igual que una LCD
+      real (no aparecen/desaparecen, están siempre ahí, solo cambian de
+      tono). El punto decimal no ocupa celda propia. Aplicado solo en
+      `AnalogGauge` (siempre son números) -- `CompassGauge` se queda con
+      texto normal porque su LCD muestra letras (`259° SSO`), que un
+      7-segmentos no puede representar con claridad; en su lugar se le
+      ensanchó el recuadro (`0.42×size`, antes `0.37×size`) para que quepa
+      el rumbo de 3 letras más largo sin recortarse.
+  - **Bug encontrado y corregido durante la verificación visual**: la
+    primera versión de `SevenSegmentDisplay` nunca recibía la coordenada
+    `y` en `DigitCell` -- los dígitos se dibujaban todos arriba de la
+    carátula (cerca de `y≈0`), no dentro del recuadro LCD. Se vio como dos
+    "píldoras verdes" raras encima de cada bisel en la primera captura.
+    Encontrado con Playwright + captura, no leyendo el código.
+- Verificado con capturas recortadas por elemento (`elementHandle.screenshot()`,
+  más preciso que la página completa) de Temperatura, Presión, Base de
+  nubes y Dirección: bisel visiblemente más grueso, LCD limpio sin
+  encimarse con números, aguja cruzando por ENCIMA del LCD, dígitos de 7
+  segmentos legibles con los segmentos apagados tenues de fondo. `tsc`
+  limpio.
+
 ## Notas
 
 - Usar SVG nativo, no librerías externas (mantener bundle pequeño)

@@ -25,15 +25,23 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   const cx = size / 2
   const cy = size / 2
   const R = size / 2 - 5
-  const faceR = R - size * 0.045
+  const faceR = R - size * 0.075
   // Mismo criterio de radios que AnalogGauge: anillo de marcas pegado al
   // borde, título bien adentro para no chocar con las letras cardinales.
   const tickOuterR = faceR * 0.84
   const tickMajorInnerR = faceR * 0.735
-  const tickMinorInnerR = faceR * 0.785
+  const tickMinorInnerR = faceR * 0.80
   const labelR = faceR * 0.60
   const titleR = faceR * 0.20
   const needleR = faceR - size * 0.02
+
+  // Igual que en AnalogGauge: LCD pegado al centro, no a media carátula --
+  // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal,
+  // y si se queda a media altura choca con las letras SO/SE de las esquinas.
+  const lcdW = size * 0.42
+  const lcdH = size * 0.115
+  const lcdX = cx - lcdW / 2
+  const lcdY = cy + size * 0.05
 
   const hasValue = value != null && !Number.isNaN(value)
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
@@ -65,8 +73,8 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
           <stop offset="100%" stopColor="#444" />
         </radialGradient>
         <radialGradient id={`cglass-${uid}`} cx="32%" cy="24%" r="55%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.07" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
         <filter id={`cshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -77,11 +85,10 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       <circle cx={cx} cy={cy} r={R} fill={`url(#cbezel-${uid})`} />
       <circle cx={cx} cy={cy} r={faceR + size * 0.012} fill="none" stroke="#00000055" strokeWidth={size * 0.01} />
       <circle cx={cx} cy={cy} r={faceR} fill={`url(#cface-${uid})`} stroke="#00000030" strokeWidth={1} />
-      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cglass-${uid})`} />
 
       {[45, 135, 225, 315].map((b) => {
-        const p = pt(cx, cy, R - size * 0.02, b)
-        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.013} fill="#7a7a7a" stroke="#f0f0f0" strokeWidth={0.6} />
+        const p = pt(cx, cy, R - size * 0.025, b)
+        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.015} fill="#7a7a7a" stroke="#f0f0f0" strokeWidth={0.6} />
       })}
 
       {minors.map((m) => {
@@ -111,23 +118,28 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
         DIRECCIÓN
       </text>
 
-      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
-        transform={`rotate(${bearing} ${cx} ${cy})`}>
-        <polygon
-          points={`${cx - size * 0.014},${cy + size * 0.07} ${cx + size * 0.014},${cy + size * 0.07} ${cx},${cy - needleR}`}
-          fill="#c0392b" filter={`url(#cshadow-${uid})`} />
-      </g>
-      <circle cx={cx} cy={cy} r={size * 0.035} fill={`url(#chub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
-
-      <rect x={cx - size * 0.185 - 1} y={cy + faceR * 0.32 - 1} width={size * 0.37 + 2} height={size * 0.135 + 2}
-        rx={3} fill="#5c5c50" />
-      <rect x={cx - size * 0.185} y={cy + faceR * 0.32} width={size * 0.37} height={size * 0.135}
-        rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
-      <text x={cx} y={cy + faceR * 0.32 + size * 0.0685} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.085} fontWeight={700} fill="#28331f" letterSpacing={0.5}
+      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <text x={cx} y={lcdY + lcdH * 0.52} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.078} fontWeight={700} fill="#28331f" letterSpacing={0.3}
         fontFamily="ui-monospace, monospace">
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
+
+      <text x={cx} y={lcdY + lcdH + size * 0.065} textAnchor="middle"
+        fontSize={size * 0.05} fill="#6b6656" fontFamily="ui-sans-serif, system-ui">
+        rumbo
+      </text>
+
+      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
+        transform={`rotate(${bearing} ${cx} ${cy})`}>
+        <polygon
+          points={`${cx - size * 0.026},${cy + size * 0.08} ${cx + size * 0.026},${cy + size * 0.08} ${cx},${cy - needleR}`}
+          fill="#c0392b" filter={`url(#cshadow-${uid})`} />
+      </g>
+      <circle cx={cx} cy={cy} r={size * 0.038} fill={`url(#chub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
+
+      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cglass-${uid})`} />
     </svg>
   )
 }
