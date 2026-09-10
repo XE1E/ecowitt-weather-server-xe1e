@@ -111,11 +111,17 @@ export function AnalogGauge({
   // más ancho que alto. Un poco más adentro (0.68) da margen de sobra sin
   // acercarse al título ni al hueco central.
   const labelR = faceR * 0.68
-  const titleR = faceR * 0.34
-  // Títulos largos (p. ej. "Radiación solar", "Base de nubes") chocan con
-  // los números vecinos de la escala si van al mismo tamaño que uno corto
-  // ("UV", "Viento") -- se reduce un poco la fuente sólo para esos casos.
-  const titleFontScale = title.length > 12 ? 0.039 : 0.046
+  // "Radiación solar" y "Base de nubes" chocan con los números vecinos de la
+  // escala si van al mismo tamaño/altura que el resto (majorStep chico +
+  // 4 cifras) -- van con fuente más chica y un poco más abajo (más cerca
+  // del centro) que los demás. El resto usa la fuente grande de
+  // "Temperatura"; si algún título largo no entra en una línea, se parte en
+  // dos con un `\n` literal (ver render de más abajo).
+  const LOWERED_TITLES = ['Radiación solar', 'Base de nubes']
+  const isLoweredTitle = LOWERED_TITLES.includes(title)
+  const titleR = faceR * (isLoweredTitle ? 0.30 : 0.34)
+  const titleFontScale = isLoweredTitle ? 0.039 : 0.046
+  const titleLines = title.split('\n')
   const needleR = tickOuterR - 1
 
   // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
@@ -149,7 +155,7 @@ export function AnalogGauge({
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${title}: ${hasValue ? value!.toFixed(decimals) : 'sin dato'} ${unit}`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${title.replace('\n', ' ')}: ${hasValue ? value!.toFixed(decimals) : 'sin dato'} ${unit}`}>
       <defs>
         <radialGradient id={`face-${uid}`} cx="35%" cy="28%" r="80%">
           <stop offset="0%" stopColor="#fbf8ee" />
@@ -245,7 +251,9 @@ export function AnalogGauge({
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * titleFontScale}
         fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
-        {title.toUpperCase()}
+        {titleLines.map((line, i) => (
+          <tspan key={i} x={cx} dy={i === 0 ? 0 : size * titleFontScale * 1.05}>{line.toUpperCase()}</tspan>
+        ))}
       </text>
 
       {/* Pantalla LCD: texto monoespaciado con sombra tenue (no dígitos de 7

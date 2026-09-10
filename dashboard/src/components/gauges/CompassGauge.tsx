@@ -151,7 +151,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
         const lp = pt(cx, cy, labelR, b)
         return (
           <text key={label} x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
-            fontSize={size * 0.062} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
+            fontSize={size * 0.078} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
             {label}
           </text>
         )

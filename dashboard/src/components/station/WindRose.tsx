@@ -156,9 +156,11 @@ export function WindRose({ rose, size = 280, compact = false, dial = false }: Pr
           {rose.calm_pct}%
         </text>
 
-        {/* Brújula */}
+        {/* Brújula -- en `dial` va bien adentro (más cerca del centro que el
+            borde de la carátula), a pedido del usuario, aunque eso las deje
+            encima de los aros concéntricos. */}
         {compass.map(({ b, t }) => {
-          const p = pt(cx, cy, R + (dial ? 4 : compact ? 10 : 12), b)
+          const p = pt(cx, cy, dial ? R * 0.55 : R + (compact ? 10 : 12), b)
           const cardinal = t.length === 1
           return (
             <text key={t} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
