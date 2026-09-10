@@ -30,15 +30,19 @@ _CACHE: Dict[str, Dict[str, Any]] = {}
 _DAILY = ("weather_code,temperature_2m_max,temperature_2m_min,"
           "precipitation_probability_max,precipitation_sum,"
           "wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset")
-_HOURLY = "weather_code,temperature_2m,precipitation_probability"
+_HOURLY = "weather_code,temperature_2m,precipitation_probability,cloud_cover"
 
 # Conjunto ampliado para el display e-paper, que necesita rellenar un `hour[]` con forma
-# WeatherAPI (sensación, humedad, presión, viento, nubosidad, visibilidad, día/noche).
+# WeatherAPI (sensación, humedad, presión, viento, visibilidad, día/noche).
 #
-# Va aparte y NO se añade al conjunto normal a propósito: son ocho campos más por cada
+# Va aparte y NO se añade al conjunto normal a propósito: son siete campos más por cada
 # una de las 168 horas, y el dashboard del navegador no los usa. Con esto cada consumidor
 # descarga lo suyo y las dos respuestas se cachean por separado (el conjunto forma parte
-# de la clave, ver get_forecast).
+# de la clave, ver get_forecast). `cloud_cover` SÍ va en el conjunto normal (no solo aquí):
+# `deriveCondition` (weather.ts) lo necesita para juzgar nubosidad de noche con el mismo
+# criterio que el e-paper (`svitrix._condition`) -- antes usaba solo `weather_code`, que
+# puede divergir del `cloud_cover` de la MISMA hora y hacer que el dashboard diga "Nublado"
+# mientras el e-paper, con el % real, decía "Parcialmente nublado" (visto en vivo 2026-09-09).
 _HOURLY_EPAPER = (
     "weather_code,temperature_2m,precipitation_probability,apparent_temperature,"
     "relative_humidity_2m,pressure_msl,wind_speed_10m,wind_direction_10m,"

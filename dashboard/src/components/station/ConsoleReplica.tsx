@@ -1043,6 +1043,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     const condCtx = {
       pressureDelta3h: localForecast?.delta_3h,
       forecastCode: mejorDiff < 90 * 60 * 1000 ? horaCercana?.code : undefined,
+      cloudCoverPct: mejorDiff < 90 * 60 * 1000 ? horaCercana?.cloudCover : undefined,
       precipProb: mejorDiff < 90 * 60 * 1000 ? horaCercana?.precipProb : undefined,
     }
     const derived = deriveCondition(data, condCtx)

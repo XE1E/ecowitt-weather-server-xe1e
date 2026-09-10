@@ -64,6 +64,7 @@ export function StationLayout() {
   const currentHour = forecast?.hours?.[0]
   const cond = data ? deriveCondition(data, {
     forecastCode: currentHour?.code,
+    cloudCoverPct: currentHour?.cloudCover,
     precipProb: currentHour?.precipProb,
     pressureDelta3h: localForecast?.delta_3h,
   }) : { fx: 'none' as const, intensity: 0, icon: '', label: '' }

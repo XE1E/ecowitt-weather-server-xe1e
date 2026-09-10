@@ -415,7 +415,7 @@ export function KioskPage() {
   // Código WMO y precipProb de la hora actual del pronóstico
   const currentForecast = (() => {
     const hrs = forecast?.hours
-    if (!hrs?.length) return { code: undefined, precipProb: undefined }
+    if (!hrs?.length) return { code: undefined, cloudCover: undefined, precipProb: undefined }
     const nowMs = now.getTime()
     let best = hrs[0]
     let bestDiff = Infinity
@@ -423,12 +423,13 @@ export function KioskPage() {
       const diff = Math.abs(new Date(h.time).getTime() - nowMs)
       if (diff < bestDiff) { bestDiff = diff; best = h }
     }
-    if (bestDiff >= 90 * 60 * 1000) return { code: undefined, precipProb: undefined }
-    return { code: best.code, precipProb: best.precipProb }
+    if (bestDiff >= 90 * 60 * 1000) return { code: undefined, cloudCover: undefined, precipProb: undefined }
+    return { code: best.code, cloudCover: best.cloudCover, precipProb: best.precipProb }
   })()
 
   const cond = data ? deriveCondition(data, {
     forecastCode: currentForecast.code,
+    cloudCoverPct: currentForecast.cloudCover,
     precipProb: currentForecast.precipProb,
   }) : { icon: '', label: '' }
   const t = stats?.temperature_outdoor

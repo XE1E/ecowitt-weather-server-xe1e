@@ -118,6 +118,20 @@ _STUCK_FIELD_LABELS = {
     "pressure_absolute": "presión absoluta",
 }
 
+def _readings_to_duration(readings: int) -> str:
+    """"N lecturas" es un número interno sin sentido para el usuario --
+    la estación reporta ~1 lectura/minuto (ver alert_stuck_sensor_readings en
+    config.py), así que se muestra como duración legible en su lugar."""
+    minutes = readings
+    if minutes < 60:
+        return f"{minutes} minutos"
+    hours = minutes / 60
+    if hours == int(hours):
+        h = int(hours)
+        return f"{h} hora" if h == 1 else f"{h} horas"
+    return f"{hours:.1f} horas"
+
+
 # Sensores cuya presencia se vigila para "sensor perdido": clave del dato -> nombre
 _SENSOR_PRESENCE = {
     "temperature_outdoor": "outdoor",
@@ -425,7 +439,7 @@ class AlertService:
                 # sale genérico y no dice cuál sensor se recuperó.
                 rules[f"stuck_{field}"] = (
                     streak >= threshold,
-                    f"🧊 Sensor atascado ({label}): sin cambiar ({val}) en {threshold} lecturas seguidas",
+                    f"🧊 Sensor atascado ({label}): sin cambiar ({val}) en {_readings_to_duration(threshold)}",
                 )
 
         # Sensor perdido: un sensor visto antes que deja de reportar (por estación).

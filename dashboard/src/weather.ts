@@ -49,6 +49,15 @@ export interface Condition {
 export interface ConditionContext {
   /** Código WMO del pronóstico (Open-Meteo) para la hora actual */
   forecastCode?: number
+  /**
+   * % de nubes del pronóstico (Open-Meteo `cloud_cover`) para la hora actual.
+   * Más fino que `forecastCode`: el código WMO es una categoría (0/1/2/3...)
+   * que puede no concordar con el % de nubes de la MISMA hora. Cuando está
+   * presente, tiene prioridad sobre `forecastCode` para juzgar nubosidad --
+   * es el mismo criterio (y los mismos cortes) que usa el e-paper
+   * (`svitrix._condition` en el backend), para que ambos no se contradigan.
+   */
+  cloudCoverPct?: number
   /** Cambio de presión en las últimas 3 horas (hPa). Negativo = bajando */
   pressureDelta3h?: number | null
   /** Probabilidad de precipitación del pronóstico (0-100) */
@@ -68,6 +77,19 @@ export interface ConditionContext {
 function _cloudLevelFromWmo(code: number): 'clear' | 'partly' | 'cloudy' {
   if (code === 0 || code === 1) return 'clear'
   if (code === 2) return 'partly'
+  return 'cloudy'
+}
+
+/**
+ * Mismos cortes que `svitrix._condition` (backend, e-paper/reloj): <35% claro,
+ * <65% parcialmente nublado, 65%+ nublado. Se usa en vez de `_cloudLevelFromWmo`
+ * cuando hay % de nubes a mano, porque el código WMO categórico puede no
+ * concordar con el % de la misma hora y hacía que dashboard y e-paper
+ * describieran el mismo momento distinto (visto en vivo 2026-09-09).
+ */
+function _cloudLevelFromPct(pct: number): 'clear' | 'partly' | 'cloudy' {
+  if (pct < 35) return 'clear'
+  if (pct < 65) return 'partly'
   return 'cloudy'
 }
 
@@ -175,10 +197,13 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
     // por el ángulo del sol, no por las nubes; bug detectado en vivo
     // 2026-09-08: 97% de nubes al atardecer se reportaba "Despejado" porque
     // esta rama solo miraba humedad, que no siempre correlaciona con nubes).
-    // El código WMO del pronóstico es mejor señal aquí que la humedad.
+    // El % de nubes (o, si no está, el código WMO) del pronóstico es mejor
+    // señal aquí que la humedad.
     if (kt === null) {
-      if (ctx.forecastCode != null) {
-        const nivel = _cloudLevelFromWmo(ctx.forecastCode)
+      if (ctx.cloudCoverPct != null || ctx.forecastCode != null) {
+        const nivel = ctx.cloudCoverPct != null
+          ? _cloudLevelFromPct(ctx.cloudCoverPct)
+          : _cloudLevelFromWmo(ctx.forecastCode!)
         if (nivel === 'cloudy') return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
         if (nivel === 'partly') return { icon: 'partly-cloudy-day', label: 'Parcialmente nublado', fx: 'partly-cloudy', intensity: 0.5 }
         return { icon: 'clear-day', label: 'Despejado', fx: 'clear', intensity: 0.7 }
@@ -213,13 +238,16 @@ export function deriveCondition(d: WeatherData, ctxOrCode?: ConditionContext | n
     return { icon: 'overcast-day', label: 'Nublado', fx: 'cloudy', intensity: 0.6 }
   }
 
-  // ─── NOCHE: código WMO del pronóstico, con humedad/rocío de respaldo ───
+  // ─── NOCHE: % de nubes / código WMO del pronóstico, con humedad/rocío de respaldo ───
   // De noche no hay sensor de radiación. Antes esta rama solo usaba humedad y
   // dew spread como proxy y podía marcar "Despejado" con cielo cubierto pero
-  // aire seco (mismo bug que en la rama de sol bajo, arriba). El código WMO
-  // del pronóstico es una señal más directa de nubosidad cuando está a mano.
-  if (ctx.forecastCode != null) {
-    const nivel = _cloudLevelFromWmo(ctx.forecastCode)
+  // aire seco (mismo bug que en la rama de sol bajo, arriba). El % de nubes
+  // (o, si no está, el código WMO) del pronóstico es una señal más directa de
+  // nubosidad cuando está a mano -- y, con el %, la misma que usa el e-paper.
+  if (ctx.cloudCoverPct != null || ctx.forecastCode != null) {
+    const nivel = ctx.cloudCoverPct != null
+      ? _cloudLevelFromPct(ctx.cloudCoverPct)
+      : _cloudLevelFromWmo(ctx.forecastCode!)
     if (nivel === 'cloudy') {
       return { icon: 'overcast-night', label: 'Noche nublada', fx: 'cloudy', intensity: 0.5 }
     }

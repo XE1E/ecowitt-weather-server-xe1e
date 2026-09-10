@@ -30,6 +30,7 @@ export interface ForecastHour {
   precipProb: number
   icon: string
   code: number       // WMO code, para pasar a deriveCondition de noche
+  cloudCover?: number // % de nubes (Open-Meteo), más fino que `code` para deriveCondition
 }
 
 export interface ForecastResult {
@@ -318,6 +319,7 @@ export async function fetchForecast(): Promise<ForecastResult> {
       precipProb: h.precipitation_probability?.[i] ?? 0,
       icon: wmoToIcon(h.weather_code[i], isDayAt(h.time[i])).icon,
       code: h.weather_code[i],
+      cloudCover: h.cloud_cover?.[i],
     })
   }
 
