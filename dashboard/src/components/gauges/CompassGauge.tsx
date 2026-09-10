@@ -77,11 +77,11 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
   // Escala nueva: marca cada 5°, mayor cada 20°, media cada 10° (impar) y
-  // menor cada 5° (impar) -- pero se salta cualquier marca a ±10° o menos de
-  // un cardinal (N/E/S/O), así nunca choca con esas letras ni con la que le
-  // sigue. El primer/último tramo visible queda entonces en 15°, no en 0°.
+  // menor cada 5° (impar) -- pero se salta cualquier marca a ±5° o menos de
+  // un cardinal (N/E/S/O), así nunca choca con esas letras; las de ±10°
+  // (p. ej. 80°/100° junto a "E") sí se ven, hay margen de sobra.
   const minors = useMemo(
-    () => Array.from({ length: 72 }, (_, i) => i * 5).filter((m) => !CARDINALS.some((c) => angDist(m, c) <= 10)),
+    () => Array.from({ length: 72 }, (_, i) => i * 5).filter((m) => !CARDINALS.some((c) => angDist(m, c) <= 5)),
     [])
 
   return (
@@ -118,7 +118,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
           <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
         </filter>
         <filter id={`ctextshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
+          <feDropShadow dx="0" dy="1.1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.75" />
         </filter>
         <filter id={`clcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />

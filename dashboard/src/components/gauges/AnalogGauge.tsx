@@ -119,7 +119,7 @@ export function AnalogGauge({
   // dos con un `\n` literal (ver render de más abajo).
   const LOWERED_TITLES = ['Radiación solar', 'Base de nubes']
   const isLoweredTitle = LOWERED_TITLES.includes(title)
-  const titleR = faceR * (isLoweredTitle ? 0.30 : 0.34)
+  const titleR = faceR * (isLoweredTitle ? 0.24 : 0.34)
   const titleFontScale = isLoweredTitle ? 0.039 : 0.046
   const titleLines = title.split('\n')
   const needleR = tickOuterR - 1
@@ -185,7 +185,7 @@ export function AnalogGauge({
           <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
         </filter>
         <filter id={`textshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
+          <feDropShadow dx="0" dy="1.1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.75" />
         </filter>
         <filter id={`lcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
