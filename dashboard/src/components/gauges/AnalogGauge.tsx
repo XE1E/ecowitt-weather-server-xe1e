@@ -27,8 +27,12 @@ export interface AnalogGaugeProps {
   trend?: 'up' | 'down' | 'stable'
 }
 
-const START = 225   // bearing del valor mínimo (abajo-izquierda)
-const SWEEP = 270   // grados totales de la escala (deja 90° de hueco abajo)
+// Arco más amplio que antes (hueco de 60° en vez de 90°): el primer y
+// último valor quedan más abajo, dejando más espacio libre arriba para
+// el recuadro LCD -- pedido explícito del usuario con una captura de
+// referencia (gauge WeeWX SteelSeries).
+const START = 210   // bearing del valor mínimo (abajo-izquierda, más abajo que antes)
+const SWEEP = 300   // grados totales de la escala (deja 60° de hueco abajo)
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180

@@ -371,6 +371,22 @@ Dirección salieran del anillo de marcas hacia el borde.
   niveles de marca cruzan visiblemente el arco de color, N/NE/E/SE/S/SO/O/NO
   quedan claramente afuera del anillo de grados. `tsc` limpio.
 
+## Cuarta ronda: arco más amplio — 2026-09-09
+
+El usuario compartió un recorte de la captura de referencia (WeeWX
+SteelSeries) y pidió extender el arco de la escala para que el primer y
+último valor queden más abajo, dando más espacio libre al recuadro LCD.
+Aprovechó para preguntar qué decía el texto en ruso de la captura original
+(«снаружи»/«внутри» = exterior/interior — selector de sensor, no relevante
+para este proyecto más allá de la referencia visual).
+
+- [x] `AnalogGauge`: `START` 225→210, `SWEEP` 270→300 (hueco de abajo de
+      90° a 60°). Solo afecta a `AnalogGauge` -- `CompassGauge` ya usa 360°
+      completos sin hueco, no le aplica.
+- Verificado con captura por elemento (Temperatura) y de página completa
+  (los 12 medidores): el primer/último valor quedan más abajo, más
+  parecido a la referencia, y el LCD gana margen arriba. `tsc` limpio.
+
 ## Notas
 
 - Usar SVG nativo, no librerías externas (mantener bundle pequeño)
