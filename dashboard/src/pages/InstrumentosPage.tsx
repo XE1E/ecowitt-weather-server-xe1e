@@ -81,6 +81,13 @@ export function InstrumentosPage() {
   // string formateado) -- se necesita el NÚMERO para posicionar la aguja.
   const altN = (m: number) => (imp ? m / 0.3048 : m)
 
+  // `rose.dominant` es el rótulo del sector (p. ej. "NNE"), no un bearing en
+  // grados -- se resuelve buscando el sector cuya `label` coincida y usando
+  // su `dir` (0-360, mismo convenio que el resto de los gauges).
+  const dominantBearing = rose?.dominant != null
+    ? rose.sectors.find((s) => s.label === rose.dominant)?.dir ?? null
+    : null
+
   const g = 200 // tamaño de cada medidor
 
   return (
@@ -131,7 +138,8 @@ export function InstrumentosPage() {
             unit={u.windU} decimals={1}
             zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
 
-          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null} />
+          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
+            dominantBearing={dominantBearing} />
 
           <GaugeFrame title="Rosa de vientos" size={g}>
             {rose ? <WindRose rose={rose} size={g * 0.78} compact /> : <p className="text-xs text-slate-500 mt-16">Sin datos</p>}

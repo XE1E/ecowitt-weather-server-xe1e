@@ -655,3 +655,53 @@ velocidad instantánea.
       `wind_gust_max_daily=58`, escala 0-100): la aguja roja marca 22 km/h
       y el triángulo aparece correctamente cerca de la marca de 60,
       sobre la zona naranja/roja de la escala.
+
+## Decimotercera ronda: correcciones a la ronda 11 + marca de predominante — 2026-09-10
+
+El usuario aclaró que la ronda 11 no había quedado como quería: los 2 LCD
+NO debían apilarse juntos arriba -- uno (actual) va arriba del centro y el
+otro (promedio) abajo, como estaba el LCD original antes de que hubiera
+dos. Además: quitar las líneas de marca propias de cada cardinal (N/S/E/O/
+SE/etc, se encimaban con la letra ahora que la escala está en el extremo),
+agrandar ambos LCD al tamaño de Presión, agregar una marca roja de
+dirección predominante, y poner la marca de ráfaga (ronda 12) también en
+rojo y más grande.
+
+**`CompassGauge.tsx`:**
+- LCD "actual" (roja) vuelve a ir ARRIBA del centro (`lcd1Y = cy -
+  size*0.173`, en el hueco que dejó el título). LCD "promedio" (azul)
+  vuelve a su posición ORIGINAL de antes de la ronda 10 (`lcd2Y = cy +
+  size*0.075`), no apilada junto a la de arriba.
+- Tamaño de ambos LCD: `lcdW = size*0.38`, `lcdH = size*0.115` -- igual
+  que Presión con `lcdWide` en `AnalogGauge.tsx`. Antes eran 0.42×0.085.
+- Se quitó la `<line>` de marca propia de cada cardinal en `DIRS.map`
+  (quedó solo el `<text>`) -- esa línea usaba `tickOuterR`/
+  `tickMajorInnerR`, que desde la ronda 11 están pegados al extremo de la
+  carátula, cruzando justo por donde está la letra.
+- Nueva prop `dominantBearing` (grados): dibuja una marca triangular ROJA
+  (`#c0392b`, mismo rojo que la aguja actual) en una banda de radio propia
+  (0.68-0.87×faceR) DELIBERADAMENTE por debajo de `labelR` (0.92) -- así
+  nunca se puede encimar con una letra cardinal, sin importar qué rumbo
+  sea el predominante (a diferencia de la escala general, que si comparte
+  radio con las letras aunque ya no tenga colisión de líneas).
+- `aria-label` ahora incluye también el predominante cuando está presente.
+
+**`InstrumentosPage.tsx`:** `rose.dominant` es un STRING (p. ej. "SE"), no
+un bearing -- se resuelve buscando en `rose.sectors` el que tenga
+`label === rose.dominant` y usando su `dir` (grados). Pasado a
+`CompassGauge` como `dominantBearing`.
+
+**`AnalogGauge.tsx` (marca de ráfaga, ronda 12):** color cambiado de gris
+oscuro (`#1f2937`) a rojo (`#c0392b`, igual que la aguja) y agrandada:
+la punta ahora llega hasta el borde interior de la banda de colores
+(`zoneR - size*0.0175`, antes `tickOuterR - size*0.01`) y el ancho angular
+subió de 3.2° a 5° -- una marca notablemente más grande y visible sobre
+cualquier color de zona.
+
+- [x] `tsc --noEmit` limpio.
+- [x] Verificado con Playwright: `aria-label` de Dirección resuelve
+      correctamente "SE" → 135° (`rose.sectors` mock con `dominant: 'SE'`
+      y un sector `{dir: 135, label: 'SE'}`); captura visual confirma LCD
+      actual arriba/promedio abajo (tamaño Presión), sin líneas de marca
+      cardinal, marca roja de predominante visible sin tocar letras, y
+      marca de ráfaga roja y más grande en Viento.

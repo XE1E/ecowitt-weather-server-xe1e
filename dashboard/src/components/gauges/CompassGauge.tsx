@@ -21,10 +21,12 @@ function rumbo(deg: number): string {
   return dirs[Math.round(((deg % 360) / 22.5)) % 16]
 }
 
-export function CompassGauge({ value, avgBearing, size = 200 }: {
+export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }: {
   value: number | null | undefined
   /** Dirección media circular de los últimos 10 min (`wind_direction_avg10m`). */
   avgBearing?: number | null
+  /** Rumbo predominante (p. ej. `rose.dominant` resuelto a grados vía `sectors[].dir`). */
+  dominantBearing?: number | null
   size?: number
 }) {
   const cx = size / 2
@@ -46,24 +48,23 @@ export function CompassGauge({ value, avgBearing, size = 200 }: {
   // (actual) quede visualmente al mando cuando ambas casi coinciden.
   const avgNeedleR = needleR * 0.86
 
-  // Igual que en AnalogGauge: LCD pegado al centro, no a media carátula --
-  // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal.
-  // Las dos filas (actual/promedio) van ARRIBA del centro, donde antes iba
-  // el título "DIRECCIÓN" (quitado) -- el color del texto (rojo/azul) hace
-  // de etiqueta, a juego con la aguja de cada uno, sin gastar una línea de
-  // texto en captions. `lcd2Y` se ancla a un margen fijo sobre el buje para
-  // que nunca lo toquen, y `lcd1Y` se apila hacia arriba desde ahí.
-  const lcdW = size * 0.42
-  const lcdH = size * 0.085
-  const lcdGap = size * 0.015
+  // Mismo tamaño de LCD que en Presión (AnalogGauge con `lcdWide`): ancho
+  // 0.38 y alto 0.115. La de ACTUAL va ARRIBA del centro (donde antes iba
+  // el título "DIRECCIÓN", quitado) y la de PROMEDIO va ABAJO (posición
+  // del LCD original, antes de que hubiera dos) -- el color del texto
+  // (rojo/azul) hace de etiqueta, a juego con la aguja de cada uno.
+  const lcdW = size * 0.38
+  const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
-  const lcd2Y = cy - size * 0.045 - lcdH
-  const lcd1Y = lcd2Y - lcdGap - lcdH
+  const lcd1Y = cy - size * 0.173
+  const lcd2Y = cy + size * 0.075
 
   const hasValue = value != null && !Number.isNaN(value)
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
   const hasAvg = avgBearing != null && !Number.isNaN(avgBearing)
   const avgBrg = hasAvg ? ((avgBearing as number) % 360 + 360) % 360 : 0
+  const hasDominant = dominantBearing != null && !Number.isNaN(dominantBearing)
+  const dominantBrg = hasDominant ? ((dominantBearing as number) % 360 + 360) % 360 : 0
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
   const minors = useMemo(() => Array.from({ length: 72 }, (_, i) => i * 5), [])
@@ -71,7 +72,8 @@ export function CompassGauge({ value, avgBearing, size = 200 }: {
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
       aria-label={`Dirección del viento: ${hasValue ? `${Math.round(bearing)}° (${rumbo(bearing)})` : 'sin dato'}`
-        + (hasAvg ? `, promedio 10 min: ${Math.round(avgBrg)}° (${rumbo(avgBrg)})` : '')}>
+        + (hasAvg ? `, promedio 10 min: ${Math.round(avgBrg)}° (${rumbo(avgBrg)})` : '')
+        + (hasDominant ? `, predominante: ${Math.round(dominantBrg)}° (${rumbo(dominantBrg)})` : '')}>
       <defs>
         <radialGradient id={`cface-${uid}`} cx="35%" cy="28%" r="80%">
           <stop offset="0%" stopColor="#fbf8ee" />
@@ -121,20 +123,35 @@ export function CompassGauge({ value, avgBearing, size = 200 }: {
         return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4a4a42" strokeWidth={m % 10 === 0 ? 1.2 : 0.7} opacity={m % 10 === 0 ? 0.85 : 0.6} />
       })}
 
+      {/* Sin línea de marca propia por cada cardinal (se quitó -- con la
+          escala de grados pegada al extremo, esa línea se encimaba con la
+          letra). Solo el texto, en su radio de siempre. */}
       {DIRS.map(([label, b]) => {
-        const p0 = pt(cx, cy, tickOuterR, b)
-        const p1 = pt(cx, cy, tickMajorInnerR, b)
         const lp = pt(cx, cy, labelR, b)
         return (
-          <g key={label}>
-            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#1c1c18" strokeWidth={1.8} />
-            <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
-              fontSize={size * 0.062} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
-              {label}
-            </text>
-          </g>
+          <text key={label} x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
+            fontSize={size * 0.062} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
+            {label}
+          </text>
         )
       })}
+
+      {/* Marca roja de dirección predominante (rose.dominant, resuelto a
+          grados por el llamador): banda propia de radio (0.68-0.87×faceR),
+          bien por debajo de labelR (0.92) para no encimarse NUNCA con las
+          letras cardinales, sin importar el rumbo. */}
+      {hasDominant && (() => {
+        const tipR = faceR * 0.68
+        const baseR = faceR * 0.87
+        const halfW = 6
+        const tip = pt(cx, cy, tipR, dominantBrg)
+        const b0 = pt(cx, cy, baseR, dominantBrg - halfW)
+        const b1 = pt(cx, cy, baseR, dominantBrg + halfW)
+        return (
+          <polygon points={`${tip.x},${tip.y} ${b0.x},${b0.y} ${b1.x},${b1.y}`}
+            fill="#c0392b" stroke="#f0ead6" strokeWidth={0.7} />
+        )
+      })()}
 
       {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
           a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}

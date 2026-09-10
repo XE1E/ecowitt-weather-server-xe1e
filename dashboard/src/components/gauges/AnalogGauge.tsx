@@ -196,17 +196,19 @@ export function AnalogGauge({
 
       {/* Marca triangular fija (p. ej. ráfaga máxima del día): apunta hacia el
           centro desde el borde de la carátula, sobre el anillo de marcas --
-          un valor de referencia aparte de la aguja, que no se mueve con ella. */}
+          un valor de referencia aparte de la aguja, que no se mueve con ella.
+          Roja (mismo rojo que la aguja) y grande a propósito para que
+          destaque sobre cualquier color de zona. */}
       {hasMarker && (() => {
-        const tipR = tickOuterR - size * 0.01
+        const tipR = zoneR - size * 0.0175   // borde interior de la banda de colores
         const baseR = faceR * 0.985
-        const halfW = 3.2
+        const halfW = 5
         const tip = pt(cx, cy, tipR, markerAngle)
         const b0 = pt(cx, cy, baseR, markerAngle - halfW)
         const b1 = pt(cx, cy, baseR, markerAngle + halfW)
         return (
           <polygon points={`${tip.x},${tip.y} ${b0.x},${b0.y} ${b1.x},${b1.y}`}
-            fill="#1f2937" stroke="#f0ead6" strokeWidth={0.6} />
+            fill="#c0392b" stroke="#f0ead6" strokeWidth={0.8} />
         )
       })()}
 
