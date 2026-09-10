@@ -126,6 +126,7 @@ export function InstrumentosPage() {
 
           <AnalogGauge title="Viento" size={g}
             value={data ? u.windN(data.wind_speed) : null}
+            markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
             min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
             unit={u.windU} decimals={1}
             zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />

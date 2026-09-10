@@ -31,30 +31,34 @@ export function CompassGauge({ value, avgBearing, size = 200 }: {
   const cy = size / 2
   const R = size / 2 - 5
   const faceR = R - size * 0.075
-  // Los puntos cardinales van AFUERA del anillo de marcas (cerca del borde),
-  // no adentro -- así se leen como en una brújula real, separados de las
-  // marcas finas de grado.
-  const tickOuterR = faceR * 0.78
-  const tickMajorInnerR = faceR * 0.68
-  const tickMinorInnerR = faceR * 0.74
+  // La escala de grados (ticks) va pegada al extremo de la carátula, cerca
+  // del bisel. Las letras cardinales se quedan en su radio de siempre
+  // (labelR, sin cambios) -- quedan DENTRO del anillo de ticks en vez de
+  // fuera, pero como los ticks se saltan las 8 marcas cardinales (ver
+  // `minors`) y `needleR` no llega a alcanzar `labelR`, no hay colisión.
+  const tickOuterR = faceR * 0.97
+  const tickMajorInnerR = faceR * 0.885
+  const tickMinorInnerR = faceR * 0.93
   const labelR = faceR * 0.92
-  const titleR = faceR * 0.20
-  const needleR = tickOuterR - 1
+  // La aguja se queda corta del radio de las letras a propósito (ver arriba).
+  const needleR = tickMajorInnerR
   // Aguja de promedio: más corta y delgada que la actual, para que la roja
   // (actual) quede visualmente al mando cuando ambas casi coinciden.
   const avgNeedleR = needleR * 0.86
 
   // Igual que en AnalogGauge: LCD pegado al centro, no a media carátula --
   // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal.
-  // Dos filas (actual/promedio) en el mismo alto total que antes ocupaba una
-  // sola -- el color del texto (rojo/azul) hace de etiqueta, a juego con la
-  // aguja de cada uno, sin gastar espacio vertical en captions.
+  // Las dos filas (actual/promedio) van ARRIBA del centro, donde antes iba
+  // el título "DIRECCIÓN" (quitado) -- el color del texto (rojo/azul) hace
+  // de etiqueta, a juego con la aguja de cada uno, sin gastar una línea de
+  // texto en captions. `lcd2Y` se ancla a un margen fijo sobre el buje para
+  // que nunca lo toquen, y `lcd1Y` se apila hacia arriba desde ahí.
   const lcdW = size * 0.42
   const lcdH = size * 0.085
-  const lcdGap = size * 0.012
+  const lcdGap = size * 0.015
   const lcdX = cx - lcdW / 2
-  const lcd1Y = cy + size * 0.075
-  const lcd2Y = lcd1Y + lcdH + lcdGap
+  const lcd2Y = cy - size * 0.045 - lcdH
+  const lcd1Y = lcd2Y - lcdGap - lcdH
 
   const hasValue = value != null && !Number.isNaN(value)
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
@@ -131,11 +135,6 @@ export function CompassGauge({ value, avgBearing, size = 200 }: {
           </g>
         )
       })}
-
-      <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
-        fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
-        DIRECCIÓN
-      </text>
 
       {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
           a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}

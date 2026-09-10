@@ -27,6 +27,12 @@ export interface AnalogGaugeProps {
   trend?: 'up' | 'down' | 'stable'
   /** LCD más ancho (p. ej. Presión, que necesita 4 dígitos + decimal). */
   lcdWide?: boolean
+  /**
+   * Marca triangular fija en la escala (p. ej. la ráfaga máxima del día en
+   * el medidor de Viento) -- un valor de referencia aparte de la aguja, que
+   * sigue mostrando la lectura instantánea. `null`/`undefined` la oculta.
+   */
+  markerValue?: number | null
 }
 
 // Arco más amplio que antes (hueco de 60° en vez de 90°): el primer y
@@ -61,6 +67,7 @@ function hasAny(list: number[], v: number) {
 
 export function AnalogGauge({
   title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend, lcdWide,
+  markerValue,
 }: AnalogGaugeProps) {
   const cx = size / 2
   const cy = size / 2
@@ -93,6 +100,9 @@ export function AnalogGauge({
   const v = hasValue ? Math.min(max, Math.max(min, value as number)) : min
   const needleAngle = START + ((v - min) / (max - min)) * SWEEP
   const angleOf = (val: number) => START + ((val - min) / (max - min)) * SWEEP
+
+  const hasMarker = markerValue != null && !Number.isNaN(markerValue)
+  const markerAngle = hasMarker ? angleOf(Math.min(max, Math.max(min, markerValue as number))) : 0
 
   const majors = useMemo(() => range(min, max, majorStep), [min, max, majorStep])
   const mids = useMemo(
@@ -183,6 +193,22 @@ export function AnalogGauge({
           </g>
         )
       })}
+
+      {/* Marca triangular fija (p. ej. ráfaga máxima del día): apunta hacia el
+          centro desde el borde de la carátula, sobre el anillo de marcas --
+          un valor de referencia aparte de la aguja, que no se mueve con ella. */}
+      {hasMarker && (() => {
+        const tipR = tickOuterR - size * 0.01
+        const baseR = faceR * 0.985
+        const halfW = 3.2
+        const tip = pt(cx, cy, tipR, markerAngle)
+        const b0 = pt(cx, cy, baseR, markerAngle - halfW)
+        const b1 = pt(cx, cy, baseR, markerAngle + halfW)
+        return (
+          <polygon points={`${tip.x},${tip.y} ${b0.x},${b0.y} ${b1.x},${b1.y}`}
+            fill="#1f2937" stroke="#f0ead6" strokeWidth={0.6} />
+        )
+      })()}
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
         fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">

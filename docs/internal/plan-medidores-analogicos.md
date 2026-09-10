@@ -592,3 +592,66 @@ explícitamente (qué ventanas de tiempo, qué corte de variabilidad).
       `wind_direction_avg10m=355`): ambas LCD muestran "30° NNE" (rojo) y
       "355° N" (azul), ambas agujas se dibujan en sus ángulos correctos,
       `aria-label` incluye ambos valores.
+
+## Undécima ronda: quitar título, LCDs arriba, escala al extremo — 2026-09-09
+
+Pedido explícito: quitar el texto "DIRECCIÓN", poner ahí (arriba del
+centro) las dos LCD (actual/promedio), mover la escala circular de grados
+al extremo de la carátula, y dejar las letras cardinales (N/S/E/O/SO/...)
+en su posición actual -- solo se mueve la escala.
+
+- [x] Texto "DIRECCIÓN" eliminado (con su `titleR`).
+- [x] Las dos LCD (antes debajo del centro) ahora van ARRIBA, en el hueco
+      que dejó el título -- hay de sobra: hueco libre entre el buje
+      (`cy ± size*0.038`) y la letra "N" (`labelR = faceR*0.92`, sin
+      cambios) es de ~0.30*faceR, y las dos LCD + su separación ocupan
+      ~0.18*faceR. `lcd2Y` (promedio, la de abajo de las dos, más cerca
+      del buje) se ancla con un margen fijo sobre el buje; `lcd1Y` (actual)
+      se apila hacia arriba desde ahí.
+- [x] Escala de grados (`tickOuterR/tickMajorInnerR/tickMinorInnerR`)
+      movida de 0.78/0.68/0.74 × faceR a 0.97/0.885/0.93 × faceR -- pegada
+      al borde de la carátula, cerca del bisel. `labelR` (0.92) NO se tocó,
+      como se pidió explícitamente.
+- **Cuidado evitado:** con la escala movida al extremo, las letras
+  cardinales (0.92) quedan DENTRO del anillo de ticks (0.885-0.97) en vez
+  de fuera. Para que la aguja no las tape al pasar exactamente por N/E/S/O,
+  se acortó `needleR` de `tickOuterR-1` a `tickMajorInnerR` (0.885×faceR,
+  claramente por debajo de 0.92) -- la aguja llega hasta el borde interior
+  de la escala pero nunca alcanza el radio de las letras, sin importar el
+  ángulo. Los ticks de 5°/10° ya se saltaban las 8 marcas cardinales antes
+  de este cambio (`if (m % 45 === 0) return null`), así que tampoco hay
+  colisión de líneas de tick contra el texto de las letras.
+- [x] `tsc --noEmit` limpio.
+- [x] Verificado con Playwright en dos casos: rumbo exactamente Norte
+      (0°/0°, el caso más exigente para la colisión aguja-letra) y rumbos
+      no cardinales divergentes (130°/165°) -- en ambos las agujas se ven
+      completas sin tocar las letras, y las LCD arriba del centro muestran
+      los valores correctos en rojo/azul.
+
+## Duodécima ronda: marca de ráfaga máxima en Viento — 2026-09-09
+
+Pedido: en el medidor de Viento (velocidad), agregar una marca triangular
+fija en el valor de la ráfaga máxima del día (`wind_gust_max_daily`) --
+un valor de referencia aparte de la aguja, que sigue mostrando la
+velocidad instantánea.
+
+- [x] Nueva prop `markerValue?: number | null` en `AnalogGauge.tsx`
+      (genérica, no solo para Viento -- cualquier gauge podría usarla a
+      futuro). Dibuja un triángulo relleno que apunta hacia el centro,
+      con el vértice apoyado sobre el anillo de marcas (`tickOuterR`) y la
+      base cerca del borde de la carátula (`faceR*0.985`); color oscuro
+      (`#1f2937`) con contorno claro para que se distinga sobre cualquier
+      color de zona (verde/amarillo/naranja/rojo).
+  - Se calcula con la MISMA función `angleOf()` que usa la aguja (mismo
+    `START`/`SWEEP`), y se recorta a `[min, max]` igual que el valor de la
+    aguja -- si la ráfaga del día superó el máximo de la escala, la marca
+    se queda pegada al extremo en vez de desaparecer o salirse.
+  - `null`/`undefined` la oculta (p. ej. si `wind_gust_max_daily` no ha
+    llegado aún).
+- [x] `InstrumentosPage.tsx`: `markerValue={u.windN(data.wind_gust_max_daily)}`
+      en el gauge de Viento.
+- [x] `tsc --noEmit` limpio.
+- [x] Verificado con Playwright (mock `wind_speed=22`,
+      `wind_gust_max_daily=58`, escala 0-100): la aguja roja marca 22 km/h
+      y el triángulo aparece correctamente cerca de la marca de 60,
+      sobre la zona naranja/roja de la escala.
