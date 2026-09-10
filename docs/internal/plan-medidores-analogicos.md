@@ -242,6 +242,44 @@ implementación, con confirmación del usuario para alcance y ubicación):
   desplegado, y el modo imperial (no se pudo probar interactivamente por
   limitaciones del entorno de pruebas -- sí se revisó a mano que las
   conversiones no producen NaN ni crashean).
+- **Falsa alarma tras desplegar** (2026-09-09): con datos reales, la aguja
+  de Presión parecía apuntar al lado equivocado en una captura de página
+  completa a baja resolución. Se verificó con el `transform="rotate(...)"`
+  real extraído del DOM (Playwright + `page.evaluate`) y con una captura
+  recortada solo de ese medidor: la aguja SÍ apuntaba donde debía (1027 mb,
+  borde gris→verde) -- el error fue de lectura visual de una miniatura
+  comprimida, no del código. Lección: para verificar posición de aguja,
+  recortar el elemento (`elementHandle.screenshot()`) o leer el atributo
+  del DOM, no confiar en una captura de página completa a baja resolución.
+
+## Referencia adicional: Medusa (HanSolo) — 2026-09-09
+
+El usuario señaló <https://github.com/HanSolo/medusa/wiki/Gauge-Skins>
+(mismo autor que steelseries.js, Gerrit Grunwald) pidiendo mejorar el
+realismo del bisel y el detalle de carátula/escalas, especialmente
+inspirado en sus skins LCD/Digital.
+
+**Licencia verificada** (`gh api repos/HanSolo/medusa/license`):
+**Apache License 2.0** — permisiva de verdad, a diferencia de la duda sobre
+el plugin de WeeWX. Pero **no aplica de todos modos**: Medusa es una
+librería **JavaFX** (Java de escritorio), no JavaScript — no puede correr
+en un navegador sin importar la licencia. Se usó solo como referencia
+visual (misma lógica que la captura de WeeWX), nunca como código a
+importar.
+
+**Mejoras de realismo aplicadas** (`AnalogGauge.tsx`, `CompassGauge.tsx`,
+`GaugeFrame.tsx`):
+- Bisel: gradiente lineal de 7 paradas (antes 4) para un reflejo
+  metálico con luz y sombra reales, más una **ranura oscura** entre el
+  bisel y la carátula (profundidad, como el borde maquinado de un
+  instrumento real).
+- **Reflejo de cristal**: gradiente radial semitransparente sobre la
+  carátula (blanco en la esquina superior-izquierda, desvaneciendo a
+  transparente) simulando el vidrio del medidor.
+- **Pantalla LCD**: tinte verdoso clásico (`#cdd9bd`, no blanco/crema) con
+  un marco recesado (rect más oscuro detrás, desplazado 1px) simulando la
+  sombra interior de una ventana LCD real.
+- Remaches del bisel con highlight/sombra propios (antes un solo color).
 
 ## Notas
 

@@ -46,18 +46,28 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       aria-label={`Dirección del viento: ${hasValue ? `${Math.round(bearing)}° (${rumbo(bearing)})` : 'sin dato'}`}>
       <defs>
         <radialGradient id={`cface-${uid}`} cx="35%" cy="28%" r="80%">
-          <stop offset="0%" stopColor="#f7f4e9" />
-          <stop offset="100%" stopColor="#dcd6c1" />
+          <stop offset="0%" stopColor="#fbf8ee" />
+          <stop offset="55%" stopColor="#f0ead6" />
+          <stop offset="100%" stopColor="#d5cdb2" />
         </radialGradient>
-        <linearGradient id={`cbezel-${uid}`} x1="15%" y1="10%" x2="85%" y2="90%">
-          <stop offset="0%" stopColor="#f6f6f6" />
-          <stop offset="35%" stopColor="#9d9d9d" />
-          <stop offset="55%" stopColor="#5c5c5c" />
-          <stop offset="100%" stopColor="#e2e2e2" />
+        <linearGradient id={`cbezel-${uid}`} x1="12%" y1="8%" x2="88%" y2="92%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="20%" stopColor="#c9c9c9" />
+          <stop offset="40%" stopColor="#8a8a8a" />
+          <stop offset="50%" stopColor="#4a4a4a" />
+          <stop offset="62%" stopColor="#8a8a8a" />
+          <stop offset="82%" stopColor="#d8d8d8" />
+          <stop offset="100%" stopColor="#f2f2f2" />
         </linearGradient>
         <radialGradient id={`chub-${uid}`} cx="35%" cy="30%" r="80%">
-          <stop offset="0%" stopColor="#eee" />
-          <stop offset="100%" stopColor="#666" />
+          <stop offset="0%" stopColor="#f5f5f5" />
+          <stop offset="60%" stopColor="#999" />
+          <stop offset="100%" stopColor="#444" />
+        </radialGradient>
+        <radialGradient id={`cglass-${uid}`} cx="32%" cy="24%" r="55%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
         <filter id={`cshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
@@ -65,11 +75,13 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       </defs>
 
       <circle cx={cx} cy={cy} r={R} fill={`url(#cbezel-${uid})`} />
-      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cface-${uid})`} stroke="#00000022" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={faceR + size * 0.012} fill="none" stroke="#00000055" strokeWidth={size * 0.01} />
+      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cface-${uid})`} stroke="#00000030" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cglass-${uid})`} />
 
       {[45, 135, 225, 315].map((b) => {
         const p = pt(cx, cy, R - size * 0.02, b)
-        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.012} fill="#8a8a8a" stroke="#e0e0e0" strokeWidth={0.5} />
+        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.013} fill="#7a7a7a" stroke="#f0f0f0" strokeWidth={0.6} />
       })}
 
       {minors.map((m) => {
@@ -107,10 +119,13 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       </g>
       <circle cx={cx} cy={cy} r={size * 0.035} fill={`url(#chub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
 
+      <rect x={cx - size * 0.185 - 1} y={cy + faceR * 0.32 - 1} width={size * 0.37 + 2} height={size * 0.135 + 2}
+        rx={3} fill="#5c5c50" />
       <rect x={cx - size * 0.185} y={cy + faceR * 0.32} width={size * 0.37} height={size * 0.135}
-        rx={3} fill="#e9ede2" stroke="#8a8a78" strokeWidth={1} />
+        rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={cy + faceR * 0.32 + size * 0.0685} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.085} fontWeight={700} fill="#1c1c18" fontFamily="ui-monospace, monospace">
+        fontSize={size * 0.085} fontWeight={700} fill="#28331f" letterSpacing={0.5}
+        fontFamily="ui-monospace, monospace">
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
     </svg>
