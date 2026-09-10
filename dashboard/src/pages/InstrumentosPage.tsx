@@ -58,13 +58,17 @@ function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: D
 }
 
 export function InstrumentosPage() {
-  const { data } = useStationData()
+  const { data, stats } = useStationData()
   const u = useUnits()
   const imp = u.system === 'imperial'
   const [rose, setRose] = useState<Rose | null>(null)
   const [tempSource, setTempSource] = useState<'out' | 'in'>('out')
   const [humSource, setHumSource] = useState<'out' | 'in'>('out')
   const [dewSource, setDewSource] = useState<DewSource>('dew')
+
+  const tempStats = stats?.[tempSource === 'out' ? 'temperature_outdoor' : 'temperature_indoor']
+  const humStats = stats?.[humSource === 'out' ? 'humidity_outdoor' : 'humidity_indoor']
+  const pressStats = stats?.pressure_relative
 
   const dewRaw = data ? (
     dewSource === 'dew' ? data.dew_point
@@ -108,7 +112,9 @@ export function InstrumentosPage() {
                 : null}
               min={u.tempN(-20)} max={u.tempN(50)} majorStep={imp ? 20 : 10} midStep={imp ? 10 : 5} minorStep={imp ? 2 : 1}
               unit={u.tempU} decimals={1}
-              zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)} />
+              zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)}
+              minMarkerValue={tempStats?.min != null ? u.tempN(tempStats.min) : null}
+              maxMarkerValue={tempStats?.max != null ? u.tempN(tempStats.max) : null} />
             <ExtIntToggle name="temp-source" value={tempSource} onChange={setTempSource} />
           </div>
 
@@ -127,7 +133,9 @@ export function InstrumentosPage() {
               min={0} max={100} majorStep={20} midStep={10} minorStep={2}
               unit="%" decimals={0}
               zones={[{ from: 0, to: 30, color: '#d4a373' }, { from: 30, to: 60, color: '#22c55e' },
-                { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]} />
+                { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]}
+              minMarkerValue={humStats?.min ?? null}
+              maxMarkerValue={humStats?.max ?? null} />
             <ExtIntToggle name="hum-source" value={humSource} onChange={setHumSource} />
           </div>
 
@@ -149,7 +157,9 @@ export function InstrumentosPage() {
             value={data ? u.pressN(data.pressure_relative) : null}
             min={u.pressN(950)} max={u.pressN(1050)} majorStep={imp ? 0.5 : 20} midStep={imp ? 0.25 : 10} minorStep={imp ? 0.05 : 2}
             unit={u.pressU} decimals={imp ? 2 : 1}
-            zones={zonesIn([[950, 1000, '#f472b6'], [1000, 1020, '#94a3b8'], [1020, 1050, '#22c55e']], u.pressN)} />
+            zones={zonesIn([[950, 1000, '#f472b6'], [1000, 1020, '#94a3b8'], [1020, 1050, '#22c55e']], u.pressN)}
+            minMarkerValue={pressStats?.min != null ? u.pressN(pressStats.min) : null}
+            maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null} />
 
           <AnalogGauge title="Lluvia (hoy)" size={g}
             value={data ? u.rainN(data.rain_daily) : null}

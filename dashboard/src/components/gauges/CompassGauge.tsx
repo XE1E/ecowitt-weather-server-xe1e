@@ -53,7 +53,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
   // el título "DIRECCIÓN", quitado) y la de PROMEDIO va ABAJO (posición
   // del LCD original, antes de que hubiera dos) -- el color del texto
   // (rojo/azul) hace de etiqueta, a juego con la aguja de cada uno.
-  const lcdW = size * 0.38
+  const lcdW = size * 0.44
   const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
   const lcd1Y = cy - size * 0.173
@@ -158,7 +158,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
       <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
       <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={lcd1Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.058} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
+        fontSize={size * 0.068} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
@@ -167,7 +167,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
       <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
       <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={lcd2Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.058} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
+        fontSize={size * 0.068} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasAvg ? `${Math.round(avgBrg)}° ${rumbo(avgBrg)}` : '--'}
       </text>

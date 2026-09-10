@@ -33,6 +33,10 @@ export interface AnalogGaugeProps {
    * sigue mostrando la lectura instantánea. `null`/`undefined` la oculta.
    */
   markerValue?: number | null
+  /** Marca del mínimo del día (triángulo azul). `null`/`undefined` la oculta. */
+  minMarkerValue?: number | null
+  /** Marca del máximo del día (triángulo rojo). `null`/`undefined` la oculta. */
+  maxMarkerValue?: number | null
 }
 
 // Arco más amplio que antes (hueco de 60° en vez de 90°): el primer y
@@ -64,10 +68,26 @@ function range(min: number, max: number, step: number): number[] {
 function hasAny(list: number[], v: number) {
   return list.some((x) => Math.abs(x - v) < 1e-6)
 }
+// Triángulo apuntando al centro desde el borde de la carátula, sobre el
+// anillo de marcas -- valor de referencia fijo, no la aguja. Compartido por
+// la marca de ráfaga (Viento) y las de mín/máx del día (Temperatura, Presión,
+// Humedad), que solo cambian de color.
+function triMarker(cx: number, cy: number, faceR: number, zoneR: number, size: number, angle: number, color: string) {
+  const tipR = zoneR - size * 0.0175   // borde interior de la banda de colores
+  const baseR = faceR * 0.985
+  const halfW = 5
+  const tip = pt(cx, cy, tipR, angle)
+  const b0 = pt(cx, cy, baseR, angle - halfW)
+  const b1 = pt(cx, cy, baseR, angle + halfW)
+  return (
+    <polygon points={`${tip.x},${tip.y} ${b0.x},${b0.y} ${b1.x},${b1.y}`}
+      fill={color} stroke="#f0ead6" strokeWidth={0.8} />
+  )
+}
 
 export function AnalogGauge({
   title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend, lcdWide,
-  markerValue,
+  markerValue, minMarkerValue, maxMarkerValue,
 }: AnalogGaugeProps) {
   const cx = size / 2
   const cy = size / 2
@@ -85,7 +105,11 @@ export function AnalogGauge({
   const tickMidInnerR = faceR * 0.86
   const tickMinorInnerR = faceR * 0.90
   const labelR = faceR * 0.72
-  const titleR = faceR * 0.20
+  const titleR = faceR * 0.34
+  // Títulos largos (p. ej. "Radiación solar", "Base de nubes") chocan con
+  // los números vecinos de la escala si van al mismo tamaño que uno corto
+  // ("UV", "Viento") -- se reduce un poco la fuente sólo para esos casos.
+  const titleFontScale = title.length > 12 ? 0.036 : 0.042
   const needleR = tickOuterR - 1
 
   // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
@@ -103,6 +127,11 @@ export function AnalogGauge({
 
   const hasMarker = markerValue != null && !Number.isNaN(markerValue)
   const markerAngle = hasMarker ? angleOf(Math.min(max, Math.max(min, markerValue as number))) : 0
+
+  const hasMinMarker = minMarkerValue != null && !Number.isNaN(minMarkerValue)
+  const minMarkerAngle = hasMinMarker ? angleOf(Math.min(max, Math.max(min, minMarkerValue as number))) : 0
+  const hasMaxMarker = maxMarkerValue != null && !Number.isNaN(maxMarkerValue)
+  const maxMarkerAngle = hasMaxMarker ? angleOf(Math.min(max, Math.max(min, maxMarkerValue as number))) : 0
 
   const majors = useMemo(() => range(min, max, majorStep), [min, max, majorStep])
   const mids = useMemo(
@@ -199,20 +228,13 @@ export function AnalogGauge({
           un valor de referencia aparte de la aguja, que no se mueve con ella.
           Roja (mismo rojo que la aguja) y grande a propósito para que
           destaque sobre cualquier color de zona. */}
-      {hasMarker && (() => {
-        const tipR = zoneR - size * 0.0175   // borde interior de la banda de colores
-        const baseR = faceR * 0.985
-        const halfW = 5
-        const tip = pt(cx, cy, tipR, markerAngle)
-        const b0 = pt(cx, cy, baseR, markerAngle - halfW)
-        const b1 = pt(cx, cy, baseR, markerAngle + halfW)
-        return (
-          <polygon points={`${tip.x},${tip.y} ${b0.x},${b0.y} ${b1.x},${b1.y}`}
-            fill="#c0392b" stroke="#f0ead6" strokeWidth={0.8} />
-        )
-      })()}
+      {hasMarker && triMarker(cx, cy, faceR, zoneR, size, markerAngle, '#c0392b')}
+      {/* Mín/máx del día (Temperatura, Presión, Humedad): mismo triángulo que
+          la ráfaga de arriba, en azul/rojo para no confundirse con la aguja. */}
+      {hasMinMarker && triMarker(cx, cy, faceR, zoneR, size, minMarkerAngle, '#2563eb')}
+      {hasMaxMarker && triMarker(cx, cy, faceR, zoneR, size, maxMarkerAngle, '#c0392b')}
 
-      <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
+      <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * titleFontScale}
         fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
         {title.toUpperCase()}
       </text>
