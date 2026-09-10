@@ -25,6 +25,8 @@ export interface AnalogGaugeProps {
   zones?: GaugeZone[]
   size?: number
   trend?: 'up' | 'down' | 'stable'
+  /** LCD más ancho (p. ej. Presión, que necesita 4 dígitos + decimal). */
+  lcdWide?: boolean
 }
 
 // Arco más amplio que antes (hueco de 60° en vez de 90°): el primer y
@@ -58,7 +60,7 @@ function hasAny(list: number[], v: number) {
 }
 
 export function AnalogGauge({
-  title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend,
+  title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend, lcdWide,
 }: AnalogGaugeProps) {
   const cx = size / 2
   const cy = size / 2
@@ -82,10 +84,10 @@ export function AnalogGauge({
   // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
   // media carátula -- si no, choca con los números de las esquinas inferiores
   // (bearing 135°/225°, los más próximos al hueco de abajo).
-  const lcdW = size * 0.30
+  const lcdW = size * (lcdWide ? 0.38 : 0.30)
   const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
-  const lcdY = cy + size * 0.05
+  const lcdY = cy + size * 0.08
 
   const hasValue = value != null && !Number.isNaN(value)
   const v = hasValue ? Math.min(max, Math.max(min, value as number)) : min

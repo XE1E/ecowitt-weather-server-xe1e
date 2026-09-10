@@ -41,7 +41,7 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   const lcdW = size * 0.42
   const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
-  const lcdY = cy + size * 0.05
+  const lcdY = cy + size * 0.08
 
   const hasValue = value != null && !Number.isNaN(value)
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0

@@ -18,6 +18,7 @@ export function InstrumentosPage() {
   const u = useUnits()
   const imp = u.system === 'imperial'
   const [rose, setRose] = useState<Rose | null>(null)
+  const [tempSource, setTempSource] = useState<'out' | 'in'>('out')
 
   useEffect(() => {
     fetch('/api/wind/rose?start=-7d').then((r) => (r.ok ? r.json() : null)).then(setRose).catch(() => {})
@@ -40,11 +41,27 @@ export function InstrumentosPage() {
 
       <div className="card">
         <div className="grid gap-x-2 gap-y-6 justify-items-center" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${g}px, 1fr))` }}>
-          <AnalogGauge title="Temperatura" size={g}
-            value={data ? u.tempN(data.temperature_outdoor) : null}
-            min={u.tempN(-20)} max={u.tempN(50)} majorStep={imp ? 20 : 10} midStep={imp ? 10 : 5} minorStep={imp ? 2 : 1}
-            unit={u.tempU} decimals={1}
-            zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Temperatura" size={g}
+              value={data
+                ? u.tempN((tempSource === 'out' ? data.temperature_outdoor : data.temperature_indoor) ?? NaN)
+                : null}
+              min={u.tempN(-20)} max={u.tempN(50)} majorStep={imp ? 20 : 10} midStep={imp ? 10 : 5} minorStep={imp ? 2 : 1}
+              unit={u.tempU} decimals={1}
+              zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)} />
+            <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="temp-source" className="accent-sky-500"
+                  checked={tempSource === 'out'} onChange={() => setTempSource('out')} />
+                Exterior
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="temp-source" className="accent-sky-500"
+                  checked={tempSource === 'in'} onChange={() => setTempSource('in')} />
+                Interior
+              </label>
+            </div>
+          </div>
 
           <AnalogGauge title="Punto de rocío" size={g}
             value={data ? u.tempN(data.dew_point ?? NaN) : null}
@@ -71,7 +88,7 @@ export function InstrumentosPage() {
             {rose ? <WindRose rose={rose} size={g * 0.78} compact /> : <p className="text-xs text-slate-500 mt-16">Sin datos</p>}
           </GaugeFrame>
 
-          <AnalogGauge title="Presión" size={g}
+          <AnalogGauge title="Presión" size={g} lcdWide
             value={data ? u.pressN(data.pressure_relative) : null}
             min={u.pressN(950)} max={u.pressN(1050)} majorStep={imp ? 0.5 : 20} midStep={imp ? 0.25 : 10} minorStep={imp ? 0.05 : 2}
             unit={u.pressU} decimals={imp ? 2 : 1}

@@ -411,3 +411,23 @@ libre en el centro de la carátula.
 - Verificado con capturas por elemento (Temperatura, Presión, Dirección)
   y de página completa: notoriamente más espacio libre en el centro de
   cada carátula. `tsc` limpio.
+
+## Sexta ronda: LCD más abajo, Presión más ancho, selector ext/int — 2026-09-09
+
+- [x] **LCD más abajo en todos**: `lcdY` `cy + size*0.05` → `cy + size*0.08`
+      (`AnalogGauge` y `CompassGauge`) -- el arco más amplio de la ronda
+      anterior dejó margen de sobra debajo del cubo de la aguja.
+- [x] **Presión con LCD más ancho**: nuevo prop `lcdWide` en
+      `AnalogGaugeProps` (`lcdW` `size*0.30` → `size*0.38` cuando está
+      activo) para que quepan los 4 dígitos + decimal (p. ej. "1027.4").
+      Solo Presión lo usa por ahora.
+- [x] **Selector exterior/interior en Temperatura**: como en la captura de
+      referencia (radio buttons «снаружи»/«внутри» = exterior/interior).
+      Estado local (`tempSource`) en `InstrumentosPage.tsx`, dos
+      `<input type="radio">` reales (no botones-píldora como en otras
+      páginas del sitio) debajo del medidor, para parecerse a la
+      referencia. Mismo rango/zonas de escala para ambos sensores (no se
+      resiembra el gauge al cambiar, solo cambia qué dato alimenta la
+      aguja/LCD).
+- Verificado con Playwright simulando el clic en "Interior": el selector
+  cambia de estado correctamente, sin errores de consola. `tsc` limpio.
