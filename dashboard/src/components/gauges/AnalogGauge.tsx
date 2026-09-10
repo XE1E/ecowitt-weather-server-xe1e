@@ -270,13 +270,13 @@ export function AnalogGauge({
           gruesa que el guion "–" que había antes. Los paths están definidos
           en un viewBox de 20×24 centrado en (10,12); se reescalan con
           `scale(s)` y se trasladan para que ese centro caiga en (px, cy).
-          Radio chico (0.48×faceR) a propósito: a 0.62 coincidía con el
+          Radio chico (0.40×faceR) a propósito: a 0.62 coincidía con el
           número "970" de Presión (bearing 270° = puro-izquierda, igual que
           este punto) -- más cerca del centro queda lejos del anillo de
-          números (0.72). */}
+          números (0.68). */}
       {trend && (() => {
         const s = size * 0.006
-        const px = cx - faceR * 0.48
+        const px = cx - faceR * 0.40
         return (
           <g transform={`translate(${px - 10 * s}, ${cy - 12 * s}) scale(${s})`}>
             {trend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}

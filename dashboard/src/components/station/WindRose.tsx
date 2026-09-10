@@ -70,7 +70,10 @@ export function WindRose({ rose, size = 280, compact = false, dial = false }: Pr
 
   const cx = size / 2
   const cy = size / 2
-  const pad = compact ? 16 : 20
+  // En `dial` (Instrumentos, sin título ni leyenda) el disco entero es la
+  // rosa: menos padding para que N/S/E/O casi toquen el borde de la
+  // carátula, como pidió el usuario ("mismo tamaño que la carátula").
+  const pad = dial ? 6 : compact ? 16 : 20
   const R = size / 2 - pad
   const innerR = R * 0.16                    // círculo de calma
   const rawMax = Math.max(...rose.sectors.map((s) => s.pct), 0)
@@ -155,7 +158,7 @@ export function WindRose({ rose, size = 280, compact = false, dial = false }: Pr
 
         {/* Brújula */}
         {compass.map(({ b, t }) => {
-          const p = pt(cx, cy, R + (compact ? 10 : 12), b)
+          const p = pt(cx, cy, R + (dial ? 4 : compact ? 10 : 12), b)
           const cardinal = t.length === 1
           return (
             <text key={t} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"

@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 
 // Variante de AnalogGauge para dirección de viento: brújula de 360° completos
-// (sin hueco), rótulos cardinales N/E/S/O en vez de números, misma convención
+// (sin hueco), rótulos SOLO en los 4 cardinales (N/E/S/O -- ya no los 8
+// intercardinales, que se apiñaban con las marcas de 5°), misma convención
 // de bearing (0 = arriba, horario) que AnalogGauge y WindRose.
 const DIRS = [
-  ['N', 0], ['NE', 45], ['E', 90], ['SE', 135],
-  ['S', 180], ['SO', 225], ['O', 270], ['NO', 315],
+  ['N', 0], ['E', 90], ['S', 180], ['O', 270],
 ] as const
+const CARDINALS = [0, 90, 180, 270]
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
@@ -14,6 +15,13 @@ function toRad(deg: number) {
 function pt(cx: number, cy: number, r: number, bearing: number) {
   const t = toRad(bearing)
   return { x: cx + r * Math.sin(t), y: cy - r * Math.cos(t) }
+}
+// Distancia angular más corta entre dos bearings (0-180°, cruzando 0°/360°
+// cuando corresponde) -- para saber si una marca de la escala cae cerca de
+// un cardinal, sin importar de qué lado.
+function angDist(a: number, b: number) {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
 }
 
 function rumbo(deg: number): string {
@@ -34,21 +42,20 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
   const R = size / 2 - 5
   const faceR = R - size * 0.075
   // La escala de grados (ticks) a la MISMA distancia relativa que en
-  // AnalogGauge (tickOuterR/tickMajorInnerR/tickMinorInnerR ahí también son
-  // 0.94/0.82/0.90×faceR) para que los medidores se vean consistentes entre
-  // sí -- las letras cardinales se quedan en su radio de siempre (labelR,
-  // SIN cambios) y, como los ticks se saltan las 8 marcas cardinales (ver
-  // `minors`) y `needleR` no llega a alcanzar `labelR`, sigue sin haber
-  // colisión.
+  // AnalogGauge (tickOuterR/tickMajorInnerR/tickMidInnerR/tickMinorInnerR
+  // ahí también son 0.94/0.82/0.86/0.90×faceR) para que los medidores se
+  // vean consistentes entre sí -- las letras cardinales se quedan en su
+  // radio de siempre (labelR, SIN cambios).
   const tickOuterR = faceR * 0.94
   const tickMajorInnerR = faceR * 0.82
+  const tickMidInnerR = faceR * 0.86
   const tickMinorInnerR = faceR * 0.90
   const labelR = faceR * 0.92
   // La aguja se queda corta del radio de las letras a propósito (ver arriba).
   const needleR = tickMajorInnerR
-  // Aguja de promedio: más corta y delgada que la actual, para que la roja
-  // (actual) quede visualmente al mando cuando ambas casi coinciden.
-  const avgNeedleR = needleR * 0.86
+  // Aguja de promedio: mismo largo que la actual (roja) -- a pedido del
+  // usuario, antes era más corta y delgada.
+  const avgNeedleR = needleR
 
   // Mismo tamaño de LCD que en Presión (AnalogGauge con `lcdWide`): ancho
   // 0.38 y alto 0.115. La de ACTUAL va ARRIBA del centro (donde antes iba
@@ -69,7 +76,13 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
   const dominantBrg = hasDominant ? ((dominantBearing as number) % 360 + 360) % 360 : 0
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
-  const minors = useMemo(() => Array.from({ length: 72 }, (_, i) => i * 5), [])
+  // Escala nueva: marca cada 5°, mayor cada 20°, media cada 10° (impar) y
+  // menor cada 5° (impar) -- pero se salta cualquier marca a ±10° o menos de
+  // un cardinal (N/E/S/O), así nunca choca con esas letras ni con la que le
+  // sigue. El primer/último tramo visible queda entonces en 15°, no en 0°.
+  const minors = useMemo(
+    () => Array.from({ length: 72 }, (_, i) => i * 5).filter((m) => !CARDINALS.some((c) => angDist(m, c) <= 10)),
+    [])
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
@@ -122,10 +135,13 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
       })}
 
       {minors.map((m) => {
-        if (m % 45 === 0) return null
+        const isMajor = m % 20 === 0    // muy marcada
+        const isMid = !isMajor && m % 10 === 0   // marcada
+        const innerR = isMajor ? tickMajorInnerR : isMid ? tickMidInnerR : tickMinorInnerR
         const a = pt(cx, cy, tickOuterR, m)
-        const b = pt(cx, cy, m % 10 === 0 ? tickMajorInnerR : tickMinorInnerR, m)
-        return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4a4a42" strokeWidth={m % 10 === 0 ? 1.2 : 0.7} opacity={m % 10 === 0 ? 0.85 : 0.6} />
+        const b = pt(cx, cy, innerR, m)
+        return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#2e2e28"
+          strokeWidth={isMajor ? 1.8 : isMid ? 1.1 : 0.8} opacity={isMajor ? 1 : isMid ? 0.8 : 0.65} />
       })}
 
       {/* Sin línea de marca propia por cada cardinal (se quitó -- con la
@@ -188,7 +204,7 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
           transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)',
         }}>
           <polygon
-            points={`${cx - size * 0.02},${cy + size * 0.06} ${cx + size * 0.02},${cy + size * 0.06} ${cx},${cy - avgNeedleR}`}
+            points={`${cx - size * 0.026},${cy + size * 0.08} ${cx + size * 0.026},${cy + size * 0.08} ${cx},${cy - avgNeedleR}`}
             fill="#2563eb" filter={`url(#cshadow-${uid})`} />
         </g>
       )}

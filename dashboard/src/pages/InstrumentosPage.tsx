@@ -163,8 +163,8 @@ export function InstrumentosPage() {
           <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
             dominantBearing={dominantBearing} />
 
-          <GaugeFrame title="Rosa de vientos" size={g}>
-            {rose ? <WindRose rose={rose} size={g * 0.56} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
+          <GaugeFrame size={g}>
+            {rose ? <WindRose rose={rose} size={g * 0.78} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
           </GaugeFrame>
 
           <AnalogGauge title="Presión" size={g} lcdWide
