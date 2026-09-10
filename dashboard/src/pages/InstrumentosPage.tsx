@@ -4,6 +4,8 @@ import { useUnits } from '../units'
 import { AnalogGauge, CompassGauge, GaugeFrame, type GaugeZone } from '../components/gauges'
 import { WindRose, type Rose } from '../components/station/WindRose'
 import { PageInfo } from '../components/station/PageInfo'
+import { getTrend } from '../components/TrendArrow'
+import { historicValue } from '../weather'
 
 // Anclas de zonas en MÉTRICO; se convierten a la unidad activa con las
 // mismas funciones que usa el resto del sitio (u.tempN, u.windN, ...) para
@@ -58,7 +60,7 @@ function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: D
 }
 
 export function InstrumentosPage() {
-  const { data, stats } = useStationData()
+  const { data, stats, history } = useStationData()
   const u = useUnits()
   const imp = u.system === 'imperial'
   const [rose, setRose] = useState<Rose | null>(null)
@@ -69,6 +71,16 @@ export function InstrumentosPage() {
   const tempStats = stats?.[tempSource === 'out' ? 'temperature_outdoor' : 'temperature_indoor']
   const humStats = stats?.[humSource === 'out' ? 'humidity_outdoor' : 'humidity_indoor']
   const pressStats = stats?.pressure_relative
+
+  // Mismo cálculo de tendencia que CurrentConditions.tsx (flecha verde/roja):
+  // umbrales en MÉTRICO, sobre el dato crudo, antes de convertir a la unidad
+  // activa -- si no, el umbral (p. ej. "0.5°C") cambiaría de significado real
+  // al pasar a Fahrenheit.
+  const tempKey = tempSource === 'out' ? 'temperature_outdoor' : 'temperature_indoor'
+  const humKey = humSource === 'out' ? 'humidity_outdoor' : 'humidity_indoor'
+  const tempTrend = getTrend(data?.[tempKey], historicValue(history, (h) => h[tempKey], 1), 0.5)
+  const humTrend = getTrend(data?.[humKey], historicValue(history, (h) => h[humKey], 1), 3)
+  const pressTrend = getTrend(data?.pressure_relative, historicValue(history, (h) => h.pressure_relative, 3), 1)
 
   const dewRaw = data ? (
     dewSource === 'dew' ? data.dew_point
@@ -114,7 +126,8 @@ export function InstrumentosPage() {
               unit={u.tempU} decimals={1}
               zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)}
               minMarkerValue={tempStats?.min != null ? u.tempN(tempStats.min) : null}
-              maxMarkerValue={tempStats?.max != null ? u.tempN(tempStats.max) : null} />
+              maxMarkerValue={tempStats?.max != null ? u.tempN(tempStats.max) : null}
+              trend={tempTrend} />
             <ExtIntToggle name="temp-source" value={tempSource} onChange={setTempSource} />
           </div>
 
@@ -135,7 +148,8 @@ export function InstrumentosPage() {
               zones={[{ from: 0, to: 30, color: '#d4a373' }, { from: 30, to: 60, color: '#22c55e' },
                 { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]}
               minMarkerValue={humStats?.min ?? null}
-              maxMarkerValue={humStats?.max ?? null} />
+              maxMarkerValue={humStats?.max ?? null}
+              trend={humTrend} />
             <ExtIntToggle name="hum-source" value={humSource} onChange={setHumSource} />
           </div>
 
@@ -159,7 +173,8 @@ export function InstrumentosPage() {
             unit={u.pressU} decimals={imp ? 2 : 1}
             zones={zonesIn([[950, 1000, '#f472b6'], [1000, 1020, '#94a3b8'], [1020, 1050, '#22c55e']], u.pressN)}
             minMarkerValue={pressStats?.min != null ? u.pressN(pressStats.min) : null}
-            maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null} />
+            maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null}
+            trend={pressTrend} />
 
           <AnalogGauge title="Lluvia (hoy)" size={g}
             value={data ? u.rainN(data.rain_daily) : null}

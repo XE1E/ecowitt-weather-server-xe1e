@@ -255,9 +255,15 @@ export function AnalogGauge({
         {unit}
       </text>
 
+      {/* Tendencia: a la izquierda de la aguja, a nivel del centro -- mismo
+          verde/rojo que el resto del sitio (TrendArrow.tsx: sube = verde,
+          baja = rojo), no el rojo/azul que usaba la marca de ráfaga. Radio
+          chico (0.48×faceR) a propósito: a 0.62 coincidía con el número "970"
+          de Presión (bearing 270° = puro-izquierda, igual que este punto)
+          -- más cerca del centro queda lejos del anillo de números (0.72). */}
       {trend && (
-        <text x={cx - faceR * 0.62} y={cy + faceR * 0.34} textAnchor="middle" fontSize={size * 0.075}
-          fill={trend === 'up' ? '#c0392b' : trend === 'down' ? '#2563eb' : '#8a8a78'}>
+        <text x={cx - faceR * 0.48} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.075}
+          fill={trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : '#8a8a78'}>
           {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '–'}
         </text>
       )}
