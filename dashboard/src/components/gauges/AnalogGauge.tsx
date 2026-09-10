@@ -68,12 +68,14 @@ export function AnalogGauge({
   // Las marcas y el arco de colores comparten la MISMA banda exterior (en
   // vez de un arco de color afuera y un anillo de marcas más adentro, como
   // antes) -- así se libera toda la zona central para el título/LCD/aguja.
+  // Marcas cortas y arco angosto, pegados al borde; los números casi tocan
+  // el extremo interior de la marca mayor -- deja más espacio libre al centro.
   const tickOuterR = faceR * 0.94
-  const zoneR = faceR * 0.87
-  const tickMajorInnerR = faceR * 0.72
-  const tickMidInnerR = faceR * 0.78
-  const tickMinorInnerR = faceR * 0.84
-  const labelR = faceR * 0.60
+  const zoneR = faceR * 0.88
+  const tickMajorInnerR = faceR * 0.82
+  const tickMidInnerR = faceR * 0.86
+  const tickMinorInnerR = faceR * 0.90
+  const labelR = faceR * 0.72
   const titleR = faceR * 0.20
   const needleR = tickOuterR - 1
 
@@ -147,7 +149,7 @@ export function AnalogGauge({
       {zones.map((z, i) => (
         <path key={i}
           d={arcPath(cx, cy, zoneR, angleOf(Math.max(min, z.from)), angleOf(Math.min(max, z.to)))}
-          stroke={z.color} strokeWidth={size * 0.05} fill="none" opacity={0.8} />
+          stroke={z.color} strokeWidth={size * 0.035} fill="none" opacity={0.8} />
       ))}
 
       {minors.map((m) => {

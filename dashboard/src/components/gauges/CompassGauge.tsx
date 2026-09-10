@@ -30,8 +30,8 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   // no adentro -- así se leen como en una brújula real, separados de las
   // marcas finas de grado.
   const tickOuterR = faceR * 0.78
-  const tickMajorInnerR = faceR * 0.58
-  const tickMinorInnerR = faceR * 0.70
+  const tickMajorInnerR = faceR * 0.68
+  const tickMinorInnerR = faceR * 0.74
   const labelR = faceR * 0.92
   const titleR = faceR * 0.20
   const needleR = tickOuterR - 1

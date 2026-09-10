@@ -393,3 +393,21 @@ para este proyecto más allá de la referencia visual).
 - Responsive: tamaños sm/md/lg con escalado proporcional
 - Tema: Adaptar colores a dark/light mode
 - Accesibilidad: Incluir aria-labels con valores actuales
+
+## Quinta ronda: marcas más cortas, arco más angosto — 2026-09-09
+
+Pedido: acortar las líneas de marca, angostar el arco de colores, y pegar
+los números al extremo interior de la marca mayor, todo para ganar espacio
+libre en el centro de la carátula.
+
+- [x] `AnalogGauge`: `tickMajorInnerR` 0.72→0.82, `tickMidInnerR`
+      0.78→0.86, `tickMinorInnerR` 0.84→0.90 (marcas más cortas, más
+      pegadas al borde). `labelR` 0.60→0.72 (números casi tocando la
+      marca mayor). Arco de color `strokeWidth` `size*0.05`→`size*0.035`
+      (más angosto).
+- [x] `CompassGauge`: mismo criterio, `tickMajorInnerR` 0.58→0.68,
+      `tickMinorInnerR` 0.70→0.74 (marcas más cortas; los cardinales ya
+      estaban afuera desde la ronda anterior, sin cambio ahí).
+- Verificado con capturas por elemento (Temperatura, Presión, Dirección)
+  y de página completa: notoriamente más espacio libre en el centro de
+  cada carátula. `tsc` limpio.
