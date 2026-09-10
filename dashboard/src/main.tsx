@@ -21,6 +21,7 @@ import { ShareEmbedPage } from './pages/ShareEmbedPage'
 import { EmbedWidget } from './pages/EmbedWidget'
 import { KioskPage } from './pages/KioskPage'
 import { ConsolePage } from './pages/ConsolePage'
+import { InstrumentosPage } from './pages/InstrumentosPage'
 import { DisclaimerPage } from './pages/DisclaimerPage'
 import {
   AdminLayout,
@@ -114,6 +115,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="tablas" element={<TablesPage />} />
                 <Route path="compartir" element={<ShareEmbedPage />} />
                 <Route path="consola" element={<ConsolePage />} />
+                <Route path="instrumentos" element={<InstrumentosPage />} />
                 <Route path="disclaimer" element={<DisclaimerPage />} />
                 {/* Redirigir /pro/admin al nuevo panel */}
                 <Route path="admin" element={<Navigate to="/admin" replace />} />

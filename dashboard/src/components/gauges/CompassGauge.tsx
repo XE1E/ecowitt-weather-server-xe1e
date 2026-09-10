@@ -1,0 +1,118 @@
+import { useMemo } from 'react'
+
+// Variante de AnalogGauge para dirección de viento: brújula de 360° completos
+// (sin hueco), rótulos cardinales N/E/S/O en vez de números, misma convención
+// de bearing (0 = arriba, horario) que AnalogGauge y WindRose.
+const DIRS = [
+  ['N', 0], ['NE', 45], ['E', 90], ['SE', 135],
+  ['S', 180], ['SO', 225], ['O', 270], ['NO', 315],
+] as const
+
+function toRad(deg: number) {
+  return (deg * Math.PI) / 180
+}
+function pt(cx: number, cy: number, r: number, bearing: number) {
+  const t = toRad(bearing)
+  return { x: cx + r * Math.sin(t), y: cy - r * Math.cos(t) }
+}
+
+function rumbo(deg: number): string {
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
+  return dirs[Math.round(((deg % 360) / 22.5)) % 16]
+}
+
+export function CompassGauge({ value, size = 200 }: { value: number | null | undefined; size?: number }) {
+  const cx = size / 2
+  const cy = size / 2
+  const R = size / 2 - 5
+  const faceR = R - size * 0.045
+  // Mismo criterio de radios que AnalogGauge: anillo de marcas pegado al
+  // borde, título bien adentro para no chocar con las letras cardinales.
+  const tickOuterR = faceR * 0.84
+  const tickMajorInnerR = faceR * 0.735
+  const tickMinorInnerR = faceR * 0.785
+  const labelR = faceR * 0.60
+  const titleR = faceR * 0.20
+  const needleR = faceR - size * 0.02
+
+  const hasValue = value != null && !Number.isNaN(value)
+  const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
+  const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
+
+  const minors = useMemo(() => Array.from({ length: 36 }, (_, i) => i * 10), [])
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
+      aria-label={`Dirección del viento: ${hasValue ? `${Math.round(bearing)}° (${rumbo(bearing)})` : 'sin dato'}`}>
+      <defs>
+        <radialGradient id={`cface-${uid}`} cx="35%" cy="28%" r="80%">
+          <stop offset="0%" stopColor="#f7f4e9" />
+          <stop offset="100%" stopColor="#dcd6c1" />
+        </radialGradient>
+        <linearGradient id={`cbezel-${uid}`} x1="15%" y1="10%" x2="85%" y2="90%">
+          <stop offset="0%" stopColor="#f6f6f6" />
+          <stop offset="35%" stopColor="#9d9d9d" />
+          <stop offset="55%" stopColor="#5c5c5c" />
+          <stop offset="100%" stopColor="#e2e2e2" />
+        </linearGradient>
+        <radialGradient id={`chub-${uid}`} cx="35%" cy="30%" r="80%">
+          <stop offset="0%" stopColor="#eee" />
+          <stop offset="100%" stopColor="#666" />
+        </radialGradient>
+        <filter id={`cshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
+        </filter>
+      </defs>
+
+      <circle cx={cx} cy={cy} r={R} fill={`url(#cbezel-${uid})`} />
+      <circle cx={cx} cy={cy} r={faceR} fill={`url(#cface-${uid})`} stroke="#00000022" strokeWidth={1} />
+
+      {[45, 135, 225, 315].map((b) => {
+        const p = pt(cx, cy, R - size * 0.02, b)
+        return <circle key={b} cx={p.x} cy={p.y} r={size * 0.012} fill="#8a8a8a" stroke="#e0e0e0" strokeWidth={0.5} />
+      })}
+
+      {minors.map((m) => {
+        if (m % 90 === 0) return null
+        const a = pt(cx, cy, tickOuterR, m)
+        const b = pt(cx, cy, m % 30 === 0 ? tickMajorInnerR : tickMinorInnerR, m)
+        return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4a4a42" strokeWidth={m % 30 === 0 ? 1.4 : 1} />
+      })}
+
+      {DIRS.map(([label, b]) => {
+        const p0 = pt(cx, cy, tickOuterR, b)
+        const p1 = pt(cx, cy, tickMajorInnerR, b)
+        const lp = pt(cx, cy, labelR, b)
+        return (
+          <g key={label}>
+            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#2e2e28" strokeWidth={1.8} />
+            <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
+              fontSize={size * 0.062} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
+              {label}
+            </text>
+          </g>
+        )
+      })}
+
+      <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
+        fill="#5a5545" fontWeight={600} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
+        DIRECCIÓN
+      </text>
+
+      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
+        transform={`rotate(${bearing} ${cx} ${cy})`}>
+        <polygon
+          points={`${cx - size * 0.014},${cy + size * 0.07} ${cx + size * 0.014},${cy + size * 0.07} ${cx},${cy - needleR}`}
+          fill="#c0392b" filter={`url(#cshadow-${uid})`} />
+      </g>
+      <circle cx={cx} cy={cy} r={size * 0.035} fill={`url(#chub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
+
+      <rect x={cx - size * 0.185} y={cy + faceR * 0.32} width={size * 0.37} height={size * 0.135}
+        rx={3} fill="#e9ede2" stroke="#8a8a78" strokeWidth={1} />
+      <text x={cx} y={cy + faceR * 0.32 + size * 0.0685} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.085} fontWeight={700} fill="#1c1c18" fontFamily="ui-monospace, monospace">
+        {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
+      </text>
+    </svg>
+  )
+}

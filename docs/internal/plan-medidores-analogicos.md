@@ -1,8 +1,22 @@
 # Plan: Medidores Analógicos de Alta Calidad
 
-**Fecha**: 2026-07-29  
-**Estado**: Pendiente  
-**Referencia visual**: Estilo AWEKAS - medidores analógicos con toque digital
+**Fecha**: 2026-07-29 · **Implementado**: 2026-09-09
+**Estado**: HECHO
+**Referencia visual**: Estilo AWEKAS / **plugin "SteelSeries Weather Gauges" de WeeWX**
+(captura de referencia: <https://weewx.com/screenshots/slavalru.png> — pedida por el
+usuario el 2026-09-09).
+
+**Sobre la referencia WeeWX y licencias:** esos medidores NO son WeeWX
+(GPLv3) en sí — son un plugin/skin de terceros que envuelve una librería
+aparte ("steelseries.js", de Gerrit Grunwald) con su propia licencia, que no
+se verificó a detalle. De cualquier forma, solo se tenía una captura PNG (no
+el código/SVG original), así que no había nada literal que "copiar": se
+recreó el **estilo** (bisel metálico, carátula crema, zonas de color,
+aguja, pantalla LCD — un lenguaje visual de instrumentación genérico, no
+exclusivo de ningún proyecto) con **SVG propio de cero**, sin vendorizar
+ningún asset ni código de terceros. Ver la sección "Implementación real"
+más abajo para el resultado final (difiere del plan original en varios
+detalles de proporciones/radios, ajustados durante la verificación visual).
 
 ## Objetivo
 
@@ -162,6 +176,72 @@ Crear nueva página `GaugesPage.tsx` accesible desde el menú, o integrar en pá
 - Integración y ajustes: 1 hora
 
 **Total estimado: 5-6 horas**
+
+## Implementación real — 2026-09-09
+
+Difiere del plan original en varios puntos (decisiones tomadas durante la
+implementación, con confirmación del usuario para alcance y ubicación):
+
+- **12 medidores, no un subconjunto**: temperatura, punto de rocío,
+  humedad, viento (velocidad), dirección del viento (brújula 360°
+  completa, sin el hueco de 90°), rosa de vientos, presión, lluvia
+  acumulada del día, tasa de lluvia, UV, radiación solar y base de nubes
+  (`cloud_base`, ya calculado por el servidor). Todos con datos reales ya
+  disponibles en `useStationData()`, salvo la rosa de vientos
+  (`/api/wind/rose?start=-7d`, fetch propio de la página).
+- **Página nueva "Instrumentos"** en la barra de navegación (no una
+  sección dentro de otra página): `/pro/instrumentos`, ruta agregada en
+  `main.tsx` y `StationLayout.tsx` (`NAV_ACTIVE`).
+- **Archivos reales** (`dashboard/src/components/gauges/`):
+  - `AnalogGauge.tsx` — el medidor de aguja genérico (10 de los 12: todos
+    salvo dirección y rosa de vientos). Recibe zonas de color, ticks
+    mayor/menor, título, unidad y decimales.
+  - `CompassGauge.tsx` — variante para dirección del viento: círculo
+    completo de 360° (no el barrido de 270° con hueco de las demás),
+    rótulos cardinales N/NE/E/SE/S/SO/O/NO en vez de números.
+  - `GaugeFrame.tsx` — marco circular con el mismo bisel (bordes
+    metálicos) para envolver contenido que NO es un dial de aguja; se usa
+    para la rosa de vientos, que **reutiliza el componente `WindRose.tsx`
+    ya existente** (compacto) en vez de reconstruir un histograma polar
+    desde cero. Su interior usa los colores de tema normales
+    (`var(--surface)`/`var(--ink)`, adaptables claro/oscuro), no la
+    carátula crema de los demás -- retemar `WindRose` solo para esta
+    página no valía el esfuerzo.
+  - `index.ts` — exports. No se creó `gauges.css` ni wrappers por variable
+    (`TemperatureGauge.tsx`, etc.): un solo componente genérico
+    parametrizado cubre los 10 medidores de aguja, no hacía falta un
+    wrapper por cada uno.
+- **Convención angular**: bearing 0° = arriba, sentido horario --misma
+  convención que ya usaba `WindRose.tsx` (`pt()`)--, así que el código
+  nuevo la reutiliza en vez de inventar otra. Barrido de 270° con hueco de
+  90° abajo (bearing 225°→495°) para los medidores de aguja normales;
+  360° completos sin hueco para la brújula.
+- **Ajuste de proporciones tras verificación visual real** (capturas con
+  Playwright contra el dev server, no solo revisión de código): la
+  primera versión tenía el título encimado con los números de la escala
+  en los 12 medidores (el bearing 0°/arriba casi siempre cae cerca de un
+  tick, y el título compartía esa misma zona). Se resolvió apretando el
+  anillo de marcas/números contra el borde exterior (0.60-0.92 × radio de
+  carátula) y bajando el título a 0.20 × radio, con margen de sobra entre
+  ambos. También se cambió el bisel de `GaugeFrame` de gradiente lineal a
+  `conic-gradient` -- con lineal, el reflejo metálico solo se veía en una
+  porción del anillo circular, casi invisible en algunos ángulos.
+- **Unidades**: cada medidor usa las mismas funciones de conversión que ya
+  usa el resto del sitio (`u.tempN`, `u.windN`, `u.pressN`, `u.rainN`,
+  `u.rateN`); los anclajes de zona (p. ej. "35°C = calor") se definen en
+  métrico y se convierten con la misma función, así caen en el mismo punto
+  real de la escala sin importar el sistema de unidades. Base de nubes no
+  tenía conversor numérico en `units.tsx` (solo `alt()`, que da un string
+  ya formateado) -- se agregó una conversión local en la página
+  (`m / 0.3048` si es imperial).
+- Verificado: `npx tsc --noEmit` limpio. Verificación visual con
+  Playwright (Chromium headless) contra el dev server de Vite -- no con
+  datos reales de la estación (el dev server no tiene proxy al backend),
+  pero sí confirma el estado "sin dato" (`--`) y el layout/estilo de los
+  12 medidores. Pendiente: verificar visualmente con datos reales una vez
+  desplegado, y el modo imperial (no se pudo probar interactivamente por
+  limitaciones del entorno de pruebas -- sí se revisó a mano que las
+  conversiones no producen NaN ni crashean).
 
 ## Notas
 

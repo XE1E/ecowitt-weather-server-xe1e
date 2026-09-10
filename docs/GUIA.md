@@ -309,10 +309,11 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 Lo que sí corresponde a este documento:
 
-- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 15
+- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 16
   pestañas: Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Tablas,
   Climatología, Radar, Cámara, Astronomía, Calidad del aire, Aeronáutica,
-  Estación remota, Widget y Consola) y la clásica de una sola página en `/`.
+  Estación remota, Widget, Consola e **Instrumentos**) y la clásica de una
+  sola página en `/`.
   La lista viva es `NAV_ACTIVE` en `dashboard/src/pages/StationLayout.tsx`.
   **Consola** no tiene página propia: monta el mismo `ConsoleReplica` que pinta
   el kiosco (§7), así que lo que se ve en el navegador es lo que hay en la pared. El panel vive en `/admin`, el
