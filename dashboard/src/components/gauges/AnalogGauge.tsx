@@ -185,7 +185,7 @@ export function AnalogGauge({
       })}
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
-        fill="#5a5545" fontWeight={600} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
+        fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
         {title.toUpperCase()}
       </text>
 
@@ -213,9 +213,17 @@ export function AnalogGauge({
       )}
 
       {/* Aguja: gruesa, forma ancha->angosta (base 0.05*size, punta en cero).
-          Va DESPUÉS del LCD para pintarse por encima. */}
-      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
-        transform={`rotate(${needleAngle} ${cx} ${cy})`}>
+          Va DESPUÉS del LCD para pintarse por encima.
+          El giro se anima como propiedad CSS `transform` con `transformOrigin`
+          fijo en el pivote -- NO como `rotate(a, cx, cy)` en el atributo SVG
+          con `transition`: eso hace que el navegador interpole la matriz ya
+          descompuesta (traslación y rotación por separado) en vez de un
+          pivote limpio, y la aguja "se sale" del centro durante el giro. */}
+      <g style={{
+        transformOrigin: `${cx}px ${cy}px`,
+        transform: `rotate(${needleAngle}deg)`,
+        transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)',
+      }}>
         <polygon
           points={`${cx - size * 0.026},${cy + size * 0.08} ${cx + size * 0.026},${cy + size * 0.08} ${cx},${cy - needleR}`}
           fill="#c0392b" filter={`url(#shadow-${uid})`} />

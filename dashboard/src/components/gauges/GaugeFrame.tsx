@@ -20,7 +20,7 @@ export function GaugeFrame({ title, size = 200, children }: { title: string; siz
       >
         <div className="rounded-full w-full h-full flex flex-col items-center justify-center bg-[var(--surface)]"
           style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15), inset 0 0 0 3px rgba(0,0,0,0.35)' }}>
-          <p className="text-[10px] font-semibold tracking-wide text-slate-400 mt-2">{title.toUpperCase()}</p>
+          <p className="text-[10px] font-bold tracking-wide text-slate-400 mt-2">{title.toUpperCase()}</p>
           {children}
         </div>
       </div>

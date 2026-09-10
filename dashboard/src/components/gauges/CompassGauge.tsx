@@ -117,7 +117,7 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       })}
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.042}
-        fill="#5a5545" fontWeight={600} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
+        fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
         DIRECCIÓN
       </text>
 
@@ -134,8 +134,15 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
         rumbo
       </text>
 
-      <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
-        transform={`rotate(${bearing} ${cx} ${cy})`}>
+      {/* Ver comentario equivalente en AnalogGauge.tsx: `transform` como
+          propiedad CSS con `transformOrigin` fijo, no `rotate(a, cx, cy)`
+          en el atributo SVG -- si no, la animación descompone la matriz y
+          la aguja se ve salirse del centro al girar. */}
+      <g style={{
+        transformOrigin: `${cx}px ${cy}px`,
+        transform: `rotate(${bearing}deg)`,
+        transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)',
+      }}>
         <polygon
           points={`${cx - size * 0.026},${cy + size * 0.08} ${cx + size * 0.026},${cy + size * 0.08} ${cx},${cy - needleR}`}
           fill="#c0392b" filter={`url(#cshadow-${uid})`} />

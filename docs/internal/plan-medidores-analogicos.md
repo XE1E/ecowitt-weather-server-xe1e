@@ -431,3 +431,66 @@ libre en el centro de la carátula.
       aguja/LCD).
 - Verificado con Playwright simulando el clic en "Interior": el selector
   cambia de estado correctamente, sin errores de consola. `tsc` limpio.
+
+## Séptima ronda: selector ext/int también en Humedad — 2026-09-09
+
+Mismo patrón que Temperatura. Se refactorizó a un componente local
+`ExtIntToggle({ name, value, onChange })` dentro de `InstrumentosPage.tsx`
+para no duplicar el bloque de radios -- `name` único por instancia para
+que los dos grupos de radio buttons no se interfieran entre sí.
+
+- [x] Estado local `humSource`, gauge de Humedad usa
+      `humSource === 'out' ? data?.humidity_outdoor : data?.humidity_indoor`.
+- Verificado con Playwright: 2 selectores encontrados en la página
+  (Temperatura + Humedad), ambos cambian a "Interior" correctamente al
+  hacer clic, sin errores de consola. `tsc` limpio.
+
+De paso, el usuario compartió otra captura de referencia (gauge de "punto
+de rocío" con 5 opciones en ruso: точка росы/по ощущению/с учетом
+ветра/по ощущению/индекс влажности -- dew point, sensación térmica,
+ajustado por viento, sensación otra vez, índice de humedad). Por ahora
+solo se documenta la traducción; no se implementó un selector de 5 vías
+para Punto de rocío (pendiente si se pide explícitamente).
+
+## Octava ronda: fix animación de aguja + títulos en negritas — 2026-09-09
+
+**Bug reportado:** "cuando carga la pagina con los instrumentos las agujas
+tienen un movimiento fuera de las caratulas y cuando selecciono
+interior/exterior la aguja se mueve fuera del centro no teniendo un giro
+natural y suave".
+
+**Causa raíz:** la aguja rotaba con el atributo SVG `transform="rotate(a,
+cx, cy)"`, animado vía `transition` de CSS. El navegador interpola ese
+`transition` descomponiendo la matriz resultante en traslación + rotación
+por separado (no como un giro puro alrededor del pivote), así que durante
+la animación la aguja se "sale" del centro en vez de barrer limpiamente.
+
+**Fix** (`AnalogGauge.tsx` y `CompassGauge.tsx`): se reemplazó el atributo
+SVG por la propiedad CSS `transform: rotate(${angle}deg)` combinada con
+`transformOrigin: '${cx}px ${cy}px'` fijo, ambos vía `style` en el `<g>`
+que envuelve el polígono de la aguja. Con `transformOrigin` explícito el
+navegador interpola un giro puro alrededor del pivote, sin descomposición.
+
+**Verificación:** un primer intento de verificar con capturas de pantalla
+(`toggle_0.png` ... `toggle_3.png`) fue engañoso -- por el overhead de
+`click()`/`screenshot()` de Playwright, las capturas mostraban la aguja ya
+asentada, pareciendo que la transición no ocurría. Se cambió el método a
+muestreo directo de `getComputedStyle(needleG).transform` dentro de
+`page.evaluate()`, primero con una transición alargada a 3s (para que el
+efecto fuera inequívoco) y luego reconfirmando con la duración real de
+0.6s: en ambos casos todas las matrices muestreadas fueron giros puros
+(sin componente de traslación), asentando limpiamente ~600-630ms después
+del clic. Esto confirma que el fix es correcto y que el problema original
+era real (no un artefacto de la prueba).
+
+**Títulos en negritas:** por pedido explícito del usuario ("poner todos
+los titulos de las caratulas... en negritas igual que texto
+interior/exterior"), se cambió `fontWeight` de 600 a 700 en el texto de
+título de `AnalogGauge.tsx` y `CompassGauge.tsx`, y la clase de Tailwind
+del título en `GaugeFrame.tsx` de `font-semibold` a `font-bold`.
+
+- [x] `tsc --noEmit` limpio tras ambos cambios.
+- [x] Verificado visualmente con Playwright contra el dev server
+      (mock de `/api/current` y demás endpoints): las 12 carátulas
+      muestran su título en negritas y las agujas están correctamente
+      centradas en reposo.

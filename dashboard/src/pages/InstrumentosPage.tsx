@@ -13,12 +13,31 @@ function zonesIn(anchors: [number, number, string][], conv: (v: number) => numbe
   return anchors.map(([from, to, color]) => ({ from: conv(from), to: conv(to), color }))
 }
 
+// Selector exterior/interior debajo de un medidor -- como en la captura de
+// referencia (radio buttons «снаружи»/«внутри»). `name` debe ser único por
+// instancia para que los dos grupos de radios no se interfieran.
+function ExtIntToggle({ name, value, onChange }: { name: string; value: 'out' | 'in'; onChange: (v: 'out' | 'in') => void }) {
+  return (
+    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+      <label className="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name={name} className="accent-sky-500" checked={value === 'out'} onChange={() => onChange('out')} />
+        Exterior
+      </label>
+      <label className="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name={name} className="accent-sky-500" checked={value === 'in'} onChange={() => onChange('in')} />
+        Interior
+      </label>
+    </div>
+  )
+}
+
 export function InstrumentosPage() {
   const { data } = useStationData()
   const u = useUnits()
   const imp = u.system === 'imperial'
   const [rose, setRose] = useState<Rose | null>(null)
   const [tempSource, setTempSource] = useState<'out' | 'in'>('out')
+  const [humSource, setHumSource] = useState<'out' | 'in'>('out')
 
   useEffect(() => {
     fetch('/api/wind/rose?start=-7d').then((r) => (r.ok ? r.json() : null)).then(setRose).catch(() => {})
@@ -49,18 +68,7 @@ export function InstrumentosPage() {
               min={u.tempN(-20)} max={u.tempN(50)} majorStep={imp ? 20 : 10} midStep={imp ? 10 : 5} minorStep={imp ? 2 : 1}
               unit={u.tempU} decimals={1}
               zones={zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)} />
-            <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input type="radio" name="temp-source" className="accent-sky-500"
-                  checked={tempSource === 'out'} onChange={() => setTempSource('out')} />
-                Exterior
-              </label>
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input type="radio" name="temp-source" className="accent-sky-500"
-                  checked={tempSource === 'in'} onChange={() => setTempSource('in')} />
-                Interior
-              </label>
-            </div>
+            <ExtIntToggle name="temp-source" value={tempSource} onChange={setTempSource} />
           </div>
 
           <AnalogGauge title="Punto de rocío" size={g}
@@ -69,12 +77,15 @@ export function InstrumentosPage() {
             unit={u.tempU} decimals={1}
             zones={zonesIn([[-10, 5, '#38bdf8'], [5, 18, '#22c55e'], [18, 30, '#f59e0b']], u.tempN)} />
 
-          <AnalogGauge title="Humedad" size={g}
-            value={data?.humidity_outdoor ?? null}
-            min={0} max={100} majorStep={20} midStep={10} minorStep={2}
-            unit="%" decimals={0}
-            zones={[{ from: 0, to: 30, color: '#d4a373' }, { from: 30, to: 60, color: '#22c55e' },
-              { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Humedad" size={g}
+              value={(humSource === 'out' ? data?.humidity_outdoor : data?.humidity_indoor) ?? null}
+              min={0} max={100} majorStep={20} midStep={10} minorStep={2}
+              unit="%" decimals={0}
+              zones={[{ from: 0, to: 30, color: '#d4a373' }, { from: 30, to: 60, color: '#22c55e' },
+                { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]} />
+            <ExtIntToggle name="hum-source" value={humSource} onChange={setHumSource} />
+          </div>
 
           <AnalogGauge title="Viento" size={g}
             value={data ? u.windN(data.wind_speed) : null}
