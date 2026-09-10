@@ -62,6 +62,12 @@ export interface WeatherData {
    * en la ventana. `wind_speed` es la lectura instantánea, no un promedio.
    */
   wind_speed_avg10m?: number
+  /**
+   * Dirección media (circular, no aritmética) de los últimos 10 min -- mismo
+   * motivo que `wind_speed_avg10m` (la estación no manda promedio propio).
+   * `wind_direction` sigue siendo la lectura instantánea.
+   */
+  wind_direction_avg10m?: number
 
   // Rain
   rain_rate: number

@@ -130,7 +130,7 @@ export function InstrumentosPage() {
             unit={u.windU} decimals={1}
             zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
 
-          <CompassGauge size={g} value={data?.wind_direction ?? null} />
+          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null} />
 
           <GaugeFrame title="Rosa de vientos" size={g}>
             {rose ? <WindRose rose={rose} size={g * 0.78} compact /> : <p className="text-xs text-slate-500 mt-16">Sin datos</p>}

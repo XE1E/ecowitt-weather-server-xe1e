@@ -757,6 +757,16 @@ async def get_current_data(station: Optional[str] = None):
     except Exception as e:
         logger.error(f"Wind 10-min average error: {e}")
 
+    # Igual que arriba, pero para la dirección -- Ecowitt tampoco manda un
+    # promedio de rumbo, y el promedio circular (get_wind_dir_avg10m) no es
+    # algo que el llamador pueda derivar de `wind_direction` por su cuenta.
+    try:
+        wind_dir_avg = await storage.get_wind_dir_avg10m(station=station)
+        if wind_dir_avg is not None:
+            result["wind_direction_avg10m"] = wind_dir_avg
+    except Exception as e:
+        logger.error(f"Wind direction 10-min average error: {e}")
+
     return result
 
 

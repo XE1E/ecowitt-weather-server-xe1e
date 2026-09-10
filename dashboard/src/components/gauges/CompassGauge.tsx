@@ -21,7 +21,12 @@ function rumbo(deg: number): string {
   return dirs[Math.round(((deg % 360) / 22.5)) % 16]
 }
 
-export function CompassGauge({ value, size = 200 }: { value: number | null | undefined; size?: number }) {
+export function CompassGauge({ value, avgBearing, size = 200 }: {
+  value: number | null | undefined
+  /** Dirección media circular de los últimos 10 min (`wind_direction_avg10m`). */
+  avgBearing?: number | null
+  size?: number
+}) {
   const cx = size / 2
   const cy = size / 2
   const R = size / 2 - 5
@@ -35,23 +40,34 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   const labelR = faceR * 0.92
   const titleR = faceR * 0.20
   const needleR = tickOuterR - 1
+  // Aguja de promedio: más corta y delgada que la actual, para que la roja
+  // (actual) quede visualmente al mando cuando ambas casi coinciden.
+  const avgNeedleR = needleR * 0.86
 
   // Igual que en AnalogGauge: LCD pegado al centro, no a media carátula --
   // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal.
+  // Dos filas (actual/promedio) en el mismo alto total que antes ocupaba una
+  // sola -- el color del texto (rojo/azul) hace de etiqueta, a juego con la
+  // aguja de cada uno, sin gastar espacio vertical en captions.
   const lcdW = size * 0.42
-  const lcdH = size * 0.115
+  const lcdH = size * 0.085
+  const lcdGap = size * 0.012
   const lcdX = cx - lcdW / 2
-  const lcdY = cy + size * 0.08
+  const lcd1Y = cy + size * 0.075
+  const lcd2Y = lcd1Y + lcdH + lcdGap
 
   const hasValue = value != null && !Number.isNaN(value)
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
+  const hasAvg = avgBearing != null && !Number.isNaN(avgBearing)
+  const avgBrg = hasAvg ? ((avgBearing as number) % 360 + 360) % 360 : 0
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
   const minors = useMemo(() => Array.from({ length: 72 }, (_, i) => i * 5), [])
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
-      aria-label={`Dirección del viento: ${hasValue ? `${Math.round(bearing)}° (${rumbo(bearing)})` : 'sin dato'}`}>
+      aria-label={`Dirección del viento: ${hasValue ? `${Math.round(bearing)}° (${rumbo(bearing)})` : 'sin dato'}`
+        + (hasAvg ? `, promedio 10 min: ${Math.round(avgBrg)}° (${rumbo(avgBrg)})` : '')}>
       <defs>
         <radialGradient id={`cface-${uid}`} cx="35%" cy="28%" r="80%">
           <stop offset="0%" stopColor="#fbf8ee" />
@@ -121,23 +137,41 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
         DIRECCIÓN
       </text>
 
-      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
-      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
-      <text x={cx} y={lcdY + lcdH * 0.56} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.078} fontWeight={700} fill="#28331f" letterSpacing={0.3}
+      {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
+          a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}
+      <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <text x={cx} y={lcd1Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.058} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
 
-      <text x={cx} y={lcdY + lcdH + size * 0.065} textAnchor="middle"
-        fontSize={size * 0.05} fill="#6b6656" fontFamily="ui-sans-serif, system-ui">
-        rumbo
+      {/* LCD de abajo: PROMEDIO de 10 min (aguja azul) */}
+      <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <text x={cx} y={lcd2Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.058} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
+        fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
+        {hasAvg ? `${Math.round(avgBrg)}° ${rumbo(avgBrg)}` : '--'}
       </text>
 
-      {/* Ver comentario equivalente en AnalogGauge.tsx: `transform` como
-          propiedad CSS con `transformOrigin` fijo, no `rotate(a, cx, cy)`
-          en el atributo SVG -- si no, la animación descompone la matriz y
-          la aguja se ve salirse del centro al girar. */}
+      {/* Aguja de promedio (azul): va DEBAJO de la actual (roja) para que esta
+          se vea al mando cuando casi coinciden. Ver comentario en
+          AnalogGauge.tsx sobre por qué el giro se anima con `transform` CSS +
+          `transformOrigin`, no con `rotate(a, cx, cy)` en el atributo SVG. */}
+      {hasAvg && (
+        <g style={{
+          transformOrigin: `${cx}px ${cy}px`,
+          transform: `rotate(${avgBrg}deg)`,
+          transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)',
+        }}>
+          <polygon
+            points={`${cx - size * 0.02},${cy + size * 0.06} ${cx + size * 0.02},${cy + size * 0.06} ${cx},${cy - avgNeedleR}`}
+            fill="#2563eb" filter={`url(#cshadow-${uid})`} />
+        </g>
+      )}
+
       <g style={{
         transformOrigin: `${cx}px ${cy}px`,
         transform: `rotate(${bearing}deg)`,

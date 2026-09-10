@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import asyncio
 import logging
+import math
 
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -644,4 +645,53 @@ class InfluxDBStorage:
 
         except Exception as e:
             logger.error(f"Error calculating {minutes}-min wind average: {e}")
+            return None
+
+    async def get_wind_dir_avg10m(
+        self, station: Optional[str] = None, minutes: int = 10
+    ) -> Optional[float]:
+        """
+        Dirección media del viento de los últimos `minutes` minutos.
+
+        NO es un promedio aritmético normal: la dirección es una cantidad
+        circular (0° y 360° son el mismo rumbo), así que promediar los grados
+        tal cual falla justo donde más importa -- p. ej. 350° y 10° (viento del
+        N virando un poco) dan un promedio aritmético de 180° (¡el rumbo
+        opuesto, S!) en vez de 0°. El método estándar es el promedio vectorial:
+        se convierte cada muestra a su vector unitario (sin, cos), se promedian
+        esas componentes por separado, y el ángulo del vector resultante
+        (atan2) es la dirección media real.
+        """
+        try:
+            station_filter = _station_filter(station)
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: -{int(minutes)}m)
+                |> filter(fn: (r) => r["_measurement"] == "weather")
+                {station_filter}
+                |> filter(fn: (r) => r["_field"] == "wind_direction")
+            '''
+            sin_sum = 0.0
+            cos_sum = 0.0
+            n = 0
+            for table in self.query_api.query(q):
+                for record in table.records:
+                    val = record.get_value()
+                    if val is None:
+                        continue
+                    rad = math.radians(val)
+                    sin_sum += math.sin(rad)
+                    cos_sum += math.cos(rad)
+                    n += 1
+            if n == 0:
+                return None
+            mean_deg = math.degrees(math.atan2(sin_sum / n, cos_sum / n))
+            # `round` ANTES del `%`: cerca de 0° la suma de senos puede quedar
+            # en un negativo minúsculo por error de punto flotante (p. ej.
+            # -1.6e-15 en vez de 0.0), y `-1.6e-15 % 360` da ~359.999999...,
+            # que redondeado a 1 decimal sale "360.0" en vez de "0.0". Redondear
+            # primero colapsa ese ruido antes de que el módulo lo estire.
+            return round(mean_deg, 1) % 360
+        except Exception as e:
+            logger.error(f"Error calculating {minutes}-min wind direction average: {e}")
             return None

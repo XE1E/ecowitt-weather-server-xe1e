@@ -521,3 +521,74 @@ el ancho de 200px del medidor):
   alternan el valor mostrado en el LCD correctamente (9.2 / 17.0 / 15.5 /
   20.3 para punto de rocío / sensación / con viento / índice de humedad).
   `tsc --noEmit` limpio.
+
+## Décima ronda: promedio de 10 min en Dirección (aguja azul) — 2026-09-09
+
+Otra captura de referencia (gauge ruso de rumbo): letras cardinales С/В/Ю/З
+(Norte/Este/Sur/Oeste en ruso -- mismo С/В/Ю/З que N/E/S/O), dos LCD:
+"последнее время" ("última lectura", el actual) y "в среднем" ("en
+promedio"). El usuario pidió agregar el promedio de 10 min con aguja azul,
+dejando la actual en rojo.
+
+**Backend (cálculo del promedio):** Ecowitt no manda un promedio de rumbo
+(igual que no manda uno de velocidad -- ver `get_wind_avg10m`). Se agregó
+`StorageService.get_wind_dir_avg10m()` en `storage.py`, cableado en
+`/api/current` (`main.py`) igual que el de velocidad. Importante: la
+dirección es una cantidad CIRCULAR (0°/360° es el mismo rumbo) -- un
+promedio aritmético de los grados falla justo donde más importa (350° y
+10°, viento casi del norte con una racha, promediarían a 180°, ¡el rumbo
+OPUESTO!). Se usa el promedio vectorial estándar: se convierte cada muestra
+a (sin, cos), se promedian esas componentes, y el ángulo del vector
+resultante (`atan2`) es la dirección media real.
+
+- Bug encontrado y corregido DURANTE la verificación (no llegó a producción):
+  `round(mean_deg % 360, 1)` hacía el módulo ANTES de redondear. Cerca de
+  0° la suma de senos puede quedar en un negativo minúsculo por error de
+  punto flotante (p. ej. `-1.6e-15` en vez de `0.0` exacto), y
+  `-1.6e-15 % 360` da `~359.999999999998`, que redondeado a 1 decimal sale
+  **"360.0"** en vez de "0.0" -- un rumbo Norte real se habría mostrado
+  como "360° N" (visualmente extraño, aunque no incorrecto en sí). Fix:
+  redondear primero (`round(mean_deg, 1) % 360`), que colapsa el ruido de
+  punto flotante antes de que el módulo lo estire. Verificado con casos de
+  prueba: `circ_mean([350, 10]) == 0.0`, `circ_mean([260, 280, 300]) ==
+  280.0`, `circ_mean([170, 190]) == 180.0`.
+- Nuevo campo `wind_direction_avg10m` en `WeatherData` (dashboard) y en la
+  respuesta de `/api/current` (backend).
+
+**Frontend (`CompassGauge.tsx`):** nueva prop `avgBearing`. Cambios:
+- Dos LCD apiladas en el mismo alto total que antes ocupaba una sola +
+  su caption "rumbo" (que se quitó): la de arriba muestra el rumbo ACTUAL
+  con el texto en rojo oscuro (`#7a2420`, a juego con la aguja roja), la
+  de abajo el PROMEDIO en azul oscuro (`#1c3a63`, a juego con la aguja
+  azul) -- el color hace de etiqueta sin gastar una línea de texto extra
+  (el hueco vertical disponible entre el hub y la letra cardinal "S" no
+  alcanzaba para dos LCD + dos captions de texto).
+- Segunda aguja azul (`#2563eb`), más corta y delgada que la roja (86% del
+  largo), dibujada ANTES que la roja para que esta quede visualmente al
+  mando cuando ambos rumbos casi coinciden. Mismo patrón de animación
+  (`transform` CSS + `transformOrigin`) que la aguja roja.
+- Si `avgBearing` es `null`/`undefined` (aún no hay 10 min de historial,
+  p. ej. recién arrancado el servidor), la aguja azul no se dibuja y su
+  LCD muestra "--".
+- `aria-label` del SVG ahora incluye también el promedio cuando está
+  disponible.
+
+**Sobre las "tres sombras de color (gris, rojo, violeta)" de la captura
+original:** no se implementaron. A diferencia de los dos LCD (que sí
+tienen texto legible que se pudo traducir), esas bandas de color no
+tienen ninguna etiqueta en la imagen -- es un elemento puramente gráfico
+de la librería SteelSeries original, y sin ver el gauge en vivo (con
+tooltip o documentación de esa skin) no hay forma de confirmar qué
+representa cada una. La hipótesis más plausible es que sean arcos de
+variabilidad de rumbo en distintas ventanas de tiempo, semitransparentes
+y superpuestos (el violeta saldría de la mezcla óptica de un gris y un
+rojo solapados) -- pero es una hipótesis, no algo que se pudiera
+implementar con confianza. Pendiente si el usuario quiere definirlo
+explícitamente (qué ventanas de tiempo, qué corte de variabilidad).
+
+- [x] `tsc --noEmit` limpio.
+- [x] `py_compile` limpio en `storage.py` y `main.py`.
+- [x] Verificado con Playwright (mock `wind_direction=30`,
+      `wind_direction_avg10m=355`): ambas LCD muestran "30° NNE" (rojo) y
+      "355° N" (azul), ambas agujas se dibujan en sus ángulos correctos,
+      `aria-label` incluye ambos valores.
