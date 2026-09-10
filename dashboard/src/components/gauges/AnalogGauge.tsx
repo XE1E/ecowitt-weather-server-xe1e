@@ -104,12 +104,18 @@ export function AnalogGauge({
   const tickMajorInnerR = faceR * 0.82
   const tickMidInnerR = faceR * 0.86
   const tickMinorInnerR = faceR * 0.90
-  const labelR = faceR * 0.72
+  // 0.72 dejaba los números de 4 cifras (970, 1030, 1200, 2500...) casi
+  // tocando la marca mayor y la franja de colores, sobre todo cerca de los
+  // 90°/270° (izquierda/derecha): ahí el ANCHO del texto (no el alto) compite
+  // por el mismo hueco radial contra la marca, y un número de 4 dígitos es
+  // más ancho que alto. Un poco más adentro (0.68) da margen de sobra sin
+  // acercarse al título ni al hueco central.
+  const labelR = faceR * 0.68
   const titleR = faceR * 0.34
   // Títulos largos (p. ej. "Radiación solar", "Base de nubes") chocan con
   // los números vecinos de la escala si van al mismo tamaño que uno corto
   // ("UV", "Viento") -- se reduce un poco la fuente sólo para esos casos.
-  const titleFontScale = title.length > 12 ? 0.036 : 0.042
+  const titleFontScale = title.length > 12 ? 0.039 : 0.046
   const needleR = tickOuterR - 1
 
   // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
@@ -174,6 +180,9 @@ export function AnalogGauge({
         </filter>
         <filter id={`textshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
+        </filter>
+        <filter id={`lcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
         </filter>
       </defs>
 
@@ -242,7 +251,7 @@ export function AnalogGauge({
       {/* Pantalla LCD: texto monoespaciado con sombra tenue (no dígitos de 7
           segmentos -- no se veían bien en el navegador real). Va ANTES que
           la aguja para que esta pinte por encima. */}
-      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#lcdshadow-${uid})`} />
       <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={lcdY + lcdH * 0.56} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.095} fontWeight={700} fill="#28331f" letterSpacing={0.5}
@@ -255,18 +264,27 @@ export function AnalogGauge({
         {unit}
       </text>
 
-      {/* Tendencia: a la izquierda de la aguja, a nivel del centro -- mismo
-          verde/rojo que el resto del sitio (TrendArrow.tsx: sube = verde,
-          baja = rojo), no el rojo/azul que usaba la marca de ráfaga. Radio
-          chico (0.48×faceR) a propósito: a 0.62 coincidía con el número "970"
-          de Presión (bearing 270° = puro-izquierda, igual que este punto)
-          -- más cerca del centro queda lejos del anillo de números (0.72). */}
-      {trend && (
-        <text x={cx - faceR * 0.48} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.075}
-          fill={trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : '#8a8a78'}>
-          {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '–'}
-        </text>
-      )}
+      {/* Tendencia: a la izquierda de la aguja, a nivel del centro -- mismos
+          path/colores que TrendGlyph en ConsoleReplica.tsx (consola/kiosco):
+          flecha con cola en vez de glifo ▲/▼, y la barra de "estable" más
+          gruesa que el guion "–" que había antes. Los paths están definidos
+          en un viewBox de 20×24 centrado en (10,12); se reescalan con
+          `scale(s)` y se trasladan para que ese centro caiga en (px, cy).
+          Radio chico (0.48×faceR) a propósito: a 0.62 coincidía con el
+          número "970" de Presión (bearing 270° = puro-izquierda, igual que
+          este punto) -- más cerca del centro queda lejos del anillo de
+          números (0.72). */}
+      {trend && (() => {
+        const s = size * 0.006
+        const px = cx - faceR * 0.48
+        return (
+          <g transform={`translate(${px - 10 * s}, ${cy - 12 * s}) scale(${s})`}>
+            {trend === 'up' && <path d="M10 4 L18 14 L13 14 L13 20 L7 20 L7 14 L2 14 Z" fill="#22c55e" />}
+            {trend === 'down' && <path d="M10 20 L18 10 L13 10 L13 4 L7 4 L7 10 L2 10 Z" fill="#ef4444" />}
+            {trend === 'stable' && <path d="M4 10 L16 10 L16 14 L4 14 Z" fill="#94a3b8" />}
+          </g>
+        )
+      })()}
 
       {/* Aguja: gruesa, forma ancha->angosta (base 0.05*size, punta en cero).
           Va DESPUÉS del LCD para pintarse por encima.

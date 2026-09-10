@@ -164,7 +164,7 @@ export function InstrumentosPage() {
             dominantBearing={dominantBearing} />
 
           <GaugeFrame title="Rosa de vientos" size={g}>
-            {rose ? <WindRose rose={rose} size={g * 0.78} compact /> : <p className="text-xs text-slate-500 mt-16">Sin datos</p>}
+            {rose ? <WindRose rose={rose} size={g * 0.56} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
           </GaugeFrame>
 
           <AnalogGauge title="Presión" size={g} lcdWide

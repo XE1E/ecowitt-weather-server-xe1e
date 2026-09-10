@@ -20,6 +20,16 @@ export interface Rose {
 
 const BAND_VARS = ['--wind-b1', '--wind-b2', '--wind-b3', '--wind-b4', '--wind-b5']
 
+// Paleta fija (independiente del tema claro/oscuro) para cuando la rosa se
+// dibuja dentro de un medidor de carátula crema (Instrumentos, prop `dial`)
+// -- ahí no tiene sentido el multicolor de las demás páginas, así que va de
+// azul claro (calma) a azul muy oscuro (40+), como el resto de zonas de los
+// otros medidores de esa página.
+const DIAL_BAND_COLORS = ['#bae6fd', '#7dd3fc', '#38bdf8', '#0284c7', '#0c4a6e']
+const DIAL_INK = '#3a3a32'
+const DIAL_MUTED = '#6b6656'
+const DIAL_LINE = '#00000030'
+
 // Punto en el lienzo para un rumbo (0=N, horario) y radio r.
 function pt(cx: number, cy: number, r: number, bearingDeg: number) {
   const t = (bearingDeg * Math.PI) / 180
@@ -40,11 +50,23 @@ interface Props {
   rose: Rose
   size?: number
   compact?: boolean
+  /**
+   * Carátula crema de medidor (Instrumentos) en vez del tema normal de la
+   * app: paleta azul fija, ink/línea fijos (no CSS vars, que están pensadas
+   * para fondo oscuro/claro del sitio, no para crema), y sin la leyenda de
+   * bandas de abajo -- redundante ahí, el resto de la página no explica sus
+   * zonas de color con una leyenda aparte.
+   */
+  dial?: boolean
 }
 
-export function WindRose({ rose, size = 280, compact = false }: Props) {
+export function WindRose({ rose, size = 280, compact = false, dial = false }: Props) {
   const u = useUnits()
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null)
+  const bandColor = (k: number) => (dial ? DIAL_BAND_COLORS[k] : `var(${BAND_VARS[k]})`)
+  const ink = dial ? DIAL_INK : 'var(--ink)'
+  const muted = dial ? DIAL_MUTED : 'var(--muted)'
+  const line = dial ? DIAL_LINE : 'var(--line)'
 
   const cx = size / 2
   const cy = size / 2
@@ -80,14 +102,14 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
         {/* Aros de referencia + cruz de orientación */}
         {rings.map((f) => (
           <circle key={f} cx={cx} cy={cy} r={rOf(f * niceMax)} fill="none"
-            stroke="var(--line)" strokeWidth={1} />
+            stroke={line} strokeWidth={1} />
         ))}
-        <line x1={cx} y1={cy - R} x2={cx} y2={cy + R} stroke="var(--line)" strokeWidth={1} />
-        <line x1={cx - R} y1={cy} x2={cx + R} y2={cy} stroke="var(--line)" strokeWidth={1} />
+        <line x1={cx} y1={cy - R} x2={cx} y2={cy + R} stroke={line} strokeWidth={1} />
+        <line x1={cx - R} y1={cy} x2={cx + R} y2={cy} stroke={line} strokeWidth={1} />
 
         {/* Etiquetas de porcentaje (aros 50% y 100%) */}
         {!compact && [0.5, 1].map((f) => (
-          <text key={f} x={cx + 4} y={cy - rOf(f * niceMax)} fill="var(--muted)"
+          <text key={f} x={cx + 4} y={cy - rOf(f * niceMax)} fill={muted}
             fontSize={9} dominantBaseline="middle">{Math.round(f * niceMax)}%</text>
         ))}
 
@@ -105,7 +127,7 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
             if (r1 <= r0) return null
             return (
               <path key={`${i}-${k}`} d={annular(cx, cy, r0, r1, a0, a1)}
-                fill={`var(${BAND_VARS[k]})`}
+                fill={bandColor(k)}
                 opacity={hover && hover.i !== i ? 0.35 : 1}
                 style={{ transition: 'opacity .12s' }} />
             )
@@ -117,7 +139,7 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
           <path key={`hit-${i}`}
             d={annular(cx, cy, innerR, R, s.dir - HALF, s.dir + HALF)}
             fill="transparent"
-            stroke={hover?.i === i ? 'var(--muted)' : 'none'} strokeWidth={1}
+            stroke={hover?.i === i ? muted : 'none'} strokeWidth={1}
             onMouseMove={(e) => {
               const box = (e.currentTarget.ownerSVGElement!.parentElement as HTMLElement).getBoundingClientRect()
               setHover({ i, x: e.clientX - box.left, y: e.clientY - box.top })
@@ -125,9 +147,9 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
         ))}
 
         {/* Círculo de calma */}
-        <circle cx={cx} cy={cy} r={innerR} fill="var(--surface)" stroke="var(--line)" strokeWidth={1} />
-        <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--muted)" fontSize={9}>Calma</text>
-        <text x={cx} y={cy + 8} textAnchor="middle" fill="var(--ink)" fontSize={12} fontWeight={700}>
+        <circle cx={cx} cy={cy} r={innerR} fill={dial ? '#f0ead6' : 'var(--surface)'} stroke={line} strokeWidth={1} />
+        <text x={cx} y={cy - 4} textAnchor="middle" fill={muted} fontSize={9}>Calma</text>
+        <text x={cx} y={cy + 8} textAnchor="middle" fill={ink} fontSize={12} fontWeight={700}>
           {rose.calm_pct}%
         </text>
 
@@ -137,7 +159,7 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
           const cardinal = t.length === 1
           return (
             <text key={t} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
-              fill={cardinal ? 'var(--ink)' : 'var(--muted)'}
+              fill={cardinal ? ink : muted}
               fontSize={cardinal ? 11 : 9} fontWeight={cardinal ? 700 : 400}>{t}</text>
           )
         })}
@@ -156,7 +178,7 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
           <div className="mt-1 space-y-0.5">
             {rose.sectors[hover.i].bands.map((bp, k) => bp > 0 && (
               <div key={k} className="flex items-center gap-1.5">
-                <i className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: `var(${BAND_VARS[k]})` }} />
+                <i className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: bandColor(k) }} />
                 <span className="text-slate-400">{bandLabel(k)}</span>
                 <span className="ml-auto tabular-nums">{bp.toFixed(1)}%</span>
               </div>
@@ -165,12 +187,14 @@ export function WindRose({ rose, size = 280, compact = false }: Props) {
         </div>
       )}
 
-      {/* Leyenda de bandas (siempre; también en compacto) */}
-      {(
+      {/* Leyenda de bandas (siempre; también en compacto) -- salvo en `dial`:
+          ahí no hace falta, ninguno de los demás medidores de Instrumentos
+          explica sus zonas de color con una leyenda aparte. */}
+      {!dial && (
         <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-400 ${compact ? 'justify-center' : ''}`}>
           {edges.map((_, k) => (
             <span key={k} className="flex items-center gap-1">
-              <i className="inline-block w-3 h-3 rounded-sm" style={{ background: `var(${BAND_VARS[k]})` }} />
+              <i className="inline-block w-3 h-3 rounded-sm" style={{ background: bandColor(k) }} />
               {bandLabel(k)}
             </span>
           ))}

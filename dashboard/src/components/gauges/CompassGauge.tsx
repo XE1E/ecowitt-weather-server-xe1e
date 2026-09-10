@@ -33,14 +33,16 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
   const cy = size / 2
   const R = size / 2 - 5
   const faceR = R - size * 0.075
-  // La escala de grados (ticks) va pegada al extremo de la carátula, cerca
-  // del bisel. Las letras cardinales se quedan en su radio de siempre
-  // (labelR, sin cambios) -- quedan DENTRO del anillo de ticks en vez de
-  // fuera, pero como los ticks se saltan las 8 marcas cardinales (ver
-  // `minors`) y `needleR` no llega a alcanzar `labelR`, no hay colisión.
-  const tickOuterR = faceR * 0.97
-  const tickMajorInnerR = faceR * 0.885
-  const tickMinorInnerR = faceR * 0.93
+  // La escala de grados (ticks) a la MISMA distancia relativa que en
+  // AnalogGauge (tickOuterR/tickMajorInnerR/tickMinorInnerR ahí también son
+  // 0.94/0.82/0.90×faceR) para que los medidores se vean consistentes entre
+  // sí -- las letras cardinales se quedan en su radio de siempre (labelR,
+  // SIN cambios) y, como los ticks se saltan las 8 marcas cardinales (ver
+  // `minors`) y `needleR` no llega a alcanzar `labelR`, sigue sin haber
+  // colisión.
+  const tickOuterR = faceR * 0.94
+  const tickMajorInnerR = faceR * 0.82
+  const tickMinorInnerR = faceR * 0.90
   const labelR = faceR * 0.92
   // La aguja se queda corta del radio de las letras a propósito (ver arriba).
   const needleR = tickMajorInnerR
@@ -105,6 +107,9 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
         <filter id={`ctextshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
         </filter>
+        <filter id={`clcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
+        </filter>
       </defs>
 
       <circle cx={cx} cy={cy} r={R} fill={`url(#cbezel-${uid})`} />
@@ -155,19 +160,19 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
 
       {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
           a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}
-      <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#clcdshadow-${uid})`} />
       <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={lcd1Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.068} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
+        fontSize={size * 0.095} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
 
       {/* LCD de abajo: PROMEDIO de 10 min (aguja azul) */}
-      <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
+      <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#clcdshadow-${uid})`} />
       <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
       <text x={cx} y={lcd2Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
-        fontSize={size * 0.068} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
+        fontSize={size * 0.095} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasAvg ? `${Math.round(avgBrg)}° ${rumbo(avgBrg)}` : '--'}
       </text>
