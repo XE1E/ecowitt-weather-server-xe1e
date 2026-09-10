@@ -334,6 +334,43 @@ monoespaciada).
   segmentos legibles con los segmentos apagados tenues de fondo. `tsc`
   limpio.
 
+## Tercera ronda de correcciones — 2026-09-09
+
+El usuario probó los dígitos de 7 segmentos en el navegador real y no se
+veían bien (aunque en las capturas de Playwright de la sesión anterior sí
+se veían correctos) -- se revierte esa parte. Además pidió más
+subdivisiones (con un tercer nivel de marca, no solo mayor/menor), que las
+marcas fueran SOBRE el arco de colores en vez de en un anillo aparte más
+adentro (para liberar espacio de carátula), y que los puntos cardinales de
+Dirección salieran del anillo de marcas hacia el borde.
+
+- [x] **7 segmentos revertido**: se borró `SevenSegmentDisplay.tsx`
+      (código muerto, no se deja sin usar). `AnalogGauge` vuelve al
+      `<text>` monoespaciado de antes, con un `feDropShadow` sutil nuevo
+      (`filter`, no clase CSS -- los filtros SVG no heredan de Tailwind)
+      para darle algo de profundidad sin la complejidad de los segmentos.
+- [x] **Marcas sobre el arco de colores**: antes el arco de color vivía
+      AFUERA del anillo de marcas (`zoneR=0.92` > `tickOuterR=0.84`,
+      radios relativos a `faceR`); ahora comparten la misma banda exterior
+      (`tickOuterR=0.94`, `zoneR=0.87` cruzando por en medio de las
+      marcas), liberando toda la zona centro-carátula.
+- [x] **Tercer nivel de marca** (`midStep`, prop nueva en `AnalogGauge`):
+      marca media SIN número entre dos marcas mayores (p. ej. temperatura
+      0→10 con mayor en 0 y 10, media en 5) más `minorStep` para la
+      subdivisión más fina (de 1 en 1 en temperatura, proporcional en el
+      resto). Los tres niveles se dibujan con distinto grosor/opacidad
+      (mayor > medio > menor) y `range()` filtra duplicados (una marca
+      menor que cae justo en un valor mayor o medio no se redibuja).
+- [x] **Puntos cardinales afuera de las marcas** (`CompassGauge`):
+      `labelR` pasó de estar DENTRO del anillo de marcas (0.60, menor que
+      `tickOuterR` 0.84) a estar AFUERA (0.92, mayor que el nuevo
+      `tickOuterR` 0.78) -- ahora se leen como en una brújula física, con
+      las marcas de grado hacia adentro. De paso, más subdivisión ahí
+      también (marca cada 5°, antes cada 10°).
+- Verificado con capturas por elemento (Temperatura, Dirección): los tres
+  niveles de marca cruzan visiblemente el arco de color, N/NE/E/SE/S/SO/O/NO
+  quedan claramente afuera del anillo de grados. `tsc` limpio.
+
 ## Notas
 
 - Usar SVG nativo, no librerías externas (mantener bundle pequeño)

@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { SevenSegmentDisplay } from './SevenSegmentDisplay'
 
 // Medidor analógico estilo "instrumento físico" (bisel metálico, carátula crema,
 // zonas de color, aguja, pantalla LCD) -- inspirado en el aspecto clásico de los
@@ -19,6 +18,9 @@ export interface AnalogGaugeProps {
   unit: string
   decimals?: number
   majorStep: number
+  /** Marca media SIN número, entre dos marcas mayores (p. ej. el "5" entre 0 y 10). */
+  midStep?: number
+  /** Subdivisión más fina, sin número (p. ej. de 1 en 1). */
   minorStep?: number
   zones?: GaugeZone[]
   size?: number
@@ -47,30 +49,33 @@ function range(min: number, max: number, step: number): number[] {
   for (let x = min; x <= max + 1e-6; x += step) out.push(Math.round(x * 1000) / 1000)
   return out
 }
+function hasAny(list: number[], v: number) {
+  return list.some((x) => Math.abs(x - v) < 1e-6)
+}
 
 export function AnalogGauge({
-  title, value, min, max, unit, decimals = 1, majorStep, minorStep, zones = [], size = 200, trend,
+  title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend,
 }: AnalogGaugeProps) {
   const cx = size / 2
   const cy = size / 2
   const R = size / 2 - 5              // bisel exterior
-  const faceR = R - size * 0.075      // carátula -- bisel más grueso que antes (0.045)
-  // Radios relativos a faceR: el anillo de marcas/números vive pegado al
-  // borde (0.60-0.92) para dejar TODO el centro-arriba libre para el título
-  // -- si no, el título choca con el número que cae arriba (bearing 0 es
-  // siempre el punto medio del rango, así que casi siempre hay un tick ahí).
-  const zoneR = faceR * 0.92
-  const tickOuterR = faceR * 0.84
-  const tickMajorInnerR = faceR * 0.735
-  const tickMinorInnerR = faceR * 0.80
+  const faceR = R - size * 0.075      // carátula
+
+  // Las marcas y el arco de colores comparten la MISMA banda exterior (en
+  // vez de un arco de color afuera y un anillo de marcas más adentro, como
+  // antes) -- así se libera toda la zona central para el título/LCD/aguja.
+  const tickOuterR = faceR * 0.94
+  const zoneR = faceR * 0.87
+  const tickMajorInnerR = faceR * 0.72
+  const tickMidInnerR = faceR * 0.78
+  const tickMinorInnerR = faceR * 0.84
   const labelR = faceR * 0.60
   const titleR = faceR * 0.20
-  const needleR = zoneR - 1
+  const needleR = tickOuterR - 1
 
   // Pantalla LCD: pegada al centro (justo debajo del cubo de la aguja), NO a
   // media carátula -- si no, choca con los números de las esquinas inferiores
-  // (bearing 135°/225°, los más próximos al hueco de abajo, caen justo en esa
-  // zona media). Ver docs/internal/plan-medidores-analogicos.md.
+  // (bearing 135°/225°, los más próximos al hueco de abajo).
   const lcdW = size * 0.30
   const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
@@ -82,7 +87,12 @@ export function AnalogGauge({
   const angleOf = (val: number) => START + ((val - min) / (max - min)) * SWEEP
 
   const majors = useMemo(() => range(min, max, majorStep), [min, max, majorStep])
-  const minors = useMemo(() => range(min, max, minorStep || 0), [min, max, minorStep])
+  const mids = useMemo(
+    () => range(min, max, midStep || 0).filter((m) => !hasAny(majors, m)),
+    [min, max, midStep, majors])
+  const minors = useMemo(
+    () => range(min, max, minorStep || 0).filter((m) => !hasAny(majors, m) && !hasAny(mids, m)),
+    [min, max, minorStep, majors, mids])
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
   return (
@@ -115,6 +125,9 @@ export function AnalogGauge({
         <filter id={`shadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
         </filter>
+        <filter id={`textshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
+        </filter>
       </defs>
 
       <circle cx={cx} cy={cy} r={R} fill={`url(#bezel-${uid})`} />
@@ -130,15 +143,21 @@ export function AnalogGauge({
       {zones.map((z, i) => (
         <path key={i}
           d={arcPath(cx, cy, zoneR, angleOf(Math.max(min, z.from)), angleOf(Math.min(max, z.to)))}
-          stroke={z.color} strokeWidth={size * 0.025} fill="none" opacity={0.85} />
+          stroke={z.color} strokeWidth={size * 0.05} fill="none" opacity={0.8} />
       ))}
 
       {minors.map((m) => {
-        if (majors.some((M) => Math.abs(M - m) < 1e-6)) return null
         const a = angleOf(m)
         const p0 = pt(cx, cy, tickOuterR, a)
         const p1 = pt(cx, cy, tickMinorInnerR, a)
-        return <line key={m} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#4a4a42" strokeWidth={1} />
+        return <line key={`mn${m}`} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#2e2e28" strokeWidth={0.8} opacity={0.65} />
+      })}
+
+      {mids.map((m) => {
+        const a = angleOf(m)
+        const p0 = pt(cx, cy, tickOuterR, a)
+        const p1 = pt(cx, cy, tickMidInnerR, a)
+        return <line key={`md${m}`} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#2e2e28" strokeWidth={1.1} opacity={0.8} />
       })}
 
       {majors.map((m) => {
@@ -148,7 +167,7 @@ export function AnalogGauge({
         const lp = pt(cx, cy, labelR, a)
         return (
           <g key={m}>
-            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#2e2e28" strokeWidth={1.6} />
+            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#1c1c18" strokeWidth={1.8} />
             <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
               fontSize={size * 0.052} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
               {Number.isInteger(m) ? m : m.toFixed(1)}
@@ -162,13 +181,16 @@ export function AnalogGauge({
         {title.toUpperCase()}
       </text>
 
-      {/* Pantalla LCD (dígitos de 7 segmentos) -- va ANTES que la aguja para
-          que esta pinte por encima, no al revés. */}
+      {/* Pantalla LCD: texto monoespaciado con sombra tenue (no dígitos de 7
+          segmentos -- no se veían bien en el navegador real). Va ANTES que
+          la aguja para que esta pinte por encima. */}
       <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
       <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
-      <SevenSegmentDisplay
-        text={hasValue ? value!.toFixed(decimals) : '--'}
-        x={lcdX + lcdW * 0.06} y={lcdY + lcdH * 0.1} width={lcdW * 0.88} height={lcdH * 0.8} />
+      <text x={cx} y={lcdY + lcdH * 0.56} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.095} fontWeight={700} fill="#28331f" letterSpacing={0.5}
+        fontFamily="ui-monospace, monospace" filter={`url(#textshadow-${uid})`}>
+        {hasValue ? value!.toFixed(decimals) : '--'}
+      </text>
 
       <text x={cx} y={lcdY + lcdH + size * 0.065} textAnchor="middle"
         fontSize={size * 0.05} fill="#6b6656" fontFamily="ui-sans-serif, system-ui">
@@ -182,8 +204,8 @@ export function AnalogGauge({
         </text>
       )}
 
-      {/* Aguja: más gruesa y con forma ancha->angosta (base 0.05*size, punta
-          en cero). Va DESPUÉS del LCD para pintarse por encima. */}
+      {/* Aguja: gruesa, forma ancha->angosta (base 0.05*size, punta en cero).
+          Va DESPUÉS del LCD para pintarse por encima. */}
       <g style={{ transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}
         transform={`rotate(${needleAngle} ${cx} ${cy})`}>
         <polygon

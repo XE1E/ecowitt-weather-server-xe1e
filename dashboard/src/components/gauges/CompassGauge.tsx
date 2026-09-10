@@ -26,18 +26,18 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   const cy = size / 2
   const R = size / 2 - 5
   const faceR = R - size * 0.075
-  // Mismo criterio de radios que AnalogGauge: anillo de marcas pegado al
-  // borde, título bien adentro para no chocar con las letras cardinales.
-  const tickOuterR = faceR * 0.84
-  const tickMajorInnerR = faceR * 0.735
-  const tickMinorInnerR = faceR * 0.80
-  const labelR = faceR * 0.60
+  // Los puntos cardinales van AFUERA del anillo de marcas (cerca del borde),
+  // no adentro -- así se leen como en una brújula real, separados de las
+  // marcas finas de grado.
+  const tickOuterR = faceR * 0.78
+  const tickMajorInnerR = faceR * 0.58
+  const tickMinorInnerR = faceR * 0.70
+  const labelR = faceR * 0.92
   const titleR = faceR * 0.20
-  const needleR = faceR - size * 0.02
+  const needleR = tickOuterR - 1
 
   // Igual que en AnalogGauge: LCD pegado al centro, no a media carátula --
-  // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal,
-  // y si se queda a media altura choca con las letras SO/SE de las esquinas.
+  // "259° SSO" (hasta 8 caracteres) necesita más ancho que un número normal.
   const lcdW = size * 0.42
   const lcdH = size * 0.115
   const lcdX = cx - lcdW / 2
@@ -47,7 +47,7 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
   const bearing = hasValue ? ((value as number) % 360 + 360) % 360 : 0
   const uid = useMemo(() => Math.random().toString(36).slice(2, 9), [])
 
-  const minors = useMemo(() => Array.from({ length: 36 }, (_, i) => i * 10), [])
+  const minors = useMemo(() => Array.from({ length: 72 }, (_, i) => i * 5), [])
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
@@ -80,6 +80,9 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
         <filter id={`cshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodOpacity="0.45" />
         </filter>
+        <filter id={`ctextshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0.6" stdDeviation="0.5" floodColor="#000000" floodOpacity="0.5" />
+        </filter>
       </defs>
 
       <circle cx={cx} cy={cy} r={R} fill={`url(#cbezel-${uid})`} />
@@ -92,10 +95,10 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
       })}
 
       {minors.map((m) => {
-        if (m % 90 === 0) return null
+        if (m % 45 === 0) return null
         const a = pt(cx, cy, tickOuterR, m)
-        const b = pt(cx, cy, m % 30 === 0 ? tickMajorInnerR : tickMinorInnerR, m)
-        return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4a4a42" strokeWidth={m % 30 === 0 ? 1.4 : 1} />
+        const b = pt(cx, cy, m % 10 === 0 ? tickMajorInnerR : tickMinorInnerR, m)
+        return <line key={m} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4a4a42" strokeWidth={m % 10 === 0 ? 1.2 : 0.7} opacity={m % 10 === 0 ? 0.85 : 0.6} />
       })}
 
       {DIRS.map(([label, b]) => {
@@ -104,7 +107,7 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
         const lp = pt(cx, cy, labelR, b)
         return (
           <g key={label}>
-            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#2e2e28" strokeWidth={1.8} />
+            <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#1c1c18" strokeWidth={1.8} />
             <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
               fontSize={size * 0.062} fontWeight={700} fill="#3a3a32" fontFamily="ui-sans-serif, system-ui">
               {label}
@@ -120,9 +123,9 @@ export function CompassGauge({ value, size = 200 }: { value: number | null | und
 
       <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#5c5c50" />
       <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
-      <text x={cx} y={lcdY + lcdH * 0.52} textAnchor="middle" dominantBaseline="middle"
+      <text x={cx} y={lcdY + lcdH * 0.56} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.078} fontWeight={700} fill="#28331f" letterSpacing={0.3}
-        fontFamily="ui-monospace, monospace">
+        fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
 
