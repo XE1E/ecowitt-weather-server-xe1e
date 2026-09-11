@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 // no muestra ningún dato de la estación, es decorativo (hora del navegador),
 // pero comparte look para que encaje en el panel de Instrumentos.
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+const DIAS = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO']
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
@@ -39,12 +40,22 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
   const tickOuterR = faceR * 0.94
   const tickMajorInnerR = faceR * 0.82
   const tickMinorInnerR = faceR * 0.90
-  const labelR = faceR * 0.76
+  // 0.76 hacía que los números chocaran con las marcas de la escala -- un
+  // poco menos de la orilla que en el primer intento, pero más afuera que
+  // el 0.68 original.
+  const labelR = faceR * 0.72
 
-  const lcdW = size * 0.30
   const lcdH = size * 0.115
+  // LCD de la fecha (abajo del centro, sin cambios de posición).
+  const lcdW = size * 0.30
   const lcdX = cx - lcdW / 2
   const lcdY = cy + size * 0.08
+  // LCD del día de la semana (arriba del centro, más ancho: el nombre
+  // completo -- "MIÉRCOLES" es el más largo -- no entra en el ancho angosto
+  // de la fecha).
+  const dayLcdW = size * 0.46
+  const dayLcdX = cx - dayLcdW / 2
+  const dayLcdY = cy - size * 0.205
 
   const h = now.getHours() % 12
   const m = now.getMinutes()
@@ -53,12 +64,13 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
   const minuteAngle = (m + s / 60) * 6
   const secondAngle = s * 6
   const dateLabel = `${now.getDate()} ${MESES[now.getMonth()]}`
+  const dayLabel = DIAS[now.getDay()]
 
   const minors = Array.from({ length: 60 }, (_, i) => i * 6)   // grados, uno por minuto
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
-      aria-label={`Reloj: ${now.toLocaleTimeString('es-MX')}, ${dateLabel}`}>
+      aria-label={`Reloj: ${now.toLocaleTimeString('es-MX')}, ${dayLabel} ${dateLabel}`}>
       <defs>
         <radialGradient id={`clk-face-${uid}`} cx="35%" cy="28%" r="80%">
           <stop offset="0%" stopColor="#fbf8ee" />
@@ -135,7 +147,18 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
         )
       })}
 
-      {/* Pantalla LCD: fecha (día + mes abreviado, p. ej. "10 SEP"). */}
+      {/* Pantalla LCD de arriba: día de la semana completo (nombre entero,
+          no abreviatura de 3 letras -- entra con el LCD más ancho). */}
+      <rect x={dayLcdX - 1} y={dayLcdY - 1} width={dayLcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
+      <rect x={dayLcdX} y={dayLcdY} width={dayLcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
+        filter={`url(#clk-lcdshadow-${uid})`} />
+      <text x={cx} y={dayLcdY + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.078} fontWeight={700} fill="#28331f" letterSpacing={0.5}
+        fontFamily="ui-monospace, monospace" filter={`url(#clk-textshadow-${uid})`}>
+        {dayLabel}
+      </text>
+
+      {/* Pantalla LCD de abajo: fecha (día + mes abreviado, p. ej. "10 SEP"). */}
       <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
       <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
         filter={`url(#clk-lcdshadow-${uid})`} />

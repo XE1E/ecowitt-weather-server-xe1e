@@ -186,7 +186,13 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
       })()}
 
       {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
-          a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}
+          a juego con la aguja, ya hacía de etiqueta, pero a pedido del
+          usuario se agrega además la palabra explícita ARRIBA del recuadro
+          (afuera, hacia el hueco libre bajo "N"). */}
+      <text x={cx} y={lcd1Y - size * 0.025} textAnchor="middle"
+        fontSize={size * 0.042} fontWeight={700} fill="#7a2420" letterSpacing={0.4} fontFamily="ui-sans-serif, system-ui">
+        ACTUAL
+      </text>
       <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
       <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
         filter={`url(#clcdshadow-${uid})`} />
@@ -196,10 +202,15 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
         {hasValue ? `${Math.round(bearing)}° ${rumbo(bearing)}` : '--'}
       </text>
 
-      {/* LCD de abajo: PROMEDIO de 10 min (aguja azul) */}
+      {/* LCD de abajo: PROMEDIO de 10 min (aguja azul) -- misma idea, pero la
+          etiqueta va ABAJO del recuadro (hacia el hueco libre sobre "S"). */}
       <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
       <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
         filter={`url(#clcdshadow-${uid})`} />
+      <text x={cx} y={lcd2Y + lcdH + size * 0.048} textAnchor="middle"
+        fontSize={size * 0.042} fontWeight={700} fill="#1c3a63" letterSpacing={0.4} fontFamily="ui-sans-serif, system-ui">
+        PROMEDIO 10 MIN
+      </text>
       <text x={cx} y={lcd2Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.095} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>

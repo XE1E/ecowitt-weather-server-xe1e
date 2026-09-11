@@ -16,17 +16,20 @@ function zonesIn(anchors: [number, number, string][], conv: (v: number) => numbe
   return anchors.map(([from, to, color]) => ({ from: conv(from), to: conv(to), color }))
 }
 
-// Mismo tamaño que el título normal en la carátula (AnalogGauge:
-// `size * 0.046`, con size=200 acá) -- para que "Exterior"/"Interior",
-// "Hoy"/"Semana"/... y demás etiquetas de selector se vean a juego.
+// Mismo tamaño Y peso que el título normal en la carátula (AnalogGauge:
+// `size * 0.046` en negrita, con size=200 acá) -- a igual tamaño en px pero
+// con el peso normal de antes, el título (negrita, mayúsculas) seguía
+// viéndose más grande/prominente; con `fontWeight` a juego sí se percibe
+// igual.
 const TOGGLE_FONT_SIZE = 200 * 0.046
+const TOGGLE_STYLE = { fontSize: TOGGLE_FONT_SIZE, fontWeight: 700 } as const
 
 // Selector exterior/interior debajo de un medidor -- como en la captura de
 // referencia (radio buttons «снаружи»/«внутри»). `name` debe ser único por
 // instancia para que los dos grupos de radios no se interfieran.
 function ExtIntToggle({ name, value, onChange }: { name: string; value: 'out' | 'in'; onChange: (v: 'out' | 'in') => void }) {
   return (
-    <div className="flex items-center gap-3 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
+    <div className="flex items-center gap-3 mt-1 text-slate-400" style={TOGGLE_STYLE}>
       <label className="flex items-center gap-1 cursor-pointer">
         <input type="radio" name={name} className="accent-sky-500" checked={value === 'out'} onChange={() => onChange('out')} />
         Exterior
@@ -53,7 +56,7 @@ const DEW_SOURCE_OPTIONS: { value: DewSource; label: string }[] = [
 ]
 function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: DewSource) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={TOGGLE_STYLE}>
       {DEW_SOURCE_OPTIONS.map((opt) => (
         <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
           <input type="radio" name="dew-source" className="accent-sky-500"
@@ -75,7 +78,7 @@ const RAIN_PERIOD_OPTIONS: { value: RainPeriod; label: string }[] = [
 ]
 function RainPeriodToggle({ value, onChange }: { value: RainPeriod; onChange: (v: RainPeriod) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={TOGGLE_STYLE}>
       {RAIN_PERIOD_OPTIONS.map((opt) => (
         <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
           <input type="radio" name="rain-period" className="accent-sky-500"
@@ -93,7 +96,7 @@ function RainPeriodToggle({ value, onChange }: { value: RainPeriod; onChange: (v
 type GardenMode = 'temp' | 'hum'
 function GardenToggle({ value, onChange }: { value: GardenMode; onChange: (v: GardenMode) => void }) {
   return (
-    <div className="flex items-center gap-3 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
+    <div className="flex items-center gap-3 mt-1 text-slate-400" style={TOGGLE_STYLE}>
       <label className="flex items-center gap-1 cursor-pointer">
         <input type="radio" name="garden-mode" className="accent-sky-500" checked={value === 'temp'} onChange={() => onChange('temp')} />
         Temperatura
