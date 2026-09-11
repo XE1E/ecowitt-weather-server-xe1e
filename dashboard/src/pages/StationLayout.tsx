@@ -70,7 +70,7 @@ export function StationLayout() {
   }) : { fx: 'none' as const, intensity: 0, icon: '', label: '' }
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `px-1 py-1 rounded-lg text-xs whitespace-nowrap tracking-tight transition ${
+    `px-1.5 py-1.5 rounded-lg text-sm whitespace-nowrap transition ${
       isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10'
     }`
 
@@ -165,7 +165,7 @@ export function StationLayout() {
           </header>
 
           {/* Cintillo de navegación */}
-          <nav className="flex items-center gap-px overflow-x-auto mb-5 border-b border-white/10 pb-2">
+          <nav className="flex items-center justify-between w-full overflow-x-auto mb-5 border-b border-white/10 pb-2">
             {NAV_ACTIVE.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} className={linkClass}>
                 {n.label}

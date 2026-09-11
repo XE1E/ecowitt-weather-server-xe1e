@@ -109,6 +109,25 @@ function GardenToggle({ value, onChange }: { value: GardenMode; onChange: (v: Ga
   )
 }
 
+// Leyenda de las marcas triangulares fijas del medidor (mín/máx del día,
+// ráfaga/promedio de viento) -- mismos colores que `triMarker` en
+// AnalogGauge.tsx, para que el cuadrito de color se identifique con el
+// triángulo correspondiente en la carátula.
+function MarkerLegend({ items }: { items: { color: string; label: string }[] }) {
+  return (
+    <div className="flex items-center gap-3 mt-1 text-slate-400" style={TOGGLE_STYLE}>
+      {items.map((it) => (
+        <span key={it.label} className="flex items-center gap-1">
+          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: it.color }} />
+          {it.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+const MIN_MAX_LEGEND = [{ color: '#2563eb', label: 'MIN' }, { color: '#c0392b', label: 'MAX' }]
+const WIND_LEGEND = [{ color: '#c0392b', label: 'Ráfaga' }, { color: '#2563eb', label: 'Promedio' }]
+
 export function InstrumentosPage() {
   const { data, stats, history } = useStationData()
   const u = useUnits()
@@ -209,6 +228,7 @@ export function InstrumentosPage() {
               minMarkerValue={tempStats?.min != null ? u.tempN(tempStats.min) : null}
               maxMarkerValue={tempStats?.max != null ? u.tempN(tempStats.max) : null}
               trend={tempTrend} />
+            <MarkerLegend items={MIN_MAX_LEGEND} />
             <ExtIntToggle name="temp-source" value={tempSource} onChange={setTempSource} />
           </div>
 
@@ -222,17 +242,21 @@ export function InstrumentosPage() {
               minMarkerValue={humStats?.min ?? null}
               maxMarkerValue={humStats?.max ?? null}
               trend={humTrend} />
+            <MarkerLegend items={MIN_MAX_LEGEND} />
             <ExtIntToggle name="hum-source" value={humSource} onChange={setHumSource} />
           </div>
 
-          <AnalogGauge title="Presión" size={g} lcdWide
-            value={data ? u.pressN(data.pressure_relative) : null}
-            min={u.pressN(950)} max={u.pressN(1050)} majorStep={imp ? 0.5 : 20} midStep={imp ? 0.25 : 10} minorStep={imp ? 0.05 : 2}
-            unit={u.pressU} decimals={imp ? 2 : 1}
-            zones={zonesIn([[950, 1000, '#f472b6'], [1000, 1020, '#94a3b8'], [1020, 1050, '#22c55e']], u.pressN)}
-            minMarkerValue={pressStats?.min != null ? u.pressN(pressStats.min) : null}
-            maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null}
-            trend={pressTrend} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Presión" size={g} lcdWide
+              value={data ? u.pressN(data.pressure_relative) : null}
+              min={u.pressN(950)} max={u.pressN(1050)} majorStep={imp ? 0.5 : 20} midStep={imp ? 0.25 : 10} minorStep={imp ? 0.05 : 2}
+              unit={u.pressU} decimals={imp ? 2 : 1}
+              zones={zonesIn([[950, 1000, '#f472b6'], [1000, 1020, '#94a3b8'], [1020, 1050, '#22c55e']], u.pressN)}
+              minMarkerValue={pressStats?.min != null ? u.pressN(pressStats.min) : null}
+              maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null}
+              trend={pressTrend} />
+            <MarkerLegend items={MIN_MAX_LEGEND} />
+          </div>
 
           <div className="flex flex-col items-center">
             <AnalogGauge title={DEW_SOURCE_OPTIONS.find((o) => o.value === dewSource)!.label} size={g}
@@ -243,13 +267,16 @@ export function InstrumentosPage() {
             <DewPointToggle value={dewSource} onChange={setDewSource} />
           </div>
 
-          <AnalogGauge title="Viento" size={g}
-            value={data ? u.windN(data.wind_speed) : null}
-            markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
-            avgMarkerValue={data?.wind_speed_avg10m != null ? u.windN(data.wind_speed_avg10m) : null}
-            min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
-            unit={u.windU} decimals={1}
-            zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Viento" size={g}
+              value={data ? u.windN(data.wind_speed) : null}
+              markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
+              avgMarkerValue={data?.wind_speed_avg10m != null ? u.windN(data.wind_speed_avg10m) : null}
+              min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
+              unit={u.windU} decimals={1}
+              zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
+            <MarkerLegend items={WIND_LEGEND} />
+          </div>
 
           <GaugeFrame size={g}>
             {rose ? <WindRose rose={rose} size={g * 0.78} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
