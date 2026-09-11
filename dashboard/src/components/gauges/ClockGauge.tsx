@@ -55,7 +55,10 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
   // de la fecha).
   const dayLcdW = size * 0.46
   const dayLcdX = cx - dayLcdW / 2
-  const dayLcdY = cy - size * 0.205
+  // -0.205 se encimaba con "11"/"1" (están en diagonal, no arriba del
+  // centro -- el ancho del LCD para que entre "MIÉRCOLES" alcanza esa zona
+  // aunque el cuadro esté centrado). Más cerca del centro le da margen.
+  const dayLcdY = cy - size * 0.145
 
   const h = now.getHours() % 12
   const m = now.getMinutes()
