@@ -127,6 +127,8 @@ function MarkerLegend({ items }: { items: { color: string; label: string }[] }) 
 }
 const MIN_MAX_LEGEND = [{ color: '#2563eb', label: 'MIN' }, { color: '#c0392b', label: 'MAX' }]
 const WIND_LEGEND = [{ color: '#c0392b', label: 'Ráfaga' }, { color: '#2563eb', label: 'Promedio' }]
+const DOMINANT_LEGEND = [{ color: '#c0392b', label: 'PREDOMINANTE' }]
+const MAX_LEGEND = [{ color: '#c0392b', label: 'MAX' }]
 
 export function InstrumentosPage() {
   const { data, stats, history } = useStationData()
@@ -143,6 +145,8 @@ export function InstrumentosPage() {
   const tempStats = stats?.[tempSource === 'out' ? 'temperature_outdoor' : 'temperature_indoor']
   const humStats = stats?.[humSource === 'out' ? 'humidity_outdoor' : 'humidity_indoor']
   const pressStats = stats?.pressure_relative
+  const solarStats = stats?.solar_radiation
+  const uvStats = stats?.uv_index
 
   // Mismo cálculo de tendencia que CurrentConditions.tsx (flecha verde/roja):
   // umbrales en MÉTRICO, sobre el dato crudo, antes de convertir a la unidad
@@ -282,8 +286,11 @@ export function InstrumentosPage() {
             {rose ? <WindRose rose={rose} size={g * 0.78} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
           </GaugeFrame>
 
-          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
-            dominantBearing={dominantBearing} />
+          <div className="flex flex-col items-center">
+            <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
+              dominantBearing={dominantBearing} />
+            <MarkerLegend items={DOMINANT_LEGEND} />
+          </div>
 
           <div className="flex flex-col items-center">
             <AnalogGauge title={`Lluvia\n${RAIN_PERIOD_OPTIONS.find((o) => o.value === rainPeriod)!.label}`} size={g}
@@ -312,19 +319,27 @@ export function InstrumentosPage() {
             zones={[{ from: 0, to: imp ? 1500 : 500, color: '#94a3b8' }, { from: imp ? 1500 : 500, to: imp ? 5000 : 1500, color: '#38bdf8' },
               { from: imp ? 5000 : 1500, to: imp ? 10000 : 3000, color: '#2563eb' }]} />
 
-          <AnalogGauge title="Radiación solar" size={g}
-            value={data?.solar_radiation ?? null}
-            min={0} max={1200} majorStep={200} midStep={100} minorStep={20}
-            unit="W/m²" decimals={0}
-            zones={[{ from: 0, to: 200, color: '#94a3b8' }, { from: 200, to: 500, color: '#22c55e' },
-              { from: 500, to: 800, color: '#eab308' }, { from: 800, to: 1200, color: '#f97316' }]} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Radiación solar" size={g}
+              value={data?.solar_radiation ?? null}
+              min={0} max={1200} majorStep={200} midStep={100} minorStep={20}
+              unit="W/m²" decimals={0}
+              zones={[{ from: 0, to: 200, color: '#94a3b8' }, { from: 200, to: 500, color: '#22c55e' },
+                { from: 500, to: 800, color: '#eab308' }, { from: 800, to: 1200, color: '#f97316' }]}
+              maxMarkerValue={solarStats?.max ?? null} />
+            <MarkerLegend items={MAX_LEGEND} />
+          </div>
 
-          <AnalogGauge title="UV" size={g}
-            value={data?.uv_index ?? null}
-            min={0} max={12} majorStep={2} midStep={1} minorStep={0.25}
-            unit="índice" decimals={1}
-            zones={[{ from: 0, to: 3, color: '#22c55e' }, { from: 3, to: 6, color: '#eab308' },
-              { from: 6, to: 8, color: '#f97316' }, { from: 8, to: 11, color: '#ef4444' }, { from: 11, to: 12, color: '#a78bfa' }]} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="UV" size={g}
+              value={data?.uv_index ?? null}
+              min={0} max={12} majorStep={2} midStep={1} minorStep={0.25}
+              unit="índice" decimals={1}
+              zones={[{ from: 0, to: 3, color: '#22c55e' }, { from: 3, to: 6, color: '#eab308' },
+                { from: 6, to: 8, color: '#f97316' }, { from: 8, to: 11, color: '#ef4444' }, { from: 11, to: 12, color: '#a78bfa' }]}
+              maxMarkerValue={uvStats?.max ?? null} />
+            <MarkerLegend items={MAX_LEGEND} />
+          </div>
 
           <AnalogGauge title={'Calidad del aire\nIMECA'} size={g}
             value={imeca?.available ? imeca.imeca ?? null : null}
