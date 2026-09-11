@@ -193,8 +193,24 @@ export function AnalogGauge({
         <filter id={`textshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="1.1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.75" />
         </filter>
-        <filter id={`lcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
+        {/* Sombra INTERIOR del recuadro del LCD -- `feDropShadow` sólo hace
+            sombra hacia AFUERA (por eso el LCD se veía "sobrepuesto",
+            flotando sobre la carátula, en vez de hundido en ella). Receta
+            estándar de sombra interna: se recorta un blur desplazado con la
+            máscara alfa del propio rect (dos `feComposite operator="in"`),
+            y se junta con el dibujo original -- así la sombra cae DENTRO
+            del borde del rect, simulando profundidad hacia adentro. */}
+        <filter id={`lcdshadow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0" /></feComponentTransfer>
+          <feGaussianBlur stdDeviation={size * 0.012} />
+          <feOffset dx="0" dy={size * 0.008} result="offsetblur" />
+          <feFlood floodColor="#000000" floodOpacity="0.7" />
+          <feComposite in2="offsetblur" operator="in" />
+          <feComposite in2="SourceAlpha" operator="in" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode />
+          </feMerge>
         </filter>
       </defs>
 
@@ -274,8 +290,9 @@ export function AnalogGauge({
       {/* Pantalla LCD: texto monoespaciado con sombra tenue (no dígitos de 7
           segmentos -- no se veían bien en el navegador real). Va ANTES que
           la aguja para que esta pinte por encima. */}
-      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#lcdshadow-${uid})`} />
-      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
+      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
+        filter={`url(#lcdshadow-${uid})`} />
       <text x={cx} y={lcdY + lcdH * 0.56} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.095} fontWeight={700} fill="#28331f" letterSpacing={0.5}
         fontFamily="ui-monospace, monospace" filter={`url(#textshadow-${uid})`}>

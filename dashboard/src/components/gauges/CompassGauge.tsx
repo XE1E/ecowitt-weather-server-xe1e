@@ -120,8 +120,19 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
         <filter id={`ctextshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="1.1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.75" />
         </filter>
-        <filter id={`clcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
+        {/* Sombra interior (mismo motivo que en AnalogGauge.tsx): el LCD
+            debe verse hundido en la carátula, no flotando sobre ella. */}
+        <filter id={`clcdshadow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0" /></feComponentTransfer>
+          <feGaussianBlur stdDeviation={size * 0.012} />
+          <feOffset dx="0" dy={size * 0.008} result="offsetblur" />
+          <feFlood floodColor="#000000" floodOpacity="0.7" />
+          <feComposite in2="offsetblur" operator="in" />
+          <feComposite in2="SourceAlpha" operator="in" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode />
+          </feMerge>
         </filter>
       </defs>
 
@@ -176,8 +187,9 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
 
       {/* LCD de arriba: dirección ACTUAL (aguja roja) -- el color del texto,
           a juego con la aguja, hace de etiqueta sin gastar una línea aparte. */}
-      <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#clcdshadow-${uid})`} />
-      <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <rect x={lcdX - 1} y={lcd1Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
+      <rect x={lcdX} y={lcd1Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
+        filter={`url(#clcdshadow-${uid})`} />
       <text x={cx} y={lcd1Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.095} fontWeight={700} fill="#7a2420" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>
@@ -185,8 +197,9 @@ export function CompassGauge({ value, avgBearing, dominantBearing, size = 200 }:
       </text>
 
       {/* LCD de abajo: PROMEDIO de 10 min (aguja azul) */}
-      <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#clcdshadow-${uid})`} />
-      <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <rect x={lcdX - 1} y={lcd2Y - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
+      <rect x={lcdX} y={lcd2Y} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
+        filter={`url(#clcdshadow-${uid})`} />
       <text x={cx} y={lcd2Y + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.095} fontWeight={700} fill="#1c3a63" letterSpacing={0.2}
         fontFamily="ui-monospace, monospace" filter={`url(#ctextshadow-${uid})`}>

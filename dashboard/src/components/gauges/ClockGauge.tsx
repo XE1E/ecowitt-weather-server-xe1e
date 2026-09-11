@@ -39,8 +39,7 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
   const tickOuterR = faceR * 0.94
   const tickMajorInnerR = faceR * 0.82
   const tickMinorInnerR = faceR * 0.90
-  const labelR = faceR * 0.68
-  const titleR = faceR * 0.34
+  const labelR = faceR * 0.76
 
   const lcdW = size * 0.30
   const lcdH = size * 0.115
@@ -91,8 +90,19 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
         <filter id={`clk-textshadow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="1.1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.75" />
         </filter>
-        <filter id={`clk-lcdshadow-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#000000" floodOpacity="0.6" />
+        {/* Sombra interior (mismo motivo que en AnalogGauge.tsx): el LCD
+            debe verse hundido en la carátula, no flotando sobre ella. */}
+        <filter id={`clk-lcdshadow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0" /></feComponentTransfer>
+          <feGaussianBlur stdDeviation={size * 0.012} />
+          <feOffset dx="0" dy={size * 0.008} result="offsetblur" />
+          <feFlood floodColor="#000000" floodOpacity="0.7" />
+          <feComposite in2="offsetblur" operator="in" />
+          <feComposite in2="SourceAlpha" operator="in" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode />
+          </feMerge>
         </filter>
       </defs>
 
@@ -125,14 +135,10 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
         )
       })}
 
-      <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * 0.046}
-        fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
-        RELOJ
-      </text>
-
       {/* Pantalla LCD: fecha (día + mes abreviado, p. ej. "10 SEP"). */}
-      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" filter={`url(#clk-lcdshadow-${uid})`} />
-      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1} />
+      <rect x={lcdX - 1} y={lcdY - 1} width={lcdW + 2} height={lcdH + 2} rx={3} fill="#45453a" />
+      <rect x={lcdX} y={lcdY} width={lcdW} height={lcdH} rx={3} fill="#cdd9bd" stroke="#7a7a68" strokeWidth={1}
+        filter={`url(#clk-lcdshadow-${uid})`} />
       <text x={cx} y={lcdY + lcdH * 0.58} textAnchor="middle" dominantBaseline="middle"
         fontSize={size * 0.078} fontWeight={700} fill="#28331f" letterSpacing={0.5}
         fontFamily="ui-monospace, monospace" filter={`url(#clk-textshadow-${uid})`}>
@@ -144,16 +150,22 @@ export function ClockGauge({ size = 200 }: { size?: number }) {
           en el atributo SVG). El segundero NO anima: un reloj real "tica",
           no desliza de un segundo a otro. */}
       <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${hourAngle}deg)`, transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}>
-        <polygon points={`${cx - size * 0.022},${cy + size * 0.05} ${cx + size * 0.022},${cy + size * 0.05} ${cx},${cy - faceR * 0.45}`}
+        <polygon points={`${cx - size * 0.030},${cy + size * 0.05} ${cx + size * 0.030},${cy + size * 0.05} ${cx},${cy - faceR * 0.54}`}
           fill="#2e2e28" filter={`url(#clk-shadow-${uid})`} />
       </g>
       <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${minuteAngle}deg)`, transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' }}>
-        <polygon points={`${cx - size * 0.016},${cy + size * 0.06} ${cx + size * 0.016},${cy + size * 0.06} ${cx},${cy - faceR * 0.68}`}
+        <polygon points={`${cx - size * 0.022},${cy + size * 0.06} ${cx + size * 0.022},${cy + size * 0.06} ${cx},${cy - faceR * 0.76}`}
           fill="#2e2e28" filter={`url(#clk-shadow-${uid})`} />
       </g>
+      {/* Sin `filter` acá a propósito: es una línea PERFECTAMENTE vertical
+          (x1===x2), o sea con bounding box de ancho cero -- un filtro SVG
+          normal (`filterUnits` por defecto es `objectBoundingBox`) sobre un
+          elemento con bbox degenerado hace que el navegador no dibuje nada
+          en absoluto, no sólo que falte la sombra. Comprobado: con el
+          filtro puesto, el segundero entero desaparecía. */}
       <g style={{ transformOrigin: `${cx}px ${cy}px`, transform: `rotate(${secondAngle}deg)` }}>
-        <line x1={cx} y1={cy + faceR * 0.16} x2={cx} y2={cy - faceR * 0.80}
-          stroke="#c0392b" strokeWidth={size * 0.008} strokeLinecap="round" filter={`url(#clk-shadow-${uid})`} />
+        <line x1={cx} y1={cy + faceR * 0.18} x2={cx} y2={cy - faceR * 0.80}
+          stroke="#c0392b" strokeWidth={size * 0.013} strokeLinecap="round" />
       </g>
       <circle cx={cx} cy={cy} r={size * 0.032} fill={`url(#clk-hub-${uid})`} stroke="#3a3a3a" strokeWidth={0.6} />
 
