@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
-import { AnalogGauge, CompassGauge, GaugeFrame, type GaugeZone } from '../components/gauges'
+import { AnalogGauge, CompassGauge, GaugeFrame, ClockGauge, type GaugeZone } from '../components/gauges'
 import { WindRose, type Rose } from '../components/station/WindRose'
 import { PageInfo } from '../components/station/PageInfo'
 import { getTrend } from '../components/TrendArrow'
@@ -16,12 +16,17 @@ function zonesIn(anchors: [number, number, string][], conv: (v: number) => numbe
   return anchors.map(([from, to, color]) => ({ from: conv(from), to: conv(to), color }))
 }
 
+// Mismo tamaño que el título normal en la carátula (AnalogGauge:
+// `size * 0.046`, con size=200 acá) -- para que "Exterior"/"Interior",
+// "Hoy"/"Semana"/... y demás etiquetas de selector se vean a juego.
+const TOGGLE_FONT_SIZE = 200 * 0.046
+
 // Selector exterior/interior debajo de un medidor -- como en la captura de
 // referencia (radio buttons «снаружи»/«внутри»). `name` debe ser único por
 // instancia para que los dos grupos de radios no se interfieran.
 function ExtIntToggle({ name, value, onChange }: { name: string; value: 'out' | 'in'; onChange: (v: 'out' | 'in') => void }) {
   return (
-    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+    <div className="flex items-center gap-3 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
       <label className="flex items-center gap-1 cursor-pointer">
         <input type="radio" name={name} className="accent-sky-500" checked={value === 'out'} onChange={() => onChange('out')} />
         Exterior
@@ -48,7 +53,7 @@ const DEW_SOURCE_OPTIONS: { value: DewSource; label: string }[] = [
 ]
 function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: DewSource) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-400">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
       {DEW_SOURCE_OPTIONS.map((opt) => (
         <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
           <input type="radio" name="dew-source" className="accent-sky-500"
@@ -70,7 +75,7 @@ const RAIN_PERIOD_OPTIONS: { value: RainPeriod; label: string }[] = [
 ]
 function RainPeriodToggle({ value, onChange }: { value: RainPeriod; onChange: (v: RainPeriod) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-400">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
       {RAIN_PERIOD_OPTIONS.map((opt) => (
         <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
           <input type="radio" name="rain-period" className="accent-sky-500"
@@ -88,7 +93,7 @@ function RainPeriodToggle({ value, onChange }: { value: RainPeriod; onChange: (v
 type GardenMode = 'temp' | 'hum'
 function GardenToggle({ value, onChange }: { value: GardenMode; onChange: (v: GardenMode) => void }) {
   return (
-    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+    <div className="flex items-center gap-3 mt-1 text-slate-400" style={{ fontSize: TOGGLE_FONT_SIZE }}>
       <label className="flex items-center gap-1 cursor-pointer">
         <input type="radio" name="garden-mode" className="accent-sky-500" checked={value === 'temp'} onChange={() => onChange('temp')} />
         Temperatura
@@ -205,15 +210,6 @@ export function InstrumentosPage() {
           </div>
 
           <div className="flex flex-col items-center">
-            <AnalogGauge title={DEW_SOURCE_OPTIONS.find((o) => o.value === dewSource)!.label} size={g}
-              value={dewRaw != null ? u.tempN(dewRaw) : null}
-              min={u.tempN(-10)} max={u.tempN(30)} majorStep={10} midStep={5} minorStep={1}
-              unit={u.tempU} decimals={1}
-              zones={zonesIn([[-10, 5, '#38bdf8'], [5, 18, '#22c55e'], [18, 30, '#f59e0b']], u.tempN)} />
-            <DewPointToggle value={dewSource} onChange={setDewSource} />
-          </div>
-
-          <div className="flex flex-col items-center">
             <AnalogGauge title={`Humedad\n${humSource === 'out' ? 'Exterior' : 'Interior'}`} size={g}
               value={(humSource === 'out' ? data?.humidity_outdoor : data?.humidity_indoor) ?? null}
               min={0} max={100} majorStep={20} midStep={10} minorStep={2}
@@ -226,21 +222,6 @@ export function InstrumentosPage() {
             <ExtIntToggle name="hum-source" value={humSource} onChange={setHumSource} />
           </div>
 
-          <AnalogGauge title="Viento" size={g}
-            value={data ? u.windN(data.wind_speed) : null}
-            markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
-            avgMarkerValue={data?.wind_speed_avg10m != null ? u.windN(data.wind_speed_avg10m) : null}
-            min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
-            unit={u.windU} decimals={1}
-            zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
-
-          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
-            dominantBearing={dominantBearing} />
-
-          <GaugeFrame size={g}>
-            {rose ? <WindRose rose={rose} size={g * 0.78} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
-          </GaugeFrame>
-
           <AnalogGauge title="Presión" size={g} lcdWide
             value={data ? u.pressN(data.pressure_relative) : null}
             min={u.pressN(950)} max={u.pressN(1050)} majorStep={imp ? 0.5 : 20} midStep={imp ? 0.25 : 10} minorStep={imp ? 0.05 : 2}
@@ -249,6 +230,30 @@ export function InstrumentosPage() {
             minMarkerValue={pressStats?.min != null ? u.pressN(pressStats.min) : null}
             maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null}
             trend={pressTrend} />
+
+          <div className="flex flex-col items-center">
+            <AnalogGauge title={DEW_SOURCE_OPTIONS.find((o) => o.value === dewSource)!.label} size={g}
+              value={dewRaw != null ? u.tempN(dewRaw) : null}
+              min={u.tempN(-10)} max={u.tempN(30)} majorStep={10} midStep={5} minorStep={1}
+              unit={u.tempU} decimals={1}
+              zones={zonesIn([[-10, 5, '#38bdf8'], [5, 18, '#22c55e'], [18, 30, '#f59e0b']], u.tempN)} />
+            <DewPointToggle value={dewSource} onChange={setDewSource} />
+          </div>
+
+          <AnalogGauge title="Viento" size={g}
+            value={data ? u.windN(data.wind_speed) : null}
+            markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
+            avgMarkerValue={data?.wind_speed_avg10m != null ? u.windN(data.wind_speed_avg10m) : null}
+            min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
+            unit={u.windU} decimals={1}
+            zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
+
+          <GaugeFrame size={g}>
+            {rose ? <WindRose rose={rose} size={g * 0.78} compact dial /> : <p className="text-xs" style={{ color: '#6b6656' }}>Sin datos</p>}
+          </GaugeFrame>
+
+          <CompassGauge size={g} value={data?.wind_direction ?? null} avgBearing={data?.wind_direction_avg10m ?? null}
+            dominantBearing={dominantBearing} />
 
           <div className="flex flex-col items-center">
             <AnalogGauge title={`Lluvia\n${RAIN_PERIOD_OPTIONS.find((o) => o.value === rainPeriod)!.label}`} size={g}
@@ -270,12 +275,12 @@ export function InstrumentosPage() {
             unit={u.rateU} decimals={imp ? 2 : 1}
             zones={zonesIn([[0, 2, '#86efac'], [2, 10, '#38bdf8'], [10, 20, '#2563eb']], u.rateN)} />
 
-          <AnalogGauge title="UV" size={g}
-            value={data?.uv_index ?? null}
-            min={0} max={12} majorStep={2} midStep={1} minorStep={0.25}
-            unit="índice" decimals={1}
-            zones={[{ from: 0, to: 3, color: '#22c55e' }, { from: 3, to: 6, color: '#eab308' },
-              { from: 6, to: 8, color: '#f97316' }, { from: 8, to: 11, color: '#ef4444' }, { from: 11, to: 12, color: '#a78bfa' }]} />
+          <AnalogGauge title="Base de nubes" size={g}
+            value={data?.cloud_base != null ? altN(data.cloud_base) : null}
+            min={0} max={imp ? 10000 : 3000} majorStep={imp ? 2000 : 500} midStep={imp ? 1000 : 250} minorStep={imp ? 200 : 50}
+            unit={u.altU} decimals={0}
+            zones={[{ from: 0, to: imp ? 1500 : 500, color: '#94a3b8' }, { from: imp ? 1500 : 500, to: imp ? 5000 : 1500, color: '#38bdf8' },
+              { from: imp ? 5000 : 1500, to: imp ? 10000 : 3000, color: '#2563eb' }]} />
 
           <AnalogGauge title="Radiación solar" size={g}
             value={data?.solar_radiation ?? null}
@@ -284,12 +289,20 @@ export function InstrumentosPage() {
             zones={[{ from: 0, to: 200, color: '#94a3b8' }, { from: 200, to: 500, color: '#22c55e' },
               { from: 500, to: 800, color: '#eab308' }, { from: 800, to: 1200, color: '#f97316' }]} />
 
-          <AnalogGauge title="Base de nubes" size={g}
-            value={data?.cloud_base != null ? altN(data.cloud_base) : null}
-            min={0} max={imp ? 10000 : 3000} majorStep={imp ? 2000 : 500} midStep={imp ? 1000 : 250} minorStep={imp ? 200 : 50}
-            unit={u.altU} decimals={0}
-            zones={[{ from: 0, to: imp ? 1500 : 500, color: '#94a3b8' }, { from: imp ? 1500 : 500, to: imp ? 5000 : 1500, color: '#38bdf8' },
-              { from: imp ? 5000 : 1500, to: imp ? 10000 : 3000, color: '#2563eb' }]} />
+          <AnalogGauge title="UV" size={g}
+            value={data?.uv_index ?? null}
+            min={0} max={12} majorStep={2} midStep={1} minorStep={0.25}
+            unit="índice" decimals={1}
+            zones={[{ from: 0, to: 3, color: '#22c55e' }, { from: 3, to: 6, color: '#eab308' },
+              { from: 6, to: 8, color: '#f97316' }, { from: 8, to: 11, color: '#ef4444' }, { from: 11, to: 12, color: '#a78bfa' }]} />
+
+          <AnalogGauge title={'Calidad del aire\nIMECA'} size={g}
+            value={imeca?.available ? imeca.imeca ?? null : null}
+            min={0} max={300} majorStep={50} midStep={25} minorStep={10}
+            unit="IMECA" decimals={0}
+            zones={[{ from: 0, to: 50, color: '#22c55e' }, { from: 50, to: 100, color: '#eab308' },
+              { from: 100, to: 150, color: '#f97316' }, { from: 150, to: 200, color: '#ef4444' },
+              { from: 200, to: 300, color: '#a21caf' }]} />
 
           <div className="flex flex-col items-center">
             <AnalogGauge title="Jardín" size={g}
@@ -310,13 +323,7 @@ export function InstrumentosPage() {
             <GardenToggle value={gardenMode} onChange={setGardenMode} />
           </div>
 
-          <AnalogGauge title={'Calidad del aire\nIMECA'} size={g}
-            value={imeca?.available ? imeca.imeca ?? null : null}
-            min={0} max={300} majorStep={50} midStep={25} minorStep={10}
-            unit="IMECA" decimals={0}
-            zones={[{ from: 0, to: 50, color: '#22c55e' }, { from: 50, to: 100, color: '#eab308' },
-              { from: 100, to: 150, color: '#f97316' }, { from: 150, to: 200, color: '#ef4444' },
-              { from: 200, to: 300, color: '#a21caf' }]} />
+          <ClockGauge size={g} />
         </div>
       </div>
 
