@@ -37,6 +37,8 @@ export interface AnalogGaugeProps {
   minMarkerValue?: number | null
   /** Marca del máximo del día (triángulo rojo). `null`/`undefined` la oculta. */
   maxMarkerValue?: number | null
+  /** Marca de un promedio (p. ej. viento medio de 10 min, triángulo azul). */
+  avgMarkerValue?: number | null
 }
 
 // Arco más amplio que antes (hueco de 60° en vez de 90°): el primer y
@@ -87,7 +89,7 @@ function triMarker(cx: number, cy: number, faceR: number, zoneR: number, size: n
 
 export function AnalogGauge({
   title, value, min, max, unit, decimals = 1, majorStep, midStep, minorStep, zones = [], size = 200, trend, lcdWide,
-  markerValue, minMarkerValue, maxMarkerValue,
+  markerValue, minMarkerValue, maxMarkerValue, avgMarkerValue,
 }: AnalogGaugeProps) {
   const cx = size / 2
   const cy = size / 2
@@ -144,6 +146,8 @@ export function AnalogGauge({
   const minMarkerAngle = hasMinMarker ? angleOf(Math.min(max, Math.max(min, minMarkerValue as number))) : 0
   const hasMaxMarker = maxMarkerValue != null && !Number.isNaN(maxMarkerValue)
   const maxMarkerAngle = hasMaxMarker ? angleOf(Math.min(max, Math.max(min, maxMarkerValue as number))) : 0
+  const hasAvgMarker = avgMarkerValue != null && !Number.isNaN(avgMarkerValue)
+  const avgMarkerAngle = hasAvgMarker ? angleOf(Math.min(max, Math.max(min, avgMarkerValue as number))) : 0
 
   const majors = useMemo(() => range(min, max, majorStep), [min, max, majorStep])
   const mids = useMemo(
@@ -248,6 +252,8 @@ export function AnalogGauge({
           la ráfaga de arriba, en azul/rojo para no confundirse con la aguja. */}
       {hasMinMarker && triMarker(cx, cy, faceR, zoneR, size, minMarkerAngle, '#2563eb')}
       {hasMaxMarker && triMarker(cx, cy, faceR, zoneR, size, maxMarkerAngle, '#c0392b')}
+      {/* Promedio (p. ej. viento medio de 10 min en Viento): mismo triángulo, azul. */}
+      {hasAvgMarker && triMarker(cx, cy, faceR, zoneR, size, avgMarkerAngle, '#2563eb')}
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * titleFontScale}
         fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">

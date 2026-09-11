@@ -6,6 +6,7 @@ import { WindRose, type Rose } from '../components/station/WindRose'
 import { PageInfo } from '../components/station/PageInfo'
 import { getTrend } from '../components/TrendArrow'
 import { historicValue } from '../weather'
+import { LOCATION } from '../config'
 
 // Anclas de zonas en MÉTRICO; se convierten a la unidad activa con las
 // mismas funciones que usa el resto del sitio (u.tempN, u.windN, ...) para
@@ -59,6 +60,47 @@ function DewPointToggle({ value, onChange }: { value: DewSource; onChange: (v: D
   )
 }
 
+// Selector de periodo para Lluvia -- mismo patrón 2x2 que DewPointToggle.
+type RainPeriod = 'day' | 'week' | 'month' | 'year'
+const RAIN_PERIOD_OPTIONS: { value: RainPeriod; label: string }[] = [
+  { value: 'day', label: 'Hoy' },
+  { value: 'week', label: 'Semana' },
+  { value: 'month', label: 'Mes' },
+  { value: 'year', label: 'Año' },
+]
+function RainPeriodToggle({ value, onChange }: { value: RainPeriod; onChange: (v: RainPeriod) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-400">
+      {RAIN_PERIOD_OPTIONS.map((opt) => (
+        <label key={opt.value} className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+          <input type="radio" name="rain-period" className="accent-sky-500"
+            checked={value === opt.value} onChange={() => onChange(opt.value)} />
+          {opt.label}
+        </label>
+      ))}
+    </div>
+  )
+}
+
+// Selector Temperatura/Humedad para el sensor extra (Jardín) -- a diferencia
+// de ExtIntToggle, acá cambia el TIPO de escala completo (zonas, unidad,
+// rango), no solo qué dato alimenta la misma escala.
+type GardenMode = 'temp' | 'hum'
+function GardenToggle({ value, onChange }: { value: GardenMode; onChange: (v: GardenMode) => void }) {
+  return (
+    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+      <label className="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="garden-mode" className="accent-sky-500" checked={value === 'temp'} onChange={() => onChange('temp')} />
+        Temperatura
+      </label>
+      <label className="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="garden-mode" className="accent-sky-500" checked={value === 'hum'} onChange={() => onChange('hum')} />
+        Humedad
+      </label>
+    </div>
+  )
+}
+
 export function InstrumentosPage() {
   const { data, stats, history } = useStationData()
   const u = useUnits()
@@ -67,6 +109,9 @@ export function InstrumentosPage() {
   const [tempSource, setTempSource] = useState<'out' | 'in'>('out')
   const [humSource, setHumSource] = useState<'out' | 'in'>('out')
   const [dewSource, setDewSource] = useState<DewSource>('dew')
+  const [rainPeriod, setRainPeriod] = useState<RainPeriod>('day')
+  const [gardenMode, setGardenMode] = useState<GardenMode>('temp')
+  const [imeca, setImeca] = useState<{ available: boolean; imeca?: number; category?: string } | null>(null)
 
   const tempStats = stats?.[tempSource === 'out' ? 'temperature_outdoor' : 'temperature_indoor']
   const humStats = stats?.[humSource === 'out' ? 'humidity_outdoor' : 'humidity_indoor']
@@ -93,6 +138,34 @@ export function InstrumentosPage() {
     fetch('/api/wind/rose?start=-7d').then((r) => (r.ok ? r.json() : null)).then(setRose).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
+      .then((r) => (r.ok ? r.json() : null)).then(setImeca).catch(() => {})
+  }, [])
+
+  // Lluvia: mismo dato (rain_daily/weekly/monthly/yearly), pero cada periodo
+  // necesita su propia escala -- un año acumula muchas veces más que un día.
+  // Los pasos en imperial son valores "redondos" propios, no una conversión
+  // exacta del métrico (mismo criterio que ya usaba "Tasa de lluvia").
+  const RAIN_SCALE: Record<RainPeriod, {
+    max: number
+    metric: { major: number; mid: number; minor: number }
+    imperial: { major: number; mid: number; minor: number }
+  }> = {
+    day: { max: 50, metric: { major: 10, mid: 5, minor: 1 }, imperial: { major: 0.5, mid: 0.25, minor: 0.05 } },
+    week: { max: 150, metric: { major: 25, mid: 12.5, minor: 5 }, imperial: { major: 1, mid: 0.5, minor: 0.1 } },
+    month: { max: 300, metric: { major: 50, mid: 25, minor: 10 }, imperial: { major: 2, mid: 1, minor: 0.2 } },
+    year: { max: 1200, metric: { major: 200, mid: 100, minor: 20 }, imperial: { major: 8, mid: 4, minor: 1 } },
+  }
+  const rainRaw = data ? (
+    rainPeriod === 'day' ? data.rain_daily
+      : rainPeriod === 'week' ? data.rain_weekly
+      : rainPeriod === 'month' ? data.rain_monthly
+      : data.rain_yearly
+  ) : undefined
+  const rainScale = RAIN_SCALE[rainPeriod]
+  const rainStep = imp ? rainScale.imperial : rainScale.metric
+
   // Base de nubes no tiene conversor en units.tsx (solo `alt()`, que da un
   // string formateado) -- se necesita el NÚMERO para posicionar la aguja.
   const altN = (m: number) => (imp ? m / 0.3048 : m)
@@ -116,7 +189,7 @@ export function InstrumentosPage() {
       </div>
 
       <div className="card">
-        <div className="grid gap-x-2 gap-y-6 justify-items-center" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${g}px, 1fr))` }}>
+        <div className="grid gap-x-2 gap-y-6 justify-items-center grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <div className="flex flex-col items-center">
             <AnalogGauge title="Temperatura" size={g}
               value={data
@@ -156,6 +229,7 @@ export function InstrumentosPage() {
           <AnalogGauge title="Viento" size={g}
             value={data ? u.windN(data.wind_speed) : null}
             markerValue={data?.wind_gust_max_daily != null ? u.windN(data.wind_gust_max_daily) : null}
+            avgMarkerValue={data?.wind_speed_avg10m != null ? u.windN(data.wind_speed_avg10m) : null}
             min={0} max={u.windN(100)} majorStep={imp ? 10 : 20} midStep={imp ? 5 : 10} minorStep={imp ? 1 : 2}
             unit={u.windU} decimals={1}
             zones={zonesIn([[0, 20, '#22c55e'], [20, 40, '#eab308'], [40, 60, '#f97316'], [60, 100, '#ef4444']], u.windN)} />
@@ -176,11 +250,19 @@ export function InstrumentosPage() {
             maxMarkerValue={pressStats?.max != null ? u.pressN(pressStats.max) : null}
             trend={pressTrend} />
 
-          <AnalogGauge title="Lluvia (hoy)" size={g}
-            value={data ? u.rainN(data.rain_daily) : null}
-            min={0} max={u.rainN(50)} majorStep={imp ? 0.5 : 10} midStep={imp ? 0.25 : 5} minorStep={imp ? 0.05 : 1}
-            unit={u.rainU} decimals={imp ? 2 : 1}
-            zones={zonesIn([[0, 10, '#7dd3fc'], [10, 25, '#38bdf8'], [25, 50, '#2563eb']], u.rainN)} />
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Lluvia" size={g}
+              value={rainRaw != null ? u.rainN(rainRaw) : null}
+              min={0} max={u.rainN(rainScale.max)}
+              majorStep={rainStep.major} midStep={rainStep.mid} minorStep={rainStep.minor}
+              unit={u.rainU} decimals={imp ? 2 : 1}
+              zones={zonesIn([
+                [0, rainScale.max * 0.2, '#7dd3fc'],
+                [rainScale.max * 0.2, rainScale.max * 0.5, '#38bdf8'],
+                [rainScale.max * 0.5, rainScale.max, '#2563eb'],
+              ], u.rainN)} />
+            <RainPeriodToggle value={rainPeriod} onChange={setRainPeriod} />
+          </div>
 
           <AnalogGauge title="Tasa de lluvia" size={g}
             value={data ? u.rateN(data.rain_rate) : null}
@@ -208,6 +290,33 @@ export function InstrumentosPage() {
             unit={u.altU} decimals={0}
             zones={[{ from: 0, to: imp ? 1500 : 500, color: '#94a3b8' }, { from: imp ? 1500 : 500, to: imp ? 5000 : 1500, color: '#38bdf8' },
               { from: imp ? 5000 : 1500, to: imp ? 10000 : 3000, color: '#2563eb' }]} />
+
+          <div className="flex flex-col items-center">
+            <AnalogGauge title="Jardín" size={g}
+              value={data ? (
+                gardenMode === 'temp' ? u.tempN(data.temperature_ch1 ?? NaN) : (data.humidity_ch1 ?? NaN)
+              ) : null}
+              min={gardenMode === 'temp' ? u.tempN(-20) : 0}
+              max={gardenMode === 'temp' ? u.tempN(50) : 100}
+              majorStep={gardenMode === 'temp' ? (imp ? 20 : 10) : 20}
+              midStep={gardenMode === 'temp' ? (imp ? 10 : 5) : 10}
+              minorStep={gardenMode === 'temp' ? (imp ? 2 : 1) : 2}
+              unit={gardenMode === 'temp' ? u.tempU : '%'}
+              decimals={gardenMode === 'temp' ? 1 : 0}
+              zones={gardenMode === 'temp'
+                ? zonesIn([[-20, 10, '#38bdf8'], [10, 25, '#22c55e'], [25, 35, '#eab308'], [35, 50, '#ef4444']], u.tempN)
+                : [{ from: 0, to: 30, color: '#d4a373' }, { from: 30, to: 60, color: '#22c55e' },
+                    { from: 60, to: 85, color: '#38bdf8' }, { from: 85, to: 100, color: '#2563eb' }]} />
+            <GardenToggle value={gardenMode} onChange={setGardenMode} />
+          </div>
+
+          <AnalogGauge title="Calidad del aire" size={g}
+            value={imeca?.available ? imeca.imeca ?? null : null}
+            min={0} max={300} majorStep={50} midStep={25} minorStep={10}
+            unit="IMECA" decimals={0}
+            zones={[{ from: 0, to: 50, color: '#22c55e' }, { from: 50, to: 100, color: '#eab308' },
+              { from: 100, to: 150, color: '#f97316' }, { from: 150, to: 200, color: '#ef4444' },
+              { from: 200, to: 300, color: '#a21caf' }]} />
         </div>
       </div>
 
