@@ -39,6 +39,7 @@ const CATEGORIES = [
   { key: 'visual', icon: '👁️', label: 'Visual (cielo)' },
   { key: 'earthquake', icon: '🌋', label: 'Sismos' },
   { key: 'backup', icon: '💾', label: 'Respaldo a R2' },
+  { key: 'publish', icon: '🌐', label: 'Publicación (redes públicas)' },
 ] as const
 
 const ALL_KEYS = CATEGORIES.map((c) => c.key)

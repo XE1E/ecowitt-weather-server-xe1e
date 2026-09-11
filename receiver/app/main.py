@@ -498,7 +498,8 @@ async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set, stats_flagg
 
 async def _bg_publish_principal(parsed_data: dict) -> None:
     try:
-        await publish_all(parsed_data, settings)
+        results = await publish_all(parsed_data, settings)
+        await alert_service.check_publish_networks(results)
     except Exception as e:
         logger.error(f"Public publish failed: {e}")
 

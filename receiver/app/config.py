@@ -150,6 +150,15 @@ class Settings(BaseSettings):
     # blip aislado (p. ej. un redeploy del contenedor).
     alert_influx_write_enabled: bool = True
     alert_influx_write_fails: int = 5
+    # Aviso de una red pública de publicación (AWEKAS/CWOP/openSenseMap/...)
+    # llevando N intentos SEGUIDOS fallando (ver services/publishers.py y
+    # AlertService.check_publish_networks) -- mismo motivo que el caso real
+    # que lo originó: AWEKAS estuvo ~2 días rechazando credenciales sin que
+    # nadie se enterara hasta revisar los logs a mano. Solo cuentan las redes
+    # ACTIVADAS y que ya les tocaba publicar ese ciclo (una apagada o fuera
+    # de intervalo no aparece en el resultado y no cuenta como fallo).
+    alert_publish_enabled: bool = True
+    alert_publish_fails: int = 3
     # Aviso de contenedor "unhealthy" (docker-compose.yml healthcheck), avisado
     # por scripts/check-docker-health.sh (cron en el HOST, fuera de los
     # contenedores) vía POST /api/admin/docker-health.

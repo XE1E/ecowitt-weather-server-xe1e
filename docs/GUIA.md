@@ -1235,6 +1235,7 @@ Corren en tareas de fondo, no por cada lectura.
 | **InfluxDB sin escribir** | N escrituras seguidas fallan (default 5) — la pantalla sigue sirviendo desde el caché en memoria mientras tanto |
 | **Respaldo a R2 desactualizado** | alguna categoría (sensores/fotos/timelapse/análisis) lleva más de N horas sin una copia exitosa (default 30 h) — ver [`docs/backups-r2.md`](backups-r2.md) |
 | **Contenedor Docker "unhealthy"** | el healthcheck nativo de `docker-compose.yml` marca un servicio como no saludable (revisado cada 5 min por `scripts/check-docker-health.sh`, vía cron en el HOST) |
+| **Red de publicación fallando** | una red activada en §11 (AWEKAS, CWOP, openSenseMap, ...) lleva N intentos seguidos fallando (default 3) — categoría propia "Publicación (redes públicas)" en Notificaciones |
 
 **Telegram:** se crea un bot con @BotFather, se obtiene el `chat_id` y se pega
 token + chat id en el panel (o en `.env`).

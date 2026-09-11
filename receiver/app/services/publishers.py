@@ -330,30 +330,48 @@ def build_cwop_packet(callsign: str, lat: float, lon: float, data: Dict[str, Any
     return f"{callsign}>APRS,TCPIP*:@{ts}z{pos}_{wx}"
 
 
+_CWOP_RETRIES = 2   # intentos totales (1 reintento) -- ver nota abajo
+_CWOP_RETRY_DELAY = 3.0  # segundos entre intentos
+
+
 async def _cwop(data, callsign, passcode, lat, lon) -> bool:
-    try:
-        packet = build_cwop_packet(callsign, lat, lon, data, datetime.utcnow())
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(_CWOP_HOST, _CWOP_PORT), timeout=_TIMEOUT)
+    """
+    El servidor APRS-IS de CWOP es viejo y da timeouts/conexiones rechazadas de
+    forma intermitente incluso con credenciales y formato correctos (~1 de cada
+    5 intentos en la práctica) -- un solo reintento tras una pausa corta
+    recupera la mayoría de esos casos sin sumar demora relevante (esto corre en
+    background, después de responder al datalogger).
+    """
+    packet = build_cwop_packet(callsign, lat, lon, data, datetime.utcnow())
+    last_err: Exception | None = None
+    for attempt in range(1, _CWOP_RETRIES + 1):
         try:
-            await reader.readline()  # banner del servidor
-            login = f"user {callsign} pass {passcode} vers ecowitt-xe1e 1.0\r\n"
-            writer.write(login.encode())
-            await writer.drain()
-            await asyncio.wait_for(reader.readline(), timeout=_TIMEOUT)  # respuesta login
-            writer.write((packet + "\r\n").encode())
-            await writer.drain()
-            logger.info("Publicado en CWOP como %s", callsign)
-            return True
-        finally:
-            writer.close()
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(_CWOP_HOST, _CWOP_PORT), timeout=_TIMEOUT)
             try:
-                await writer.wait_closed()
-            except Exception:
-                pass
-    except Exception as e:
-        logger.error("Error publicando en CWOP: %s", e)
-        return False
+                await reader.readline()  # banner del servidor
+                login = f"user {callsign} pass {passcode} vers ecowitt-xe1e 1.0\r\n"
+                writer.write(login.encode())
+                await writer.drain()
+                await asyncio.wait_for(reader.readline(), timeout=_TIMEOUT)  # respuesta login
+                writer.write((packet + "\r\n").encode())
+                await writer.drain()
+                logger.info("Publicado en CWOP como %s", callsign)
+                return True
+            finally:
+                writer.close()
+                try:
+                    await writer.wait_closed()
+                except Exception:
+                    pass
+        except Exception as e:
+            last_err = e
+            if attempt < _CWOP_RETRIES:
+                logger.warning("CWOP intento %d/%d falló (%s), reintentando en %gs",
+                               attempt, _CWOP_RETRIES, e, _CWOP_RETRY_DELAY)
+                await asyncio.sleep(_CWOP_RETRY_DELAY)
+    logger.error("Error publicando en CWOP: %s", last_err)
+    return False
 
 
 async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:

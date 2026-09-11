@@ -277,6 +277,8 @@ def public_settings(settings) -> Dict[str, Any]:
         # Respaldo externo a R2 (claves enmascaradas)
         "alert_backup_enabled": settings.alert_backup_enabled,
         "alert_backup_stale_hours": settings.alert_backup_stale_hours,
+        "alert_publish_enabled": settings.alert_publish_enabled,
+        "alert_publish_fails": settings.alert_publish_fails,
         "r2_account_id": settings.r2_account_id,
         "r2_access_key_id_masked": mask(settings.r2_access_key_id),
         "r2_secret_access_key_masked": mask(settings.r2_secret_access_key),

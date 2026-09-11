@@ -100,6 +100,10 @@ EDITABLE_KEYS = {
     # Aviso de InfluxDB sin aceptar escrituras
     "alert_influx_write_enabled",
     "alert_influx_write_fails",
+    # Aviso de una red pública de publicación (AWEKAS/CWOP/openSenseMap/...)
+    # fallando de forma sostenida
+    "alert_publish_enabled",
+    "alert_publish_fails",
     # Aviso de contenedor "unhealthy" (scripts/check-docker-health.sh)
     "alert_docker_health_enabled",
     "docker_health_api_token",

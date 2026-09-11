@@ -24,7 +24,19 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake", "backup"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake", "backup", "publish"]
+
+# Etiquetas legibles por red (para el mensaje de alerta) -- claves iguales a
+# las que devuelve publishers.publish_all (nombre de red -> ok).
+_PUBLISH_LABELS = {
+    "wunderground": "Weather Underground",
+    "pwsweather": "PWSWeather",
+    "windy": "Windy",
+    "openweathermap": "OpenWeatherMap",
+    "awekas": "AWEKAS",
+    "opensensemap": "openSenseMap",
+    "cwop": "CWOP/APRS",
+}
 
 # Etiquetas legibles por categoría de respaldo (scripts/backup-*.sh).
 _BACKUP_LABELS = {
@@ -73,6 +85,8 @@ def _category_for(rule_key: str) -> str:
     if (rule_key.startswith("backup_") or rule_key == "influx_write_failing"
             or rule_key.startswith("docker_health_")):
         return "backup"
+    if rule_key.startswith("publish_"):
+        return "publish"
     return "other"
 
 
@@ -175,6 +189,9 @@ class AlertService:
         self._backup_stale: Dict[str, bool] = {}
         # Contador de escrituras a InfluxDB fallidas SEGUIDAS (ver check_influx_write).
         self._influx_write_fails: int = 0
+        # Intentos SEGUIDOS fallando por red de publicación (ver check_publish_networks).
+        # Clave = nombre de red (mismo que publishers.publish_all), valor = racha.
+        self._publish_fails: Dict[str, int] = {}
         # Sismos ya notificados (ver check_earthquake). De instancia y no de
         # clase: la declaración de abajo (línea ~955) es solo la anotación de
         # tipo; sin esto, todas las instancias de AlertService compartirían el
@@ -851,6 +868,44 @@ class AlertService:
                     "✅ Normalizado — 🗄️ InfluxDB vuelve a aceptar escrituras.", category="backup"
                 )
             self._influx_write_fails = 0
+
+    async def check_publish_networks(self, results: Dict[str, bool]) -> None:
+        """
+        Avisa si una red pública de publicación (AWEKAS, CWOP, openSenseMap, ...)
+        lleva varios intentos SEGUIDOS fallando, y cuando se recupera. `results`
+        es el dict que devuelve `publishers.publish_all` (red -> ok), que solo
+        trae las redes ACTIVADAS a las que les tocaba publicar ESTE ciclo -- una
+        red apagada o fuera de su intervalo simplemente no aparece, y por lo
+        tanto no cuenta como fallo.
+
+        Mismo patrón "N seguidos" que check_camera_analysis/check_influx_write:
+        un timeout aislado no debe avisar, solo una falla sostenida. Caso real
+        que lo motivó: AWEKAS estuvo ~2 días rechazando las credenciales (usuario
+        con mayúsculas distintas a las guardadas) sin que nadie se enterara hasta
+        revisar los logs a mano.
+        """
+        s = self._settings
+        if not self.enabled or not getattr(s, "alert_publish_enabled", True):
+            return
+        threshold = max(1, int(getattr(s, "alert_publish_fails", 3)))
+
+        for red, ok in results.items():
+            label = _PUBLISH_LABELS.get(red, red)
+            key = f"publish_{red}"
+            if ok:
+                if self._publish_fails.get(red, 0) >= threshold:
+                    self._add_to_history(key, f"Publicación a {label} fallando", resolved=True)
+                    await self._safe_notify(
+                        f"✅ Normalizado — 🌐 {label} vuelve a recibir datos.", category="publish")
+                self._publish_fails[red] = 0
+            else:
+                fails = self._publish_fails.get(red, 0) + 1
+                self._publish_fails[red] = fails
+                if fails == threshold:
+                    msg = (f"🌐 {label} lleva {threshold} intentos seguidos fallando "
+                           f"-- revisa credenciales/config en Admin → Publicación.")
+                    self._add_to_history(key, msg, resolved=False)
+                    await self._safe_notify(f"⚠️ ALERTA — {msg}", category="publish")
 
     async def check_stats_outlier(
         self, flagged: List[Tuple[str, float, float]], station: Optional[str] = None

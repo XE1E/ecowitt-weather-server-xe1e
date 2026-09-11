@@ -489,6 +489,69 @@ def test_category_mapping():
     assert _category_for("solar_high") == "sun"
     assert _category_for("influx_write_failing") == "backup"
     assert _category_for("docker_health_receiver") == "backup"
+    assert _category_for("publish_awekas") == "publish"
+
+
+def test_publish_network_failing_then_recovery():
+    c = Collector()
+    svc = AlertService(make_settings(alert_publish_fails=3), notifier=c)
+
+    # Dos fallos: todavía no cruza el umbral
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    assert c.msgs == []
+
+    # Tercer fallo seguido -> dispara (un cuarto no repite)
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    assert len(c.msgs) == 1 and "AWEKAS" in c.msgs[0] and "3 intentos seguidos" in c.msgs[0]
+
+    # Un éxito -> normaliza y resetea el contador
+    asyncio.run(svc.check_publish_networks({"awekas": True}))
+    assert len(c.msgs) == 2 and "AWEKAS" in c.msgs[1] and "vuelve a recibir datos" in c.msgs[1]
+
+    # Dos fallos más no vuelven a disparar (contador reseteado, no llega a 3)
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    assert len(c.msgs) == 2
+
+
+def test_publish_network_isolated_failure_does_not_alert():
+    # Un solo intento fallido (blip de red) no debe avisar -- solo una falla
+    # SOSTENIDA, igual que check_influx_write.
+    c = Collector()
+    svc = AlertService(make_settings(alert_publish_fails=3), notifier=c)
+    asyncio.run(svc.check_publish_networks({"cwop": False}))
+    assert c.msgs == []
+
+
+def test_publish_networks_independientes():
+    # Cada red lleva su propia racha: que CWOP falle no debe adelantar el
+    # contador de AWEKAS ni disparar su alerta antes de tiempo.
+    c = Collector()
+    svc = AlertService(make_settings(alert_publish_fails=2), notifier=c)
+    asyncio.run(svc.check_publish_networks({"cwop": False, "awekas": True}))
+    asyncio.run(svc.check_publish_networks({"cwop": False, "awekas": True}))
+    assert len(c.msgs) == 1 and "CWOP" in c.msgs[0]
+
+
+def test_publish_network_not_attempted_does_not_count_as_failure():
+    # Una red apagada o fuera de intervalo simplemente no aparece en `results`
+    # (ver publishers.publish_all) -- no debe sumar a la racha de fallos.
+    c = Collector()
+    svc = AlertService(make_settings(alert_publish_fails=2), notifier=c)
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    asyncio.run(svc.check_publish_networks({}))  # este ciclo no le tocaba
+    asyncio.run(svc.check_publish_networks({"awekas": False}))
+    assert len(c.msgs) == 1
+
+
+def test_publish_network_disabled():
+    c = Collector()
+    svc = AlertService(make_settings(alert_publish_enabled=False), notifier=c)
+    for _ in range(5):
+        asyncio.run(svc.check_publish_networks({"awekas": False}))
+    assert c.msgs == []
 
 
 def test_all_categories_are_declared():

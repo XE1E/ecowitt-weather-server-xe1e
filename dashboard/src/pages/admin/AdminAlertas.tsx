@@ -51,6 +51,8 @@ interface AlertSettings {
   alert_camera_analysis_fails: number
   alert_backup_enabled: boolean
   alert_backup_stale_hours: number
+  alert_publish_enabled: boolean
+  alert_publish_fails: number
   telegram_enabled: boolean
   telegram_chat_id: string | null
   email_enabled: boolean
@@ -742,6 +744,22 @@ export function AdminAlertas() {
               </div>
             </div>
             <p className="text-xs text-slate-500">Credenciales de R2 y retención: Sistema → Respaldos.</p>
+          </div>
+
+          {/* Redes públicas de publicación (AWEKAS/CWOP/openSenseMap/...): las
+              credenciales van en Admin → Publicación; aquí solo el umbral de
+              "lleva demasiado fallando". */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 space-y-3">
+            <p className="text-sm font-medium">🌐 Publicación a redes públicas</p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Toggle enabled={settings.alert_publish_enabled} onChange={(v) => update('alert_publish_enabled', v)} label="Red fallando" />
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">tras</span>
+                <NumField value={settings.alert_publish_fails} onChange={(v) => update('alert_publish_fails', v)} min={1} max={50} off={!settings.alert_publish_enabled} />
+                <span className="text-xs text-slate-500">intentos seguidos fallando (por red)</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">Credenciales de cada red: Admin → Publicación.</p>
           </div>
         </>
       )}
