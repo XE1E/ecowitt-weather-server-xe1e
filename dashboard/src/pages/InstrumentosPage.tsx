@@ -191,7 +191,7 @@ export function InstrumentosPage() {
       <div className="card">
         <div className="grid gap-x-2 gap-y-6 justify-items-center grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <div className="flex flex-col items-center">
-            <AnalogGauge title="Temperatura" size={g}
+            <AnalogGauge title={`Temperatura\n${tempSource === 'out' ? 'Exterior' : 'Interior'}`} size={g}
               value={data
                 ? u.tempN((tempSource === 'out' ? data.temperature_outdoor : data.temperature_indoor) ?? NaN)
                 : null}
@@ -205,7 +205,7 @@ export function InstrumentosPage() {
           </div>
 
           <div className="flex flex-col items-center">
-            <AnalogGauge title="Punto de rocío" size={g}
+            <AnalogGauge title={DEW_SOURCE_OPTIONS.find((o) => o.value === dewSource)!.label} size={g}
               value={dewRaw != null ? u.tempN(dewRaw) : null}
               min={u.tempN(-10)} max={u.tempN(30)} majorStep={10} midStep={5} minorStep={1}
               unit={u.tempU} decimals={1}
@@ -214,7 +214,7 @@ export function InstrumentosPage() {
           </div>
 
           <div className="flex flex-col items-center">
-            <AnalogGauge title="Humedad" size={g}
+            <AnalogGauge title={`Humedad\n${humSource === 'out' ? 'Exterior' : 'Interior'}`} size={g}
               value={(humSource === 'out' ? data?.humidity_outdoor : data?.humidity_indoor) ?? null}
               min={0} max={100} majorStep={20} midStep={10} minorStep={2}
               unit="%" decimals={0}
@@ -251,7 +251,7 @@ export function InstrumentosPage() {
             trend={pressTrend} />
 
           <div className="flex flex-col items-center">
-            <AnalogGauge title="Lluvia" size={g}
+            <AnalogGauge title={`Lluvia\n${RAIN_PERIOD_OPTIONS.find((o) => o.value === rainPeriod)!.label}`} size={g}
               value={rainRaw != null ? u.rainN(rainRaw) : null}
               min={0} max={u.rainN(rainScale.max)}
               majorStep={rainStep.major} midStep={rainStep.mid} minorStep={rainStep.minor}
@@ -310,7 +310,7 @@ export function InstrumentosPage() {
             <GardenToggle value={gardenMode} onChange={setGardenMode} />
           </div>
 
-          <AnalogGauge title="Calidad del aire" size={g}
+          <AnalogGauge title={'Calidad del aire\nIMECA'} size={g}
             value={imeca?.available ? imeca.imeca ?? null : null}
             min={0} max={300} majorStep={50} midStep={25} minorStep={10}
             unit="IMECA" decimals={0}

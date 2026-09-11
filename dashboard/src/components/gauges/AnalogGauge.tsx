@@ -113,13 +113,15 @@ export function AnalogGauge({
   // más ancho que alto. Un poco más adentro (0.68) da margen de sobra sin
   // acercarse al título ni al hueco central.
   const labelR = faceR * 0.68
-  // "Radiación solar" y "Base de nubes" chocan con los números vecinos de la
-  // escala si van al mismo tamaño/altura que el resto (majorStep chico +
-  // 4 cifras) -- van con fuente más chica y un poco más abajo (más cerca
-  // del centro) que los demás. El resto usa la fuente grande de
-  // "Temperatura"; si algún título largo no entra en una línea, se parte en
-  // dos con un `\n` literal (ver render de más abajo).
-  const LOWERED_TITLES = ['Radiación solar', 'Base de nubes']
+  // "Radiación solar", "Base de nubes" y "Calidad del aire" (con la
+  // subtítulo "IMECA" en su propia línea) chocan con los números vecinos de
+  // la escala si van al mismo tamaño/altura que el resto -- van con fuente
+  // más chica y un poco más abajo (más cerca del centro) que los demás. El
+  // resto usa la fuente grande de "Temperatura"; un `\n` literal en el
+  // título agrega una SEGUNDA línea más chica debajo (subtítulo -- p. ej.
+  // "Exterior"/"Interior", el periodo de Lluvia, o "IMECA"), no un salto de
+  // línea por falta de espacio.
+  const LOWERED_TITLES = ['Radiación solar', 'Base de nubes', 'Calidad del aire\nIMECA']
   const isLoweredTitle = LOWERED_TITLES.includes(title)
   const titleR = faceR * (isLoweredTitle ? 0.24 : 0.34)
   const titleFontScale = isLoweredTitle ? 0.039 : 0.046
@@ -257,8 +259,15 @@ export function AnalogGauge({
 
       <text x={cx} y={cy - titleR} textAnchor="middle" fontSize={size * titleFontScale}
         fill="#5a5545" fontWeight={700} letterSpacing={0.2} fontFamily="ui-sans-serif, system-ui">
+        {/* Segunda línea (subtítulo -- selección activa: Exterior/Interior,
+            periodo de Lluvia, IMECA...): más chica y pegada a la primera,
+            no un salto de línea a tamaño completo. */}
         {titleLines.map((line, i) => (
-          <tspan key={i} x={cx} dy={i === 0 ? 0 : size * titleFontScale * 1.05}>{line.toUpperCase()}</tspan>
+          <tspan key={i} x={cx}
+            fontSize={i === 0 ? undefined : size * titleFontScale * 0.68}
+            dy={i === 0 ? 0 : size * titleFontScale * 0.95}>
+            {line.toUpperCase()}
+          </tspan>
         ))}
       </text>
 

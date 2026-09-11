@@ -107,8 +107,8 @@ export function WindRose({ rose, size = 280, compact = false, dial = false }: Pr
           <circle key={f} cx={cx} cy={cy} r={rOf(f * niceMax)} fill="none"
             stroke={line} strokeWidth={1} />
         ))}
-        <line x1={cx} y1={cy - R} x2={cx} y2={cy + R} stroke={line} strokeWidth={1} />
-        <line x1={cx - R} y1={cy} x2={cx + R} y2={cy} stroke={line} strokeWidth={1} />
+        <line x1={cx} y1={cy - R} x2={cx} y2={cy + R} stroke={line} strokeWidth={1} strokeDasharray={dial ? '3 2' : undefined} />
+        <line x1={cx - R} y1={cy} x2={cx + R} y2={cy} stroke={line} strokeWidth={1} strokeDasharray={dial ? '3 2' : undefined} />
 
         {/* Etiquetas de porcentaje (aros 50% y 100%) */}
         {!compact && [0.5, 1].map((f) => (
@@ -156,11 +156,12 @@ export function WindRose({ rose, size = 280, compact = false, dial = false }: Pr
           {rose.calm_pct}%
         </text>
 
-        {/* Brújula -- en `dial` casi pegada al borde de la carátula, igual
-            que N/E/S/O en CompassGauge (labelR ≈ 0.92×faceR ahí; acá R ya
-            equivale a esa carátula, así que +4 la deja igual de cerca). */}
+        {/* Brújula -- en `dial` cerca del borde de la carátula, igual que
+            N/E/S/O en CompassGauge, pero un poco más adentro que antes
+            (+4 hacía que el ANCHO del texto -- textAnchor sólo centra el
+            punto, no todo el glifo -- se saliera sobre el bisel metálico). */}
         {compass.map(({ b, t }) => {
-          const p = pt(cx, cy, R + (dial ? 4 : compact ? 10 : 12), b)
+          const p = pt(cx, cy, R + (dial ? -3 : compact ? 10 : 12), b)
           const cardinal = t.length === 1
           return (
             <text key={t} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
