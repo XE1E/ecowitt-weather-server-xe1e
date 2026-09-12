@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { initAnalytics, posthog } from './analytics'
 import App from './App'
 import { StationLayout } from './pages/StationLayout'
 import { HomePage } from './pages/HomePage'
@@ -50,6 +51,18 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+// Dispara un $pageview en cada cambio de ruta (incluida la carga inicial) --
+// las vistas con router navegan sin recargar, así que sin esto solo se vería
+// la primera página visitada por sesión. Ver analytics.ts para por qué no
+// se usa el `capture_pageview` automático de PostHog.
+function RouteTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    posthog.capture('$pageview')
+  }, [location.pathname])
+  return null
+}
+
 // Detectar tipo de página:
 // /embed -> widget compacto
 // /admin -> panel de administración
@@ -60,6 +73,18 @@ const isEmbed = path.startsWith('/embed')
 const isAdmin = path.startsWith('/admin')
 const isStation = path.startsWith('/pro')
 const isKiosk = path.startsWith('/kiosko')
+const isClassic = !isKiosk && !isEmbed && !isAdmin && !isStation
+
+// Analítica solo en las vistas públicas (clásica y /pro) -- ver analytics.ts
+// para por qué se excluyen admin/kiosko/embed.
+if (isStation || isClassic) {
+  initAnalytics()
+}
+// La clásica es página única sin router -- no hay `<RouteTracker>` que
+// dispare el pageview de /pro, así que se manda una sola vez aquí.
+if (isClassic) {
+  posthog.capture('$pageview')
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -97,6 +122,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <UnitsProvider>
         <StationDataProvider>
           <BrowserRouter>
+            <RouteTracker />
             <Routes>
               <Route path="/pro" element={<StationLayout />}>
                 <Route index element={<HomePage />} />
