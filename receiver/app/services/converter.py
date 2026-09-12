@@ -193,9 +193,15 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
             if cb is not None:
                 result["cloud_base"] = round(cb)
 
-        # Heat index (only valid for temp >= 27°C and humidity >= 40%)
+        # Heat index: mismo caso que wind_chill -- la regresión de Rothfusz (NWS)
+        # da valores sin sentido fuera de su rango de validez (temp>=27°C y
+        # humedad>=40%), así que fuera de rango cae a la temperatura real en vez
+        # de omitirse. Antes esto dejaba el "Heat Index" de Weathercloud en
+        # blanco casi todo el año en CDMX (rara vez llega a esa combinación).
         if temp >= 27 and humidity >= 40:
             result["heat_index"] = round(calculate_heat_index(temp, humidity), 1)
+        else:
+            result["heat_index"] = round(temp, 1)
 
     if temp is not None:
         # Wind chill: la fórmula (Environment Canada) SÍ da valores sin sentido

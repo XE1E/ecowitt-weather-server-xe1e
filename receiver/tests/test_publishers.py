@@ -2,7 +2,7 @@
 
 import asyncio
 
-from app.services.publishers import _wu_like, _weathercloud
+from app.services.publishers import _wu_like, _weathercloud, _awekas
 
 
 class FakeResponse:
@@ -14,15 +14,16 @@ class FakeResponse:
 class FakeClient:
     """Registra la última llamada a `get` sin tocar la red de verdad."""
 
-    def __init__(self, status_code=200):
+    def __init__(self, status_code=200, text="success"):
         self.status_code = status_code
+        self.text = text
         self.last_url = None
         self.last_params = None
 
     async def get(self, url, params=None, timeout=None):
         self.last_url = url
         self.last_params = params
-        return FakeResponse(self.status_code)
+        return FakeResponse(self.status_code, self.text)
 
 
 DATA = {
@@ -136,3 +137,17 @@ def test_weathercloud_url_and_failure():
     ok = asyncio.run(_weathercloud(client, DATA, "WID123", "key123"))
     assert ok is False
     assert client.last_url == "http://api.weathercloud.net/v01/set"
+
+
+def test_awekas_sends_condition_code_in_position_11():
+    client = FakeClient(text="OK")
+    ok = asyncio.run(_awekas(client, DATA, "xe1e", "pw", 19.38, -99.17, condition=3))
+    assert ok is True
+    assert ";3;" in client.last_url  # posicion 11 (partly cloudy)
+
+
+def test_awekas_condition_blank_when_none():
+    client = FakeClient(text="OK")
+    asyncio.run(_awekas(client, DATA, "xe1e", "pw", 19.38, -99.17, condition=None))
+    # posicion 10 (direccion) y 11 (condicion, vacia) seguidas de ";;"
+    assert ";;en;" in client.last_url

@@ -451,7 +451,8 @@ async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set, stats_flagg
 
 async def _bg_publish_principal(parsed_data: dict) -> None:
     try:
-        results = await publish_all(parsed_data, settings)
+        awekas_condition = await _awekas_condition_code(parsed_data)
+        results = await publish_all(parsed_data, settings, awekas_condition=awekas_condition)
         await alert_service.check_publish_networks(results)
     except Exception as e:
         logger.error(f"Public publish failed: {e}")
@@ -2398,6 +2399,39 @@ async def _current_forecast_wmo_cloudcover() -> Optional[Dict[str, Any]]:
             "cloud_cover": clouds[idx] if idx < len(clouds) else 0,
         }
     except Exception:
+        return None
+
+
+# Código entero que espera AWEKAS en la posición 11 de su protocolo (ver el
+# uploader de referencia weewx-awekas, que documenta la tabla completa: 0-25,
+# fog/nieve/tormenta/granizo/etc incluidos). Solo mapeamos lo que `svitrix.
+# _condition` puede distinguir con nuestras señales (radiación solar + % de
+# nubes del pronóstico): despejado/parcial/nublado y lluvia por intensidad --
+# el resto (niebla, nieve, tormenta, granizo...) no lo detectamos, así que se
+# deja sin mandar antes que adivinar mal.
+_AWEKAS_CONDITION_FROM_WEATHERAPI_CODE = {
+    1000: 2,   # Sunny -> sunny sky
+    1003: 3,   # Partly cloudy -> partly cloudy
+    1006: 6,   # Cloudy -> overcast sky
+    1183: 10,  # Light rain -> light rain
+    1189: 11,  # Moderate rain -> rain
+    1195: 12,  # Heavy rain -> heavy rain
+}
+
+
+async def _awekas_condition_code(data: Dict[str, Any]) -> Optional[int]:
+    """Traduce la condición actual (mismo criterio que el e-paper, ver
+    svitrix._condition) al código entero que espera AWEKAS. None si no se
+    pudo derivar (p. ej. Open-Meteo caído) -- AWEKAS simplemente no recibe
+    ese campo ese ciclo, no rompe el resto de la publicación."""
+    try:
+        sun_elev = sun_altitude(settings.cwop_latitude, settings.cwop_longitude)
+        fc = await _current_forecast_wmo_cloudcover()
+        cloud_cover = fc.get("cloud_cover") if fc else None
+        cond = svitrix._condition(data, sun_elev=sun_elev, cloud_cover=cloud_cover)
+        return _AWEKAS_CONDITION_FROM_WEATHERAPI_CODE.get(cond.get("code"))
+    except Exception as e:
+        logger.warning("No se pudo derivar condición para AWEKAS: %s", e)
         return None
 
 

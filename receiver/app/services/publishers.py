@@ -21,7 +21,7 @@ Redes soportadas:
 Los datos entran en MÉTRICO (°C, km/h, hPa, mm) y aquí se convierten según
 lo que cada protocolo espera.
 """
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import asyncio
 import hashlib
 import logging
@@ -232,7 +232,7 @@ async def _owm(client, data, api_key, station_id) -> bool:
 
 
 # ---------- AWEKAS ----------
-async def _awekas(client, data, username, password, lat, lon) -> bool:
+async def _awekas(client, data, username, password, lat, lon, condition=None) -> bool:
     """
     Publica a AWEKAS usando su formato de 25 campos semicolon-delimited.
     Unidades: °C, km/h, hPa y lluvia en **mm directos**.
@@ -240,6 +240,11 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
     Ojo: la documentación de AWEKAS dice "décimas de mm" para el campo 8, pero es
     incorrecta — se verificó contra el dato ya publicado y lo que espera son mm.
     No "corrijas" esto multiplicando por 10: se publicaría 10x la lluvia real.
+
+    `condition`: código entero de la posición 11 (0=clear warning, 1=clear,
+    2=sunny sky, 3=partly cloudy, 4=cloudy, ... 25=heavy snow showers -- ver
+    main.py::_awekas_condition_code, que lo deriva de la misma lógica que usa
+    el e-paper). None si no se pudo derivar -- se manda vacío como antes.
     """
     now = datetime.utcnow()
     password_hash = hashlib.md5(password.encode()).hexdigest()
@@ -260,7 +265,7 @@ async def _awekas(client, data, username, password, lat, lon) -> bool:
         _fmt(data.get("rain_daily") or 0),              # 8: lluvia diaria (mm)
         _fmt(data.get("wind_speed")),                # 9: viento km/h
         _fmt(data.get("wind_direction")),            # 10: dirección
-        "",                                          # 11: condición clima
+        str(condition) if condition is not None else "",  # 11: condición clima
         "",                                          # 12: texto aviso
         "",                                          # 13: altura nieve
         "en",                                        # 14: idioma
@@ -429,13 +434,18 @@ async def _cwop(data, callsign, passcode, lat, lon) -> bool:
     return False
 
 
-async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
+async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional[int] = None) -> Dict[str, bool]:
     """
     Publica a todas las redes activas EN PARALELO (antes iban en secuencia:
     5 redes de 15s de timeout cada una podían sumar hasta ~75-90s en el peor
     caso si varias fallaban a la vez -- ver PLAN-OPTIMIZACION-SERVIDOR.md, A1).
     Devuelve {red: ok} para las intentadas. Nunca lanza excepción (cada red se
     protege por separado, tanto antes como ahora).
+
+    `awekas_condition`: código de condición del cielo para AWEKAS (posición 11
+    de su protocolo), derivado por el llamador (main.py::_awekas_condition_code)
+    -- requiere astronomía/pronóstico que este módulo no maneja, así que se
+    calcula afuera y se pasa ya resuelto.
     """
     now = datetime.utcnow()
     tareas: Dict[str, Any] = {}  # nombre de red -> coroutine sin arrancar
@@ -471,7 +481,8 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
                 and _due("awekas", getattr(settings, "awekas_interval", 5), now)):
             tareas["awekas"] = _awekas(
                 client, data, settings.awekas_username, settings.awekas_password,
-                getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None))
+                getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None),
+                condition=awekas_condition)
         if (getattr(settings, "opensensemap_enabled", False) and settings.opensensemap_box_id
                 and settings.opensensemap_access_token
                 and _due("opensensemap", getattr(settings, "opensensemap_interval", 1), now)):

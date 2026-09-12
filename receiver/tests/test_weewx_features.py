@@ -199,6 +199,19 @@ def test_wind_chill_uses_formula_when_conditions_met():
     assert out["wind_chill"] < 5.0
 
 
+def test_heat_index_falls_back_to_temp_outside_valid_range():
+    # Regresión: el "Heat Index" de Weathercloud se quedaba en blanco casi
+    # siempre en CDMX (rara vez llega a 27°C+40% humedad a la vez).
+    out = calculate_derived_values({"temperature_outdoor": 16.2, "humidity_outdoor": 87.0})
+    assert out["heat_index"] == 16.2
+
+
+def test_heat_index_uses_formula_when_conditions_met():
+    out = calculate_derived_values({"temperature_outdoor": 30.0, "humidity_outdoor": 60.0})
+    # Con calor y humedad reales, el heat index debe ser mayor que la temperatura.
+    assert out["heat_index"] > 30.0
+
+
 # ---------- Pronóstico local ----------
 def test_trend_classification():
     assert classify_trend(-4.0)["code"] == "falling_fast"
