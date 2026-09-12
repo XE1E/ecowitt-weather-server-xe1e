@@ -23,8 +23,9 @@ interface PubSettings {
   weathercloud_key_masked: string | null
   weathercloud_interval: number
   windy_enabled: boolean
-  windy_api_key: string | null
-  windy_api_key_masked: string | null
+  windy_station_id: string | null
+  windy_station_password: string | null
+  windy_station_password_masked: string | null
   windy_interval: number
   owm_enabled: boolean
   owm_api_key: string | null
@@ -312,14 +313,22 @@ export function AdminPublicacion() {
           <div className="flex items-center gap-3 mb-3">
             <Toggle enabled={settings.windy_enabled} onChange={(v) => update('windy_enabled', v)} />
             <span className="text-sm font-medium">Windy.com</span>
-            {settings.windy_enabled && <CfgBadge ok={!!settings.windy_api_key || !!settings.windy_api_key_masked} />}
-            <a href="https://stations.windy.com/" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener API →</a>
+            {settings.windy_enabled && <CfgBadge ok={!!settings.windy_station_id && (!!settings.windy_station_password || !!settings.windy_station_password_masked)} />}
+            <a href="https://stations.windy.com/stations" target="_blank" className="text-sky-400 text-xs ml-auto">Mis estaciones →</a>
           </div>
           {settings.windy_enabled && (
             <div className="grid gap-2">
+              <p className="text-xs text-slate-500">
+                API v2: entra a "Mis estaciones" en windy.com y copia el <code>Station ID</code> y la{' '}
+                <code>Station password</code> de tu estación (ya no se usa API key de cuenta).
+              </p>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">API Key</span>
-                <TextField value={settings.windy_api_key} onChange={(v) => update('windy_api_key', v)} placeholder="API key" type="password" masked={settings.windy_api_key_masked} />
+                <span className="text-xs text-slate-400 w-24">Station ID</span>
+                <TextField value={settings.windy_station_id} onChange={(v) => update('windy_station_id', v)} placeholder="Station ID" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Password</span>
+                <TextField value={settings.windy_station_password} onChange={(v) => update('windy_station_password', v)} placeholder="Station password" type="password" masked={settings.windy_station_password_masked} />
               </div>
               <IntervalField value={settings.windy_interval} onChange={(v) => update('windy_interval', v)} />
             </div>

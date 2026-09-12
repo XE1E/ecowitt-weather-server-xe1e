@@ -31,7 +31,8 @@ interface WizardData {
   wu_station_id: string
   wu_station_key: string
   windy_enabled: boolean
-  windy_api_key: string
+  windy_station_id: string
+  windy_station_password: string
 }
 
 const STEPS = [
@@ -509,15 +510,27 @@ function PublishStep({
             </div>
           </label>
           {data.windy_enabled && (
-            <div className="mt-4 pl-8">
-              <label className="block text-sm text-slate-300 mb-1">API Key</label>
-              <input
-                type="password"
-                value={data.windy_api_key}
-                onChange={e => onChange({ windy_api_key: e.target.value })}
-                placeholder="Tu API key de Windy"
-                className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
-              />
+            <div className="mt-4 pl-8 space-y-2">
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Station ID</label>
+                <input
+                  type="text"
+                  value={data.windy_station_id}
+                  onChange={e => onChange({ windy_station_id: e.target.value })}
+                  placeholder="Station ID (en 'Mis estaciones' de windy.com)"
+                  className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Station password</label>
+                <input
+                  type="password"
+                  value={data.windy_station_password}
+                  onChange={e => onChange({ windy_station_password: e.target.value })}
+                  placeholder="Station password (no la API key)"
+                  className="w-full rounded-lg bg-slate-900/50 border border-white/10 px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -702,7 +715,8 @@ export function AdminWizard() {
     wu_station_id: '',
     wu_station_key: '',
     windy_enabled: false,
-    windy_api_key: '',
+    windy_station_id: '',
+    windy_station_password: '',
   })
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -785,7 +799,8 @@ export function AdminWizard() {
       }
       if (data.windy_enabled) {
         settings.windy_enabled = true
-        if (data.windy_api_key) settings.windy_api_key = data.windy_api_key
+        settings.windy_station_id = data.windy_station_id
+        if (data.windy_station_password) settings.windy_station_password = data.windy_station_password
       }
       if (data.email_enabled) {
         settings.email_enabled = true

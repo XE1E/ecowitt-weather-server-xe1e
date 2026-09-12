@@ -13,7 +13,7 @@ Redes soportadas:
   tras su retiro en 2026 -- mismo protocolo que WU, acepta estaciones de
   cualquier país)
 - Weathercloud (protocolo propio, valores enteros escalados x10)
-- Windy.com (unidades métricas / SI)
+- Windy.com (API v2: Station ID + Station password propia, no API key de cuenta)
 - OpenWeatherMap (Stations API, JSON)
 - AWEKAS (unidades métricas, formato semicolon-delimited)
 - openSenseMap / senseBox (unidades métricas, JSON con sensorId fijo)
@@ -181,22 +181,43 @@ async def _weathercloud(client, data, wid, key) -> bool:
     return await _get(client, "http://api.weathercloud.net/v01/set", params, "Weathercloud")
 
 
-async def _windy(client, data, api_key) -> bool:
-    # Windy PWS API acepta métrico: temp °C, wind m/s, pressure Pa, precip mm
+async def _windy(client, data, station_id, station_password) -> bool:
+    """
+    Windy Stations API v2 (stations.windy.com/api-reference), vigente desde
+    enero 2026 -- la v1 (una sola API key genérica en la URL) se retira en
+    diciembre 2026. La v2 identifica la estación por su `id` (query) y
+    autentica con la STATION PASSWORD propia de esa estación (no una API key
+    de cuenta) como Bearer token -- por eso el alta nueva en windy.com ya
+    solo entrega Station ID + Station password, sin API key.
+
+    Unidades métricas: temp °C, wind/gust m/s, pressure Pa, precip mm (última
+    hora, no acumulado del día -- documentado distinto mal en su sitio).
+    """
     params = _q({
+        "id": station_id,
         "temp": data.get("temperature_outdoor"),
-        "tempf": None,
         "wind": _kmh_to_ms(data.get("wind_speed")),
         "gust": _kmh_to_ms(data.get("wind_gust")),
         "winddir": data.get("wind_direction"),
-        "rh": data.get("humidity_outdoor"),
+        "humidity": data.get("humidity_outdoor"),
         "dewpoint": data.get("dew_point"),
         "pressure": (data["pressure_relative"] * 100) if data.get("pressure_relative") else None,
         "precip": data.get("rain_hourly"),
         "uv": data.get("uv_index"),
+        "softwaretype": "ecowitt-xe1e_1.0",
     })
-    url = f"https://stations.windy.com/pws/update/{api_key}"
-    return await _get(client, url, params, "Windy")
+    url = "https://stations.windy.com/api/v2/observation/update"
+    try:
+        r = await client.get(url, params=params, headers={"Authorization": f"Bearer {station_password}"},
+                              timeout=_TIMEOUT)
+        if r.status_code == 200:
+            logger.info("Publicado en Windy")
+            return True
+        logger.warning("Windy respondió %s: %s", r.status_code, r.text[:120])
+        return False
+    except Exception as e:
+        logger.error("Error publicando en Windy: %s", e)
+        return False
 
 
 async def _owm(client, data, api_key, station_id) -> bool:
@@ -471,9 +492,9 @@ async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional
                 and _due("weathercloud", getattr(settings, "weathercloud_interval", 10), now)):
             tareas["weathercloud"] = _weathercloud(
                 client, data, settings.weathercloud_id, settings.weathercloud_key)
-        if (getattr(settings, "windy_enabled", False) and settings.windy_api_key
+        if (getattr(settings, "windy_enabled", False) and settings.windy_station_id and settings.windy_station_password
                 and _due("windy", getattr(settings, "windy_interval", 5), now)):
-            tareas["windy"] = _windy(client, data, settings.windy_api_key)
+            tareas["windy"] = _windy(client, data, settings.windy_station_id, settings.windy_station_password)
         if (getattr(settings, "owm_enabled", False) and settings.owm_api_key
                 and _due("openweathermap", getattr(settings, "owm_interval", 5), now)):
             tareas["openweathermap"] = _owm(client, data, settings.owm_api_key, settings.owm_station_id)

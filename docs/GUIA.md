@@ -1276,6 +1276,12 @@ y registrar la estación ahí para obtener el **Site ID** (UUID) y la
 **Authentication Key** — no hay migración automática desde una cuenta vieja
 de WOW-UK. Usa el mismo protocolo que Weather Underground por dentro.
 
+**Windy.com** usa su API v2 (vigente desde enero 2026; la v1 -- una sola API
+key de cuenta -- se retira en diciembre 2026). El panel pide **Station ID** y
+**Station password** (se copian de "Mis estaciones" en windy.com), no una API
+key genérica -- si tu cuenta es de antes de 2026, tendrás que entrar ahí y
+generarlos para esa estación en concreto.
+
 Cada red tiene un **intervalo de envío** configurable en minutos (CWOP recomienda
 10–15 min; `0` = reenviar en cada dato recibido, ~60 s). Así se respeta el ritmo
 sugerido por cada red aunque la estación reporte cada minuto.

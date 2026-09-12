@@ -2,7 +2,7 @@
 
 import asyncio
 
-from app.services.publishers import _wu_like, _weathercloud, _awekas
+from app.services.publishers import _wu_like, _weathercloud, _awekas, _windy
 
 
 class FakeResponse:
@@ -19,10 +19,12 @@ class FakeClient:
         self.text = text
         self.last_url = None
         self.last_params = None
+        self.last_headers = None
 
-    async def get(self, url, params=None, timeout=None):
+    async def get(self, url, params=None, timeout=None, headers=None):
         self.last_url = url
         self.last_params = params
+        self.last_headers = headers
         return FakeResponse(self.status_code, self.text)
 
 
@@ -151,3 +153,31 @@ def test_awekas_condition_blank_when_none():
     asyncio.run(_awekas(client, DATA, "xe1e", "pw", 19.38, -99.17, condition=None))
     # posicion 10 (direccion) y 11 (condicion, vacia) seguidas de ";;"
     assert ";;en;" in client.last_url
+
+
+def test_windy_v2_uses_station_id_and_bearer_password():
+    client = FakeClient()
+    ok = asyncio.run(_windy(client, DATA, "abc123", "s3cr3t"))
+    assert ok is True
+    assert client.last_url == "https://stations.windy.com/api/v2/observation/update"
+    assert client.last_params["id"] == "abc123"
+    assert client.last_headers == {"Authorization": "Bearer s3cr3t"}
+    # la password NUNCA va en la query string
+    assert "s3cr3t" not in str(client.last_params)
+
+
+def test_windy_v2_field_names_and_units():
+    client = FakeClient()
+    asyncio.run(_windy(client, DATA, "abc123", "s3cr3t"))
+    p = client.last_params
+    assert p["humidity"] == 55       # no "rh" (protocolo v1 viejo)
+    assert "rh" not in p
+    assert p["pressure"] == 101500.0  # 1015.0 hPa -> Pa
+    assert p["wind"] == round(10.0 / 3.6, 2)   # km/h -> m/s
+    assert p["gust"] == round(20.0 / 3.6, 2)
+
+
+def test_windy_v2_reports_failure_on_non_200():
+    client = FakeClient(status_code=401)
+    ok = asyncio.run(_windy(client, DATA, "abc123", "wrong-password"))
+    assert ok is False

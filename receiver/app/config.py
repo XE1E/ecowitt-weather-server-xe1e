@@ -279,8 +279,14 @@ class Settings(BaseSettings):
     weathercloud_id: Optional[str] = None
     weathercloud_key: Optional[str] = None
     weathercloud_interval: int = 10
-    windy_enabled: bool = False        # Windy.com
-    windy_api_key: Optional[str] = None
+    # Windy.com: API v2 (vigente desde enero 2026; la v1 -- solo pedía una
+    # API key genérica -- se retira en diciembre 2026). La v2 identifica la
+    # estación por su Station ID y autentica con la STATION PASSWORD propia
+    # de esa estación (Bearer token), no con una API key de cuenta -- por
+    # eso el alta nueva en windy.com ya solo entrega esos dos datos.
+    windy_enabled: bool = False
+    windy_station_id: Optional[str] = None
+    windy_station_password: Optional[str] = None
     windy_interval: int = 5
     owm_enabled: bool = False          # OpenWeatherMap
     owm_api_key: Optional[str] = None
