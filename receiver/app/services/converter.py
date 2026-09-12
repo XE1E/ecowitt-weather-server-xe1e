@@ -179,9 +179,14 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
         if dew is not None:
             result["dew_point"] = round(dew, 1)
 
-            # Humidex (índice canadiense de bochorno; útil sobre ~20 °C)
-            if temp >= 20:
-                result["humidex"] = round(calculate_humidex(temp, dew), 1)
+            # Humidex (índice canadiense de bochorno). Environment Canada solo
+            # lo PUBLICA sobre ~20°C porque abajo de eso no se "siente" como
+            # bochorno extra, pero la fórmula en sí es válida a cualquier
+            # temperatura (a diferencia del wind chill, que si se rompe fuera
+            # de su rango -- ver abajo) -- se calcula siempre para que el
+            # medidor de Instrumentos no se quede sin aguja en días frescos;
+            # a esas temperaturas simplemente da un valor cercano a `temp`.
+            result["humidex"] = round(calculate_humidex(temp, dew), 1)
 
             # Base de nubes estimada (m sobre el suelo), aprox. Espy
             cb = calculate_cloud_base(temp, dew)
@@ -192,10 +197,18 @@ def calculate_derived_values(data: Dict[str, Any]) -> Dict[str, Any]:
         if temp >= 27 and humidity >= 40:
             result["heat_index"] = round(calculate_heat_index(temp, humidity), 1)
 
-    if temp is not None and wind_speed is not None:
-        # Wind chill (only valid for temp <= 10°C and wind >= 4.8 km/h)
-        if temp <= 10 and wind_speed >= 4.8:
+    if temp is not None:
+        # Wind chill: la fórmula (Environment Canada) SÍ da valores sin sentido
+        # fuera de su rango de validez (temp <= 10°C y viento >= 4.8 km/h) --
+        # a diferencia del humidex de arriba, no basta con quitar el `if`. Por
+        # eso, fuera de ese rango se muestra la temperatura real (mismo criterio
+        # que `feels_like` más abajo): sin viento frío relevante, "se siente"
+        # como la temperatura real, en vez de dejar el medidor de Instrumentos
+        # sin aguja.
+        if wind_speed is not None and temp <= 10 and wind_speed >= 4.8:
             result["wind_chill"] = round(calculate_wind_chill(temp, wind_speed), 1)
+        else:
+            result["wind_chill"] = round(temp, 1)
 
     # Feels like temperature
     if temp is not None:

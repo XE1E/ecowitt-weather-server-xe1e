@@ -168,6 +168,37 @@ def test_derived_values_zero_humidity_no_crash():
     assert "feels_like" in out
 
 
+def test_humidex_present_below_20_degrees():
+    # Regresión: el medidor "Índice humedad" de Instrumentos se quedaba sin
+    # aguja en días frescos (p. ej. 16°C) porque humidex solo se calculaba
+    # sobre 20°C -- la fórmula es válida a cualquier temperatura, así que
+    # ahora se calcula siempre que haya un punto de rocío válido.
+    out = calculate_derived_values({"temperature_outdoor": 16.2, "humidity_outdoor": 87.0})
+    assert "humidex" in out
+    # A esta temperatura no hay bochorno fuerte: el valor debe quedar
+    # razonablemente cerca de la temperatura real, no disparado.
+    assert abs(out["humidex"] - 16.2) < 5.0
+
+
+def test_wind_chill_falls_back_to_temp_outside_valid_range():
+    # Regresión: el medidor "Con viento" (Punto de rocío) se quedaba sin
+    # aguja casi siempre en CDMX, porque wind_chill exige temp<=10°C Y
+    # viento>=4.8 km/h a la vez -- fuera de ese rango ahora cae a la
+    # temperatura real (mismo criterio que feels_like), en vez de omitirse.
+    out = calculate_derived_values({"temperature_outdoor": 16.2, "wind_speed": 2.2})
+    assert out["wind_chill"] == 16.2
+
+    # Sin dato de viento tampoco debe quedar ausente.
+    out2 = calculate_derived_values({"temperature_outdoor": 16.2})
+    assert out2["wind_chill"] == 16.2
+
+
+def test_wind_chill_uses_formula_when_conditions_met():
+    out = calculate_derived_values({"temperature_outdoor": 5.0, "wind_speed": 20.0})
+    # Con frío real y viento fuerte, el chill debe ser menor que la temperatura.
+    assert out["wind_chill"] < 5.0
+
+
 # ---------- Pronóstico local ----------
 def test_trend_classification():
     assert classify_trend(-4.0)["code"] == "falling_fast"
