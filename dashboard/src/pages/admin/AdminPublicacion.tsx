@@ -17,6 +17,11 @@ interface PubSettings {
   wow_be_auth_key: string | null
   wow_be_auth_key_masked: string | null
   wow_be_interval: number
+  weathercloud_enabled: boolean
+  weathercloud_id: string | null
+  weathercloud_key: string | null
+  weathercloud_key_masked: string | null
+  weathercloud_interval: number
   windy_enabled: boolean
   windy_api_key: string | null
   windy_api_key_masked: string | null
@@ -274,6 +279,30 @@ export function AdminPublicacion() {
                 <TextField value={settings.wow_be_auth_key} onChange={(v) => update('wow_be_auth_key', v)} placeholder="Authentication Key" type="password" masked={settings.wow_be_auth_key_masked} />
               </div>
               <IntervalField value={settings.wow_be_interval} onChange={(v) => update('wow_be_interval', v)} />
+            </div>
+          )}
+        </div>
+
+        {/* Weathercloud */}
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Toggle enabled={settings.weathercloud_enabled} onChange={(v) => update('weathercloud_enabled', v)} />
+            <span className="text-sm font-medium">Weathercloud</span>
+            {settings.weathercloud_enabled && <CfgBadge ok={!!settings.weathercloud_id && (!!settings.weathercloud_key || !!settings.weathercloud_key_masked)} />}
+            <a href="https://weathercloud.net/en/register" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
+          </div>
+          {settings.weathercloud_enabled && (
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Wid</span>
+                <TextField value={settings.weathercloud_id} onChange={(v) => update('weathercloud_id', v)} placeholder="Weathercloud ID" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Key</span>
+                <TextField value={settings.weathercloud_key} onChange={(v) => update('weathercloud_key', v)} placeholder="API key" type="password" masked={settings.weathercloud_key_masked} />
+              </div>
+              <IntervalField value={settings.weathercloud_interval} onChange={(v) => update('weathercloud_interval', v)} />
+              <p className="text-xs text-slate-500">Plan gratis: mínimo 10 min entre envíos (1 min solo Pro/Premium).</p>
             </div>
           )}
         </div>

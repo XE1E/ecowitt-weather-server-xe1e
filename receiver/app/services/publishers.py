@@ -12,6 +12,7 @@ Redes soportadas:
 - WOW-BE (Instituto Real Meteorológico de Bélgica, sucesor de Met Office WOW
   tras su retiro en 2026 -- mismo protocolo que WU, acepta estaciones de
   cualquier país)
+- Weathercloud (protocolo propio, valores enteros escalados x10)
 - Windy.com (unidades métricas / SI)
 - OpenWeatherMap (Stations API, JSON)
 - AWEKAS (unidades métricas, formato semicolon-delimited)
@@ -138,6 +139,46 @@ async def _wu_like(client, url, station_id, password, data, name,
         "indoorhumidity": data.get("humidity_indoor"),
     })
     return await _get(client, url, params, name)
+
+
+async def _weathercloud(client, data, wid, key) -> bool:
+    """
+    Weathercloud (api.weathercloud.net/v01/set): protocolo propio, NO es
+    estilo WU. Valores ENTEROS escalados x10 para un decimal sin usar coma
+    (p. ej. "205" = 20.5°C) -- ver docs.weathercloud.net. wspd/wspdhi van en
+    m/s (no km/h ni mph), y date/time van en UTC.
+    """
+    now = datetime.utcnow()
+
+    def _x10(v):
+        return None if v is None else round(v * 10)
+
+    def _ms(kmh):
+        return None if kmh is None else kmh / 3.6
+
+    params = _q({
+        "wid": wid,
+        "key": key,
+        "date": now.strftime("%Y%m%d"),
+        "time": now.strftime("%H%M"),
+        "temp": _x10(data.get("temperature_outdoor")),
+        "tempin": _x10(data.get("temperature_indoor")),
+        "chill": _x10(data.get("wind_chill")),
+        "dew": _x10(data.get("dew_point")),
+        "heat": _x10(data.get("heat_index")),
+        "hum": data.get("humidity_outdoor"),
+        "humin": data.get("humidity_indoor"),
+        "bar": _x10(data.get("pressure_relative")),
+        "wspd": _x10(_ms(data.get("wind_speed"))),
+        "wspdhi": _x10(_ms(data.get("wind_gust"))),
+        "wdir": data.get("wind_direction"),
+        "rain": _x10(data.get("rain_daily")),
+        "rainrate": _x10(data.get("rain_rate")),
+        "solarrad": _x10(data.get("solar_radiation")),
+        "uvi": _x10(data.get("uv_index")),
+        "software": "ecowitt-xe1e_1.0",
+    })
+    return await _get(client, "http://api.weathercloud.net/v01/set", params, "Weathercloud")
 
 
 async def _windy(client, data, api_key) -> bool:
@@ -416,6 +457,10 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
                 client, "http://wow.meteo.be/api/v2/send",
                 settings.wow_be_site_id, settings.wow_be_auth_key, data, "WOW-BE",
                 id_key="siteid", pw_key="siteAuthenticationKey")
+        if (getattr(settings, "weathercloud_enabled", False) and settings.weathercloud_id and settings.weathercloud_key
+                and _due("weathercloud", getattr(settings, "weathercloud_interval", 10), now)):
+            tareas["weathercloud"] = _weathercloud(
+                client, data, settings.weathercloud_id, settings.weathercloud_key)
         if (getattr(settings, "windy_enabled", False) and settings.windy_api_key
                 and _due("windy", getattr(settings, "windy_interval", 5), now)):
             tareas["windy"] = _windy(client, data, settings.windy_api_key)

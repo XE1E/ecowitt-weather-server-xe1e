@@ -893,6 +893,7 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
             "cwop": settings.cwop_enabled,
             "awekas": settings.awekas_enabled,
             "wow_be": settings.wow_be_enabled,
+            "weathercloud": settings.weathercloud_enabled,
         },
     }
 

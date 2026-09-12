@@ -1257,6 +1257,7 @@ se activen, con sus credenciales, desde el panel:
 | **AWEKAS** | red europea con mapa interactivo y estadísticas |
 | **openSenseMap** | red ciudadana de datos ambientales (senseBox, Universidad de Münster) |
 | **WOW-BE** | sucesor del Met Office WOW (retirado en 2026); acepta estaciones de cualquier país, dato abierto |
+| **Weathercloud** | red ciudadana con app propia y mapa interactivo; plan gratis a 10 min |
 
 Filosofía: aportar a todas las útiles. Cada red usa sus unidades; el servidor
 convierte según el protocolo de cada una.

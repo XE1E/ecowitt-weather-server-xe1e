@@ -272,6 +272,13 @@ class Settings(BaseSettings):
     wow_be_site_id: Optional[str] = None
     wow_be_auth_key: Optional[str] = None
     wow_be_interval: int = 5
+    # Weathercloud: protocolo propio (no estilo WU), valores enteros x10 --
+    # ver _weathercloud en publishers.py. Intervalo mínimo 10 min en el plan
+    # gratis (1 min solo Pro/Premium).
+    weathercloud_enabled: bool = False
+    weathercloud_id: Optional[str] = None
+    weathercloud_key: Optional[str] = None
+    weathercloud_interval: int = 10
     windy_enabled: bool = False        # Windy.com
     windy_api_key: Optional[str] = None
     windy_interval: int = 5

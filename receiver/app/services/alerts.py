@@ -32,6 +32,7 @@ _PUBLISH_LABELS = {
     "wunderground": "Weather Underground",
     "pwsweather": "PWSWeather",
     "wow_be": "WOW-BE",
+    "weathercloud": "Weathercloud",
     "windy": "Windy",
     "openweathermap": "OpenWeatherMap",
     "awekas": "AWEKAS",

@@ -30,6 +30,7 @@ interface PublicationStatus {
   cwop: boolean
   awekas: boolean
   wow_be: boolean
+  weathercloud: boolean
 }
 
 interface AdminStatus {
@@ -304,7 +305,7 @@ export function AdminDashboard() {
 
   const alerts = status?.active_alerts || []
   const history = status?.alert_history || []
-  const pub = status?.publication || { wu: false, windy: false, pws: false, owm: false, cwop: false, awekas: false, wow_be: false }
+  const pub = status?.publication || { wu: false, windy: false, pws: false, owm: false, cwop: false, awekas: false, wow_be: false, weathercloud: false }
 
   return (
     <div className="space-y-4">
@@ -503,6 +504,9 @@ export function AdminDashboard() {
             </span>
             <span className={`text-xs ${pub.wow_be ? 'text-emerald-400' : 'text-slate-500'}`}>
               {pub.wow_be ? '●' : '○'} WOW-BE
+            </span>
+            <span className={`text-xs ${pub.weathercloud ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {pub.weathercloud ? '●' : '○'} Weathercloud
             </span>
           </div>
         </div>

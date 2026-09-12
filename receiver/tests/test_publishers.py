@@ -1,8 +1,8 @@
-"""Tests for the public-network publishers (WU-like protocol / WOW-BE)."""
+"""Tests for the public-network publishers (WU-like protocol / WOW-BE / Weathercloud)."""
 
 import asyncio
 
-from app.services.publishers import _wu_like
+from app.services.publishers import _wu_like, _weathercloud
 
 
 class FakeResponse:
@@ -40,6 +40,9 @@ DATA = {
     "uv_index": 6,
     "temperature_indoor": 22.0,
     "humidity_indoor": 45,
+    "wind_chill": 18.0,
+    "heat_index": 24.0,
+    "rain_rate": 3.0,
 }
 
 
@@ -85,3 +88,51 @@ def test_wu_like_reports_failure_on_non_200():
     client = FakeClient(status_code=403)
     ok = asyncio.run(_wu_like(client, "https://example.com/update", "ID1", "pw", DATA, "Test"))
     assert ok is False
+
+
+def test_weathercloud_scales_values_by_10():
+    client = FakeClient()
+    ok = asyncio.run(_weathercloud(client, DATA, "WID123", "key123"))
+    assert ok is True
+    p = client.last_params
+    assert p["wid"] == "WID123"
+    assert p["key"] == "key123"
+    assert p["temp"] == 200          # 20.0 °C -> 200
+    assert p["tempin"] == 220        # 22.0 °C -> 220
+    assert p["chill"] == 180         # 18.0 °C -> 180
+    assert p["dew"] == 110           # 11.0 °C -> 110
+    assert p["heat"] == 240          # 24.0 °C -> 240
+    assert p["hum"] == 55            # % sin escalar
+    assert p["humin"] == 45
+    assert p["bar"] == 10150         # 1015.0 hPa -> 10150
+    assert p["wdir"] == 180          # grados sin escalar
+    assert p["rain"] == 50           # 5.0 mm -> 50
+    assert p["rainrate"] == 30       # 3.0 mm/h -> 30
+    assert p["solarrad"] == 4000     # 400 W/m2 -> 4000
+    assert p["uvi"] == 60            # 6 -> 60
+
+
+def test_weathercloud_wind_speed_converted_kmh_to_ms_then_scaled():
+    client = FakeClient()
+    asyncio.run(_weathercloud(client, DATA, "WID123", "key123"))
+    # 10 km/h = 2.7778 m/s -> x10 -> 28 (redondeado)
+    assert client.last_params["wspd"] == 28
+    # 20 km/h gust = 5.5556 m/s -> x10 -> 56
+    assert client.last_params["wspdhi"] == 56
+
+
+def test_weathercloud_omits_missing_fields():
+    client = FakeClient()
+    data = {k: v for k, v in DATA.items() if k not in ("wind_chill", "heat_index")}
+    asyncio.run(_weathercloud(client, data, "WID123", "key123"))
+    assert "chill" not in client.last_params
+    assert "heat" not in client.last_params
+    # El resto sigue mandandose normal
+    assert "temp" in client.last_params
+
+
+def test_weathercloud_url_and_failure():
+    client = FakeClient(status_code=401)
+    ok = asyncio.run(_weathercloud(client, DATA, "WID123", "key123"))
+    assert ok is False
+    assert client.last_url == "http://api.weathercloud.net/v01/set"
