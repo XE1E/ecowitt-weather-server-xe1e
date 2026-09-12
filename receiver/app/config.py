@@ -262,6 +262,16 @@ class Settings(BaseSettings):
     pws_station_id: Optional[str] = None
     pws_password: Optional[str] = None
     pws_interval: int = 5
+    # WOW-BE (Instituto Real Meteorológico de Bélgica): sucesor de Met Office
+    # WOW -- ese se retira en 2026. Mismo protocolo que WU (ver _wu_like en
+    # publishers.py), solo cambia el endpoint y los nombres de los campos de
+    # autenticación (siteid/siteAuthenticationKey en vez de ID/PASSWORD). Acepta
+    # estaciones de cualquier país, no solo Bélgica. El sitio pide al menos
+    # 5 min entre lecturas (mismo límite que tenía WOW-UK).
+    wow_be_enabled: bool = False
+    wow_be_site_id: Optional[str] = None
+    wow_be_auth_key: Optional[str] = None
+    wow_be_interval: int = 5
     windy_enabled: bool = False        # Windy.com
     windy_api_key: Optional[str] = None
     windy_interval: int = 5

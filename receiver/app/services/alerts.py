@@ -31,6 +31,7 @@ ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "stat
 _PUBLISH_LABELS = {
     "wunderground": "Weather Underground",
     "pwsweather": "PWSWeather",
+    "wow_be": "WOW-BE",
     "windy": "Windy",
     "openweathermap": "OpenWeatherMap",
     "awekas": "AWEKAS",

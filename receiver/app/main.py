@@ -939,6 +939,7 @@ async def admin_status(authorization: Optional[str] = Header(default=None)):
             "owm": settings.owm_enabled,
             "cwop": settings.cwop_enabled,
             "awekas": settings.awekas_enabled,
+            "wow_be": settings.wow_be_enabled,
         },
     }
 

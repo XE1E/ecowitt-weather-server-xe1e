@@ -9,6 +9,9 @@ si una red falla, no afecta la ingestión ni a las demás.
 Redes soportadas:
 - Weather Underground (unidades imperiales)
 - PWSWeather (unidades imperiales, mismo protocolo que WU)
+- WOW-BE (Instituto Real Meteorológico de Bélgica, sucesor de Met Office WOW
+  tras su retiro en 2026 -- mismo protocolo que WU, acepta estaciones de
+  cualquier país)
 - Windy.com (unidades métricas / SI)
 - OpenWeatherMap (Stations API, JSON)
 - AWEKAS (unidades métricas, formato semicolon-delimited)
@@ -102,10 +105,18 @@ async def _get(client: httpx.AsyncClient, url: str, params: Dict[str, Any], name
         return False
 
 
-async def _wu_like(client, url, station_id, password, data, name) -> bool:
+async def _wu_like(client, url, station_id, password, data, name,
+                    id_key="ID", pw_key="PASSWORD") -> bool:
+    """
+    Protocolo "estilo Weather Underground" (WU/PWSWeather/WOW-BE comparten el
+    mismo formato de query string). `id_key`/`pw_key` permiten reusarlo para
+    WOW-BE, que manda los mismos campos pero con otros nombres para el ID de
+    estación y la clave ("siteid"/"siteAuthenticationKey" en vez de
+    "ID"/"PASSWORD") -- ver services/publish_all.
+    """
     params = _q({
-        "ID": station_id,
-        "PASSWORD": password,
+        id_key: station_id,
+        pw_key: password,
         "dateutc": "now",
         "action": "updateraw",
         "tempf": _c_to_f(data.get("temperature_outdoor")),
@@ -115,6 +126,9 @@ async def _wu_like(client, url, station_id, password, data, name) -> bool:
         "windgustmph": _kmh_to_mph(data.get("wind_gust")),
         "winddir": data.get("wind_direction"),
         "baromin": _hpa_to_inhg(data.get("pressure_relative")),
+        # Presión absoluta (sin corregir a nivel del mar) -- WOW-BE la pide
+        # aparte de la relativa; WU/PWSWeather la aceptan como campo opcional.
+        "absbaromin": _hpa_to_inhg(data.get("pressure_absolute")),
         "rainin": _mm_to_in(data.get("rain_hourly")),
         "dailyrainin": _mm_to_in(data.get("rain_daily")),
         "solarradiation": data.get("solar_radiation"),
@@ -396,6 +410,12 @@ async def publish_all(data: Dict[str, Any], settings) -> Dict[str, bool]:
             tareas["pwsweather"] = _wu_like(
                 client, "https://pwsupdate.pwsweather.com/api/v1/submitwx",
                 settings.pws_station_id, settings.pws_password, data, "PWSWeather")
+        if (getattr(settings, "wow_be_enabled", False) and settings.wow_be_site_id and settings.wow_be_auth_key
+                and _due("wow_be", getattr(settings, "wow_be_interval", 5), now)):
+            tareas["wow_be"] = _wu_like(
+                client, "http://wow.meteo.be/api/v2/send",
+                settings.wow_be_site_id, settings.wow_be_auth_key, data, "WOW-BE",
+                id_key="siteid", pw_key="siteAuthenticationKey")
         if (getattr(settings, "windy_enabled", False) and settings.windy_api_key
                 and _due("windy", getattr(settings, "windy_interval", 5), now)):
             tareas["windy"] = _windy(client, data, settings.windy_api_key)

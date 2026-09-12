@@ -1256,6 +1256,7 @@ se activen, con sus credenciales, desde el panel:
 | **CWOP / APRS** | entra a MADIS → modelos de NOAA (mayor aporte científico) |
 | **AWEKAS** | red europea con mapa interactivo y estadísticas |
 | **openSenseMap** | red ciudadana de datos ambientales (senseBox, Universidad de Münster) |
+| **WOW-BE** | sucesor del Met Office WOW (retirado en 2026); acepta estaciones de cualquier país, dato abierto |
 
 Filosofía: aportar a todas las útiles. Cada red usa sus unidades; el servidor
 convierte según el protocolo de cada una.
@@ -1267,6 +1268,12 @@ estación — hay que **crear la senseBox manualmente** en su web (modelo
 pega esos IDs; no puede crear la caja ni los sensores por ti. Un campo sin
 `sensorId` configurado simplemente no se publica — puedes empezar con solo
 temperatura/humedad e ir agregando sensores después.
+
+**WOW-BE** reemplaza al viejo Met Office WOW (retirado en 2026): hay que crear
+cuenta nueva en [wow.meteo.be](https://wow.meteo.be/en/connect-your-station/)
+y registrar la estación ahí para obtener el **Site ID** (UUID) y la
+**Authentication Key** — no hay migración automática desde una cuenta vieja
+de WOW-UK. Usa el mismo protocolo que Weather Underground por dentro.
 
 Cada red tiene un **intervalo de envío** configurable en minutos (CWOP recomienda
 10–15 min; `0` = reenviar en cada dato recibido, ~60 s). Así se respeta el ritmo

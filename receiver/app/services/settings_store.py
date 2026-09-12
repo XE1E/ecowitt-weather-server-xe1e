@@ -154,6 +154,7 @@ EDITABLE_KEYS = {
     # Publicación a redes públicas (*_interval = minutos entre envíos)
     "wu_enabled", "wu_station_id", "wu_station_key", "wu_interval",
     "pws_enabled", "pws_station_id", "pws_password", "pws_interval",
+    "wow_be_enabled", "wow_be_site_id", "wow_be_auth_key", "wow_be_interval",
     "windy_enabled", "windy_api_key", "windy_interval",
     "owm_enabled", "owm_api_key", "owm_station_id", "owm_interval",
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
@@ -201,6 +202,7 @@ SECRET_KEYS = {
     "weatherapi_key",
     "wu_station_key",
     "pws_password",
+    "wow_be_auth_key",
     "windy_api_key",
     "mqtt_password",
     "owm_api_key",

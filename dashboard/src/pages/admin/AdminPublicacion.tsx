@@ -12,6 +12,11 @@ interface PubSettings {
   pws_password: string | null
   pws_password_masked: string | null
   pws_interval: number
+  wow_be_enabled: boolean
+  wow_be_site_id: string | null
+  wow_be_auth_key: string | null
+  wow_be_auth_key_masked: string | null
+  wow_be_interval: number
   windy_enabled: boolean
   windy_api_key: string | null
   windy_api_key_masked: string | null
@@ -241,6 +246,34 @@ export function AdminPublicacion() {
                 <TextField value={settings.pws_password} onChange={(v) => update('pws_password', v)} placeholder="Password" type="password" masked={settings.pws_password_masked} />
               </div>
               <IntervalField value={settings.pws_interval} onChange={(v) => update('pws_interval', v)} />
+            </div>
+          )}
+        </div>
+
+        {/* WOW-BE (sucesor de Met Office WOW, retirado en 2026) */}
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Toggle enabled={settings.wow_be_enabled} onChange={(v) => update('wow_be_enabled', v)} />
+            <span className="text-sm font-medium">WOW-BE</span>
+            {settings.wow_be_enabled && <CfgBadge ok={!!settings.wow_be_site_id && (!!settings.wow_be_auth_key || !!settings.wow_be_auth_key_masked)} />}
+            <a href="https://wow.meteo.be/en/connect-your-station/" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
+          </div>
+          {settings.wow_be_enabled && (
+            <div className="grid gap-2">
+              <p className="text-xs text-slate-500">
+                Sucesor de Met Office WOW (retirado en 2026) -- acepta estaciones de cualquier país.
+                Crea tu cuenta en wow.meteo.be y registra la estación para obtener el Site ID y la
+                Authentication Key.
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Site ID</span>
+                <TextField value={settings.wow_be_site_id} onChange={(v) => update('wow_be_site_id', v)} placeholder="UUID del sitio" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-16">Auth Key</span>
+                <TextField value={settings.wow_be_auth_key} onChange={(v) => update('wow_be_auth_key', v)} placeholder="Authentication Key" type="password" masked={settings.wow_be_auth_key_masked} />
+              </div>
+              <IntervalField value={settings.wow_be_interval} onChange={(v) => update('wow_be_interval', v)} />
             </div>
           )}
         </div>
