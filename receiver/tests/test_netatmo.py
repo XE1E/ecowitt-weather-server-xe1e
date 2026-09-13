@@ -8,7 +8,8 @@ OUR_LAT, OUR_LON = 19.380359, -99.174564
 
 
 def _raw(pressure=1013.6, temp=15.0, humidity=60, wind_strength=10.0, wind_angle=180,
-         station_id="70:ee:50:aa:bb:cc", lat=19.41, lon=-99.17, ts=1700000000, with_wind=True):
+         station_id="70:ee:50:aa:bb:cc", lat=19.41, lon=-99.17, ts=1700000000, with_wind=True,
+         rain_live=None):
     measures = {
         "02:00:00:aa:bb:cc": {"type": ["temperature", "humidity"], "res": {str(ts): [temp, humidity]}},
         station_id: {"type": ["pressure"], "res": {str(ts): [pressure]}},
@@ -17,6 +18,11 @@ def _raw(pressure=1013.6, temp=15.0, humidity=60, wind_strength=10.0, wind_angle
         measures["03:00:00:aa:bb:cc"] = {
             "type": ["wind_strength", "wind_angle", "gust_strength", "gust_angle"],
             "res": {str(ts): [wind_strength, wind_angle, wind_strength + 5, wind_angle]},
+        }
+    if rain_live is not None:
+        measures["04:00:00:aa:bb:cc"] = {
+            "type": ["rain_live", "rain_60min", "rain_24h"],
+            "res": {str(ts): [rain_live, rain_live * 2, rain_live * 5]},
         }
     return {"_id": station_id, "place": {"location": [lon, lat]}, "measures": measures}
 
@@ -41,6 +47,18 @@ def test_normalize_works_without_wind_module():
     assert out is not None
     assert out["wind_speed_kph"] is None
     assert out["wind_dir_deg"] is None
+
+
+def test_normalize_extracts_rain_when_module_present():
+    out = _normalize(_raw(rain_live=1.2), OUR_LAT, OUR_LON, now=0.0)
+    assert out is not None
+    assert out["precip_mm"] == 1.2
+
+
+def test_normalize_precip_none_without_rain_module():
+    out = _normalize(_raw(), OUR_LAT, OUR_LON, now=0.0)
+    assert out is not None
+    assert out["precip_mm"] is None
 
 
 def test_normalize_drops_implausible_pressure():

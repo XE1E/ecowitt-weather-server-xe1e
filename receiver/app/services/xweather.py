@@ -129,6 +129,13 @@ def _normalize(raw: Dict[str, Any], now: Optional[float] = None) -> Optional[Dic
         "pressure_trend_mb": _station_trend(station_id, now if now is not None else time.time(), pressure_clean),
         "wind_speed_kph": ob.get("windSpeedKPH"),
         "wind_dir_deg": ob.get("windDirDEG"),
+        # Precipitación desde la última observación de ESA estación (verificado
+        # en vivo 2026-09-13: el campo existe por default, sin pedir `fields`,
+        # y es 0/valor real por estación -- no confundir con `weatherPrimary`
+        # ("Thunderstorms" etc.), que en la misma prueba salió IDÉNTICO en las
+        # 10 estaciones a la vez -- parece una condición regional sintetizada,
+        # no una lectura puntual, así que no se usa aquí).
+        "precip_mm": ob.get("precipMM"),
         "trust_factor": trust,
     }
 

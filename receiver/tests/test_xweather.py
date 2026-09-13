@@ -4,7 +4,7 @@ from app.services.xweather import _normalize, _clean_pressure, _station_trend, _
 from app.services.forecaster import zone_trend as _zone_trend
 
 
-def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST"):
+def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST", precip_mm=None):
     ob = {
         "dateTimeISO": "2026-09-13T00:45:00-06:00",
         "tempC": 15.0,
@@ -16,6 +16,8 @@ def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST"
     }
     if altimeter_mb is not None:
         ob["altimeterMB"] = altimeter_mb
+    if precip_mm is not None:
+        ob["precipMM"] = precip_mm
     return {
         "id": station_id,
         "dataSource": "PWS",
@@ -69,6 +71,18 @@ def test_normalize_keeps_station_without_trust_factor():
     del raw["ob"]["trustFactor"]
     out = _normalize(raw)
     assert out is not None
+
+
+def test_normalize_extracts_precip_mm():
+    out = _normalize(_raw(precip_mm=2.5))
+    assert out is not None
+    assert out["precip_mm"] == 2.5
+
+
+def test_normalize_precip_mm_none_when_absent():
+    out = _normalize(_raw())
+    assert out is not None
+    assert out["precip_mm"] is None
 
 
 def test_clean_pressure_none_passthrough():

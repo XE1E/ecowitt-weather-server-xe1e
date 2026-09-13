@@ -17,10 +17,17 @@ manejo de OAuth2 (Netatmo, a diferencia de Xweather, no usa una llave fija):
   el callback `on_refresh_token` (main.py lo conecta a settings_store), antes
   de que el proceso pueda caerse y perderlo.
 
-Presión: `getpublicdata` no dice si su "pressure" ya es a nivel del mar o
-absoluta de estación -- **sin verificar contra datos reales todavía** (ver
-checklist en PLAN-ESTACIONES-VECINAS.md). Se aplica el mismo filtro de rango
-plausible que Xweather (950-1050 hPa) como red de seguridad mientras tanto.
+Presión: **verificado con datos reales el 2026-09-13** (tras conectar la
+cuenta) que `pressure` de `getpublicdata` YA viene a nivel del mar, igual que
+nuestra `pressure_relative` -- no hace falta ningún ajuste como el que sí
+necesitó Xweather (`altimeterMB` vs `pressureMB`). El filtro de rango
+plausible (950-1050 hPa) se conserva como red de seguridad permanente.
+
+Lluvia: el nombre de medida del módulo pluviómetro (`rain_live`/`rain_60min`)
+es best-effort, **sin verificar contra datos reales** -- ninguna estación
+vecina real vista hasta ahora trae ese módulo (solo base + exterior). Si el
+nombre real difiere, simplemente no se puebla `precip_mm` para esa red (falla
+en silencio, no rompe nada).
 """
 import asyncio
 import logging
@@ -221,6 +228,14 @@ def _normalize(raw: Dict[str, Any], our_lat: float, our_lon: float, now: float) 
         # por el dueño de la estación (ver docstring del módulo).
         "wind_speed_kph": latest.get("wind_strength"),
         "wind_dir_deg": latest.get("wind_angle"),
+        # Módulo pluviómetro (NAModule3): nombres de medida SIN VERIFICAR
+        # contra datos reales todavía (ninguna estación vecina de la prueba
+        # de factibilidad traía este módulo) -- best-effort con los nombres
+        # documentados por la comunidad (`rain_live`/`rain_60min`). Si el
+        # nombre real difiera, esto sencillamente queda en None (no rompe
+        # nada, solo no se muestra esa estación como "lloviendo").
+        "precip_mm": (latest.get("rain_live") if latest.get("rain_live") is not None
+                     else latest.get("rain_60min")),
         "trust_factor": None,  # getpublicdata no expone nada equivalente
     }
 

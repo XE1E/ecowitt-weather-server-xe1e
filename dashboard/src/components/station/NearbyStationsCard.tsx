@@ -17,6 +17,7 @@ interface NearbyStation {
   pressure_mb: number | null
   wind_speed_kph: number | null
   wind_dir_deg: number | null
+  precip_mm: number | null
   trust_factor: number | null
 }
 
@@ -59,6 +60,29 @@ function pickSignificant(sortedByDistance: NearbyStation[], count: number): Near
   const picked = metar ? [metar, ...rest.slice(0, count - 1)] : rest.slice(0, count)
   return [...picked].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
 }
+
+// Rumbo en inglés (mismas 8 letras que ya manda el backend en `bearing` --
+// Xweather solo da compass point, no grados, así que esta es la resolución
+// máxima posible; NO es el `cardinal()` en español de weather.ts, que usa
+// otro alfabeto -- SO/O/NO en vez de SW/W/NW -- y compararía mal).
+const COMPASS_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+function compassEN(deg: number): string {
+  return COMPASS_EN[Math.round((((deg % 360) + 360) % 360) / 45) % 8]
+}
+
+// Mismo rumbo, o uno de los dos adyacentes (+/-45°) -- da algo de margen al
+// bucket de 8 puntos, que ya es la resolución más fina disponible.
+function isRoughlyFrom(stationBearing: string, windFrom: string): boolean {
+  const ia = COMPASS_EN.indexOf(stationBearing)
+  const ib = COMPASS_EN.indexOf(windFrom)
+  if (ia < 0 || ib < 0) return false
+  const diff = Math.min((ia - ib + 8) % 8, (ib - ia + 8) % 8)
+  return diff <= 1
+}
+
+// Señal (no pronóstico): con viento en calma no hay nada que "traiga" la
+// lluvia, y por debajo de esto el rumbo instantáneo es demasiado ruidoso.
+const MIN_WIND_KPH_FOR_SIGNAL = 5
 
 export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: LocalForecast | null }) {
   const u = useUnits()
@@ -112,6 +136,18 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
   const visibleStations = expanded ? sortedByDistance : pickSignificant(sortedByDistance, COLLAPSED_COUNT)
   const canExpand = stations.length > COLLAPSED_COUNT
 
+  // Señal puntual de lluvia acercándose (no interpolación ni pronóstico):
+  // alguna vecina en la dirección de donde SOPLA el viento ahora mismo
+  // reporta precipitación, y aquí todavía no llueve. Se busca en TODAS las
+  // estaciones (no solo las 5 visibles) -- la que avisa puede no ser de las
+  // "significativas" por distancia. Ver conversación: el viento superficial
+  // no siempre coincide con el movimiento real de la célula, así que esto
+  // es una pista, no una certeza -- se redacta como tal.
+  const windFrom = data.wind_direction != null ? compassEN(data.wind_direction) : null
+  const incomingRain = (windFrom && (data.wind_speed ?? 0) >= MIN_WIND_KPH_FOR_SIGNAL && !((data.rain_rate ?? 0) > 0))
+    ? stations.find((s) => s.bearing && s.precip_mm != null && s.precip_mm > 0 && isRoughlyFrom(s.bearing, windFrom))
+    : undefined
+
   return (
     <div className="card">
       <div className="flex items-center gap-2">
@@ -124,6 +160,14 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
         <p className="text-xs text-amber-400 mt-2">
           Tu presión difiere {Math.abs(pressureDeltaMb).toFixed(1)} hPa de {referenceLabel}
           -- revisa la calibración si se sostiene.
+        </p>
+      )}
+
+      {incomingRain && (
+        <p className="text-xs text-sky-400 mt-2">
+          {SOURCE_LABEL[incomingRain.source] ?? incomingRain.source} reporta lluvia al {incomingRain.bearing}
+          {incomingRain.distance_km != null && ` (${incomingRain.distance_km.toFixed(1)} km)`}
+          {' '}y el viento viene de esa dirección -- podría estar acercándose (no es un pronóstico).
         </p>
       )}
 
@@ -145,6 +189,7 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
             <span className="font-semibold text-right tabular-nums shrink-0">
               {s.temp_c != null ? `${u.temp(s.temp_c)}${u.tempU}` : '--'}
               {s.pressure_mb != null && ` · ${u.press(s.pressure_mb)} ${u.pressU}`}
+              {s.precip_mm != null && s.precip_mm > 0 && <span className="text-sky-400"> · lluvia</span>}
             </span>
           </div>
         ))}
