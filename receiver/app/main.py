@@ -87,6 +87,16 @@ class MemoryLogHandler(logging.Handler):
     def get_logs(self, limit: int = 100) -> List[Dict]:
         return list(self.buffer)[-limit:]
 
+    def get_logs_since(self, minutes: int) -> List[Dict]:
+        """
+        Filtra por ventana de tiempo en vez de cantidad de líneas: con más
+        redes publicando (reintentos incluidos) y más chequeos de alertas, un
+        límite fijo de líneas cubre cada vez menos tiempo real según cuánto
+        esté pasando en ese momento.
+        """
+        cutoff = datetime.now() - timedelta(minutes=minutes)
+        return [e for e in self.buffer if datetime.fromisoformat(e["timestamp"]) >= cutoff]
+
 
 memory_log_handler = MemoryLogHandler(maxlen=1500)
 memory_log_handler.setLevel(logging.INFO)
@@ -1389,11 +1399,18 @@ async def admin_setup_status(authorization: Optional[str] = Header(default=None)
 @app.get("/api/admin/logs")
 async def admin_logs(
     limit: int = 100,
+    minutes: Optional[int] = None,
     authorization: Optional[str] = Header(default=None)
 ):
-    """Retorna los últimos logs del sistema."""
+    """
+    Retorna los últimos logs del sistema. Con `minutes` filtra por ventana de
+    tiempo real (recomendado) en vez de `limit` por cantidad de líneas.
+    """
     _require_admin(authorization)
-    logs = memory_log_handler.get_logs(limit=min(limit, 1500))
+    if minutes is not None:
+        logs = memory_log_handler.get_logs_since(minutes=min(minutes, 240))
+    else:
+        logs = memory_log_handler.get_logs(limit=min(limit, 1500))
     return {"logs": logs}
 
 

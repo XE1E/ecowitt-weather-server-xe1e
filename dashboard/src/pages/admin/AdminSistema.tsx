@@ -189,7 +189,7 @@ export function AdminSistema() {
   const loadLogs = useCallback(async () => {
     setLogsLoading(true)
     try {
-      const r = await fetchWithAuth('/api/admin/logs?limit=100')
+      const r = await fetchWithAuth('/api/admin/logs?minutes=30')
       if (r.ok) {
         const data = await r.json()
         setLogs(data.logs || [])
