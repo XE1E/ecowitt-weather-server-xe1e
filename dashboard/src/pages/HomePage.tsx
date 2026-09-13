@@ -53,12 +53,10 @@ export function HomePage() {
           <PrecipitationCard data={data} forecast={forecast} />
           <ForecastCard forecast={forecast} />
           <ForecastCompareCard forecast={forecast} />
-          <LocalForecastCard lf={localForecast} />
         </div>
         {/* Columna central */}
         <div className="space-y-4">
           <PressureCard data={data} stats={stats} history={history} />
-          <NearbyStationsCard data={data} lf={localForecast} />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />
@@ -81,6 +79,10 @@ export function HomePage() {
           La cámara NO va aquí: es redundante con la pestaña Cámara, que muestra lo
           mismo con más detalle (timelapse, historial de análisis, etc). */}
       <div className="mt-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <NearbyStationsCard data={data} lf={localForecast} />
+          <LocalForecastCard lf={localForecast} />
+        </div>
         <StationTempChart history={history} forecast={forecast} />
         <RadarCard />
       </div>
