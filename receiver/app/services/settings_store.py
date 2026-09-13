@@ -128,6 +128,10 @@ EDITABLE_KEYS = {
     "weatherapi_key",
     # Estaciones vecinas (Xweather) - ver docs/internal/PLAN-ESTACIONES-VECINAS.md
     "xweather_enabled", "xweather_client_id", "xweather_client_secret",
+    # Estaciones vecinas (Netatmo, fase 3) - refresh_token normalmente lo
+    # escribe el callback OAuth, no el panel, pero se deja editable por si hay
+    # que pegarlo a mano tras un login hecho fuera del panel.
+    "netatmo_enabled", "netatmo_client_id", "netatmo_client_secret", "netatmo_refresh_token",
     # Control de calidad
     "qc_enabled",
     "qc_spike_enabled",
@@ -223,6 +227,9 @@ SECRET_KEYS = {
     "cloudflare_api_token",
     "xweather_client_id",
     "xweather_client_secret",
+    "netatmo_client_id",
+    "netatmo_client_secret",
+    "netatmo_refresh_token",
 }
 
 # Configuración por defecto para una estación

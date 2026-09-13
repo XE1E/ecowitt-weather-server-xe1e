@@ -34,6 +34,7 @@ const SOURCE_LABEL: Record<string, string> = {
   PWS: 'PWS',
   METAR_NOAA: 'METAR',
   MADIS_MESONET2: 'Mesonet',
+  NETATMO: 'Netatmo',
 }
 
 function minutesAgo(iso: string | null): string {
@@ -132,7 +133,8 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
       </div>
 
       <p className="mt-3 text-[11px] text-slate-500">
-        {stations.length} estaciones cercanas · {minutesAgo(resp?.fetched_at ?? null)} · vía Xweather
+        {stations.length} estaciones cercanas · {minutesAgo(resp?.fetched_at ?? null)}
+        {' · vía '}{[...new Set(stations.map((s) => (s.source === 'NETATMO' ? 'Netatmo' : 'Xweather')))].join(' + ')}
       </p>
     </div>
   )

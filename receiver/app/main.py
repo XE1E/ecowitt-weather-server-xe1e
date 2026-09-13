@@ -6,7 +6,7 @@ and stores it in InfluxDB.
 """
 
 from fastapi import FastAPI, Request, HTTPException, Header, Response, Body, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
@@ -41,6 +41,7 @@ from .services import forecaster
 from .services import aggregator
 from .services import openmeteo
 from .services import xweather
+from .services import netatmo
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
@@ -3139,24 +3140,126 @@ async def get_local_forecast():
 @app.get("/api/nearby-stations")
 async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optional[float] = None):
     """
-    Estaciones vecinas (PWS/METAR/mesonet) vía Xweather, para comparar contra
-    la lectura propia. Ver docs/internal/PLAN-ESTACIONES-VECINAS.md.
+    Estaciones vecinas (PWS/METAR/mesonet vía Xweather + Netatmo), para
+    comparar contra la lectura propia. Ver docs/internal/PLAN-ESTACIONES-VECINAS.md.
 
-    Sin credenciales configuradas (Admin → Integraciones), devuelve la lista
-    vacía en vez de error -- es una tarjeta opcional, no debe romper la página.
+    Sin ninguna red configurada (Admin → Integraciones), devuelve la lista
+    vacía en vez de error -- es una tarjeta opcional, no debe romper la
+    página. Cada red se consulta por separado y si UNA falla se ignora (con
+    log) en vez de tumbar la respuesta completa -- así una Netatmo mal
+    configurada no le quita la tarjeta a quien solo usa Xweather, y viceversa.
     """
-    if not (settings.xweather_enabled and settings.xweather_client_id and settings.xweather_client_secret):
+    lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
+    lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
+
+    results = []
+    if settings.xweather_enabled and settings.xweather_client_id and settings.xweather_client_secret:
+        try:
+            results.append(await xweather.get_nearby_stations(
+                lat_, lon_, settings.xweather_client_id, settings.xweather_client_secret,
+            ))
+        except Exception as e:
+            logger.error(f"Error obteniendo estaciones vecinas (Xweather): {e}")
+    if (settings.netatmo_enabled and settings.netatmo_client_id and settings.netatmo_client_secret
+            and settings.netatmo_refresh_token):
+        try:
+            results.append(await netatmo.get_nearby_stations(
+                lat_, lon_, settings.netatmo_client_id, settings.netatmo_client_secret,
+                settings.netatmo_refresh_token, _persist_netatmo_refresh_token,
+            ))
+        except Exception as e:
+            logger.error(f"Error obteniendo estaciones vecinas (Netatmo): {e}")
+
+    if not results:
         return {"stations": [], "fetched_at": None, "age_minutes": None, "stale": False,
                 "zone_trend_mb": None, "zone_trend": None, "zone_trend_reference": None}
+
+    stations = [s for r in results for s in r["stations"]]
+    fetched_ats = [r["fetched_at"] for r in results if r["fetched_at"]]
+    ages = [r["age_minutes"] for r in results if r["age_minutes"] is not None]
+    zone = forecaster.zone_trend(stations)
+    return {
+        "stations": stations,
+        # El más viejo de los dos (conservador): si una red no responde hace
+        # rato, la tarjeta lo refleja aunque la otra esté fresca.
+        "fetched_at": min(fetched_ats) if fetched_ats else None,
+        "age_minutes": max(ages) if ages else None,
+        "stale": any(r["stale"] for r in results),
+        "zone_trend_mb": zone["delta_mb"],
+        "zone_trend": zone["trend"],
+        "zone_trend_reference": zone["reference"],
+    }
+
+
+# --- Netatmo: login OAuth2 (fase 3 de estaciones vecinas) -------------------
+# Ver docs/internal/PLAN-ESTACIONES-VECINAS.md. Netatmo, a diferencia de
+# Xweather, no usa una llave fija -- hay que mandar al dueño de la cuenta a
+# autorizar la app y recibir el `code` en un callback propio, del lado del
+# servidor, apenas Netatmo redirige (el code expira en ~30-60 s).
+
+_NETATMO_REDIRECT_URI = "https://clima.xe1e.net/api/admin/netatmo/oauth/callback"
+_NETATMO_OAUTH_STATE_TTL = 600  # 10 min
+_netatmo_oauth_states: Dict[str, float] = {}
+
+
+def _netatmo_gen_state() -> str:
+    """`state` de un solo uso para el flujo OAuth -- se emite solo con sesión
+    admin válida (endpoint /oauth/start) y se consume una vez en el callback,
+    que en sí no puede llevar el Bearer del panel (es un redirect de
+    navegador). Es la protección real del callback público."""
+    now = time.time()
+    for s, ts in list(_netatmo_oauth_states.items()):
+        if now - ts > _NETATMO_OAUTH_STATE_TTL:
+            _netatmo_oauth_states.pop(s, None)
+    state = secrets.token_urlsafe(24)
+    _netatmo_oauth_states[state] = now
+    return state
+
+
+def _netatmo_check_state(state: Optional[str]) -> bool:
+    ts = _netatmo_oauth_states.pop(state, None) if state else None
+    return ts is not None and (time.time() - ts) <= _NETATMO_OAUTH_STATE_TTL
+
+
+def _persist_netatmo_refresh_token(new_token: str) -> None:
+    """Persiste (settings.json) y aplica EN VIVO un refresh_token nuevo --
+    mismo patrón que _persist_registry. Netatmo lo rota en cada uso, así que
+    esto se llama tanto desde el callback (primer login) como desde
+    netatmo.py cada vez que se pide un access_token nuevo con el anterior."""
+    current = settings_store.load_overrides(settings.settings_file)
+    current["netatmo_refresh_token"] = new_token
+    settings_store.save_overrides(settings.settings_file, current)
+    adminsvc.apply_overrides(settings, alert_service, current)
+
+
+@app.get("/api/admin/netatmo/oauth/start")
+async def netatmo_oauth_start(authorization: Optional[str] = Header(default=None)):
+    _require_admin(authorization)
+    if not (settings.netatmo_client_id and settings.netatmo_client_secret):
+        raise HTTPException(status_code=400, detail="Configura client_id/client_secret de Netatmo primero")
+    state = _netatmo_gen_state()
+    return {"url": netatmo.authorize_url(settings.netatmo_client_id, _NETATMO_REDIRECT_URI, state)}
+
+
+@app.get("/api/admin/netatmo/oauth/callback")
+async def netatmo_oauth_callback(code: Optional[str] = None, state: Optional[str] = None,
+                                  error: Optional[str] = None):
+    """Netatmo redirige aquí tras el login. Sin Authorization header a
+    propósito -- ver _netatmo_gen_state para la protección real (el `state`)."""
+    if error or not code or not _netatmo_check_state(state):
+        return RedirectResponse(url="/admin/integraciones?netatmo=error")
     try:
-        return await xweather.get_nearby_stations(
-            lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
-            lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
-            settings.xweather_client_id, settings.xweather_client_secret,
+        token_body = await netatmo.exchange_code(
+            settings.netatmo_client_id, settings.netatmo_client_secret, code, _NETATMO_REDIRECT_URI,
         )
+        refresh_token = token_body.get("refresh_token")
+        if not refresh_token:
+            raise RuntimeError("Netatmo no devolvió refresh_token")
+        _persist_netatmo_refresh_token(refresh_token)
     except Exception as e:
-        logger.error(f"Error obteniendo estaciones vecinas (Xweather): {e}")
-        raise HTTPException(status_code=502, detail="No se pudo obtener estaciones vecinas")
+        logger.error(f"Netatmo OAuth callback falló: {e}")
+        return RedirectResponse(url="/admin/integraciones?netatmo=error")
+    return RedirectResponse(url="/admin/integraciones?netatmo=ok")
 
 
 @app.get("/api/forecast/consensus")

@@ -201,6 +201,16 @@ class Settings(BaseSettings):
     xweather_client_id: Optional[str] = None
     xweather_client_secret: Optional[str] = None
 
+    # Netatmo - segunda red de estaciones vecinas (fase 3 de
+    # docs/internal/PLAN-ESTACIONES-VECINAS.md). OAuth2: client_id/secret vienen
+    # de una app registrada en dev.netatmo.com; refresh_token se obtiene del
+    # login (Admin -> Integraciones -> "Conectar con Netatmo") y se ROTA solo
+    # (el callback de main.py lo persiste de nuevo cada vez que se usa).
+    netatmo_enabled: bool = False
+    netatmo_client_id: Optional[str] = None
+    netatmo_client_secret: Optional[str] = None
+    netatmo_refresh_token: Optional[str] = None
+
     # Control de calidad (QC): descarta lecturas fuera de rango antes de guardar
     qc_enabled: bool = True
     # Filtro de picos: descarta saltos imposibles entre lecturas consecutivas

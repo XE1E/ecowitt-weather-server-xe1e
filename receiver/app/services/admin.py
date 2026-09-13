@@ -196,6 +196,11 @@ def public_settings(settings) -> Dict[str, Any]:
         "xweather_enabled": settings.xweather_enabled,
         "xweather_client_id_masked": mask(settings.xweather_client_id),
         "xweather_client_secret_masked": mask(settings.xweather_client_secret),
+        # Estaciones vecinas (Netatmo, fase 3)
+        "netatmo_enabled": settings.netatmo_enabled,
+        "netatmo_client_id_masked": mask(settings.netatmo_client_id),
+        "netatmo_client_secret_masked": mask(settings.netatmo_client_secret),
+        "netatmo_connected": bool(settings.netatmo_refresh_token),
         # Control de calidad
         "qc_enabled": settings.qc_enabled,
         "qc_spike_enabled": settings.qc_spike_enabled,

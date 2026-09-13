@@ -37,7 +37,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from .forecaster import classify_trend
+from .forecaster import zone_trend as _zone_trend_helper
 
 logger = logging.getLogger(__name__)
 
@@ -95,24 +95,6 @@ def _station_trend(station_id: Optional[str], now: float, pressure_mb: Optional[
     return round(hist[-1][1] - baseline[1], 1)
 
 
-def _zone_trend(stations: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Tendencia agregada de la zona: preferir el METAR (calibración
-    profesional) si ya tiene suficiente historia, cayendo a la mediana de
-    las vecinas -- mismo criterio que la comparación de presión absoluta en
-    NearbyStationsCard (ver 'Residual esperado' en PLAN-ESTACIONES-VECINAS.md:
-    las PWS baratas dispersan 8-13 hPa entre sí sin que sea un error)."""
-    metar = next((s for s in stations
-                  if s.get("source") == "METAR_NOAA" and s.get("pressure_trend_mb") is not None), None)
-    if metar:
-        delta, reference = metar["pressure_trend_mb"], "metar"
-    else:
-        deltas = sorted(s["pressure_trend_mb"] for s in stations if s.get("pressure_trend_mb") is not None)
-        if not deltas:
-            return {"delta_mb": None, "trend": None, "reference": None}
-        delta, reference = deltas[len(deltas) // 2], "median"
-    return {"delta_mb": delta, "trend": classify_trend(delta), "reference": reference}
-
-
 def _normalize(raw: Dict[str, Any], now: Optional[float] = None) -> Optional[Dict[str, Any]]:
     ob = raw.get("ob") or {}
     rel = raw.get("relativeTo") or {}
@@ -153,7 +135,7 @@ def _normalize(raw: Dict[str, Any], now: Optional[float] = None) -> Optional[Dic
 
 def _with_freshness(payload: List[Dict[str, Any]], ts: float) -> Dict[str, Any]:
     age = _age_min(ts)
-    zone = _zone_trend(payload)
+    zone = _zone_trend_helper(payload)
     return {
         "stations": payload,
         "fetched_at": datetime.fromtimestamp(ts, timezone.utc).replace(tzinfo=None).isoformat(),

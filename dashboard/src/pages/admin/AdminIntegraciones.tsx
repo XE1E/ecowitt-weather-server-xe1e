@@ -20,6 +20,12 @@ interface IntegSettings {
   xweather_client_id_masked: string | null
   xweather_client_secret: string | null
   xweather_client_secret_masked: string | null
+  netatmo_enabled: boolean
+  netatmo_client_id: string | null
+  netatmo_client_id_masked: string | null
+  netatmo_client_secret: string | null
+  netatmo_client_secret_masked: string | null
+  netatmo_connected: boolean
   ecowitt_secure_enabled: boolean
   ecowitt_secure_token: string | null
   ecowitt_secure_token_masked: string | null
@@ -101,6 +107,20 @@ export function AdminIntegraciones() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+  const [connectingNetatmo, setConnectingNetatmo] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const netatmoResult = params.get('netatmo')
+    if (netatmoResult === 'ok') {
+      setMessage({ type: 'ok', text: 'Netatmo conectado' })
+    } else if (netatmoResult === 'error') {
+      setMessage({ type: 'error', text: 'No se pudo conectar con Netatmo' })
+    }
+    if (netatmoResult) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   const loadMqttStatus = async () => {
     try {
@@ -140,6 +160,31 @@ export function AdminIntegraciones() {
       setTestResult({ success: false, message: 'Error de conexión' })
     }
     setTesting(false)
+  }
+
+  const connectNetatmo = async () => {
+    if (!settings) return
+    setConnectingNetatmo(true)
+    try {
+      // Guarda client_id/secret primero -- /oauth/start los necesita ya
+      // persistidos (los lee del `settings` del servidor, no del body).
+      await fetchWithAuth('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      })
+      const r = await fetchWithAuth('/api/admin/netatmo/oauth/start')
+      if (r.ok) {
+        const { url } = await r.json()
+        window.location.href = url
+      } else {
+        setMessage({ type: 'error', text: 'Faltan credenciales de Netatmo' })
+        setConnectingNetatmo(false)
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Error de conexión' })
+      setConnectingNetatmo(false)
+    }
   }
 
   const handleSave = async () => {
@@ -326,6 +371,45 @@ export function AdminIntegraciones() {
           </div>
         )}
         <p className="text-xs text-slate-500 mt-2">Tarjeta "En tu zona" en /pro: compara tu lectura contra estaciones (PWS/METAR/mesonet) cercanas. Tier gratis Developer: 15,000 llamadas/mes.</p>
+      </div>
+
+      {/* Netatmo (estaciones vecinas, segunda red) */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Toggle enabled={settings.netatmo_enabled} onChange={(v) => update('netatmo_enabled', v)} />
+          <span className="text-sm font-medium">🏡 Netatmo (estaciones vecinas)</span>
+          {settings.netatmo_enabled && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+              settings.netatmo_connected ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+            }`}>
+              {settings.netatmo_connected ? '✓ Conectado' : '⚠ Sin conectar'}
+            </span>
+          )}
+          <a href="https://dev.netatmo.com/apps/createanapp" target="_blank" className="text-sky-400 text-xs ml-auto">Crear app →</a>
+        </div>
+        {settings.netatmo_enabled && (
+          <div className="space-y-2">
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Client ID</span>
+                <TextField value={settings.netatmo_client_id} onChange={(v) => update('netatmo_client_id', v)} placeholder="Client ID" type="password" masked={settings.netatmo_client_id_masked} className="flex-1 max-w-md" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Client Secret</span>
+                <TextField value={settings.netatmo_client_secret} onChange={(v) => update('netatmo_client_secret', v)} placeholder="Client Secret" type="password" masked={settings.netatmo_client_secret_masked} className="flex-1 max-w-md" />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={connectNetatmo}
+              disabled={connectingNetatmo || !(settings.netatmo_client_id || settings.netatmo_client_id_masked)}
+              className="text-sm text-sky-400 hover:text-sky-300 disabled:text-slate-500"
+            >
+              {connectingNetatmo ? 'Redirigiendo...' : settings.netatmo_connected ? '🔌 Reconectar con Netatmo' : '🔌 Conectar con Netatmo'}
+            </button>
+          </div>
+        )}
+        <p className="text-xs text-slate-500 mt-2">Segunda red para "En tu zona": guarda Client ID/Secret y guarda cambios antes de conectar -- el login de Netatmo redirige de vuelta aquí.</p>
       </div>
 
       {/* WAQI */}

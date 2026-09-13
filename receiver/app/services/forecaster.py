@@ -12,7 +12,30 @@ No depende de Open-Meteo: es un pronóstico propio calculado con los datos de
 NUESTRA estación. Devuelve un texto corto + la tendencia para mostrar en un
 recuadro tipo "estado del barómetro".
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+
+def zone_trend(stations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Tendencia de presión agregada de un grupo de estaciones vecinas (cada una
+    con su propio `pressure_trend_mb` ya calculado, ver xweather.py/netatmo.py).
+
+    Prefiere el METAR (calibración profesional, sin el ruido de las PWS
+    baratas) si hay uno con historia suficiente; si no, cae a la MEDIANA del
+    resto -- mismo criterio documentado en PLAN-ESTACIONES-VECINAS.md
+    ("Residual esperado": las PWS dispersan 8-13 hPa entre sí sin ser error).
+    Se usa tanto por red (Xweather o Netatmo solas) como sobre la lista ya
+    fusionada de ambas (ver /api/nearby-stations en main.py).
+    """
+    metar = next((s for s in stations
+                  if s.get("source") == "METAR_NOAA" and s.get("pressure_trend_mb") is not None), None)
+    if metar:
+        delta, reference = metar["pressure_trend_mb"], "metar"
+    else:
+        deltas = sorted(s["pressure_trend_mb"] for s in stations if s.get("pressure_trend_mb") is not None)
+        if not deltas:
+            return {"delta_mb": None, "trend": None, "reference": None}
+        delta, reference = deltas[len(deltas) // 2], "median"
+    return {"delta_mb": delta, "trend": classify_trend(delta), "reference": reference}
 
 
 def classify_trend(delta_3h: Optional[float]) -> Dict[str, Any]:

@@ -1,6 +1,7 @@
 """Tests for the nearby-stations quality filter (Xweather)."""
 
-from app.services.xweather import _normalize, _clean_pressure, _station_trend, _zone_trend, _TREND_HIST
+from app.services.xweather import _normalize, _clean_pressure, _station_trend, _TREND_HIST
+from app.services.forecaster import zone_trend as _zone_trend
 
 
 def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST"):

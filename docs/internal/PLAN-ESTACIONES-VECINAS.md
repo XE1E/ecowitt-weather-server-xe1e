@@ -2,21 +2,22 @@
 
 > Escrito el 2026-09-13. Vive en git.
 >
-> **Estado:** fases 1 y 2 (Xweather) HECHAS y en producción. Fase 3
-> (sumar Netatmo como segunda red) **planeada, no implementada todavía**
-> — investigación y prueba de factibilidad ya hechas (ver
-> *Fase 3: sumar Netatmo* al final del documento), falta escribir el
-> código. Se retoma en una sesión posterior.
+> **Estado:** fases 1 y 2 (Xweather) HECHAS y en producción. Fase 3 (Netatmo)
+> **código escrito (2026-09-13), sin desplegar ni conectar todavía** — falta
+> completar el login OAuth real (checklist abajo, puntos 4/OAuth y 6).
 >
 > **Decidido (fase 1-2):** Xweather (ex-AerisWeather), tier gratis
 > **Developer** (15,000 llamadas/mes, sin tarjeta, sin vencimiento). Se
 > descartaron MADIS directo, Synoptic Data, Weather Underground directo y
 > Ecowitt.net — ver *Opciones descartadas*.
 >
-> **Siguiente paso concreto (fase 3):** ver checklist en
-> *Fase 3: sumar Netatmo* — empieza por registrar el callback OAuth en
-> `receiver/app/main.py` antes que nada más, para no repetir el problema
-> de código de un solo uso que ya se vivió (ver *Nota de la prueba real*).
+> **Siguiente paso concreto (fase 3):** en Admin → Integraciones → Netatmo,
+> pegar el `client_id`/`client_secret` ya generados (ver *Credenciales ya
+> generadas*), guardar, y darle "Conectar con Netatmo" para completar el
+> login OAuth real por primera vez -- solo entonces se puede verificar el
+> punto 4 (¿la presión de Netatmo es absoluta o a nivel del mar?) contra
+> datos reales. Ver *Fase 3* al final del documento para el detalle de lo
+> ya construido.
 
 ## Objetivo
 
@@ -283,7 +284,44 @@ otra tarjeta que muestra dato de una fuente externa puntual), en `/pro`:
 
 ---
 
-## Fase 3: sumar Netatmo (red adicional, planeada)
+## Fase 3: sumar Netatmo (red adicional) — código escrito 2026-09-13
+
+**Implementado, sin conectar/verificar en vivo todavía:**
+- `receiver/app/services/netatmo.py` — OAuth2 (`authorize_url`/`exchange_code`/
+  `_ensure_access_token` con rotación de refresh_token), `_normalize` (combina
+  los módulos de `getpublicdata` por `type`, no hay `module_types` explícito
+  en esta API pública — confirmado contra ejemplos reales de la API, no
+  supuesto), filtro de presión plausible (mismo rango que Xweather) y
+  tendencia por estación (mismo mecanismo que `xweather.py`). Tests en
+  `receiver/tests/test_netatmo.py`.
+- `forecaster.zone_trend()` (antes `xweather._zone_trend`, movida para
+  reusarla entre las dos redes y en la fusión) — METAR-primero-si-hay, si no
+  mediana.
+- `main.py`: `GET /api/admin/netatmo/oauth/start` (requiere sesión admin,
+  genera un `state` de un solo uso) + `GET /api/admin/netatmo/oauth/callback`
+  (sin auth header a propósito — es un redirect de navegador, la protección
+  real es el `state`; intercambia el `code` de inmediato y persiste el
+  `refresh_token`). `/api/nearby-stations` ahora consulta Xweather y Netatmo
+  por separado y fusiona ambas listas — si una red falla se ignora (con log)
+  en vez de tumbar la tarjeta completa.
+- `Admin → Integraciones`: sección "Netatmo" (toggle, client_id/secret,
+  botón "Conectar con Netatmo" que guarda y redirige al login).
+- `NearbyStationsCard.tsx`: `SOURCE_LABEL.NETATMO` y el pie ("vía Xweather +
+  Netatmo") ya no asumen una sola red.
+
+**Sigue pendiente (nada de esto se puede hacer sin credenciales reales):**
+- Completar el login OAuth real desde Admin → Integraciones (el intento de
+  esta sesión, con el `code` pasado por el chat, expiró — ver *Nota de la
+  prueba real* — hay que hacerlo de punta a punta desde el navegador).
+- **Punto 4 del checklist original: verificar si `pressure` de Netatmo es
+  absoluta o a nivel del mar**, comparándola en vivo contra `pressure_relative`
+  propia. Hasta entonces el filtro de rango plausible (950-1050 hPa) es la
+  única red de seguridad, igual que se dejó documentado para Xweather antes
+  de confirmarlo.
+- Validar en producción unos días (mismo criterio que se usó con la fase 1
+  de Xweather antes de darla por buena).
+
+### Por qué (redacción original)
 
 ### Por qué
 
@@ -418,19 +456,19 @@ límite razonable.
 
 ### Checklist (fase 3)
 
-- [ ] **1. Callback OAuth server-side** (`GET
-      /api/admin/netatmo/oauth/callback` en `main.py`) — hacerlo primero,
-      antes que nada más, para poder generar un `refresh_token` válido sin
-      que expire en el camino.
-- [ ] **2. Config + Admin → Integraciones:** campos `netatmo_*` en
-      `config.py`, sección nueva en el panel con botón "Conectar con
+- [x] **1. Callback OAuth server-side** — `GET /api/admin/netatmo/oauth/start`
+      (sesión admin, genera `state`) + `GET /api/admin/netatmo/oauth/callback`
+      (público a propósito, protegido por el `state`) en `main.py`.
+- [x] **2. Config + Admin → Integraciones:** campos `netatmo_*` en
+      `config.py`, sección "Netatmo" en el panel con botón "Conectar con
       Netatmo".
-- [ ] **3. `netatmo.py`:** fetch + refresh de token + normalize + caché
-      TTL, mismo patrón que `xweather.py`.
+- [x] **3. `netatmo.py`:** fetch + refresh de token + normalize + caché
+      TTL, mismo patrón que `xweather.py`. Tests en `test_netatmo.py`.
 - [ ] **4. Verificar con datos reales** si `pressure` de Netatmo es
       absoluta o a nivel del mar (ver *La API* arriba) antes de mostrarla.
-- [ ] **5. Fusionar con Xweather** en `/api/nearby-stations` y en
-      `NearbyStationsCard.tsx` (marcar la red de origen de cada
-      estación).
+      **Bloqueado hasta completar el login OAuth real** (necesita un
+      `refresh_token` válido, ver *Sigue pendiente* arriba).
+- [x] **5. Fusionar con Xweather** en `/api/nearby-stations` y en
+      `NearbyStationsCard.tsx` (marca la red de origen de cada estación).
 - [ ] **6. Validar en producción unos días**, mismo criterio que la fase
-      1 de Xweather.
+      1 de Xweather. Depende de 4.
