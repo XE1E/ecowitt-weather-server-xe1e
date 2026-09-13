@@ -195,6 +195,12 @@ class Settings(BaseSettings):
     # Complementa Open-Meteo con datos más precisos para ciudades grandes
     weatherapi_key: Optional[str] = None
 
+    # Xweather (ex-AerisWeather) - estaciones vecinas (PWS/METAR/mesonet) para
+    # comparar contra la lectura propia, ver docs/internal/PLAN-ESTACIONES-VECINAS.md
+    xweather_enabled: bool = False
+    xweather_client_id: Optional[str] = None
+    xweather_client_secret: Optional[str] = None
+
     # Control de calidad (QC): descarta lecturas fuera de rango antes de guardar
     qc_enabled: bool = True
     # Filtro de picos: descarta saltos imposibles entre lecturas consecutivas

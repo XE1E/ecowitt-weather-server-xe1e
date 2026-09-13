@@ -33,6 +33,7 @@ import { SkyAnalysisCard } from '../components/station/SkyAnalysisCard'
 import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { MetarCard } from '../components/station/MetarCard'
+import { NearbyStationsCard } from '../components/station/NearbyStationsCard'
 import { PageInfo } from '../components/station/PageInfo'
 
 const STORAGE_KEY = 'mi_tablero_cards'
@@ -86,6 +87,7 @@ export function MiTableroPage() {
     { key: 'skyanalysis', label: 'Análisis del cielo (IA)', span: 1, render: () => <SkyAnalysisCard /> },
     { key: 'wind', label: 'Viento', span: 1, render: () => <WindFlipCard data={data!} /> },
     { key: 'pressure', label: 'Presión', span: 1, render: () => <PressureCard data={data!} stats={stats} history={history} /> },
+    { key: 'nearby', label: 'En tu zona (estaciones vecinas)', span: 1, render: () => <NearbyStationsCard data={data!} /> },
     { key: 'localforecast', label: 'Pronóstico local', span: 1, render: () => <LocalForecastCard lf={localForecast} /> },
     { key: 'forecast', label: 'Pronóstico', span: 1, render: () => <ForecastCard forecast={forecast} /> },
     { key: 'forecastcmp', label: 'Pronóstico comparativa (Open-Meteo, WeatherAPI, SMN)', span: 1, render: () => <ForecastCompareCard forecast={forecast} /> },

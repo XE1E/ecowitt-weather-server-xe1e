@@ -192,6 +192,10 @@ def public_settings(settings) -> Dict[str, Any]:
         "email_categories": settings.email_categories,
         "waqi_token_masked": mask(settings.waqi_token),
         "weatherapi_key_masked": mask(settings.weatherapi_key),
+        # Estaciones vecinas (Xweather)
+        "xweather_enabled": settings.xweather_enabled,
+        "xweather_client_id_masked": mask(settings.xweather_client_id),
+        "xweather_client_secret_masked": mask(settings.xweather_client_secret),
         # Control de calidad
         "qc_enabled": settings.qc_enabled,
         "qc_spike_enabled": settings.qc_spike_enabled,

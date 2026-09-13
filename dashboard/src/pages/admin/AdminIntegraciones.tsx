@@ -15,6 +15,11 @@ interface IntegSettings {
   waqi_token_masked: string | null
   weatherapi_key: string | null
   weatherapi_key_masked: string | null
+  xweather_enabled: boolean
+  xweather_client_id: string | null
+  xweather_client_id_masked: string | null
+  xweather_client_secret: string | null
+  xweather_client_secret_masked: string | null
   ecowitt_secure_enabled: boolean
   ecowitt_secure_token: string | null
   ecowitt_secure_token_masked: string | null
@@ -288,6 +293,39 @@ export function AdminIntegraciones() {
           <TextField value={settings.weatherapi_key} onChange={(v) => update('weatherapi_key', v)} placeholder="API Key" type="password" masked={settings.weatherapi_key_masked} className="flex-1 max-w-md" />
         </div>
         <p className="text-xs text-slate-500 mt-2">Opcional: mejora la precisión del pronóstico combinándolo con Open-Meteo. Sin key, el sistema usa solo Open-Meteo + presión local. Plan gratuito: 1M llamadas/mes.</p>
+      </div>
+
+      {/* Xweather (estaciones vecinas) */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Toggle enabled={settings.xweather_enabled} onChange={(v) => update('xweather_enabled', v)} />
+          <span className="text-sm font-medium">📍 Xweather (estaciones vecinas)</span>
+          {settings.xweather_enabled && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+              (settings.xweather_client_id || settings.xweather_client_id_masked) &&
+              (settings.xweather_client_secret || settings.xweather_client_secret_masked)
+                ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+            }`}>
+              {(settings.xweather_client_id || settings.xweather_client_id_masked) &&
+               (settings.xweather_client_secret || settings.xweather_client_secret_masked)
+                ? '✓ Configurado' : '⚠ Faltan credenciales'}
+            </span>
+          )}
+          <a href="https://www.xweather.com/account" target="_blank" className="text-sky-400 text-xs ml-auto">Ver credenciales →</a>
+        </div>
+        {settings.xweather_enabled && (
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 w-24">Client ID</span>
+              <TextField value={settings.xweather_client_id} onChange={(v) => update('xweather_client_id', v)} placeholder="Client ID" type="password" masked={settings.xweather_client_id_masked} className="flex-1 max-w-md" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 w-24">Client Secret</span>
+              <TextField value={settings.xweather_client_secret} onChange={(v) => update('xweather_client_secret', v)} placeholder="Client Secret" type="password" masked={settings.xweather_client_secret_masked} className="flex-1 max-w-md" />
+            </div>
+          </div>
+        )}
+        <p className="text-xs text-slate-500 mt-2">Tarjeta "En tu zona" en /pro: compara tu lectura contra estaciones (PWS/METAR/mesonet) cercanas. Tier gratis Developer: 15,000 llamadas/mes.</p>
       </div>
 
       {/* WAQI */}

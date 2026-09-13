@@ -40,6 +40,7 @@ from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
 from .services import openmeteo
+from .services import xweather
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
@@ -3133,6 +3134,28 @@ async def get_local_forecast():
     except Exception as e:
         logger.error(f"Error building local forecast: {e}")
         return {"available": False, "reason": "error"}
+
+
+@app.get("/api/nearby-stations")
+async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optional[float] = None):
+    """
+    Estaciones vecinas (PWS/METAR/mesonet) vía Xweather, para comparar contra
+    la lectura propia. Ver docs/internal/PLAN-ESTACIONES-VECINAS.md.
+
+    Sin credenciales configuradas (Admin → Integraciones), devuelve la lista
+    vacía en vez de error -- es una tarjeta opcional, no debe romper la página.
+    """
+    if not (settings.xweather_enabled and settings.xweather_client_id and settings.xweather_client_secret):
+        return {"stations": [], "fetched_at": None, "age_minutes": None, "stale": False}
+    try:
+        return await xweather.get_nearby_stations(
+            lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
+            lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
+            settings.xweather_client_id, settings.xweather_client_secret,
+        )
+    except Exception as e:
+        logger.error(f"Error obteniendo estaciones vecinas (Xweather): {e}")
+        raise HTTPException(status_code=502, detail="No se pudo obtener estaciones vecinas")
 
 
 @app.get("/api/forecast/consensus")

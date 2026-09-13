@@ -23,6 +23,7 @@ import { AirQualityCard } from '../components/station/AirQualityCard'
 import { ImecaMiniCard } from '../components/station/ImecaMiniCard'
 import { MetarCard } from '../components/station/MetarCard'
 import { EarthquakesCard } from '../components/station/EarthquakesCard'
+import { NearbyStationsCard } from '../components/station/NearbyStationsCard'
 
 export function HomePage() {
   const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
@@ -57,6 +58,7 @@ export function HomePage() {
         {/* Columna central */}
         <div className="space-y-4">
           <PressureCard data={data} stats={stats} history={history} />
+          <NearbyStationsCard data={data} />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />

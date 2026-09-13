@@ -126,6 +126,8 @@ EDITABLE_KEYS = {
     "smtp_tls", "email_from", "email_to", "email_categories",
     "waqi_token",
     "weatherapi_key",
+    # Estaciones vecinas (Xweather) - ver docs/internal/PLAN-ESTACIONES-VECINAS.md
+    "xweather_enabled", "xweather_client_id", "xweather_client_secret",
     # Control de calidad
     "qc_enabled",
     "qc_spike_enabled",
@@ -219,6 +221,8 @@ SECRET_KEYS = {
     "backup_api_token",
     "docker_health_api_token",
     "cloudflare_api_token",
+    "xweather_client_id",
+    "xweather_client_secret",
 }
 
 # Configuración por defecto para una estación
