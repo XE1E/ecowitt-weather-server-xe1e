@@ -18,13 +18,26 @@ plausible a nivel del mar (una PWS con la altitud mal configurada manda
 presión absoluta cruda -- se vio en producción, mismo bug que tuvo nuestro
 propio GW1100, ver `project_gw1100_pressure_fix` en memoria) y estaciones con
 `trustFactor` bajo.
+
+Fase 2: además del dato puntual, se guarda un historial corto de presión POR
+ESTACIÓN VECINA (mismo patrón que `_pressure_hist`/`_push_and_delta` en
+alerts.py, pero uno por vecina en vez de por estación propia) para calcular
+su tendencia en la misma ventana de 3 h que usa `/api/forecast/local` para la
+estación propia -- así ambas tendencias son directamente comparables. Se
+agrega una tendencia agregada "de la zona" (`zone_trend*`), preferiendo el
+METAR si tiene suficiente historia (misma razón que en NearbyStationsCard:
+calibración profesional, sin el ruido de las PWS baratas) y cayendo a la
+mediana de las vecinas si no.
 """
 import time
 import logging
+from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+from .forecaster import classify_trend
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +53,13 @@ _CACHE: Dict[str, Dict[str, Any]] = {}
 _PLAUSIBLE_PRESSURE_MB = (950.0, 1050.0)
 _MIN_TRUST_FACTOR = 50
 
+# Ventana de tendencia: 3 h, igual que /api/forecast/local (estación propia),
+# para que la tendencia de la zona y la propia se puedan comparar directo.
+_TREND_WINDOW_MIN = 180
+# Historial de presión por estación vecina: id -> deque de (ts unix, mb).
+# maxlen generoso: a TTL de 10 min caben ~36 lecturas en 2x la ventana (6 h).
+_TREND_HIST: Dict[str, deque] = {}
+
 
 def _age_min(ts: float) -> Optional[float]:
     return None if not ts else (time.time() - ts) / 60.0
@@ -52,7 +72,48 @@ def _clean_pressure(mb: Optional[float]) -> Optional[float]:
     return mb if lo <= mb <= hi else None
 
 
-def _normalize(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _station_trend(station_id: Optional[str], now: float, pressure_mb: Optional[float]) -> Optional[float]:
+    """Guarda esta lectura en el historial de la estación y devuelve su
+    tendencia de presión (actual - línea base de hace ~_TREND_WINDOW_MIN),
+    o None si aún no hay suficiente historia (tras un reinicio, o si esta
+    lectura no trae presión utilizable). Mismo cálculo que
+    `_delta_over_window` en alerts.py, aplicado por estación vecina.
+    """
+    if not station_id or pressure_mb is None:
+        return None
+    hist = _TREND_HIST.setdefault(station_id, deque(maxlen=40))
+    hist.append((now, pressure_mb))
+    cutoff = now - _TREND_WINDOW_MIN * 2 * 60
+    while hist and hist[0][0] < cutoff:
+        hist.popleft()
+    if len(hist) < 2:
+        return None
+    target = now - _TREND_WINDOW_MIN * 60
+    baseline = min(hist, key=lambda e: abs(e[0] - target))
+    if (now - baseline[0]) < _TREND_WINDOW_MIN * 60 * 0.5:
+        return None
+    return round(hist[-1][1] - baseline[1], 1)
+
+
+def _zone_trend(stations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Tendencia agregada de la zona: preferir el METAR (calibración
+    profesional) si ya tiene suficiente historia, cayendo a la mediana de
+    las vecinas -- mismo criterio que la comparación de presión absoluta en
+    NearbyStationsCard (ver 'Residual esperado' en PLAN-ESTACIONES-VECINAS.md:
+    las PWS baratas dispersan 8-13 hPa entre sí sin que sea un error)."""
+    metar = next((s for s in stations
+                  if s.get("source") == "METAR_NOAA" and s.get("pressure_trend_mb") is not None), None)
+    if metar:
+        delta, reference = metar["pressure_trend_mb"], "metar"
+    else:
+        deltas = sorted(s["pressure_trend_mb"] for s in stations if s.get("pressure_trend_mb") is not None)
+        if not deltas:
+            return {"delta_mb": None, "trend": None, "reference": None}
+        delta, reference = deltas[len(deltas) // 2], "median"
+    return {"delta_mb": delta, "trend": classify_trend(delta), "reference": reference}
+
+
+def _normalize(raw: Dict[str, Any], now: Optional[float] = None) -> Optional[Dict[str, Any]]:
     ob = raw.get("ob") or {}
     rel = raw.get("relativeTo") or {}
     trust = ob.get("trustFactor")
@@ -72,15 +133,18 @@ def _normalize(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     pressure_mb = ob.get("altimeterMB")
     if pressure_mb is None:
         pressure_mb = ob.get("pressureMB")
+    pressure_clean = _clean_pressure(pressure_mb)
+    station_id = raw.get("id")
     return {
-        "id": raw.get("id"),
+        "id": station_id,
         "source": raw.get("dataSource"),
         "distance_km": rel.get("distanceKM"),
         "bearing": rel.get("bearingENG"),
         "observed_at": ob.get("dateTimeISO"),
         "temp_c": ob.get("tempC"),
         "humidity": ob.get("humidity"),
-        "pressure_mb": _clean_pressure(pressure_mb),
+        "pressure_mb": pressure_clean,
+        "pressure_trend_mb": _station_trend(station_id, now if now is not None else time.time(), pressure_clean),
         "wind_speed_kph": ob.get("windSpeedKPH"),
         "wind_dir_deg": ob.get("windDirDEG"),
         "trust_factor": trust,
@@ -89,11 +153,15 @@ def _normalize(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _with_freshness(payload: List[Dict[str, Any]], ts: float) -> Dict[str, Any]:
     age = _age_min(ts)
+    zone = _zone_trend(payload)
     return {
         "stations": payload,
         "fetched_at": datetime.fromtimestamp(ts, timezone.utc).replace(tzinfo=None).isoformat(),
         "age_minutes": round(age, 1) if age is not None else None,
         "stale": bool(age is not None and age > _TTL / 60.0),
+        "zone_trend_mb": zone["delta_mb"],
+        "zone_trend": zone["trend"],
+        "zone_trend_reference": zone["reference"],
     }
 
 
@@ -120,7 +188,7 @@ async def get_nearby_stations(lat: float, lon: float, client_id: str, client_sec
             body = r.json()
             if not body.get("success"):
                 raise RuntimeError(body.get("error") or "respuesta sin éxito")
-            data = [s for raw in (body.get("response") or []) if (s := _normalize(raw))]
+            data = [s for raw in (body.get("response") or []) if (s := _normalize(raw, now))]
     except Exception as e:
         if cached:
             logger.warning("Xweather no responde (%s); se sirve la copia de hace %.0f min",

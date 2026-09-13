@@ -3146,7 +3146,8 @@ async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optiona
     vacía en vez de error -- es una tarjeta opcional, no debe romper la página.
     """
     if not (settings.xweather_enabled and settings.xweather_client_id and settings.xweather_client_secret):
-        return {"stations": [], "fetched_at": None, "age_minutes": None, "stale": False}
+        return {"stations": [], "fetched_at": None, "age_minutes": None, "stale": False,
+                "zone_trend_mb": None, "zone_trend": None, "zone_trend_reference": None}
     try:
         return await xweather.get_nearby_stations(
             lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),

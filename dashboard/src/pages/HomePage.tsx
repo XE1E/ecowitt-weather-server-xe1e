@@ -58,7 +58,7 @@ export function HomePage() {
         {/* Columna central */}
         <div className="space-y-4">
           <PressureCard data={data} stats={stats} history={history} />
-          <NearbyStationsCard data={data} />
+          <NearbyStationsCard data={data} lf={localForecast} />
           <UvSolarCard data={data} />
           <InteriorCard data={data} />
           <ExtraSensorsCard data={data} history={history} />

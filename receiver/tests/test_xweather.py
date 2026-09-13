@@ -1,6 +1,6 @@
 """Tests for the nearby-stations quality filter (Xweather)."""
 
-from app.services.xweather import _normalize, _clean_pressure
+from app.services.xweather import _normalize, _clean_pressure, _station_trend, _zone_trend, _TREND_HIST
 
 
 def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST"):
@@ -79,3 +79,53 @@ def test_clean_pressure_boundary_values():
     assert _clean_pressure(1050.0) == 1050.0
     assert _clean_pressure(949.9) is None
     assert _clean_pressure(1050.1) is None
+
+
+# --- Fase 2: tendencia por estación vecina + agregado de zona ---
+
+_H = 3600.0  # 1 hora en segundos, para construir historiales en las pruebas
+
+
+def test_station_trend_none_without_enough_history():
+    # Recién visto por primera vez: sin línea base, no hay tendencia todavía
+    # (mismo comportamiento que _delta_over_window en alerts.py tras un reinicio).
+    _TREND_HIST.pop("PWS_NEW", None)
+    assert _station_trend("PWS_NEW", 0.0, 1020.0) is None
+
+
+def test_station_trend_computes_delta_over_3h_window():
+    _TREND_HIST.pop("PWS_TREND", None)
+    _station_trend("PWS_TREND", 0.0, 1020.0)  # línea base, sin tendencia aún
+    assert _station_trend("PWS_TREND", 3 * _H, 1017.0) == -3.0
+
+
+def test_station_trend_none_without_pressure():
+    _TREND_HIST.pop("PWS_NOPRESS", None)
+    assert _station_trend("PWS_NOPRESS", 0.0, None) is None
+
+
+def test_zone_trend_prefers_metar_over_median():
+    stations = [
+        {"source": "METAR_NOAA", "pressure_trend_mb": -2.0},
+        {"source": "PWS", "pressure_trend_mb": 5.0},
+        {"source": "PWS", "pressure_trend_mb": 6.0},
+    ]
+    out = _zone_trend(stations)
+    assert out["reference"] == "metar"
+    assert out["delta_mb"] == -2.0
+    assert out["trend"]["code"] == "falling"
+
+
+def test_zone_trend_falls_back_to_median_without_metar():
+    stations = [
+        {"source": "PWS", "pressure_trend_mb": 1.0},
+        {"source": "PWS", "pressure_trend_mb": 4.0},
+        {"source": "PWS", "pressure_trend_mb": 5.0},
+    ]
+    out = _zone_trend(stations)
+    assert out["reference"] == "median"
+    assert out["delta_mb"] == 4.0
+
+
+def test_zone_trend_none_without_any_data():
+    assert _zone_trend([{"source": "PWS", "pressure_trend_mb": None}])["delta_mb"] is None

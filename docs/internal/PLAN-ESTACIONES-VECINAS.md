@@ -240,12 +240,19 @@ otra tarjeta que muestra dato de una fuente externa puntual), en `/pro`:
 - [ ] **5. Validar en producción unos días**: ¿la lista de vecinas es
       estable? ¿el filtro de presión descarta lo que debe sin tirar datos
       buenos? ¿el `trustFactor` observado en la práctica sirve para algo?
-- [ ] **6 (fase 2, no bloquea lo anterior). Tendencias.** Guardar un
+- [x] **6 (fase 2). Tendencias.** HECHA (2026-09-13). `xweather.py` guarda un
       historial corto por estación vecina (mismo patrón que
-      `_pressure_hist`/`_temp_hist` en `alerts.py`) para comparar la
-      variación de presión de la zona en las últimas horas contra la
-      propia — insumo para nowcasting, no reemplazo del pronóstico de
-      modelos.
+      `_pressure_hist`/`_push_and_delta` en `alerts.py`) y calcula su
+      tendencia en la misma ventana de 3 h que `/api/forecast/local` (para
+      que sean comparables). `_zone_trend` agrega esto a una tendencia "de
+      la zona" (prefiere el METAR si tiene historia suficiente, si no cae a
+      la mediana de las PWS vecinas — mismo criterio que la comparación de
+      presión absoluta). Expuesto en `/api/nearby-stations` como
+      `zone_trend_mb`/`zone_trend`/`zone_trend_reference`, y mostrado en
+      `NearbyStationsCard.tsx` junto a la tendencia propia (prop `lf`,
+      reutilizando `localForecast` que ya traían `HomePage`/`MiTableroPage`)
+      — solo como contexto visual, sin alerta automática todavía (ver
+      "Decisiones abiertas" abajo).
 
 ## Decisiones abiertas
 
@@ -258,10 +265,11 @@ otra tarjeta que muestra dato de una fuente externa puntual), en `/pro`:
 - **Si vale la pena mostrar viento/humedad de la zona** además de
   temp/presión, o si eso satura la tarjeta sin aportar tanto — a decidir
   viendo el diseño real.
-- **Fase 2 (tendencias):** qué ventana de tiempo y qué umbral de
-  divergencia zona-vs-propio justifica una alerta — necesita datos de
-  varias semanas antes de fijar números, igual que se hizo con el detector
-  de lluvia y el QC estadístico.
+- **Fase 2 (tendencias):** la ventana quedó fija en 3 h (igual que
+  `/api/forecast/local`). Falta decidir qué umbral de divergencia
+  zona-vs-propio justificaría una alerta automática — necesita datos de
+  varias semanas de la comparación visual ya desplegada antes de fijar
+  números, igual que se hizo con el detector de lluvia y el QC estadístico.
 
 ## Fuentes
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { useUnits } from '../../units'
 import type { WeatherData } from '../../types'
+import type { LocalForecast } from '../../station-data'
 
 const REFRESH = 600000 // 10 min (igual que la caché del servidor)
 
@@ -24,6 +25,9 @@ interface NearbyResponse {
   fetched_at: string | null
   age_minutes: number | null
   stale: boolean
+  zone_trend_mb: number | null
+  zone_trend: { code: string; label: string; arrow: string } | null
+  zone_trend_reference: 'metar' | 'median' | null
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -42,7 +46,7 @@ function minutesAgo(iso: string | null): string {
   return `hace ${Math.round(min / 60)} h`
 }
 
-export function NearbyStationsCard({ data }: { data: WeatherData }) {
+export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: LocalForecast | null }) {
   const u = useUnits()
   const [resp, setResp] = useState<NearbyResponse | null>(null)
 
@@ -78,6 +82,17 @@ export function NearbyStationsCard({ data }: { data: WeatherData }) {
   const ownPressure = data.pressure_relative
   const pressureDeltaMb = referencePressure != null && ownPressure != null ? ownPressure - referencePressure : null
 
+  // Fase 2: tendencia de presión de la zona en las últimas 3 h (mismo criterio
+  // METAR-primero-si-hay que la comparación de arriba), calculada del lado del
+  // servidor con un historial corto por estación vecina -- ver xweather.py.
+  // Se muestra junto a la tendencia propia (misma ventana, `/api/forecast/local`)
+  // solo como contexto visual: aún no hay umbral definido para alertar por
+  // divergencia (ver "Decisiones abiertas" en PLAN-ESTACIONES-VECINAS.md).
+  const zoneTrend = resp?.zone_trend && resp.zone_trend.code !== 'unknown' ? resp.zone_trend : null
+  const zoneTrendSuffix = zoneTrend && resp?.zone_trend_mb != null
+    ? ` (${resp.zone_trend_mb > 0 ? '+' : ''}${resp.zone_trend_mb.toFixed(1)} hPa/3h${resp?.zone_trend_reference === 'metar' ? ', METAR' : ''})`
+    : ''
+
   return (
     <div className="card">
       <div className="flex items-center gap-2">
@@ -90,6 +105,13 @@ export function NearbyStationsCard({ data }: { data: WeatherData }) {
         <p className="text-xs text-amber-400 mt-2">
           Tu presión difiere {Math.abs(pressureDeltaMb).toFixed(1)} hPa de {referenceLabel}
           -- revisa la calibración si se sostiene.
+        </p>
+      )}
+
+      {zoneTrend && (
+        <p className="mt-2 text-xs text-slate-400">
+          Tendencia de la zona: {zoneTrend.arrow} {zoneTrend.label}{zoneTrendSuffix}
+          {lf?.available && lf.trend && ` · tu estación: ${lf.trend.arrow} ${lf.trend.label}`}
         </p>
       )}
 
