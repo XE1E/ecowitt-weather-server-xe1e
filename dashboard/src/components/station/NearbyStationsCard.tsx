@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, ChevronDown } from 'lucide-react'
 import { useUnits } from '../../units'
 import type { WeatherData } from '../../types'
 import type { LocalForecast } from '../../station-data'
@@ -47,9 +47,23 @@ function minutesAgo(iso: string | null): string {
   return `hace ${Math.round(min / 60)} h`
 }
 
+const COLLAPSED_COUNT = 5
+
+// Las 5 (colapsado) "más significativas": el METAR siempre entra si hay uno
+// en el radio -- es la referencia de calibración de la tarjeta (ver el
+// aviso de presión más abajo) -- y el resto son las más cercanas. Sin
+// METAR, son simplemente las 5 más cercanas.
+function pickSignificant(sortedByDistance: NearbyStation[], count: number): NearbyStation[] {
+  const metar = sortedByDistance.find((s) => s.source === 'METAR_NOAA')
+  const rest = sortedByDistance.filter((s) => s !== metar)
+  const picked = metar ? [metar, ...rest.slice(0, count - 1)] : rest.slice(0, count)
+  return [...picked].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+}
+
 export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: LocalForecast | null }) {
   const u = useUnits()
   const [resp, setResp] = useState<NearbyResponse | null>(null)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let cancel = false
@@ -94,6 +108,10 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
     ? ` (${resp.zone_trend_mb > 0 ? '+' : ''}${resp.zone_trend_mb.toFixed(1)} hPa/3h${resp?.zone_trend_reference === 'metar' ? ', METAR' : ''})`
     : ''
 
+  const sortedByDistance = [...stations].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+  const visibleStations = expanded ? sortedByDistance : pickSignificant(sortedByDistance, COLLAPSED_COUNT)
+  const canExpand = stations.length > COLLAPSED_COUNT
+
   return (
     <div className="card">
       <div className="flex items-center gap-2">
@@ -117,7 +135,7 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
       )}
 
       <div className="mt-3 space-y-2 text-sm">
-        {stations.slice(0, 5).map((s) => (
+        {visibleStations.map((s) => (
           <div key={s.id} className="flex items-baseline justify-between gap-2">
             <span className="text-slate-400 truncate">
               {SOURCE_LABEL[s.source] ?? s.source}
@@ -132,10 +150,24 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] text-slate-500">
-        {stations.length} estaciones cercanas · {minutesAgo(resp?.fetched_at ?? null)}
-        {' · vía '}{[...new Set(stations.map((s) => (s.source === 'NETATMO' ? 'Netatmo' : 'Xweather')))].join(' + ')}
-      </p>
+      {canExpand ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-3 flex w-full items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300"
+        >
+          <span>
+            {stations.length} estaciones cercanas · {minutesAgo(resp?.fetched_at ?? null)}
+            {' · vía '}{[...new Set(stations.map((s) => (s.source === 'NETATMO' ? 'Netatmo' : 'Xweather')))].join(' + ')}
+          </span>
+          <ChevronDown className={`w-3 h-3 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <p className="mt-3 text-[11px] text-slate-500">
+          {stations.length} estaciones cercanas · {minutesAgo(resp?.fetched_at ?? null)}
+          {' · vía '}{[...new Set(stations.map((s) => (s.source === 'NETATMO' ? 'Netatmo' : 'Xweather')))].join(' + ')}
+        </p>
+      )}
     </div>
   )
 }
