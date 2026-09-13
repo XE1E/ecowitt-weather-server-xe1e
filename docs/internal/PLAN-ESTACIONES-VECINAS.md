@@ -2,22 +2,31 @@
 
 > Escrito el 2026-09-13. Vive en git.
 >
-> **Estado:** fases 1 y 2 (Xweather) HECHAS y en producción. Fase 3 (Netatmo)
-> **código escrito (2026-09-13), sin desplegar ni conectar todavía** — falta
-> completar el login OAuth real (checklist abajo, puntos 4/OAuth y 6).
+> **Estado:** fases 1, 2 y 3 **HECHAS, conectadas y en producción**
+> (2026-09-13). Netatmo desplegado, login OAuth completado desde Admin →
+> Integraciones y ya sirviendo datos reales en `/api/nearby-stations` (10
+> estaciones Netatmo en 15 km, contra 10 combinadas de Xweather en 40 km —
+> confirma la mejora de densidad que anticipaba la prueba de factibilidad).
 >
 > **Decidido (fase 1-2):** Xweather (ex-AerisWeather), tier gratis
 > **Developer** (15,000 llamadas/mes, sin tarjeta, sin vencimiento). Se
 > descartaron MADIS directo, Synoptic Data, Weather Underground directo y
 > Ecowitt.net — ver *Opciones descartadas*.
 >
-> **Siguiente paso concreto (fase 3):** en Admin → Integraciones → Netatmo,
-> pegar el `client_id`/`client_secret` ya generados (ver *Credenciales ya
-> generadas*), guardar, y darle "Conectar con Netatmo" para completar el
-> login OAuth real por primera vez -- solo entonces se puede verificar el
-> punto 4 (¿la presión de Netatmo es absoluta o a nivel del mar?) contra
-> datos reales. Ver *Fase 3* al final del documento para el detalle de lo
-> ya construido.
+> **Punto 4 del checklist CERRADO con datos reales (2026-09-13):** la
+> `pressure` de `getpublicdata` SÍ viene ya corregida a nivel del mar, no
+> absoluta. Verificado comparando las 10 estaciones Netatmo reales más
+> cercanas (1017-1027 hPa) contra la propia `pressure_relative` (1023.1 hPa)
+> y `pressure_absolute` (778.1 hPa) en el mismo instante: si `pressure` de
+> Netatmo fuera absoluta sin corregir, a la altitud de CDMX rondaría los
+> ~770-790 hPa como la propia -- en vez de eso cae en el mismo rango que la
+> relativa. No hace falta ningún ajuste adicional (a diferencia de Xweather,
+> que sí necesitó preferir `altimeterMB` sobre `pressureMB`).
+>
+> **Pendiente real, no bloqueante:** validar en producción unos días (punto
+> 6 del checklist) antes de dar la fase por cerrada del todo -- confirmar
+> que el filtro de rango plausible no está descartando estaciones válidas
+> ni dejando pasar ninguna mal calibrada con el tiempo.
 
 ## Objetivo
 
@@ -284,9 +293,9 @@ otra tarjeta que muestra dato de una fuente externa puntual), en `/pro`:
 
 ---
 
-## Fase 3: sumar Netatmo (red adicional) — código escrito 2026-09-13
+## Fase 3: sumar Netatmo (red adicional) — HECHA, conectada 2026-09-13
 
-**Implementado, sin conectar/verificar en vivo todavía:**
+**Implementado:**
 - `receiver/app/services/netatmo.py` — OAuth2 (`authorize_url`/`exchange_code`/
   `_ensure_access_token` con rotación de refresh_token), `_normalize` (combina
   los módulos de `getpublicdata` por `type`, no hay `module_types` explícito
@@ -309,19 +318,17 @@ otra tarjeta que muestra dato de una fuente externa puntual), en `/pro`:
 - `NearbyStationsCard.tsx`: `SOURCE_LABEL.NETATMO` y el pie ("vía Xweather +
   Netatmo") ya no asumen una sola red.
 
-**Sigue pendiente (nada de esto se puede hacer sin credenciales reales):**
-- Completar el login OAuth real desde Admin → Integraciones (el intento de
-  esta sesión, con el `code` pasado por el chat, expiró — ver *Nota de la
-  prueba real* — hay que hacerlo de punta a punta desde el navegador).
-- **Punto 4 del checklist original: verificar si `pressure` de Netatmo es
-  absoluta o a nivel del mar**, comparándola en vivo contra `pressure_relative`
-  propia. Hasta entonces el filtro de rango plausible (950-1050 hPa) es la
-  única red de seguridad, igual que se dejó documentado para Xweather antes
-  de confirmarlo.
-- Validar en producción unos días (mismo criterio que se usó con la fase 1
-  de Xweather antes de darla por buena).
+**Cerrado el mismo día (2026-09-13):** login OAuth completado desde Admin →
+Integraciones (el intento fallido de esta sesión, con el `code` pasado por
+el chat, fue justo lo que motivó construir el callback server-side — ver
+*Nota de la prueba real* abajo) y el punto 4 (¿la presión de Netatmo es
+absoluta o a nivel del mar?) verificado con datos reales -- **es a nivel del
+mar**, ver el resumen al principio del documento. El filtro de rango
+plausible (950-1050 hPa) queda como red de seguridad permanente, no como
+sustituto de la verificación.
 
-### Por qué (redacción original)
+**Sigue pendiente:** validar en producción unos días (punto 6) antes de dar
+la fase por cerrada del todo.
 
 ### Por qué
 
@@ -464,11 +471,11 @@ límite razonable.
       Netatmo".
 - [x] **3. `netatmo.py`:** fetch + refresh de token + normalize + caché
       TTL, mismo patrón que `xweather.py`. Tests en `test_netatmo.py`.
-- [ ] **4. Verificar con datos reales** si `pressure` de Netatmo es
-      absoluta o a nivel del mar (ver *La API* arriba) antes de mostrarla.
-      **Bloqueado hasta completar el login OAuth real** (necesita un
-      `refresh_token` válido, ver *Sigue pendiente* arriba).
+- [x] **4. Verificar con datos reales** si `pressure` de Netatmo es
+      absoluta o a nivel del mar — **es a nivel del mar** (verificado
+      2026-09-13 contra 10 estaciones reales, ver resumen al principio del
+      documento). No hace falta ningún ajuste tipo `altimeterMB`.
 - [x] **5. Fusionar con Xweather** en `/api/nearby-stations` y en
       `NearbyStationsCard.tsx` (marca la red de origen de cada estación).
 - [ ] **6. Validar en producción unos días**, mismo criterio que la fase
-      1 de Xweather. Depende de 4.
+      1 de Xweather, antes de dar la fase por cerrada del todo.
