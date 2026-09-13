@@ -29,6 +29,9 @@ interface NearbyResponse {
   zone_trend_mb: number | null
   zone_trend: { code: string; label: string; arrow: string } | null
   zone_trend_reference: 'metar' | 'median' | null
+  // Calculada en el servidor (forecaster.detect_incoming_rain) -- misma
+  // lógica que usa el watchdog de segundo plano, para no duplicarla aquí.
+  incoming_rain: NearbyStation | null
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -60,29 +63,6 @@ function pickSignificant(sortedByDistance: NearbyStation[], count: number): Near
   const picked = metar ? [metar, ...rest.slice(0, count - 1)] : rest.slice(0, count)
   return [...picked].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
 }
-
-// Rumbo en inglés (mismas 8 letras que ya manda el backend en `bearing` --
-// Xweather solo da compass point, no grados, así que esta es la resolución
-// máxima posible; NO es el `cardinal()` en español de weather.ts, que usa
-// otro alfabeto -- SO/O/NO en vez de SW/W/NW -- y compararía mal).
-const COMPASS_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-function compassEN(deg: number): string {
-  return COMPASS_EN[Math.round((((deg % 360) + 360) % 360) / 45) % 8]
-}
-
-// Mismo rumbo, o uno de los dos adyacentes (+/-45°) -- da algo de margen al
-// bucket de 8 puntos, que ya es la resolución más fina disponible.
-function isRoughlyFrom(stationBearing: string, windFrom: string): boolean {
-  const ia = COMPASS_EN.indexOf(stationBearing)
-  const ib = COMPASS_EN.indexOf(windFrom)
-  if (ia < 0 || ib < 0) return false
-  const diff = Math.min((ia - ib + 8) % 8, (ib - ia + 8) % 8)
-  return diff <= 1
-}
-
-// Señal (no pronóstico): con viento en calma no hay nada que "traiga" la
-// lluvia, y por debajo de esto el rumbo instantáneo es demasiado ruidoso.
-const MIN_WIND_KPH_FOR_SIGNAL = 5
 
 export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: LocalForecast | null }) {
   const u = useUnits()
@@ -136,17 +116,10 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
   const visibleStations = expanded ? sortedByDistance : pickSignificant(sortedByDistance, COLLAPSED_COUNT)
   const canExpand = stations.length > COLLAPSED_COUNT
 
-  // Señal puntual de lluvia acercándose (no interpolación ni pronóstico):
-  // alguna vecina en la dirección de donde SOPLA el viento ahora mismo
-  // reporta precipitación, y aquí todavía no llueve. Se busca en TODAS las
-  // estaciones (no solo las 5 visibles) -- la que avisa puede no ser de las
-  // "significativas" por distancia. Ver conversación: el viento superficial
-  // no siempre coincide con el movimiento real de la célula, así que esto
-  // es una pista, no una certeza -- se redacta como tal.
-  const windFrom = data.wind_direction != null ? compassEN(data.wind_direction) : null
-  const incomingRain = (windFrom && (data.wind_speed ?? 0) >= MIN_WIND_KPH_FOR_SIGNAL && !((data.rain_rate ?? 0) > 0))
-    ? stations.find((s) => s.bearing && s.precip_mm != null && s.precip_mm > 0 && isRoughlyFrom(s.bearing, windFrom))
-    : undefined
+  // Señal puntual de lluvia acercándose -- ya calculada en el servidor
+  // (forecaster.detect_incoming_rain, misma lógica que usa el watchdog de
+  // segundo plano): no es interpolación ni pronóstico, solo una pista.
+  const incomingRain = resp?.incoming_rain ?? null
 
   return (
     <div className="card">

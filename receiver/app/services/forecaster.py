@@ -15,6 +15,52 @@ recuadro tipo "estado del barómetro".
 from typing import Any, Dict, List, Optional
 
 
+_COMPASS_EN = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+
+def _compass_en(deg: float) -> str:
+    return _COMPASS_EN[round((deg % 360) / 45) % 8]
+
+
+def _roughly_from(station_bearing: str, wind_from: str) -> bool:
+    """Mismo rumbo, o uno de los dos adyacentes (+/-45°) -- da algo de margen
+    al bucket de 8 puntos, que ya es la resolución más fina disponible (ver
+    `bearing` en xweather.py/netatmo.py: compass point, no grados)."""
+    if station_bearing not in _COMPASS_EN or wind_from not in _COMPASS_EN:
+        return False
+    ia, ib = _COMPASS_EN.index(station_bearing), _COMPASS_EN.index(wind_from)
+    return min((ia - ib) % 8, (ib - ia) % 8) <= 1
+
+
+def detect_incoming_rain(stations: List[Dict[str, Any]], wind_dir_deg: Optional[float],
+                          wind_speed_kph: Optional[float], own_rain_rate: Optional[float],
+                          min_wind_kph: float = 5.0) -> Optional[Dict[str, Any]]:
+    """Señal puntual (NO interpolación, NO pronóstico) de lluvia acercándose:
+    alguna vecina en la dirección de donde SOPLA el viento ahora mismo
+    reporta precipitación, y aquí todavía no llueve. Devuelve la vecina más
+    cercana que cumple, o None.
+
+    Única fuente de verdad para esto -- la usan tanto `/api/nearby-stations`
+    (expone el resultado para NearbyStationsCard.tsx, que ya NO lo calcula
+    por su cuenta) como el watchdog en segundo plano de main.py (para poder
+    evaluar "qué tanto dispara" sin depender de que el dashboard esté
+    abierto). Con viento en calma no hay nada que "traiga" la lluvia, y el
+    viento superficial no siempre coincide con el movimiento real de una
+    célula convectiva -- por eso es una pista, no una certeza.
+    """
+    if wind_dir_deg is None or wind_speed_kph is None or wind_speed_kph < min_wind_kph:
+        return None
+    if (own_rain_rate or 0) > 0:
+        return None
+    wind_from = _compass_en(wind_dir_deg)
+    candidates = [s for s in stations
+                  if s.get("bearing") and (s.get("precip_mm") or 0) > 0
+                  and _roughly_from(s["bearing"], wind_from)]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda s: s["distance_km"] if s.get("distance_km") is not None else float("inf"))
+
+
 def zone_trend(stations: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Tendencia de presión agregada de un grupo de estaciones vecinas (cada una
     con su propio `pressure_trend_mb` ya calculado, ver xweather.py/netatmo.py).
