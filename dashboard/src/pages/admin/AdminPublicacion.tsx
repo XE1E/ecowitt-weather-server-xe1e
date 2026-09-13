@@ -243,13 +243,18 @@ export function AdminPublicacion() {
           </div>
           {settings.pws_enabled && (
             <div className="grid gap-2">
+              <p className="text-xs text-slate-500">
+                PWSWeather renombró el campo "Password" a "Station Specific API Key" --
+                se genera en la página de tu estación en pwsweather.com (Edit Station,
+                al fondo). Va en el mismo campo de abajo, el protocolo no cambió.
+              </p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400 w-16">Station ID</span>
                 <TextField value={settings.pws_station_id} onChange={(v) => update('pws_station_id', v)} placeholder="STATIONID" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Password</span>
-                <TextField value={settings.pws_password} onChange={(v) => update('pws_password', v)} placeholder="Password" type="password" masked={settings.pws_password_masked} />
+                <span className="text-xs text-slate-400 w-16">API Key</span>
+                <TextField value={settings.pws_password} onChange={(v) => update('pws_password', v)} placeholder="Station Specific API Key" type="password" masked={settings.pws_password_masked} />
               </div>
               <IntervalField value={settings.pws_interval} onChange={(v) => update('pws_interval', v)} />
             </div>
