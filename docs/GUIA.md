@@ -1168,7 +1168,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, **AWEKAS** y **openSenseMap**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos |
 | **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
-| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos, **QC estadístico** opt-in — el umbral de z-score y demás ajustes finos solo por `settings.json`, ver §4). **Visor de logs** con filtros por nivel (todos/warning/error) y refresco en tiempo real. **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
+| **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos, **QC estadístico** opt-in — el umbral de z-score y demás ajustes finos solo por `settings.json`, ver §4). **Visor de logs**: filtros por nivel (todos/warning/error), refresco en tiempo real y **ventana de 30 min** (por timestamp, no por cantidad fija de líneas — con el tráfico normal del sitio unas pocas líneas de acceso HTTP bastan para llenar un límite fijo en minutos). **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
 dejan **en blanco al guardar, se conservan**. Los ajustes se guardan en
@@ -1280,11 +1280,27 @@ de WOW-UK. Usa el mismo protocolo que Weather Underground por dentro.
 key de cuenta -- se retira en diciembre 2026). El panel pide **Station ID** y
 **Station password** (se copian de "Mis estaciones" en windy.com), no una API
 key genérica -- si tu cuenta es de antes de 2026, tendrás que entrar ahí y
-generarlos para esa estación en concreto.
+generarlos para esa estación en concreto. Su cuota **Free** aplica rate-limit
+(429 "too many requests"); el servidor no insiste contra eso (ver "Robustez"
+abajo), así que un 429 ocasional se resuelve solo en el siguiente ciclo.
+
+**PWSWeather** renombró su campo de autenticación de "Password" a **"Station
+Specific API Key"** en su sitio (se genera en la página de tu estación, al
+fondo de "Edit Station") -- pero el protocolo de subida sigue mandándolo en
+el mismo parámetro `PASSWORD` de siempre. El panel (Admin → Publicación) ya
+tiene el campo etiquetado como "API Key"; no hace falta ningún dato extra.
 
 Cada red tiene un **intervalo de envío** configurable en minutos (CWOP recomienda
 10–15 min; `0` = reenviar en cada dato recibido, ~60 s). Así se respeta el ritmo
 sugerido por cada red aunque la estación reporte cada minuto.
+
+**Robustez:** cada red se publica en background, de forma independiente y sin
+bloquear la ingestión. Ante un fallo, se reintenta **una vez** (pausa de 3 s)
+solo si es un problema que un reintento inmediato SÍ puede resolver (timeout,
+conexión rechazada, error 5xx del servidor); ante un **4xx** (credenciales
+inválidas, rate-limit, payload rechazado) no se reintenta -- insistir en
+segundos no lo arregla, y se resuelve solo en el próximo ciclo de publicación
+si la causa era pasajera (p. ej. un 429 de Windy).
 
 > Seguridad del endpoint de entrada (`/data/report/`) y su configuración completa:
 > ver **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)**.
@@ -1545,6 +1561,15 @@ disponibilidad (ver `uptime-worker/`).
 
 **Persistencia:** los ajustes del panel viven en el volumen `receiver-data`
 (`/data/settings.json`), así que sobreviven a reinicios y reconstrucciones.
+
+**Analítica del sitio (PostHog):** instrumentado en las vistas **públicas**
+(`/` clásica y `/pro`) -- deliberadamente NO corre en `/admin` (panel
+privado, mezclaría acciones del dueño con visitas reales), `/kiosko` (un solo
+dispositivo físico en loop, no un "visitante") ni `/embed` (widget incrustado
+en OTROS sitios, mediría tráfico ajeno). Incluye **Session Replay**
+(grabaciones de sesión) además de los eventos de página. Hay un dashboard
+propio con tendencia de visitas, país, páginas más vistas, dispositivo y
+navegador, armado desde el panel de PostHog (acceso con cuenta propia).
 
 **Estación en operación:** el WS2910 está **instalado y enviando datos reales**
 desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`

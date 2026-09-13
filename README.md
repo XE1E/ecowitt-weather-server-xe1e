@@ -43,7 +43,7 @@ Además: **panel de administración** (`/admin`, usuario/contraseña) con **wiza
 
 **Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, **sensor atascado** (mismo valor exacto muchas lecturas seguidas), estación caída, calidad del aire, **sismos**, **visuales** —tormentas, precipitación, visibilidad— e **infraestructura** —InfluxDB sin aceptar escrituras, respaldo a R2 desactualizado, contenedor Docker "unhealthy"—) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos. Además, un **QC estadístico opcional** (desactivado por omisión) compara cada lectura contra el historial de la propia estación y avisa si un valor se sostiene estadísticamente raro.
 
-**Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, AWEKAS y **openSenseMap** (red ciudadana de datos ambientales).
+**Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, AWEKAS, WOW-BE, Weathercloud y **openSenseMap** (red ciudadana de datos ambientales).
 
 ---
 
