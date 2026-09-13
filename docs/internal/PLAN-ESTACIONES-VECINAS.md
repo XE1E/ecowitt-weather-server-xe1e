@@ -116,20 +116,46 @@ sin él y concluir erróneamente que "no hay estaciones cerca".
 }
 ```
 
-### Calidad del dato: `pressureMB` sin corregir en algunas PWS
+### Calidad del dato: TRES presiones distintas, y dos bugs encontrados en vivo
 
-Se observó en la prueba real que varias PWS mandan `pressureMB` en **771,
-757, 779 hPa** — valores de presión **absoluta** (sin corregir a nivel del
-mar), no relativa. Es exactamente el mismo bug que se corrigió en nuestro
-propio GW1100 (ver `project_gw1100_pressure_fix` en memoria): la estación
-tiene mal puesta su altitud y manda la presión cruda.
+Cada estación trae `pressureMB`, `spressureMB` y `altimeterMB` — no son
+intercambiables:
 
-**No usar `pressureMB` de una vecina a ciegas.** Antes de comparar o
-promediar: descartar (o marcar como sospechosa) cualquier lectura de presión
-fuera de un rango plausible a nivel del mar para la zona — algo como
+| Campo | Qué es |
+|---|---|
+| `spressureMB` | Presión **absoluta** de estación, sin corregir |
+| `pressureMB` | Reducida a nivel del mar con **fórmula meteorológica** (usa temperatura) |
+| `altimeterMB` | **QNH** — fórmula estándar de aviación (la misma familia que la fórmula ISA que usa nuestra propia `pressure_relative`) |
+
+**Bug 1 (de la PWS, no nuestro):** varias PWS mandan `pressureMB`/`altimeterMB`
+en **771, 757, 779 hPa** — valores de presión **absoluta**, ni siquiera
+corregidos. Exactamente el mismo bug que se corrigió en nuestro propio GW1100
+(ver `project_gw1100_pressure_fix` en memoria): la estación tiene mal puesta
+su altitud. Se filtra con el rango plausible de abajo.
+
+**Bug 2 (nuestro, encontrado y corregido el mismo día del deploy):** el
+primer código usaba `pressureMB` para comparar contra la lectura propia. En
+vivo, MMMX (METAR del aeropuerto) traía `pressureMB=1013` pero
+`altimeterMB=1027` — y la estación propia marcaba **1027.3 hPa**, casi
+idéntica al `altimeterMB`. Las dos fórmulas de reducción a nivel del mar
+divergen bastante a la altitud de CDMX (~2250 m), cada vez más cuanto más
+alto. **`_normalize` en `xweather.py` usa `altimeterMB` (con fallback a
+`pressureMB` si la fuente no trae altímetro)** — no volver a usar
+`pressureMB` como campo principal.
+
+**Filtro de calidad restante:** descartar cualquier presión (ya sea
+`altimeterMB` o el fallback) fuera de un rango plausible a nivel del mar —
 **950-1050 hPa** — sin importar el `trustFactor` (que en los ejemplos vistos
-venía en 100 igual para las lecturas mal corregidas; ese campo mide otra
-cosa, no valida rangos físicos).
+venía en 100 igual para las lecturas mal corregidas del Bug 1; ese campo mide
+otra cosa, no valida rangos físicos).
+
+**Residual esperado, no es un bug:** incluso ya usando `altimeterMB`, las PWS
+vecinas (sensores baratos, sin calibración profesional) siguen mostrando
+8-13 hPa de dispersión entre sí y contra la estación propia/METAR, que sí
+coinciden casi exacto. Es ruido normal de sensores de bajo costo en redes
+ciudadanas, no algo que Xweather "ajuste" por nosotros ni que tenga arreglo
+de nuestro lado — el METAR del aeropuerto es la referencia más confiable de
+la zona para validar la propia estación, más que la mediana de PWS.
 
 ## Diseño del lado del servidor
 

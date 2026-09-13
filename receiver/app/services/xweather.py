@@ -7,10 +7,17 @@ Mismo patrón que openmeteo.py: caché TTL en memoria, y si el origen no
 responde se sirve la última copia buena marcada `stale` en vez de romper la
 tarjeta del sitio.
 
-Filtro de calidad: se descarta `pressureMB` fuera de un rango plausible a
-nivel del mar (una PWS con la altitud mal configurada manda presión absoluta
-cruda -- se vio en producción, mismo bug que tuvo nuestro propio GW1100, ver
-`project_gw1100_pressure_fix` en memoria) y estaciones con `trustFactor` bajo.
+Presión: se usa `altimeterMB` (QNH, fórmula de aviación) y NO `pressureMB`
+(reducida a nivel del mar con fórmula meteorológica) -- divergen bastante a
+la altitud de CDMX, y `altimeterMB` es la que corresponde a nuestra propia
+`pressure_relative` (fórmula ISA). Ver `_normalize` para el detalle y los
+números reales que lo confirmaron.
+
+Filtro de calidad: se descarta la presión resultante si cae fuera de un rango
+plausible a nivel del mar (una PWS con la altitud mal configurada manda
+presión absoluta cruda -- se vio en producción, mismo bug que tuvo nuestro
+propio GW1100, ver `project_gw1100_pressure_fix` en memoria) y estaciones con
+`trustFactor` bajo.
 """
 import time
 import logging
@@ -51,6 +58,20 @@ def _normalize(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     trust = ob.get("trustFactor")
     if trust is not None and trust < _MIN_TRUST_FACTOR:
         return None
+    # Xweather trae TRES presiones por estación: `spressureMB` (absoluta, sin
+    # corregir), `pressureMB` (reducida a nivel del mar con fórmula
+    # meteorológica -- usa temperatura) y `altimeterMB` (QNH, fórmula estándar
+    # de aviación). Nuestra `pressure_relative` se calcula con la fórmula ISA
+    # (misma familia que QNH, ver project_gw1100_pressure_fix en memoria), así
+    # que hay que comparar contra `altimeterMB`, NO `pressureMB` -- las dos
+    # fórmulas divergen bastante a la altitud de CDMX (~2250 m): se verificó
+    # en vivo que MMMX daba pressureMB=1013 pero altimeterMB=1027, y la
+    # estación propia marcaba 1027.3 -- casi idéntica al QNH, nada parecida a
+    # la "reducida a nivel del mar". Cae a `pressureMB` solo si la fuente no
+    # trae `altimeterMB` (algunas PWS no lo reportan).
+    pressure_mb = ob.get("altimeterMB")
+    if pressure_mb is None:
+        pressure_mb = ob.get("pressureMB")
     return {
         "id": raw.get("id"),
         "source": raw.get("dataSource"),
@@ -59,7 +80,7 @@ def _normalize(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "observed_at": ob.get("dateTimeISO"),
         "temp_c": ob.get("tempC"),
         "humidity": ob.get("humidity"),
-        "pressure_mb": _clean_pressure(ob.get("pressureMB")),
+        "pressure_mb": _clean_pressure(pressure_mb),
         "wind_speed_kph": ob.get("windSpeedKPH"),
         "wind_dir_deg": ob.get("windDirDEG"),
         "trust_factor": trust,

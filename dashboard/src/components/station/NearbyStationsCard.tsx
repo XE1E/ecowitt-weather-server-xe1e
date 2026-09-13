@@ -62,16 +62,21 @@ export function NearbyStationsCard({ data }: { data: WeatherData }) {
   const stations = resp?.stations ?? []
   if (stations.length === 0) return null // sin configurar o sin estaciones cerca: no ocupa espacio
 
-  // Mediana de presión de la zona (solo estaciones con presión ya filtrada por
-  // el servidor -- ver xweather.py, descarta valores no corregidos a nivel del
-  // mar), para comparar contra la lectura propia sin que una sola estación rara
-  // arrastre la comparación.
+  // Referencia de presión para comparar: preferir el METAR más cercano si hay
+  // uno en el radio -- es la más confiable (calibración profesional de
+  // aeropuerto). Las PWS vecinas son sensores baratos sin calibrar: se vio en
+  // vivo que su mediana puede quedar 8-13 hPa por debajo del METAR/estación
+  // propia aunque ambos estén bien (ver PLAN-ESTACIONES-VECINAS.md,
+  // "Residual esperado") -- comparar contra esa mediana daría falsas alarmas
+  // de "revisa tu calibración". Solo si no hay METAR cerca se cae a la
+  // mediana de lo que haya, con menos confianza.
+  const metar = stations.find((s) => s.source === 'METAR_NOAA' && s.pressure_mb != null)
   const zonePressures = stations.map((s) => s.pressure_mb).filter((v): v is number => v != null).sort((a, b) => a - b)
-  const zoneMedian = zonePressures.length
-    ? zonePressures[Math.floor(zonePressures.length / 2)]
-    : null
+  const zoneMedian = zonePressures.length ? zonePressures[Math.floor(zonePressures.length / 2)] : null
+  const referencePressure = metar?.pressure_mb ?? zoneMedian
+  const referenceLabel = metar ? 'el METAR más cercano' : 'la mediana de la zona'
   const ownPressure = data.pressure_relative
-  const pressureDeltaMb = zoneMedian != null && ownPressure != null ? ownPressure - zoneMedian : null
+  const pressureDeltaMb = referencePressure != null && ownPressure != null ? ownPressure - referencePressure : null
 
   return (
     <div className="card">
@@ -81,9 +86,9 @@ export function NearbyStationsCard({ data }: { data: WeatherData }) {
         {resp?.stale && <span className="text-[10px] text-amber-400 ml-auto">datos previos</span>}
       </div>
 
-      {pressureDeltaMb != null && Math.abs(pressureDeltaMb) >= 3 && (
+      {pressureDeltaMb != null && Math.abs(pressureDeltaMb) >= (metar ? 3 : 10) && (
         <p className="text-xs text-amber-400 mt-2">
-          Tu presión difiere {Math.abs(pressureDeltaMb).toFixed(1)} hPa de la mediana de la zona
+          Tu presión difiere {Math.abs(pressureDeltaMb).toFixed(1)} hPa de {referenceLabel}
           -- revisa la calibración si se sostiene.
         </p>
       )}
