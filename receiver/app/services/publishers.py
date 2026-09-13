@@ -50,19 +50,35 @@ _RETRY_DELAY = 3.0  # segundos entre intentos
 _last_publish: Dict[str, datetime] = {}
 
 
+class _NoRetry(Exception):
+    """
+    Fallo DEFINITIVO del intento actual -- reintentar en unos segundos no lo
+    va a arreglar (credenciales inválidas, payload rechazado, rate-limit con
+    fecha de reintento futura). Se usa para status 4xx: caso real que lo
+    motivó, Windy respondió 429 "too many requests, try again after <hora>" y
+    el reintento genérico igual esperaba 3s y volvía a pegarle, sin sentido
+    (el límite no se libera en 3s) y sumando ruido al log.
+    """
+
+
 async def _retrying(attempt_fn, name: str) -> bool:
     """
     Ejecuta `attempt_fn()` (coroutine sin argumentos que hace UN intento y
     devuelve True/False, o lanza) hasta _RETRIES veces con una pausa corta
-    entre intentos. Mismo patrón que ya usaba solo CWOP, generalizado a todas
-    las redes: la excepción se loguea con su tipo (antes `logger.error("...%s",
-    e)` quedaba vacío para excepciones como timeouts, que no traen mensaje).
+    entre intentos -- salvo que lance `_NoRetry`, que corta de inmediato sin
+    esperar ni volver a intentar. Mismo patrón que ya usaba solo CWOP,
+    generalizado a todas las redes: la excepción se loguea con su tipo (antes
+    `logger.error("...%s", e)` quedaba vacío para excepciones como timeouts,
+    que no traen mensaje).
     """
     last_exc: Optional[Exception] = None
     for attempt in range(1, _RETRIES + 1):
         try:
             if await attempt_fn():
                 return True
+        except _NoRetry as e:
+            logger.error("Error publicando en %s: %s", name, e)
+            return False
         except Exception as e:
             last_exc = e
         if attempt < _RETRIES:
@@ -136,6 +152,8 @@ async def _get(client: httpx.AsyncClient, url: str, params: Dict[str, Any], name
         logger.info("Publicado en %s", name)
         return True
     logger.warning("%s respondió %s: %s", name, r.status_code, r.text[:120])
+    if 400 <= r.status_code < 500:
+        raise _NoRetry(f"{r.status_code}: {r.text[:200]}")
     return False
 
 
@@ -249,6 +267,8 @@ async def _windy(client, data, station_id, station_password) -> bool:
             logger.info("Publicado en Windy")
             return True
         logger.warning("Windy respondió %s: %s", r.status_code, r.text[:120])
+        if 400 <= r.status_code < 500:
+            raise _NoRetry(f"{r.status_code}: {r.text[:200]}")
         return False
 
     return await _retrying(_attempt, "Windy")
@@ -281,6 +301,8 @@ async def _owm(client, data, api_key, station_id) -> bool:
             logger.info("Publicado en OpenWeatherMap")
             return True
         logger.warning("OpenWeatherMap respondió %s: %s", r.status_code, r.text[:120])
+        if 400 <= r.status_code < 500:
+            raise _NoRetry(f"{r.status_code}: {r.text[:200]}")
         return False
 
     return await _retrying(_attempt, "OpenWeatherMap")
@@ -346,6 +368,8 @@ async def _awekas(client, data, username, password, lat, lon, condition=None) ->
             logger.info("Publicado en AWEKAS")
             return True
         logger.warning("AWEKAS respondió %s: %s", r.status_code, r.text[:120])
+        if 400 <= r.status_code < 500:
+            raise _NoRetry(f"{r.status_code}: {r.text[:200]}")
         return False
 
     return await _retrying(_attempt, "AWEKAS")
@@ -382,6 +406,8 @@ async def _opensensemap(client, data, box_id, access_token, sensor_ids) -> bool:
             logger.info("Publicado en openSenseMap (%d sensores)", len(payload))
             return True
         logger.warning("openSenseMap respondió %s: %s", r.status_code, r.text[:120])
+        if 400 <= r.status_code < 500:
+            raise _NoRetry(f"{r.status_code}: {r.text[:200]}")
         return False
 
     return await _retrying(_attempt, "openSenseMap")

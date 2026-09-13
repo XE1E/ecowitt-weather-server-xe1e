@@ -20,8 +20,10 @@ class FakeClient:
         self.last_url = None
         self.last_params = None
         self.last_headers = None
+        self.call_count = 0
 
     async def get(self, url, params=None, timeout=None, headers=None):
+        self.call_count += 1
         self.last_url = url
         self.last_params = params
         self.last_headers = headers
@@ -181,3 +183,13 @@ def test_windy_v2_reports_failure_on_non_200():
     client = FakeClient(status_code=401)
     ok = asyncio.run(_windy(client, DATA, "abc123", "wrong-password"))
     assert ok is False
+
+
+def test_windy_v2_does_not_retry_on_429_rate_limit():
+    # Caso real: Windy respondió 429 "too many requests, try again after
+    # <hora>" -- reintentar unos segundos después no sirve de nada (el
+    # rate-limit no se libera tan rápido) y antes lo hacíamos igual.
+    client = FakeClient(status_code=429, text="too many requests, try again after 2026-09-13T06:00:00Z")
+    ok = asyncio.run(_windy(client, DATA, "abc123", "s3cr3t"))
+    assert ok is False
+    assert client.call_count == 1
