@@ -36,10 +36,42 @@ _CWOP_HOST = "cwop.aprs.net"
 _CWOP_PORT = 14580
 _AWEKAS_URL = "http://data.awekas.at/eingabe_pruefung.php"
 
+# Reintentos genéricos para todas las redes (antes solo los tenía CWOP): sus
+# servidores fallan de forma intermitente (timeouts, 5xx puntuales) sin que
+# haya nada mal en credenciales ni formato -- ver AWEKAS/openSenseMap en los
+# logs de producción. Esto corre en background después de responder al
+# datalogger, así que la demora extra de un reintento no afecta la ingestión.
+_RETRIES = 2   # intentos totales (1 reintento)
+_RETRY_DELAY = 3.0  # segundos entre intentos
+
 # Último instante en que se intentó publicar en cada red, para respetar el
 # intervalo por sistema (la estación ingresa datos ~cada minuto, pero cada red
 # puede tener su propio ritmo; CWOP recomienda 10-15 min, por ejemplo).
 _last_publish: Dict[str, datetime] = {}
+
+
+async def _retrying(attempt_fn, name: str) -> bool:
+    """
+    Ejecuta `attempt_fn()` (coroutine sin argumentos que hace UN intento y
+    devuelve True/False, o lanza) hasta _RETRIES veces con una pausa corta
+    entre intentos. Mismo patrón que ya usaba solo CWOP, generalizado a todas
+    las redes: la excepción se loguea con su tipo (antes `logger.error("...%s",
+    e)` quedaba vacío para excepciones como timeouts, que no traen mensaje).
+    """
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _RETRIES + 1):
+        try:
+            if await attempt_fn():
+                return True
+        except Exception as e:
+            last_exc = e
+        if attempt < _RETRIES:
+            logger.warning("%s intento %d/%d sin éxito, reintentando en %gs",
+                            name, attempt, _RETRIES, _RETRY_DELAY)
+            await asyncio.sleep(_RETRY_DELAY)
+    if last_exc is not None:
+        logger.error("Error publicando en %s: %s: %s", name, type(last_exc).__name__, last_exc)
+    return False
 
 
 def _due(name: str, interval_min: Any, now: datetime) -> bool:
@@ -93,17 +125,18 @@ def _q(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _get(client: httpx.AsyncClient, url: str, params: Dict[str, Any], name: str) -> bool:
-    try:
-        r = await client.get(url, params=params, timeout=_TIMEOUT)
-        # WU/PWSWeather responden 200 con cuerpo "success"; tratamos 200 como éxito
-        if r.status_code == 200:
-            logger.info("Publicado en %s", name)
-            return True
-        logger.warning("%s respondió %s: %s", name, r.status_code, r.text[:120])
-        return False
-    except Exception as e:
-        logger.error("Error publicando en %s: %s", name, e)
-        return False
+    """
+    Un único intento GET. Las excepciones (timeout, conexión rechazada, etc.)
+    NO se atajan acá -- se dejan propagar para que `_retrying` decida si
+    reintentar, en vez de tragárselas y devolver False directamente.
+    """
+    r = await client.get(url, params=params, timeout=_TIMEOUT)
+    # WU/PWSWeather responden 200 con cuerpo "success"; tratamos 200 como éxito
+    if r.status_code == 200:
+        logger.info("Publicado en %s", name)
+        return True
+    logger.warning("%s respondió %s: %s", name, r.status_code, r.text[:120])
+    return False
 
 
 async def _wu_like(client, url, station_id, password, data, name,
@@ -138,7 +171,7 @@ async def _wu_like(client, url, station_id, password, data, name,
         "indoortempf": _c_to_f(data.get("temperature_indoor")),
         "indoorhumidity": data.get("humidity_indoor"),
     })
-    return await _get(client, url, params, name)
+    return await _retrying(lambda: _get(client, url, params, name), name)
 
 
 async def _weathercloud(client, data, wid, key) -> bool:
@@ -178,7 +211,8 @@ async def _weathercloud(client, data, wid, key) -> bool:
         "uvi": _x10(data.get("uv_index")),
         "software": "ecowitt-xe1e_1.0",
     })
-    return await _get(client, "http://api.weathercloud.net/v01/set", params, "Weathercloud")
+    url = "http://api.weathercloud.net/v01/set"
+    return await _retrying(lambda: _get(client, url, params, "Weathercloud"), "Weathercloud")
 
 
 async def _windy(client, data, station_id, station_password) -> bool:
@@ -207,7 +241,8 @@ async def _windy(client, data, station_id, station_password) -> bool:
         "softwaretype": "ecowitt-xe1e_1.0",
     })
     url = "https://stations.windy.com/api/v2/observation/update"
-    try:
+
+    async def _attempt() -> bool:
         r = await client.get(url, params=params, headers={"Authorization": f"Bearer {station_password}"},
                               timeout=_TIMEOUT)
         if r.status_code == 200:
@@ -215,9 +250,8 @@ async def _windy(client, data, station_id, station_password) -> bool:
             return True
         logger.warning("Windy respondió %s: %s", r.status_code, r.text[:120])
         return False
-    except Exception as e:
-        logger.error("Error publicando en Windy: %s", e)
-        return False
+
+    return await _retrying(_attempt, "Windy")
 
 
 async def _owm(client, data, api_key, station_id) -> bool:
@@ -240,16 +274,16 @@ async def _owm(client, data, api_key, station_id) -> bool:
     # quitar None de cada medición y dt vacío
     payload = [{k: v for k, v in m.items() if v is not None} for m in payload]
     url = f"https://api.openweathermap.org/data/3.0/measurements?appid={api_key}"
-    try:
+
+    async def _attempt() -> bool:
         r = await client.post(url, json=payload, timeout=_TIMEOUT)
         if r.status_code in (200, 204):
             logger.info("Publicado en OpenWeatherMap")
             return True
         logger.warning("OpenWeatherMap respondió %s: %s", r.status_code, r.text[:120])
         return False
-    except Exception as e:
-        logger.error("Error publicando en OpenWeatherMap: %s", e)
-        return False
+
+    return await _retrying(_attempt, "OpenWeatherMap")
 
 
 # ---------- AWEKAS ----------
@@ -306,16 +340,15 @@ async def _awekas(client, data, username, password, lat, lon, condition=None) ->
     valstr = ";".join(values)
     url = f"{_AWEKAS_URL}?val={valstr}"
 
-    try:
+    async def _attempt() -> bool:
         r = await client.get(url, timeout=_TIMEOUT)
         if r.status_code == 200 and "OK" in r.text.upper():
             logger.info("Publicado en AWEKAS")
             return True
         logger.warning("AWEKAS respondió %s: %s", r.status_code, r.text[:120])
         return False
-    except Exception as e:
-        logger.error("Error publicando en AWEKAS: %s", e)
-        return False
+
+    return await _retrying(_attempt, "AWEKAS")
 
 
 # ---------- openSenseMap (senseBox) ----------
@@ -342,16 +375,16 @@ async def _opensensemap(client, data, box_id, access_token, sensor_ids) -> bool:
     if not payload:
         return False
     url = f"https://api.opensensemap.org/boxes/{box_id}/data"
-    try:
+
+    async def _attempt() -> bool:
         r = await client.post(url, json=payload, headers={"Authorization": access_token}, timeout=_TIMEOUT)
         if r.status_code in (200, 201):
             logger.info("Publicado en openSenseMap (%d sensores)", len(payload))
             return True
         logger.warning("openSenseMap respondió %s: %s", r.status_code, r.text[:120])
         return False
-    except Exception as e:
-        logger.error("Error publicando en openSenseMap: %s", e)
-        return False
+
+    return await _retrying(_attempt, "openSenseMap")
 
 
 # ---------- CWOP / APRS-IS ----------
@@ -411,48 +444,37 @@ def build_cwop_packet(callsign: str, lat: float, lon: float, data: Dict[str, Any
     return f"{callsign}>APRS,TCPIP*:@{ts}z{pos}_{wx}"
 
 
-_CWOP_RETRIES = 2   # intentos totales (1 reintento) -- ver nota abajo
-_CWOP_RETRY_DELAY = 3.0  # segundos entre intentos
-
-
 async def _cwop(data, callsign, passcode, lat, lon) -> bool:
     """
     El servidor APRS-IS de CWOP es viejo y da timeouts/conexiones rechazadas de
     forma intermitente incluso con credenciales y formato correctos (~1 de cada
-    5 intentos en la práctica) -- un solo reintento tras una pausa corta
-    recupera la mayoría de esos casos sin sumar demora relevante (esto corre en
-    background, después de responder al datalogger).
+    5 intentos en la práctica) -- de acá salió el patrón de reintento que ahora
+    usan también las demás redes (ver `_retrying`). Usa un socket TCP crudo, no
+    httpx, así que no puede reusar `_get`/`_retrying` directamente.
     """
     packet = build_cwop_packet(callsign, lat, lon, data, datetime.utcnow())
-    last_err: Exception | None = None
-    for attempt in range(1, _CWOP_RETRIES + 1):
+
+    async def _attempt() -> bool:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(_CWOP_HOST, _CWOP_PORT), timeout=_TIMEOUT)
         try:
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(_CWOP_HOST, _CWOP_PORT), timeout=_TIMEOUT)
+            await reader.readline()  # banner del servidor
+            login = f"user {callsign} pass {passcode} vers ecowitt-xe1e 1.0\r\n"
+            writer.write(login.encode())
+            await writer.drain()
+            await asyncio.wait_for(reader.readline(), timeout=_TIMEOUT)  # respuesta login
+            writer.write((packet + "\r\n").encode())
+            await writer.drain()
+            logger.info("Publicado en CWOP como %s", callsign)
+            return True
+        finally:
+            writer.close()
             try:
-                await reader.readline()  # banner del servidor
-                login = f"user {callsign} pass {passcode} vers ecowitt-xe1e 1.0\r\n"
-                writer.write(login.encode())
-                await writer.drain()
-                await asyncio.wait_for(reader.readline(), timeout=_TIMEOUT)  # respuesta login
-                writer.write((packet + "\r\n").encode())
-                await writer.drain()
-                logger.info("Publicado en CWOP como %s", callsign)
-                return True
-            finally:
-                writer.close()
-                try:
-                    await writer.wait_closed()
-                except Exception:
-                    pass
-        except Exception as e:
-            last_err = e
-            if attempt < _CWOP_RETRIES:
-                logger.warning("CWOP intento %d/%d falló (%s), reintentando en %gs",
-                               attempt, _CWOP_RETRIES, e, _CWOP_RETRY_DELAY)
-                await asyncio.sleep(_CWOP_RETRY_DELAY)
-    logger.error("Error publicando en CWOP: %s", last_err)
-    return False
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    return await _retrying(_attempt, "CWOP")
 
 
 async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional[int] = None) -> Dict[str, bool]:
