@@ -42,6 +42,7 @@ from .services import aggregator
 from .services import openmeteo
 from .services import xweather
 from .services import netatmo
+from .services import awekas_image
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
@@ -2824,6 +2825,35 @@ async def camera_latest():
         media_type="image/jpeg",
         # Media cadencia: lo bastante para que un refresco no vuelva a descargarla,
         # lo bastante poco para no servir una foto vieja tras la siguiente captura.
+        headers={"Cache-Control": "max-age=150", "X-Captured-At": cuando},
+    )
+
+
+@app.api_route("/api/camera/awekas.jpg", methods=["GET", "HEAD"])
+async def camera_awekas():
+    """
+    Foto de la cámara + cintillo de datos de la estación, en 4:3 (800x600) --
+    pensada para AWEKAS, cuya caja de webcam es ~4:3 y le añade franjas
+    negras arriba/abajo a nuestra foto 16:9 si se le manda tal cual (ver
+    services/awekas_image.py). Mismo criterio que /api/camera/latest.jpg:
+    acepta HEAD porque varios de estos servicios validan el enlace así.
+
+    Se compone en cada petición (barato: un resize + dibujar texto), así que
+    los datos del cintillo siempre son los más recientes, sin caché propia
+    más allá de la que ya impone la cabecera.
+    """
+    ultima = _camera.latest()
+    if ultima is None:
+        raise HTTPException(status_code=404, detail="Sin capturas")
+    data, cuando = ultima
+    try:
+        jpeg = awekas_image.build_awekas_jpeg(data, latest_by_station.get(None) or {})
+    except Exception as e:
+        logger.error(f"Error componiendo la imagen de AWEKAS: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
         headers={"Cache-Control": "max-age=150", "X-Captured-At": cuando},
     )
 
