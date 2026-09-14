@@ -1,7 +1,30 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-09-01.
+> Última actualización: 2026-09-14.
+
+## 0. Estaciones vecinas + "nuestro pronóstico" — en observación (2026-09-14)
+
+Sesión grande del 2026-09-14: fase 3 de estaciones vecinas (Netatmo, ver
+`docs/internal/PLAN-ESTACIONES-VECINAS.md`), señal de "lluvia acercándose"
+(`forecaster.detect_incoming_rain`), recalibración de `sky_validation.py`, y
+`forecaster.own_forecast` (`GET /api/forecast/own`) como voz propia de la
+estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
+**nada de esto está "cerrado" todavía** -- falta observación real:
+
+- [ ] **`nearby_rain_signal_watchdog`** (log cada 10 min, sin Telegram) --
+      dejar correr unos días y revisar `docker compose logs receiver | grep
+      "Señal de lluvia"` para ver qué tanto dispara antes de decidir si
+      amerita una alerta de verdad.
+- [ ] **`forecaster.own_forecast`** -- ver cómo se siente en la práctica
+      `PrecipitationCard.tsx` unos días (¿el titular aparece con sentido?,
+      ¿los umbrales de confianza/viento necesitan ajuste?) antes de tocar
+      nada más.
+- [ ] Netatmo fase 3: validar en producción unos días (punto 6 del checklist
+      en PLAN-ESTACIONES-VECINAS.md) antes de darla por cerrada del todo.
+- [ ] Netatmo: ninguna vecina real tiene todavía módulo pluviómetro, así que
+      `rain_live`/`rain_60min` en `netatmo.py` sigue sin verificarse contra
+      datos reales -- revisar si alguna vecina nueva lo trae.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
@@ -165,7 +188,7 @@ tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
 la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
 `docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
 
-## 2.e Corrección de sesgo del pronóstico con datos de la cámara — pendiente
+## 2.e Corrección de sesgo del pronóstico con datos de la cámara — reencauzado (2026-09-14)
 
 Idea derivada de comparar la cámara del exterior con el pronóstico de Open-Meteo
 (§2.b, "Análisis del cielo con IA"): si la cámara ve sistemáticamente más (o menos)
@@ -177,20 +200,36 @@ presión y la temperatura del pronóstico horario (commits `be6d6e7`, `2fc1630`)
 `match`/`forecast_condition`/`forecast_coverage_pct` en el histórico diario
 (`<camera_dir>/analysis/YYYY-MM-DD.json`, ver `CameraStore.save_analysis` /
 `_append_to_daily` en `receiver/app/services/camera.py`, y
-`_current_forecast_wmo_cloudcover` en `main.py`). Antes la validación se
-calculaba al vuelo en cada petición del dashboard y se descartaba, así que no
-había con qué corregir nada. También se añadió `GET
-/api/camera/analysis/accuracy` para tabular el % de acierto (ver
-`docs/guias/analisis-cielo.md`), que sirve de termómetro de si vale la pena la
-corrección antes de construirla.
+`_current_forecast_wmo_cloudcover` en `main.py`). También se añadió `GET
+/api/camera/analysis/accuracy` para tabular el % de acierto.
 
-**Falta:**
-- Dejar pasar unas semanas para acumular muestras suficientes (a ~5 min de
-  cadencia y la ventana diurna configurada, son decenas de comparaciones al día).
-- Diseñar el ajuste con datos reales en mano, no antes: ¿por hora del día?, ¿por
-  estación del año?, ¿un offset fijo de cobertura o algo más fino?
-- No confundir con `GET /api/camera/analysis/validation` (ya existe, sólo informa
-  "la cámara y el modelo dijeron cosas distintas ahora mismo"; no corrige nada).
+**Datos ya acumulados y analizados (2026-09-14, 1149 comparaciones / 16 días):**
+exact 21.5%, close 23.8%, differ 54.6%, conflict 0.2%. Desglose real (ver
+commits `e22303a`/`fbab1be`): ~40% del "differ" eran saltos de 2-3 escalones
+de nubosidad (ruido de clasificación real, no un error del modelo -- se
+verificó que NO se debían a una lista de pares mal calibrada, ver
+`sky_validation.py`), y el resto (347 casos) era el patrón real: cámara ve
+nublado sin lluvia, Open-Meteo predice lluvia en la hora actual.
+
+**Se descartó la corrección de sesgo (offset a Open-Meteo) a favor de otra
+solución al mismo problema:** en vez de ajustar el número de Open-Meteo,
+`forecaster.own_forecast()` (`GET /api/forecast/own`) hace que la propia
+estación (pluviómetro + cámara + presión + vecinas) sea la que decide qué se
+muestra como pronóstico inmediato, y Open-Meteo pasa a ser una referencia
+aparte y rotulada (`PrecipitationCard.tsx`) en vez de mezclarse sin más --
+evita la incongruencia sin necesitar calibrar un offset con más semanas de
+datos. Detalle completo de la sesión: commits `e22303a` (recalibración de
+`sky_validation.py`) y `fbab1be` (own_forecast).
+
+**Sigue sin hacerse, y probablemente ya no haga falta:** el offset de sesgo
+propiamente dicho (por hora del día / época del año). Solo retomarlo si,
+tras usar `own_forecast` unos días, se ve que el patrón persiste de forma
+que un ajuste fino a Open-Meteo aportaría algo que la nueva jerarquía de
+fuentes propias no cubre ya.
+
+No confundir con `GET /api/camera/analysis/validation` (informa "la cámara y
+el modelo dijeron cosas distintas ahora mismo"; sigue sin corregir nada, y
+sigue siendo así a propósito).
 
 ## 2.c Timelapse diario — ✅ HECHO (2026-08-18)
 
