@@ -42,7 +42,7 @@ from .services import aggregator
 from .services import openmeteo
 from .services import xweather
 from .services import netatmo
-from .services import awekas_image
+from .services import webcam_overlay
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
@@ -2829,18 +2829,19 @@ async def camera_latest():
     )
 
 
-@app.api_route("/api/camera/awekas.jpg", methods=["GET", "HEAD"])
-async def camera_awekas():
+@app.api_route("/api/camera/webcam.jpg", methods=["GET", "HEAD"])
+async def camera_webcam():
     """
     Foto de la cámara + cintillo de datos de la estación, en 4:3 (800x600) --
-    nació pensada para AWEKAS, cuya caja de webcam es ~4:3 y le añade franjas
-    negras arriba/abajo a nuestra foto 16:9 si se le manda tal cual (ver
-    services/awekas_image.py), pero el nombre del endpoint se quedó así por
-    compatibilidad -- también se usa para Weathercloud (campo "Webcam" del
-    dispositivo en weathercloud.net, sin requisito de proporción documentado;
-    ~65-70 KB por imagen, bien por debajo de su tope de 250 KB). Mismo
-    criterio que /api/camera/latest.jpg: acepta HEAD porque varios de estos
-    servicios validan el enlace así.
+    para publicar como webcam en redes externas (AWEKAS, Weathercloud; ver
+    docs/api-reference.md para por qué esas dos y no otras). AWEKAS muestra
+    la webcam en una caja ~4:3 y le añade franjas negras arriba/abajo a
+    nuestra foto 16:9 si se le manda tal cual (ver services/webcam_overlay.py);
+    Weathercloud no exige otra proporción, así que la misma imagen le sirve
+    (campo "Webcam" del dispositivo en weathercloud.net; ~65-70 KB por
+    imagen, bien por debajo de su tope de 250 KB). Mismo criterio que
+    /api/camera/latest.jpg: acepta HEAD porque varios de estos servicios
+    validan el enlace así.
 
     Se compone en cada petición (barato: un resize + dibujar texto), así que
     los datos del cintillo siempre son los más recientes, sin caché propia
@@ -2859,11 +2860,11 @@ async def camera_awekas():
         if rain_24h is not None:
             weather["rain_24h"] = rain_24h
     except Exception as e:
-        logger.error(f"Error calculando rain_24h para AWEKAS: {e}")
+        logger.error(f"Error calculando rain_24h para el cintillo de webcam: {e}")
     try:
-        jpeg = awekas_image.build_awekas_jpeg(data, weather)
+        jpeg = webcam_overlay.build_webcam_jpeg(data, weather)
     except Exception as e:
-        logger.error(f"Error componiendo la imagen de AWEKAS: {e}")
+        logger.error(f"Error componiendo la imagen de webcam: {e}")
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
     return Response(
         content=jpeg,

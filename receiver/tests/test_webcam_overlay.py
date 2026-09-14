@@ -1,9 +1,9 @@
-"""Tests para awekas_image.build_awekas_jpeg (cintillo de datos para AWEKAS)."""
+"""Tests para webcam_overlay.build_webcam_jpeg (cintillo de datos para AWEKAS/Weathercloud)."""
 import io
 
 from PIL import Image
 
-from app.services.awekas_image import build_awekas_jpeg, CANVAS_W, CANVAS_H, _compass_es
+from app.services.webcam_overlay import build_webcam_jpeg, CANVAS_W, CANVAS_H, _compass_es
 
 
 def _fake_photo(w, h, color=(120, 140, 180)) -> bytes:
@@ -26,13 +26,13 @@ _WEATHER = {
 
 
 def test_output_is_exact_canvas_size():
-    jpeg = build_awekas_jpeg(_fake_photo(1600, 904), _WEATHER)
+    jpeg = build_webcam_jpeg(_fake_photo(1600, 904), _WEATHER)
     im = Image.open(io.BytesIO(jpeg))
     assert im.size == (CANVAS_W, CANVAS_H)
 
 
 def test_output_is_valid_jpeg():
-    jpeg = build_awekas_jpeg(_fake_photo(1600, 904), _WEATHER)
+    jpeg = build_webcam_jpeg(_fake_photo(1600, 904), _WEATHER)
     im = Image.open(io.BytesIO(jpeg))
     assert im.format == "JPEG"
 
@@ -40,7 +40,7 @@ def test_output_is_valid_jpeg():
 def test_handles_16_9_photo_without_cropping():
     # 1600x904 (16:9) a 800 de ancho da 452 de alto -- bastante margen sobre
     # MIN_BANNER_H (110), así que no debería recortarse nada.
-    jpeg = build_awekas_jpeg(_fake_photo(1600, 904, color=(0, 255, 0)), _WEATHER)
+    jpeg = build_webcam_jpeg(_fake_photo(1600, 904, color=(0, 255, 0)), _WEATHER)
     im = Image.open(io.BytesIO(jpeg)).convert("RGB")
     # A media altura de la foto (bien lejos del cintillo) debe seguir verde.
     assert im.getpixel((CANVAS_W // 2, 200))[1] > 200
@@ -49,13 +49,13 @@ def test_handles_16_9_photo_without_cropping():
 def test_handles_near_square_photo_by_cropping_not_shrinking_banner():
     # Una foto casi cuadrada dejaría menos de MIN_BANNER_H libres si se
     # respetara el aspecto -- debe recortarse la foto, no encoger el cintillo.
-    jpeg = build_awekas_jpeg(_fake_photo(800, 700), _WEATHER)
+    jpeg = build_webcam_jpeg(_fake_photo(800, 700), _WEATHER)
     im = Image.open(io.BytesIO(jpeg))
     assert im.size == (CANVAS_W, CANVAS_H)
 
 
 def test_missing_weather_fields_render_placeholder_not_crash():
-    jpeg = build_awekas_jpeg(_fake_photo(1600, 904), {})
+    jpeg = build_webcam_jpeg(_fake_photo(1600, 904), {})
     im = Image.open(io.BytesIO(jpeg))
     assert im.size == (CANVAS_W, CANVAS_H)
 

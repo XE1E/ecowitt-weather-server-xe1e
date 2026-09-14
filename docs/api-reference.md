@@ -233,7 +233,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`) |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET`/`HEAD /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At`. Sirve para enlazarla como webcam en servicios externos (p. ej. AWEKAS) — acepta HEAD porque varios de esos servicios validan el enlace así antes de aceptarlo |
-| `GET`/`HEAD /api/camera/awekas.jpg` | Igual, pero recompuesta en 4:3 (800×600) con un cintillo de datos de la estación abajo — pensada específicamente para AWEKAS (ver abajo) |
+| `GET`/`HEAD /api/camera/webcam.jpg` | Igual, pero recompuesta en 4:3 (800×600) con un cintillo de datos de la estación abajo — para AWEKAS/Weathercloud (ver abajo) |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
 | `GET /api/camera/analysis` | Último análisis del cielo + tendencia (nowcasting) |
 | `GET /api/camera/analysis/validation` | Validación en vivo vs pronóstico de Open-Meteo |
@@ -308,21 +308,22 @@ Si algún día otro servicio externo rechaza el link de la cámara con un error
 parecido, probar primero esta URL directa antes de suponer que el archivo está
 mal — probablemente sea el mismo bloqueo de Cloudflare a fetches server-to-server.
 
-**Formato especial con cintillo de datos (`/api/camera/awekas.jpg`,
-2026-09-14):** nació para AWEKAS, cuya caja de webcam es ~4:3 (verificado con
-una captura real: 540×404, centrando nuestra foto 16:9 con franjas negras
-arriba y abajo). En vez de dejarlas en negro, este endpoint compone un lienzo
+**Formato especial con cintillo de datos (`/api/camera/webcam.jpg`,
+2026-09-14, nombre genérico a propósito -- lo usan varias redes, no solo
+una):** nació para AWEKAS, cuya caja de webcam es ~4:3 (verificado con una
+captura real: 540×404, centrando nuestra foto 16:9 con franjas negras arriba
+y abajo). En vez de dejarlas en negro, este endpoint compone un lienzo
 800×600 propio: la foto se reescala a 800 de ancho SIN recortar ni
 distorsionar (a 16:9 sobran exactamente 148 px) y ese espacio se llena con un
 cintillo — encabezado "XE1E STATION · Mexico City" + "clima.xe1e.net", y 6
 columnas de ancho variable, medido contra la fuente real para que ninguna
 quede apretada (temperatura, humedad, presión, lluvia 24h + tasa, viento +
 rumbo, radiación + UV), tomadas de `/api/current` en el momento de la
-petición. Ver `services/awekas_image.py`. Usa la misma URL directa al VPS que
-`latest.jpg` (mismo bloqueo de Cloudflare aplica):
+petición. Ver `services/webcam_overlay.py`. Usa la misma URL directa al VPS
+que `latest.jpg` (mismo bloqueo de Cloudflare aplica):
 
 ```
-http://<IP_DEL_VPS>:8080/api/camera/awekas.jpg
+http://<IP_DEL_VPS>:8080/api/camera/webcam.jpg
 ```
 
 **También conectado a Weathercloud (2026-09-14).** De las 9 redes a las que

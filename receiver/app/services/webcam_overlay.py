@@ -1,11 +1,13 @@
 """
-Imagen especial de la cámara para AWEKAS (y servicios de webcam similares).
+Imagen especial de la cámara con cintillo de datos, para publicar como
+webcam en redes externas (AWEKAS, Weathercloud) -- ver `/api/camera/webcam.jpg`.
 
 AWEKAS muestra la webcam en una caja ~4:3 (verificado 2026-09-14 con una
 captura real de cómo la renderiza: 540x404, centrando nuestra foto 16:9 con
 franjas negras arriba y abajo). En vez de dejar que esas franjas queden en
 negro, se genera un lienzo 4:3 propio con la foto alineada arriba y un
-cintillo de datos de la estación abajo, en el espacio que sobra.
+cintillo de datos de la estación abajo, en el espacio que sobra. Weathercloud
+no exige otra proporción, así que la misma imagen le sirve tal cual.
 
 La foto se reescala a `CANVAS_W` de ancho SIN recortar ni distorsionar: la
 altura que le sobre respecto a `CANVAS_H` es exactamente el alto del
@@ -78,7 +80,7 @@ def _fmt(value: Optional[float], template: str, none: str = "--") -> str:
     return template.format(value) if value is not None else none
 
 
-def build_awekas_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int = 88) -> bytes:
+def build_webcam_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int = 88) -> bytes:
     """Compone la foto + cintillo de datos y devuelve el JPEG resultante.
 
     `weather` son las claves de `/api/current` (temperature_outdoor,

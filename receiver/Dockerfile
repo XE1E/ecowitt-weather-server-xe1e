@@ -7,9 +7,9 @@ WORKDIR /app
 # lo que el ARM del free tier de Oracle no aguantaria--. Va ANTES de instalar las
 # dependencias de Python para que un cambio en requirements.txt no rehaga esta capa,
 # que es la lenta de las dos en ARM.
-# fonts-dejavu-core: el banner de datos que se compone sobre la foto de la
-# cámara para AWEKAS (services/awekas_image.py) necesita una fuente TTF real
-# -- la imagen base python:3.11-slim no trae ninguna.
+# fonts-dejavu-core: el cintillo de datos que se compone sobre la foto de la
+# cámara para AWEKAS/Weathercloud (services/webcam_overlay.py) necesita una
+# fuente TTF real -- la imagen base python:3.11-slim no trae ninguna.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
