@@ -46,20 +46,23 @@ MATCH_CLOSE = "close"      # Similar (ej: partly_cloudy vs mostly_cloudy)
 MATCH_DIFFER = "differ"    # Diferente pero no crítico
 MATCH_CONFLICT = "conflict"  # Conflicto importante (ej: clear vs stormy)
 
-# Pares que se consideran "cercanos" aunque no sean iguales
-CLOSE_PAIRS = {
-    ("clear", "partly_cloudy"),
-    ("partly_cloudy", "mostly_cloudy"),
-    ("mostly_cloudy", "overcast"),
-    ("rainy", "stormy"),
-}
+# Escala de NUBOSIDAD pura (sin precipitación), de menos a más cubierto.
+# Antes esto era una lista fija de pares "cercanos" a mano (CLOSE_PAIRS) que
+# solo cubría saltos de UN escalón -- un salto de dos (p. ej. parcialmente
+# nublado <-> cubierto) caía en "differ" aunque en la práctica es solo ruido
+# de qué tan nublado está, no un desacuerdo de fondo. Verificado con datos
+# reales: sobre 1149 comparaciones guardadas (2026-08-29 a 2026-09-13), esos
+# saltos de 2 escalones (partly_cloudy<->overcast, overcast<->clear, etc.)
+# eran ~40% de TODO el "differ" -- inflaban el conteo sin aportar señal.
+_CLOUDINESS_RANK = {"clear": 0, "partly_cloudy": 1, "mostly_cloudy": 2, "overcast": 3}
 
-# Pares que son conflictos importantes
-CONFLICT_PAIRS = {
-    ("clear", "stormy"),
-    ("clear", "rainy"),
-    ("partly_cloudy", "stormy"),
-}
+# El eje que de verdad importa (ver conversación 2026-09-13: "Precipitaciones"
+# marcaba 82% mientras la cámara veía despejando, sin lluvia visible): si un
+# lado dice que hay precipitación (rainy/stormy) y el otro no, es un
+# desacuerdo sobre EL HECHO de si llueve, no sobre cuánta nube hay -- nunca
+# se trata como simple diferencia de nubosidad, sin importar qué tan
+# "cercanas" luzcan las etiquetas.
+_PRECIP_CONDITIONS = {"rainy", "stormy"}
 
 # Nombres en español para armar explicaciones legibles en la UI
 CONDITION_ES = {
@@ -94,29 +97,56 @@ def compare_conditions(camera_cond: str, forecast_wmo: int) -> Tuple[str, str]:
     """
     Compara condición de cámara con código WMO del pronóstico.
 
+    Dos ejes distintos, tratados por separado (antes era una sola lista de
+    pares "cercanos"/"en conflicto" a mano, que mezclaba ambos):
+
+    1. **¿Llueve o no?** (rainy/stormy vs el resto) -- el eje que importa para
+       decidir si hay una incongruencia real. Un desacuerdo aquí es "differ"
+       como mínimo, y "conflict" si un lado tiene alta confianza (el modelo
+       dice "tormenta" o la cámara ve cielo despejado).
+    2. **Nubosidad** (clear/partly_cloudy/mostly_cloudy/overcast, cuando
+       NINGUNO de los dos dice precipitación) -- es una escala continua
+       partida en 4 categorías discretas, así que un salto de un escalón es
+       ruido de clasificación, no una discrepancia ("close").
+
     Returns:
         (match_level, explanation)
     """
     forecast_cond = WMO_TO_CONDITION.get(forecast_wmo, "unknown")
 
-    # Coincidencia exacta
-    if camera_cond == forecast_cond:
-        return MATCH_EXACT, f"Coincide: {camera_cond}"
-
-    # Noche: no podemos validar bien
+    # Noche: la cámara no distingue bien nubosidad sin luz -- no se valida.
     if camera_cond == "night":
         return MATCH_CLOSE, "Noche: validación limitada"
 
-    # Verificar si es par cercano
-    pair = tuple(sorted([camera_cond, forecast_cond]))
-    if pair in CLOSE_PAIRS or (pair[0], pair[1]) in CLOSE_PAIRS or (pair[1], pair[0]) in CLOSE_PAIRS:
+    if camera_cond == forecast_cond:
+        return MATCH_EXACT, f"Coincide: {camera_cond}"
+
+    if camera_cond not in _CLOUDINESS_RANK and camera_cond not in _PRECIP_CONDITIONS and camera_cond != "foggy":
+        return MATCH_DIFFER, f"Difiere: cámara={camera_cond}, modelo={forecast_cond}"
+    if forecast_cond not in _CLOUDINESS_RANK and forecast_cond not in _PRECIP_CONDITIONS and forecast_cond != "foggy":
+        return MATCH_DIFFER, f"Difiere: cámara={camera_cond}, modelo={forecast_cond}"
+
+    cam_precip = camera_cond in _PRECIP_CONDITIONS
+    fc_precip = forecast_cond in _PRECIP_CONDITIONS
+
+    if cam_precip and fc_precip:
+        # rainy vs stormy: distinta intensidad, no un desacuerdo sobre si llueve.
         return MATCH_CLOSE, f"Similar: cámara={camera_cond}, modelo={forecast_cond}"
 
-    # Verificar conflicto
-    if pair in CONFLICT_PAIRS or (pair[0], pair[1]) in CONFLICT_PAIRS or (pair[1], pair[0]) in CONFLICT_PAIRS:
-        return MATCH_CONFLICT, f"Discrepancia: cámara={camera_cond}, modelo={forecast_cond}"
+    if cam_precip != fc_precip:
+        no_precip_side = forecast_cond if cam_precip else camera_cond
+        precip_side = camera_cond if cam_precip else forecast_cond
+        if no_precip_side == "clear" or precip_side == "stormy":
+            return MATCH_CONFLICT, f"Discrepancia: cámara={camera_cond}, modelo={forecast_cond}"
+        return MATCH_DIFFER, f"Difiere: cámara={camera_cond}, modelo={forecast_cond}"
 
-    # Diferencia normal
+    if camera_cond == "foggy" or forecast_cond == "foggy":
+        return MATCH_DIFFER, f"Difiere: cámara={camera_cond}, modelo={forecast_cond}"
+
+    # Ninguno dice precipitación ni niebla: pura diferencia de nubosidad.
+    dist = abs(_CLOUDINESS_RANK[camera_cond] - _CLOUDINESS_RANK[forecast_cond])
+    if dist <= 1:
+        return MATCH_CLOSE, f"Similar: cámara={camera_cond}, modelo={forecast_cond}"
     return MATCH_DIFFER, f"Difiere: cámara={camera_cond}, modelo={forecast_cond}"
 
 
