@@ -61,6 +61,14 @@ export interface ConsensusForecast {
   sources: string[]
 }
 
+export interface OwnForecast {
+  headline: string
+  source: 'station' | 'camera' | 'camera_trend' | 'pressure' | 'pressure+nearby' | 'nearby' | 'none'
+  rain_now: boolean
+  storm_likely: boolean
+  confidence: 'high' | 'medium' | 'low'
+}
+
 interface StationData {
   data: WeatherData | null
   stats: DailyStats['stats'] | null
@@ -71,6 +79,10 @@ interface StationData {
   compare: Comparison | null
   localForecast: LocalForecast | null
   consensus: ConsensusForecast | null
+  // "Nuestro pronóstico" (estación + cámara + presión + vecinas, ver
+  // forecaster.own_forecast) -- manda sobre `consensus`/Open-Meteo cuando
+  // hay señal propia. Ver docs de PrecipitationCard.tsx y ConsoleReplica.
+  ownForecast: OwnForecast | null
   loading: boolean
 }
 
@@ -87,6 +99,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
   const [compare, setCompare] = useState<Comparison | null>(null)
   const [localForecast, setLocalForecast] = useState<LocalForecast | null>(null)
   const [consensus, setConsensus] = useState<ConsensusForecast | null>(null)
+  const [ownForecast, setOwnForecast] = useState<OwnForecast | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -134,8 +147,23 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(i)
   }, [])
 
+  // "Nuestro pronóstico" -- estación + cámara + presión + vecinas (ver
+  // forecaster.own_forecast). Reemplaza a consensus.current.storm_approaching
+  // como fuente de la señal de tormenta en ConsoleReplica: NO depende de
+  // Open-Meteo/WeatherAPI, es la voz propia de la estación.
+  useEffect(() => {
+    const load = () =>
+      fetch('/api/forecast/own')
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setOwnForecast)
+        .catch(() => {})
+    load()
+    const i = setInterval(load, 5 * 60000) // Cada 5 min
+    return () => clearInterval(i)
+  }, [])
+
   return (
-    <Ctx.Provider value={{ data, stats, history, forecast, compare, localForecast, consensus, loading }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ data, stats, history, forecast, compare, localForecast, consensus, ownForecast, loading }}>{children}</Ctx.Provider>
   )
 }
 

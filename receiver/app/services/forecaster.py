@@ -61,6 +61,79 @@ def detect_incoming_rain(stations: List[Dict[str, Any]], wind_dir_deg: Optional[
     return min(candidates, key=lambda s: s["distance_km"] if s.get("distance_km") is not None else float("inf"))
 
 
+def own_forecast(rain_rate: Optional[float], camera_analysis: Optional[Dict[str, Any]],
+                  local_pressure: Optional[Dict[str, Any]],
+                  incoming_rain: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    "Nuestro pronóstico": lo que la propia estación puede afirmar sobre
+    lluvia AHORA o en las PRÓXIMAS HORAS, sin depender de ningún modelo
+    externo (Open-Meteo/WeatherAPI) -- esos se muestran aparte y siempre
+    atribuidos (ver PrecipitationCard.tsx), nunca mezclados aquí como si
+    fueran nuestra propia conclusión.
+
+    Motivo (2026-09-14): "Precipitaciones" mostraba el % crudo de Open-Meteo
+    sin cruzarlo con nada, y ese día marcó 82% de lluvia inminente mientras
+    la cámara veía despejando y sin precipitación visible -- justo el tipo
+    de incongruencia que esto evita: la fuente propia manda, el modelo
+    externo queda como referencia aparte.
+
+    Orden de autoridad (gana la primera que tenga algo que decir):
+    1. Pluviómetro (`rain_rate` > 0) -- dato real, ahora mismo.
+    2. Cámara, precipitación YA visible en la foto -- dato real, visual, ahora.
+    3. Cámara, tendencia de nubes de lluvia FORMÁNDOSE (`trend.precip_appearing`)
+       -- todavía no se ve lluvia, pero la serie de fotos recientes lo sugiere.
+    4. Presión propia (`/api/forecast/local`, tendencia calibrada a CDMX) --
+       proyección física de 0-3h, no un modelo numérico externo.
+    5. Vecinas + viento (`detect_incoming_rain`) -- corroboración con
+       observaciones reales de otras estaciones, no con un pronóstico.
+    Si dos señales INDEPENDIENTES coinciden (presión bajando Y una vecina
+    real confirmando lluvia viniendo con el viento), la confianza es máxima.
+    Si ninguna de las cinco tiene algo que decir, se reporta `source: "none"`
+    -- el llamador decide si mostrar el modelo externo como respaldo.
+    """
+    if (rain_rate or 0) > 0:
+        return {"headline": "Lloviendo ahora (estación)", "source": "station",
+                "rain_now": True, "storm_likely": False, "confidence": "high"}
+
+    if camera_analysis and camera_analysis.get("precipitation_visible"):
+        return {"headline": "La cámara ve precipitación en el horizonte", "source": "camera",
+                "rain_now": False, "storm_likely": True, "confidence": "high"}
+
+    trend = (camera_analysis or {}).get("trend") or {}
+    pressure_falling = bool(local_pressure and local_pressure.get("available")
+                            and local_pressure["trend"]["code"] in ("falling", "falling_fast"))
+
+    if trend.get("precip_appearing"):
+        return {"headline": "La cámara detecta nubes de lluvia formándose", "source": "camera_trend",
+                "rain_now": False, "storm_likely": True, "confidence": "medium"}
+
+    if pressure_falling and incoming_rain:
+        return {
+            "headline": (f"Presión bajando y {incoming_rain.get('source')} reporta lluvia al "
+                        f"{incoming_rain.get('bearing')} -- posible lluvia acercándose"),
+            "source": "pressure+nearby", "rain_now": False, "storm_likely": True, "confidence": "high",
+        }
+
+    if pressure_falling:
+        fast = local_pressure["trend"]["code"] == "falling_fast"
+        return {
+            "headline": "Presión cayendo rápido: posible tormenta en 1-2h" if fast
+                        else "Presión bajando: posible lluvia en unas horas",
+            "source": "pressure", "rain_now": False, "storm_likely": True,
+            "confidence": "high" if fast else "medium",
+        }
+
+    if incoming_rain:
+        return {
+            "headline": (f"{incoming_rain.get('source')} reporta lluvia al {incoming_rain.get('bearing')} "
+                        "y el viento viene de esa dirección"),
+            "source": "nearby", "rain_now": False, "storm_likely": True, "confidence": "medium",
+        }
+
+    return {"headline": "Sin señal propia de lluvia inminente", "source": "none",
+            "rain_now": False, "storm_likely": False, "confidence": "low"}
+
+
 def zone_trend(stations: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Tendencia de presión agregada de un grupo de estaciones vecinas (cada una
     con su propio `pressure_trend_mb` ya calculado, ver xweather.py/netatmo.py).

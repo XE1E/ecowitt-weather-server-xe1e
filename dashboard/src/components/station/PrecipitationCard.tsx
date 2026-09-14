@@ -4,6 +4,8 @@ import { useUnits } from '../../units'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconLluvia } from '../../theme/icons'
 import { useState, useEffect } from 'react'
+import { CloudRain } from 'lucide-react'
+import { useStationData } from '../../station-data'
 
 interface Props {
   data: WeatherData
@@ -16,6 +18,7 @@ interface LastRainInfo {
 
 export function PrecipitationCard({ data, forecast }: Props) {
   const u = useUnits()
+  const { ownForecast: own } = useStationData()
   const [lastRain, setLastRain] = useState<LastRainInfo | null>(null)
   const next = forecast?.hours?.slice(0, 8) ?? []
   const peakProb = next.length ? Math.max(...next.map((h) => h.precipProb ?? 0)) : 0
@@ -26,6 +29,27 @@ export function PrecipitationCard({ data, forecast }: Props) {
       .then(setLastRain)
       .catch(() => {})
   }, [])
+
+  // "Nuestro pronóstico" (estación + cámara + presión + vecinas, ver
+  // forecaster.own_forecast) manda sobre Open-Meteo: si alguna fuente
+  // propia SÍ tiene señal, es el titular; Open-Meteo se ve abajo, aparte y
+  // rotulado. Si no hay señal propia (`source === 'none'`), no se muestra
+  // nada aquí -- no hay nada propio que decir, y repetirlo como "todo en
+  // calma" en cada carga sería ruido, no señal.
+  const ownHasSignal = own && own.source !== 'none'
+
+  // Contradicción visible: Open-Meteo prevé bastante más lluvia de la que
+  // nuestras fuentes propias detectan (o al revés) -- se dice, no se oculta.
+  const ownVsModelNote = (() => {
+    if (!own || next.length === 0) return null
+    if (!ownHasSignal && peakProb >= 50) {
+      return 'Open-Meteo prevé más probabilidad de lluvia que lo que detectamos aquí (estación/cámara/presión/vecinas).'
+    }
+    if (own?.storm_likely && peakProb < 30) {
+      return 'Open-Meteo todavía no lo refleja en su probabilidad.'
+    }
+    return null
+  })()
 
   const formatLastRain = (dateStr: string | null) => {
     if (!dateStr) return null
@@ -84,12 +108,27 @@ export function PrecipitationCard({ data, forecast }: Props) {
         </div>
       </div>
 
+      {ownHasSignal && (
+        <div className={`mt-3 p-2.5 rounded-lg border flex items-start gap-2 ${
+          own!.confidence === 'high' ? 'bg-amber-500/15 border-amber-500/30' : 'bg-sky-500/10 border-sky-500/20'
+        }`}>
+          <CloudRain className={`w-5 h-5 shrink-0 mt-0.5 ${own!.confidence === 'high' ? 'text-amber-400' : 'text-sky-400'}`} />
+          <div>
+            <p className="text-sm font-medium text-slate-100">{own!.headline}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Nuestro pronóstico (estación · cámara · presión · vecinas)</p>
+          </div>
+        </div>
+      )}
+
       {next.length > 0 && (
         <div className="mt-4 pt-3 border-t border-white/10">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-slate-500">Probabilidad de precipitaciones en las próximas horas</p>
+            <p className="text-xs text-slate-500">Según Open-Meteo, próximas horas</p>
             <p className="text-xs text-slate-400">{getNextRainInfo()}</p>
           </div>
+          {ownVsModelNote && (
+            <p className="text-[11px] text-slate-500 mb-2">{ownVsModelNote}</p>
+          )}
           <div className="flex items-end gap-1.5 h-20 rounded-lg bg-gradient-to-t from-slate-800/50 to-transparent px-2 pt-2">
             {next.map((h) => {
               const prob = h.precipProb ?? 0

@@ -3128,9 +3128,7 @@ async def get_forecast(lat: Optional[float] = None, lon: Optional[float] = None)
         raise HTTPException(status_code=502, detail="No se pudo obtener el pronóstico")
 
 
-@app.get("/api/forecast/local")
-async def get_local_forecast():
-    """Pronóstico local por tendencia barométrica (datos de nuestra estación)."""
+async def _compute_local_forecast() -> Dict[str, Any]:
     try:
         p_now = latest_by_station.get(None, {}).get("pressure_relative")
         p_3h = await storage.get_field_value_ago("pressure_relative", start="-3h")
@@ -3138,6 +3136,33 @@ async def get_local_forecast():
     except Exception as e:
         logger.error(f"Error building local forecast: {e}")
         return {"available": False, "reason": "error"}
+
+
+@app.get("/api/forecast/local")
+async def get_local_forecast():
+    """Pronóstico local por tendencia barométrica (datos de nuestra estación)."""
+    return await _compute_local_forecast()
+
+
+@app.get("/api/forecast/own")
+async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = None):
+    """
+    "Nuestro pronóstico": estación + cámara + presión propia + vecinas, en
+    ese orden de autoridad (ver forecaster.own_forecast) -- NO depende de
+    Open-Meteo/WeatherAPI. Esos modelos externos se muestran aparte y
+    siempre atribuidos (ver PrecipitationCard.tsx): este endpoint es la voz
+    PROPIA de la estación, la que manda cuando hay desacuerdo.
+    """
+    own = latest_by_station.get(None) or {}
+    camera_analysis = _camera.get_analysis()
+    local_pressure = await _compute_local_forecast()
+    lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
+    lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
+    merged = await _fetch_nearby_stations_merged(lat_, lon_)
+    incoming_rain = forecaster.detect_incoming_rain(
+        merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
+    )
+    return forecaster.own_forecast(own.get("rain_rate"), camera_analysis, local_pressure, incoming_rain)
 
 
 async def _fetch_nearby_stations_merged(lat: float, lon: float) -> Dict[str, Any]:

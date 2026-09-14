@@ -895,7 +895,7 @@ interface ImecaData {
 }
 
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
-  const { data, history, stats, consensus, localForecast } = useStationData()
+  const { data, history, stats, ownForecast, localForecast } = useStationData()
   const u = useUnits()
   // Contenedor raíz: de él cuelgan las celdas con `data-nav` que se miden para el
   // mapa de zonas del display.
@@ -1048,8 +1048,10 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     }
     const derived = deriveCondition(data, condCtx)
 
-    // Solo tomar storm_approaching del consenso (útil para avisar de tormentas)
-    const stormApproaching = consensus?.current?.storm_approaching ?? false
+    // Solo tomar la señal de tormenta de "nuestro pronóstico" (estación +
+    // cámara + presión + vecinas, ver forecaster.own_forecast) -- NO del
+    // consenso con Open-Meteo/WeatherAPI, que quedó fuera de esta decisión.
+    const stormApproaching = ownForecast?.storm_likely ?? false
 
     return { ...derived, stormApproaching, source: 'sensor' }
   })()

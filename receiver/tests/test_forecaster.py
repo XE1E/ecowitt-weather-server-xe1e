@@ -1,6 +1,7 @@
-"""Tests for the incoming-rain signal (estaciones vecinas + viento propio)."""
+"""Tests for the incoming-rain signal (estaciones vecinas + viento propio) and
+"nuestro pronóstico" (own_forecast: estación + cámara + presión + vecinas)."""
 
-from app.services.forecaster import detect_incoming_rain
+from app.services.forecaster import detect_incoming_rain, own_forecast
 
 
 def _station(bearing="E", precip_mm=1.0, distance_km=5.0):
@@ -51,3 +52,64 @@ def test_picks_closest_among_multiple_candidates():
     near = _station(bearing="E", distance_km=3.0)
     out = detect_incoming_rain([far, near], wind_dir_deg=90, wind_speed_kph=10, own_rain_rate=0)
     assert out is near
+
+
+# --- own_forecast: "nuestro pronóstico" (estación + cámara + presión + vecinas) ---
+
+_PRESSURE_FALLING = {"available": True, "trend": {"code": "falling"}}
+_PRESSURE_FALLING_FAST = {"available": True, "trend": {"code": "falling_fast"}}
+_PRESSURE_STEADY = {"available": True, "trend": {"code": "steady"}}
+_PRESSURE_UNAVAILABLE = {"available": False, "reason": "sin presión actual"}
+
+
+def test_own_forecast_station_rain_wins_over_everything():
+    # Ya está lloviendo de verdad -- ni cámara, ni presión, ni vecina importan.
+    out = own_forecast(2.0, {"precipitation_visible": False}, _PRESSURE_STEADY, {"source": "PWS", "bearing": "E"})
+    assert out["source"] == "station"
+    assert out["rain_now"] is True
+
+
+def test_own_forecast_camera_sees_precip_now():
+    out = own_forecast(0, {"precipitation_visible": True}, _PRESSURE_STEADY, None)
+    assert out["source"] == "camera"
+    assert out["storm_likely"] is True
+
+
+def test_own_forecast_camera_trend_developing():
+    analysis = {"precipitation_visible": False, "trend": {"precip_appearing": True}}
+    out = own_forecast(0, analysis, _PRESSURE_STEADY, None)
+    assert out["source"] == "camera_trend"
+
+
+def test_own_forecast_pressure_and_nearby_agree_is_high_confidence():
+    out = own_forecast(0, None, _PRESSURE_FALLING, {"source": "PWS", "bearing": "E", "distance_km": 4.0})
+    assert out["source"] == "pressure+nearby"
+    assert out["confidence"] == "high"
+
+
+def test_own_forecast_pressure_falling_fast_alone():
+    out = own_forecast(0, None, _PRESSURE_FALLING_FAST, None)
+    assert out["source"] == "pressure"
+    assert out["confidence"] == "high"
+
+
+def test_own_forecast_pressure_falling_alone_is_medium_confidence():
+    out = own_forecast(0, None, _PRESSURE_FALLING, None)
+    assert out["source"] == "pressure"
+    assert out["confidence"] == "medium"
+
+
+def test_own_forecast_nearby_alone():
+    out = own_forecast(0, None, _PRESSURE_STEADY, {"source": "PWS", "bearing": "NE", "distance_km": 6.0})
+    assert out["source"] == "nearby"
+
+
+def test_own_forecast_none_when_nothing_signals():
+    out = own_forecast(0, {"precipitation_visible": False}, _PRESSURE_STEADY, None)
+    assert out["source"] == "none"
+    assert out["storm_likely"] is False
+
+
+def test_own_forecast_handles_missing_pressure_and_camera():
+    out = own_forecast(None, None, _PRESSURE_UNAVAILABLE, None)
+    assert out["source"] == "none"
