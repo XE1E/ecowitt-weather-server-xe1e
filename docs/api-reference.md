@@ -308,20 +308,36 @@ Si algún día otro servicio externo rechaza el link de la cámara con un error
 parecido, probar primero esta URL directa antes de suponer que el archivo está
 mal — probablemente sea el mismo bloqueo de Cloudflare a fetches server-to-server.
 
-**Formato especial para AWEKAS (`/api/camera/awekas.jpg`, 2026-09-14):** la
-caja de webcam de AWEKAS es ~4:3 (verificado con una captura real: 540×404,
-centrando nuestra foto 16:9 con franjas negras arriba y abajo). En vez de
-dejarlas en negro, este endpoint compone un lienzo 800×600 propio: la foto se
-reescala a 800 de ancho SIN recortar ni distorsionar (a 16:9 sobran
-exactamente 148 px) y ese espacio se llena con un cintillo — encabezado "XE1E
-STATION · clima.xe1e.net" y 6 columnas (temperatura, humedad, presión, lluvia
-24h + tasa, viento + rumbo, radiación + UV), tomadas de `/api/current` en el
-momento de la petición. Ver `services/awekas_image.py`. Usa la misma URL
-directa al VPS que `latest.jpg` (mismo bloqueo de Cloudflare aplica):
+**Formato especial con cintillo de datos (`/api/camera/awekas.jpg`,
+2026-09-14):** nació para AWEKAS, cuya caja de webcam es ~4:3 (verificado con
+una captura real: 540×404, centrando nuestra foto 16:9 con franjas negras
+arriba y abajo). En vez de dejarlas en negro, este endpoint compone un lienzo
+800×600 propio: la foto se reescala a 800 de ancho SIN recortar ni
+distorsionar (a 16:9 sobran exactamente 148 px) y ese espacio se llena con un
+cintillo — encabezado "XE1E STATION · Mexico City" + "clima.xe1e.net", y 6
+columnas de ancho variable, medido contra la fuente real para que ninguna
+quede apretada (temperatura, humedad, presión, lluvia 24h + tasa, viento +
+rumbo, radiación + UV), tomadas de `/api/current` en el momento de la
+petición. Ver `services/awekas_image.py`. Usa la misma URL directa al VPS que
+`latest.jpg` (mismo bloqueo de Cloudflare aplica):
 
 ```
 http://<IP_DEL_VPS>:8080/api/camera/awekas.jpg
 ```
+
+**También conectado a Weathercloud (2026-09-14).** De las 9 redes a las que
+publicamos (`publishers.py`), investigado cuáles soportan webcam en el perfil
+de la estación: **solo Weathercloud** tiene esa función activa y documentada
+además de AWEKAS — campo "Webcam" en weathercloud.net (Dispositivos → Editar),
+con tope de 250 KB (nuestra imagen pesa ~65-70 KB, sin margen que cuidar) y
+sin requisito de proporción, así que usa la misma URL de arriba tal cual. El
+resto se descartó con evidencia, no por omisión: Weather Underground
+**discontinuó** su servicio de webcam el 2021-10-21; PWSWeather, WOW-BE y
+OpenWeatherMap no tienen esa función documentada; Windy sí tiene "Webcams"
+pero es un sistema aparte (mapa comunitario con moderación manual, no ligado
+al perfil de la estación); openSenseMap y CWOP no soportan imágenes por
+diseño (el primero solo acepta valores numéricos, el segundo es un protocolo
+de texto vía APRS).
 
 ### Precisión del pronóstico y mejor foto del día
 

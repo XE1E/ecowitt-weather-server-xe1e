@@ -2833,10 +2833,14 @@ async def camera_latest():
 async def camera_awekas():
     """
     Foto de la cámara + cintillo de datos de la estación, en 4:3 (800x600) --
-    pensada para AWEKAS, cuya caja de webcam es ~4:3 y le añade franjas
+    nació pensada para AWEKAS, cuya caja de webcam es ~4:3 y le añade franjas
     negras arriba/abajo a nuestra foto 16:9 si se le manda tal cual (ver
-    services/awekas_image.py). Mismo criterio que /api/camera/latest.jpg:
-    acepta HEAD porque varios de estos servicios validan el enlace así.
+    services/awekas_image.py), pero el nombre del endpoint se quedó así por
+    compatibilidad -- también se usa para Weathercloud (campo "Webcam" del
+    dispositivo en weathercloud.net, sin requisito de proporción documentado;
+    ~65-70 KB por imagen, bien por debajo de su tope de 250 KB). Mismo
+    criterio que /api/camera/latest.jpg: acepta HEAD porque varios de estos
+    servicios validan el enlace así.
 
     Se compone en cada petición (barato: un resize + dibujar texto), así que
     los datos del cintillo siempre son los más recientes, sin caché propia
