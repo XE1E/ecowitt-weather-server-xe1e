@@ -71,7 +71,7 @@ function SortableCard({ id, spanClass, editing, children }: {
 }
 
 export function MiTableroPage() {
-  const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
+  const { data, stats, history, forecast, compare, localForecast, ownForecast, loading } = useStationData()
   const [editing, setEditing] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
@@ -92,7 +92,7 @@ export function MiTableroPage() {
     { key: 'forecast', label: 'Pronóstico', span: 1, render: () => <ForecastCard forecast={forecast} /> },
     { key: 'forecastcmp', label: 'Pronóstico comparativa (Open-Meteo, WeatherAPI, SMN)', span: 1, render: () => <ForecastCompareCard forecast={forecast} /> },
     { key: 'tempchart', label: 'Gráfica de temperatura', span: 2, render: () => <StationTempChart history={history} forecast={forecast} /> },
-    { key: 'precip', label: 'Precipitación', span: 1, render: () => <PrecipitationCard data={data!} forecast={forecast} /> },
+    { key: 'precip', label: 'Precipitación', span: 1, render: () => <PrecipitationCard data={data!} forecast={forecast} ownForecast={ownForecast} /> },
     { key: 'uvsolar', label: 'UV y radiación solar', span: 1, render: () => <UvSolarCard data={data!} /> },
     { key: 'sunmoon', label: 'Sol y luna', span: 1, render: () => <SunMoonCard astro={forecast?.astro ?? null} /> },
     { key: 'air', label: 'Calidad del aire', span: 1, render: () => <AirQualityCard /> },

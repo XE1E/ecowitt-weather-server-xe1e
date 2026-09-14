@@ -1,24 +1,28 @@
 import { WeatherData } from '../../types'
 import { ForecastResult } from '../../forecast'
+import { OwnForecast } from '../../station-data'
 import { useUnits } from '../../units'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconLluvia } from '../../theme/icons'
 import { useState, useEffect } from 'react'
 import { CloudRain } from 'lucide-react'
-import { useStationData } from '../../station-data'
 
 interface Props {
   data: WeatherData
   forecast: ForecastResult | null
+  // Prop, no `useStationData()` propio: la vista clásica (App.tsx) usa esta
+  // tarjeta SIN StationDataProvider -- llamar el hook aquí adentro reventaba
+  // toda la página en blanco (sin error boundary en la app, cualquier throw
+  // de render tumba todo). Opcional: la clásica simplemente no lo pasa.
+  ownForecast?: OwnForecast | null
 }
 
 interface LastRainInfo {
   date: string | null
 }
 
-export function PrecipitationCard({ data, forecast }: Props) {
+export function PrecipitationCard({ data, forecast, ownForecast: own = null }: Props) {
   const u = useUnits()
-  const { ownForecast: own } = useStationData()
   const [lastRain, setLastRain] = useState<LastRainInfo | null>(null)
   const next = forecast?.hours?.slice(0, 8) ?? []
   const peakProb = next.length ? Math.max(...next.map((h) => h.precipProb ?? 0)) : 0

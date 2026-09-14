@@ -26,7 +26,7 @@ import { EarthquakesCard } from '../components/station/EarthquakesCard'
 import { NearbyStationsCard } from '../components/station/NearbyStationsCard'
 
 export function HomePage() {
-  const { data, stats, history, forecast, compare, localForecast, loading } = useStationData()
+  const { data, stats, history, forecast, compare, localForecast, ownForecast, loading } = useStationData()
 
   if (loading && !data) {
     return (
@@ -50,7 +50,7 @@ export function HomePage() {
         <div className="space-y-4">
           <CurrentConditions data={data} history={history} />
           <SkyAnalysisCard />
-          <PrecipitationCard data={data} forecast={forecast} />
+          <PrecipitationCard data={data} forecast={forecast} ownForecast={ownForecast} />
           <ForecastCard forecast={forecast} />
           <ForecastCompareCard forecast={forecast} />
         </div>
