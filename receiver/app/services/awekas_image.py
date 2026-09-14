@@ -108,41 +108,47 @@ def build_awekas_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int 
     y0 = photo_h
     draw.rectangle([0, y0, CANVAS_W, y0 + HEADER_H], fill=HEADER_BG)
     f_header = _load_font(bold=True, size=16)
-    f_header_small = _load_font(bold=False, size=13)
-    draw.text((14, y0 + 5), "XE1E STATION", font=f_header, fill=HEADER_TEXT)
-    draw.text((CANVAS_W - 14, y0 + 6), "clima.xe1e.net", font=f_header_small,
+    f_header_small = _load_font(bold=False, size=15)
+    draw.text((14, y0 + 5), "XE1E STATION \u00b7 Mexico City", font=f_header, fill=HEADER_TEXT)
+    draw.text((CANVAS_W - 14, y0 + 5), "clima.xe1e.net", font=f_header_small,
                fill=HEADER_SUB_TEXT, anchor="ra")
 
     # --- Cuadrícula de datos ---
+    # Ancho por columna, NO parejo: medido con la fuente real (DejaVu) contra
+    # cada etiqueta/valor -- "1028.3 hPa" en negrita 22px mide ~139px, más
+    # ancho que el 800/6=133px parejo de antes, por eso PRESION quedaba
+    # apretada contra las líneas divisorias. Se le quitó ese margen a HUMEDAD
+    # (su valor, "100%", es el más angosto de los seis).
     cols = [
-        ("TEMPERATURA", _fmt(weather.get("temperature_outdoor"), "{:.1f}\u00b0C"), ""),
-        ("HUMEDAD", _fmt(weather.get("humidity_outdoor"), "{:.0f}%"), ""),
-        ("PRESION", _fmt(weather.get("pressure_relative"), "{:.1f} hPa"), ""),
+        ("TEMPERATURA", _fmt(weather.get("temperature_outdoor"), "{:.1f}\u00b0C"), "", 120),
+        ("HUMEDAD", _fmt(weather.get("humidity_outdoor"), "{:.0f}%"), "", 90),
+        ("PRESION", _fmt(weather.get("pressure_relative"), "{:.1f} hPa"), "", 170),
         ("LLUVIA 24H", _fmt(weather.get("rain_24h"), "{:.1f} mm"),
-         _fmt(weather.get("rain_rate"), "{:.1f} mm/h")),
+         _fmt(weather.get("rain_rate"), "{:.1f} mm/h"), 130),
         ("VIENTO", _fmt(weather.get("wind_speed"), "{:.0f} km/h"),
-         _compass_es(weather.get("wind_direction"))),
+         _compass_es(weather.get("wind_direction")), 130),
         ("RADIACION", _fmt(weather.get("solar_radiation"), "{:.0f} W/m\u00b2"),
-         _fmt(weather.get("uv_index"), "UV {:.0f}")),
+         _fmt(weather.get("uv_index"), "UV {:.0f}"), 160),
     ]
+    assert sum(c[3] for c in cols) == CANVAS_W
 
     grid_y0 = y0 + HEADER_H
     grid_h = banner_h - HEADER_H
-    col_w = CANVAS_W / len(cols)
 
     f_label = _load_font(bold=False, size=13)
     f_value = _load_font(bold=True, size=22)
     f_sub = _load_font(bold=False, size=14)
 
-    for i, (label, value, sub) in enumerate(cols):
-        cx = int(col_w * i + col_w / 2)
-        if i > 0:
-            x = int(col_w * i)
+    x = 0
+    for label, value, sub, w in cols:
+        cx = int(x + w / 2)
+        if x > 0:
             draw.line([(x, grid_y0 + 8), (x, grid_y0 + grid_h - 8)], fill=DIVIDER_COLOR, width=1)
         draw.text((cx, grid_y0 + 10), label, font=f_label, fill=LABEL_COLOR, anchor="ma")
         draw.text((cx, grid_y0 + grid_h / 2 - 4), value, font=f_value, fill=VALUE_COLOR, anchor="mm")
         if sub:
             draw.text((cx, grid_y0 + grid_h - 12), sub, font=f_sub, fill=SUB_COLOR, anchor="ms")
+        x += w
 
     out = io.BytesIO()
     canvas.save(out, "JPEG", quality=quality)
