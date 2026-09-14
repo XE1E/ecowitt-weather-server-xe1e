@@ -2846,8 +2846,18 @@ async def camera_awekas():
     if ultima is None:
         raise HTTPException(status_code=404, detail="Sin capturas")
     data, cuando = ultima
+    weather = dict(latest_by_station.get(None) or {})
+    # `rain_24h` es ventana móvil (integra rain_rate), NO `rain_daily` (se
+    # reinicia a medianoche) -- no vive en `latest_by_station`, se calcula
+    # aparte igual que en /api/current (ver ese endpoint, mismo criterio).
     try:
-        jpeg = awekas_image.build_awekas_jpeg(data, latest_by_station.get(None) or {})
+        rain_24h = await storage.get_rain_hours(hours=24, station=None)
+        if rain_24h is not None:
+            weather["rain_24h"] = rain_24h
+    except Exception as e:
+        logger.error(f"Error calculando rain_24h para AWEKAS: {e}")
+    try:
+        jpeg = awekas_image.build_awekas_jpeg(data, weather)
     except Exception as e:
         logger.error(f"Error componiendo la imagen de AWEKAS: {e}")
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
