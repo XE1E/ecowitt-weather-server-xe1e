@@ -3241,6 +3241,13 @@ async def _fetch_nearby_stations_merged(lat: float, lon: float) -> Dict[str, Any
                 "zone_trend_mb": None, "zone_trend": None, "zone_trend_reference": None}
 
     stations = [s for r in results for s in r["stations"]]
+    # La propia estación puede aparecer en la lista de Xweather: publicamos a
+    # PWSWeather (su propia red) y Xweather la devuelve como una PWS más, a
+    # distancia ~0 -- se descarta por id para que la tarjeta sea de vecinas
+    # de verdad y no se cuente a sí misma en la mediana/tendencia de la zona.
+    if settings.pws_station_id:
+        own_id = f"PWS_{settings.pws_station_id}".upper()
+        stations = [s for s in stations if (s.get("id") or "").upper() != own_id]
     fetched_ats = [r["fetched_at"] for r in results if r["fetched_at"]]
     ages = [r["age_minutes"] for r in results if r["age_minutes"] is not None]
     zone = forecaster.zone_trend(stations)

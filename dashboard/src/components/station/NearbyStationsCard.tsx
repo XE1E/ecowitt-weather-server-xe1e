@@ -125,7 +125,7 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
     <div className="card">
       <div className="flex items-center gap-2">
         <MapPin className="w-6 h-6 text-emerald-400 shrink-0" />
-        <p className="card-title mb-0">En tu zona</p>
+        <p className="card-title mb-0">Estaciones cercanas</p>
         {resp?.stale && <span className="text-[10px] text-amber-400 ml-auto">datos previos</span>}
       </div>
 
