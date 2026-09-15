@@ -1022,7 +1022,16 @@ class AlertService:
         if not recipients:
             logger.warning("Email sin destinatarios; omitido")
             return
-        sender = getattr(s, "email_from", None) or s.smtp_user or recipients[0]
+        # `email_from` es de uso libre en el panel (algunos ponen un nombre,
+        # p. ej. "xe1e station", no una dirección) -- pero smtplib lo manda
+        # TAL CUAL como remitente del sobre SMTP, y un servidor real lo
+        # rechaza ("501 sender address must contain a domain"). Si no parece
+        # una dirección (sin "@"), se ignora y se cae a smtp_user, que sí lo
+        # es -- visto en producción con mail.xe1e.net.
+        email_from = getattr(s, "email_from", None)
+        if not email_from or "@" not in email_from:
+            email_from = None
+        sender = email_from or s.smtp_user or recipients[0]
 
         msg = EmailMessage()
         # Asunto: una línea corta a partir del texto (sin saltos).

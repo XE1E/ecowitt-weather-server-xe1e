@@ -340,8 +340,8 @@ export function AdminNotificaciones() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Remitente (From)</label>
-                <TextField value={settings.email_from} onChange={(v) => update('email_from', v)} placeholder="(por defecto = usuario)" />
+                <label className="block text-xs text-slate-400 mb-1">Remitente (From) -- debe ser una dirección de correo</label>
+                <TextField value={settings.email_from} onChange={(v) => update('email_from', v)} placeholder="clima@tudominio.com (por defecto = usuario)" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Destinatario(s)</label>
