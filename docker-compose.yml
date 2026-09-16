@@ -1,3 +1,14 @@
+# Límite de tamaño para los logs de cada contenedor (json-file no rota solo):
+# sin esto, un servicio que loguea seguido (p. ej. reintentos de publishers.py
+# contra una red externa caída) puede crecer sin fin -- ver limpieza de disco
+# del 2026-09-15. 10MB x 3 archivos por contenedor, se aplica con un anchor YAML
+# para no repetirlo en cada servicio.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Receiver - Receives data from Ecowitt gateway
   receiver:
@@ -42,6 +53,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     # `python3` en vez de curl/wget: la imagen python:3.11-slim no trae
     # ninguno de los dos por omisión, pero Python sí, siempre.
     healthcheck:
@@ -76,6 +88,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     # La imagen oficial de InfluxDB trae curl; es el healthcheck que ellos
     # mismos documentan.
     healthcheck:
@@ -103,6 +116,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     profiles:
       - grafana
 
@@ -118,6 +132,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     # nginx:alpine trae wget (BusyBox) pero no curl. 127.0.0.1 explícito, NO
     # "localhost": wget lo resuelve primero a IPv6 (::1) dentro del
     # contenedor, donde nginx no escucha -- "Connection refused" en bucle
@@ -149,6 +164,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     # Imagen de Playwright: trae Python (con la que ya corre uvicorn), sin
     # garantía de curl/wget -- mismo truco que `receiver`.
     healthcheck:
@@ -186,6 +202,7 @@ services:
     restart: unless-stopped
     networks:
       - ecowitt-network
+    logging: *default-logging
     profiles:
       - caddy
 
