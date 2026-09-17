@@ -17,7 +17,13 @@ interface NotifSettings {
   email_from: string | null
   email_to: string | null
   email_categories: string[] | null
+  email_digest_enabled: boolean
+  email_digest_weekday: number
+  email_digest_hour: number
 }
+
+// 0=lunes ... 6=domingo, como `date.weekday()` en Python (ver services/digest.py)
+const WEEKDAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 // Categorías de alerta (deben coincidir con alerts.ALERT_CATEGORIES del backend)
 // Debe cubrir TODAS las claves de alerts.ALERT_CATEGORIES: lo que no aparezca
@@ -140,7 +146,7 @@ export function AdminNotificaciones() {
   const [settings, setSettings] = useState<NotifSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState<'telegram' | 'email' | null>(null)
+  const [testing, setTesting] = useState<'telegram' | 'email' | 'digest' | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -193,14 +199,15 @@ export function AdminNotificaciones() {
     }
   }
 
-  const handleTest = async (channel: 'telegram' | 'email') => {
+  const handleTest = async (channel: 'telegram' | 'email' | 'digest') => {
     setTesting(channel)
     setMessage(null)
-    const url = channel === 'telegram' ? '/api/admin/test-telegram' : '/api/admin/test-email'
+    const url = channel === 'telegram' ? '/api/admin/test-telegram'
+      : channel === 'digest' ? '/api/admin/test-digest' : '/api/admin/test-email'
     try {
       const res = await fetchWithAuth(url, { method: 'POST' })
       if (res.ok) {
-        setMessage({ type: 'ok', text: channel === 'email' ? 'Correo de prueba enviado' : 'Mensaje de prueba enviado' })
+        setMessage({ type: 'ok', text: channel === 'telegram' ? 'Mensaje de prueba enviado' : channel === 'digest' ? 'Resumen de prueba enviado' : 'Correo de prueba enviado' })
       } else {
         const err = await res.json().catch(() => ({}))
         setMessage({ type: 'error', text: err.detail || 'Error al enviar' })
@@ -350,6 +357,48 @@ export function AdminNotificaciones() {
             </div>
             <Toggle enabled={settings.smtp_tls} onChange={(v) => update('smtp_tls', v)} label="Usar STARTTLS (recomendado en puerto 587; el 465 usa SSL directo)" />
             <CategoryPicker selected={settings.email_categories} onChange={(v) => update('email_categories', v)} />
+
+            <div className="h-px bg-white/10" />
+
+            <div className="flex items-center gap-4">
+              <Toggle enabled={settings.email_digest_enabled} onChange={(v) => update('email_digest_enabled', v)} label="Resumen semanal por correo" />
+              {settings.email_digest_enabled && settings.smtp_host && settings.email_to && (
+                <button
+                  onClick={() => handleTest('digest')}
+                  disabled={testing !== null}
+                  className="text-sky-400 hover:text-sky-300 text-sm ml-auto disabled:text-slate-600"
+                >
+                  {testing === 'digest' ? 'Enviando...' : 'Enviar prueba'}
+                </button>
+              )}
+            </div>
+            {settings.email_digest_enabled && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Día</label>
+                  <select
+                    value={settings.email_digest_weekday}
+                    onChange={(e) => update('email_digest_weekday', Number(e.target.value))}
+                    className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white"
+                  >
+                    {WEEKDAYS.map((w, i) => <option key={w} value={i}>{w}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Hora (local)</label>
+                  <input
+                    type="number" min="0" max="23"
+                    value={settings.email_digest_hour}
+                    onChange={(e) => update('email_digest_hour', Math.min(23, Math.max(0, Math.round(Number(e.target.value)))))}
+                    className="w-20 rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 flex-1 min-w-[200px]">
+                  Récords de los últimos 7 días, comparación con la semana anterior y la mejor foto
+                  (si hay). Mismo remitente/destinatarios de arriba.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

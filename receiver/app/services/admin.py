@@ -190,6 +190,9 @@ def public_settings(settings) -> Dict[str, Any]:
         "email_from": settings.email_from,
         "email_to": settings.email_to,
         "email_categories": settings.email_categories,
+        "email_digest_enabled": settings.email_digest_enabled,
+        "email_digest_weekday": settings.email_digest_weekday,
+        "email_digest_hour": settings.email_digest_hour,
         "waqi_token_masked": mask(settings.waqi_token),
         "weatherapi_key_masked": mask(settings.weatherapi_key),
         # Estaciones vecinas (Xweather)

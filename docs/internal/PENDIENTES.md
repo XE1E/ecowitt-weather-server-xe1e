@@ -53,10 +53,21 @@ mano). Cron de `backup-camera-archivo.sh` agregada (48 3 * * *, entre
       `dashboard/public/guia.html`: es una guía más ligera, sin sección de
       analítica/backups que mantener en sync (se verificó antes de omitirlo,
       no es un descuido).
-- [ ] **5. Digest semanal/mensual por correo.** Reutilizar el SMTP de
-      alertas (ya arreglado, `36cde6d`) para un correo con récords de la
-      semana, comparación vs normal y mejor foto. El más grande: requiere
-      decidir cadencia/plantilla/opt-in antes de programarlo.
+- [x] **5. Resumen semanal por correo.** Cadencia decidida: **semanal**
+      (día/hora configurables, Admin → Notificaciones → Correo). Reusa el
+      mismo canal SMTP de las alertas (`AlertService.send_digest`), con
+      opt-in propio (`email_digest_enabled`, independiente de
+      `email_enabled`). Contenido: máx/mín/racha (con fecha), lluvia
+      acumulada, comparación **vs la semana anterior** (no "vs normal": la
+      estación es de julio 2026, no hay años previos con qué comparar
+      todavía) y enlace a la mejor foto de la semana (`CameraStore.best_of_week`,
+      usa el archivo permanente de la idea 3). `services/digest.py` es puro
+      (recibe filas ya obtenidas) para poder probarse sin InfluxDB; la
+      orquestación (qué semana pedir, estado "ya enviada" en
+      `digest_state_file` para no duplicar tras un reinicio) vive en
+      `main.py::email_digest_task`. Botón "Enviar prueba" en el panel
+      (`/api/admin/test-digest`) manda con datos reales sin esperar al
+      día/hora ni marcar la semana como enviada.
 
 ## 0. Estaciones vecinas + "nuestro pronóstico" — en observación (2026-09-14)
 

@@ -188,6 +188,14 @@ class Settings(BaseSettings):
     email_to: Optional[str] = None           # destinatarios separados por coma
     email_categories: Optional[List[str]] = None  # None = todas
 
+    # Resumen semanal por correo (services/digest.py). Opt-in propio, aparte de
+    # email_enabled: comparte servidor/destinatarios pero alguien puede querer
+    # alertas sin el resumen, o viceversa.
+    email_digest_enabled: bool = False
+    email_digest_weekday: int = 0             # 0=lunes ... 6=domingo
+    email_digest_hour: int = 7                # hora LOCAL a partir de la cual se manda
+    digest_state_file: str = "/data/digest_state.json"  # última semana ya enviada
+
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None
 

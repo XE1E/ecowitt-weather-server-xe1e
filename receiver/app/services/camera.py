@@ -35,7 +35,7 @@ import logging
 import os
 import shutil
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -594,6 +594,22 @@ class CameraStore:
             return None
         candidatas = [e for e in entradas if e.get("condition") != "night"] or entradas
         return max(candidatas, key=lambda e: self._VISIBILITY_RANK.get(e.get("visibility"), -1))
+
+    def best_of_week(self, date_strs: List[str]) -> Optional[str]:
+        """De una lista de fechas (p. ej. los 7 días del resumen semanal, ver
+        services/digest.py), la que tuvo mejor visibilidad reportada. None si
+        ninguna tiene análisis. Compara sólo `best_of_day` de cada una -- ya es
+        la entrada de mayor visibilidad de ESE día, así que no hace falta
+        releer todas las entradas."""
+        mejor_fecha, mejor_rank = None, -1
+        for d in date_strs:
+            entry = self.best_of_day(d)
+            if entry is None:
+                continue
+            rank = self._VISIBILITY_RANK.get(entry.get("visibility"), -1)
+            if rank > mejor_rank:
+                mejor_fecha, mejor_rank = d, rank
+        return mejor_fecha
 
     def frame_path(self, date_str: str, ts_str: str, tolerance_seconds: int = 600) -> Optional[str]:
         """Ruta al fotograma archivado (ver `_archive`) más cercano a un `ts` ISO

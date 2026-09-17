@@ -194,3 +194,28 @@ def test_guardar_una_foto_dispara_la_purga_del_analisis(tmp_path):
 
     st.save(b"\xff\xd8\xff" + b"x" * 2000, taken_at=datetime.now(timezone.utc))
     assert st.get_daily_analysis(viejo) is None
+
+
+# ---------- best_of_week (resumen semanal por correo, services/digest.py) ----------
+def test_best_of_week_picks_the_best_visibility_across_days(tmp_path):
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-15T12:00:00+00:00", condition="overcast"))
+    st.save_analysis(_analisis("2026-09-18T12:00:00+00:00", condition="clear"))
+    # Sube la visibilidad del 18 a mano (el helper _analisis siempre pone "good")
+    entradas = st.get_daily_analysis("2026-09-18")
+    entradas[0]["visibility"] = "excellent"
+    st._write_daily_analysis("2026-09-18", entradas)
+
+    semana = ["2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21"]
+    assert st.best_of_week(semana) == "2026-09-18"
+
+
+def test_best_of_week_none_without_any_analysis(tmp_path):
+    st = _store(tmp_path)
+    assert st.best_of_week(["2026-09-15", "2026-09-16"]) is None
+
+
+def test_best_of_week_skips_days_without_analysis(tmp_path):
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-16T12:00:00+00:00"))
+    assert st.best_of_week(["2026-09-15", "2026-09-16", "2026-09-17"]) == "2026-09-16"

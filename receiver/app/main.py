@@ -58,6 +58,7 @@ from .services import security as secsvc
 from .services.camera import CameraStore
 from .services.timelapse import TimelapseService, TimelapseError
 from .services import csv_export
+from .services import digest
 from .services import sky_analyzer
 from .services import backup_status
 from .services import r2_quota
@@ -195,6 +196,8 @@ async def lifespan(app: FastAPI):
     # Señal de lluvia acercándose (estaciones vecinas + viento propio): solo
     # log, para evaluar "qué tanto dispara" sin depender del dashboard abierto
     background_tasks.append(asyncio.create_task(nearby_rain_signal_watchdog()))
+    # Resumen semanal por correo (opt-in, ver email_digest_enabled)
+    background_tasks.append(asyncio.create_task(email_digest_task()))
 
     # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
     # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
@@ -1195,6 +1198,21 @@ async def admin_test_email(authorization: Optional[str] = Header(default=None)):
     try:
         await alert_service.send_test_email()
         return {"status": "ok", "message": "Correo enviado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/test-digest")
+async def admin_test_digest(authorization: Optional[str] = Header(default=None)):
+    """Envía el resumen semanal AHORA MISMO (con los datos reales de los últimos
+    7 días), sin esperar al día/hora programados y sin marcar la semana como
+    ya enviada -- ver `_build_and_send_digest(force=True)`."""
+    _require_admin(authorization)
+    if not settings.email_enabled or not settings.smtp_host or not settings.email_to:
+        raise HTTPException(status_code=400, detail="Correo no configurado (falta host o destinatario)")
+    try:
+        await _build_and_send_digest(force=True)
+        return {"status": "ok", "message": "Resumen enviado"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -3357,6 +3375,70 @@ async def nearby_rain_signal_watchdog():
         except Exception as e:
             logger.error(f"Nearby rain-signal watchdog error: {e}")
         await asyncio.sleep(600)  # 10 min, igual TTL que xweather.py/netatmo.py
+
+
+def _read_digest_state() -> Optional[str]:
+    """Última semana ISO ya enviada (o None si nunca), desde `digest_state_file`."""
+    try:
+        with open(settings.digest_state_file, encoding="utf-8") as f:
+            return json.load(f).get("last_sent_week")
+    except (OSError, ValueError):
+        return None
+
+
+def _write_digest_state(week: str) -> None:
+    try:
+        os.makedirs(os.path.dirname(settings.digest_state_file), exist_ok=True)
+        tmp = settings.digest_state_file + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"last_sent_week": week}, f)
+        os.replace(tmp, settings.digest_state_file)
+    except OSError as e:
+        logger.warning("no se pudo guardar el estado del resumen semanal: %s", e)
+
+
+async def _build_and_send_digest(force: bool = False) -> None:
+    """
+    Arma y manda el resumen semanal. `force=True` (usado por el botón "Enviar
+    prueba" del panel) ignora `email_digest_enabled`/el día-hora configurados y
+    NO actualiza `digest_state_file` -- una prueba no debe "gastar" el envío
+    de la semana real.
+    """
+    week_start, week_end, week_dates = digest.week_range(datetime.now().astimezone().date())
+    _, _, prev_dates = digest.week_range(datetime.strptime(week_start, "%Y-%m-%d").date())
+
+    all_rows = await storage.query_daily_summaries(start="-16d")
+    week_set, prev_set = set(week_dates), set(prev_dates)
+    week_rows = [r for r in all_rows if str(r.get("date")) in week_set]
+    prev_rows = [r for r in all_rows if str(r.get("date")) in prev_set]
+
+    best_photo_date = _camera.best_of_week(week_dates)
+
+    msg = digest.build_weekly_digest(week_rows, prev_rows, week_start, week_end, best_photo_date=best_photo_date)
+    if force:
+        msg["subject"] = "🧪 Prueba — " + msg["subject"]
+    await alert_service.send_digest(msg["subject"], msg["body"])
+    if not force:
+        _write_digest_state(digest.week_id(datetime.now().astimezone().date()))
+
+
+async def email_digest_task():
+    """Revisa cada hora (mismo idiom que timelapse_task/daily_rollup_task) si
+    toca mandar el resumen semanal (email_digest_enabled + día/hora configurados,
+    ver digest.is_due). El estado de "ya se mandó esta semana" vive en un
+    archivito propio (digest_state_file) para no duplicar si el receiver se
+    reinicia el mismo día programado."""
+    await asyncio.sleep(180)  # gracia inicial
+    while True:
+        try:
+            if getattr(settings, "email_digest_enabled", False):
+                now = datetime.now().astimezone()
+                if digest.is_due(now, settings.email_digest_weekday, settings.email_digest_hour, _read_digest_state()):
+                    await _build_and_send_digest(force=False)
+                    logger.info("Resumen semanal enviado")
+        except Exception as e:
+            logger.error(f"Resumen semanal falló: {e}")
+        await asyncio.sleep(3600)
 
 
 # --- Netatmo: login OAuth2 (fase 3 de estaciones vecinas) -------------------

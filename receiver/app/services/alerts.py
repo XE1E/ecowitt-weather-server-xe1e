@@ -1262,3 +1262,11 @@ class AlertService:
             "Si lo recibes, las notificaciones por correo están configuradas correctamente.",
             subject="🧪 Prueba — Estación Clima XE1E",
         )
+
+    async def send_digest(self, subject: str, body: str) -> None:
+        """Envía el resumen semanal (services/digest.py) por el mismo canal SMTP
+        que las alertas -- reusa `_send_email` tal cual, sin pasar por
+        `_default_notifier` (el resumen no es una alerta: no respeta
+        `email_categories` ni requiere `alerts_enabled`, sólo su propio
+        `email_digest_enabled`, que valida quien llama)."""
+        await self._send_email(body, subject=subject)

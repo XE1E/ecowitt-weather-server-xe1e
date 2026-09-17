@@ -125,6 +125,7 @@ EDITABLE_KEYS = {
     # Notificaciones por correo (SMTP)
     "email_enabled", "smtp_host", "smtp_port", "smtp_user", "smtp_password",
     "smtp_tls", "email_from", "email_to", "email_categories",
+    "email_digest_enabled", "email_digest_weekday", "email_digest_hour",
     "waqi_token",
     "weatherapi_key",
     # Estaciones vecinas (Xweather) - ver docs/internal/PLAN-ESTACIONES-VECINAS.md
