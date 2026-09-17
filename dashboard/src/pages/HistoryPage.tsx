@@ -6,6 +6,7 @@ import { HistoryDayDetail } from '../components/station/HistoryDayDetail'
 import { HistoryCharts, HistPoint } from '../components/station/HistoryCharts'
 import { MultiVariableChart } from '../components/station/MultiVariableChart'
 import { PageInfo } from '../components/station/PageInfo'
+import { trackEvent } from '../analytics'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const MES_ABR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -124,6 +125,7 @@ export function HistoryPage() {
     : (l: string) => `${l} ${sel.year}`
 
   const downloadCsv = () => {
+    trackEvent('csv_export', { scope: isMonth ? 'month' : 'year' })
     // El CSV sale en la MISMA unidad que la pantalla, y con la unidad escrita en
     // el encabezado. Antes se exportaban los valores métricos crudos con cabeceras
     // sin unidad: se veía la tabla en °F y se descargaba un archivo en °C.

@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { useUnits } from '../../units'
+import { trackEvent } from '../../analytics'
 
 interface Row {
   _time: string
@@ -151,6 +152,7 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
             {has && (
               <a
                 href={`/api/history?start=${start}&stop=${stop}&format=csv`}
+                onClick={() => trackEvent('csv_export', { scope: 'day' })}
                 className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10"
                 title="Descargar los datos de este día en CSV"
               >

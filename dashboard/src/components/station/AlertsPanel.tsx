@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAlerta } from '../../theme/icons'
+import { trackEvent } from '../../analytics'
 
 interface Alert {
   key: string
@@ -136,7 +137,10 @@ export function AlertsPanel() {
       {enabled && (
         <>
           <button
-            onClick={() => setShowHistory((v) => !v)}
+            onClick={() => setShowHistory((v) => {
+              if (!v) trackEvent('alert_history_open')
+              return !v
+            })}
             className="mt-3 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition-colors"
           >
             {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}

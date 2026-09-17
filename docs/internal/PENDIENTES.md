@@ -43,10 +43,16 @@ mano). Cron de `backup-camera-archivo.sh` agregada (48 3 * * *, entre
       `BestPhotoCard` (ya se degradaba solo a texto sin foto). Ojo: como el
       archivo arranca el 2026-09-16, ningún año anterior a esa fecha tendrá
       foto real nunca -- sólo lo que se archive de aquí en adelante.
-- [ ] **4. PostHog con eventos propios.** Hoy solo mide `$pageview`
-      (`dashboard/src/analytics.ts`). Instrumentar clics en tarjetas clave
-      (pronóstico propio, radar, cámara…) para decidir con datos qué construir
-      después.
+- [x] **4. PostHog con eventos propios.** `trackEvent()` nuevo en
+      `analytics.ts` (no-op fuera de vistas públicas, nunca rompe la
+      interacción real). 6 eventos instrumentados: `units_toggle`,
+      `radar_layer_change`, `forecast_source_change` (Open-Meteo/SMN),
+      `csv_export` (día/mes/año -- adopción de la idea 1),
+      `alert_history_open` (adopción de la idea 2) y `onthisday_photo_view`
+      (adopción de la idea 3). Documentado en `docs/GUIA.md`. No se tocó
+      `dashboard/public/guia.html`: es una guía más ligera, sin sección de
+      analítica/backups que mantener en sync (se verificó antes de omitirlo,
+      no es un descuido).
 - [ ] **5. Digest semanal/mensual por correo.** Reutilizar el SMTP de
       alertas (ya arreglado, `36cde6d`) para un correo con récords de la
       semana, comparación vs normal y mejor foto. El más grande: requiere

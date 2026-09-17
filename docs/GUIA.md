@@ -1571,6 +1571,15 @@ en OTROS sitios, mediría tráfico ajeno). Incluye **Session Replay**
 propio con tendencia de visitas, país, páginas más vistas, dispositivo y
 navegador, armado desde el panel de PostHog (acceso con cuenta propia).
 
+Desde 2026-09-16, además del `$pageview` (uno por página, ya dice qué se
+visita) y el autocapture de clics (genérico, sin nombre de negocio), hay
+**eventos propios** para saber qué se usa DENTRO de una página:
+`units_toggle` (a qué sistema cambia), `radar_layer_change` (qué capa del
+mapa), `forecast_source_change` (Open-Meteo vs SMN), `csv_export` (día, mes
+o año), `alert_history_open` (adopción del historial de alertas) y
+`onthisday_photo_view` (clic en la foto de un año en la efeméride "En este
+día"). Ver `dashboard/src/analytics.ts` (`trackEvent`).
+
 **Estación en operación:** el WS2910 está **instalado y enviando datos reales**
 desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`
 (*Weather Services → Customized → Ecowitt*), y las lecturas reales se ven en

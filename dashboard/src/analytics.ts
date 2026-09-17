@@ -31,4 +31,25 @@ export function initAnalytics(): void {
   })
 }
 
+/**
+ * Evento propio, más allá del `$pageview` y el autocapture de clics de
+ * PostHog (que sí sigue activo, pero da nombres de evento genéricos --
+ * "clicked <button>" sin contexto de negocio). Antes de esto no había NADA
+ * con nombre propio: imposible saber, por ejemplo, si alguien usa el
+ * radar o el historial de alertas sin adivinar a partir de autocapture.
+ *
+ * No-op fuera de las vistas donde corre `initAnalytics()` (admin/kiosko/embed)
+ * -- varios de los componentes que llaman esto (UnitsProvider, RadarCard) se
+ * comparten con esas vistas -- y nunca debe tumbar la interacción real que
+ * lo dispara si PostHog fallara por lo que sea.
+ */
+export function trackEvent(name: string, props?: Record<string, unknown>): void {
+  if (!initialized) return
+  try {
+    posthog.capture(name, props)
+  } catch {
+    // intencional: la analítica nunca debe romper la app
+  }
+}
+
 export { posthog }

@@ -7,6 +7,7 @@ import { useUnits } from '../units'
 import { LOCATION } from '../config'
 import { PageInfo } from '../components/station/PageInfo'
 import { BestPhotoCard } from '../components/station/BestPhotoCard'
+import { trackEvent } from '../analytics'
 
 interface Rec { value: number; date: string }
 interface Period {
@@ -399,7 +400,7 @@ export function ClimatePage() {
                       return (
                         <tr
                           key={y.date}
-                          onClick={() => setOtdPhotoDate(y.date)}
+                          onClick={() => { setOtdPhotoDate(y.date); trackEvent('onthisday_photo_view', { year: y.date.slice(0, 4) }) }}
                           className={`border-t border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activa ? 'bg-white/5' : ''}`}
                         >
                           <td className={`py-1 ${activa ? 'text-slate-100 font-semibold' : 'text-slate-300'}`}>{y.date.slice(0, 4)}</td>

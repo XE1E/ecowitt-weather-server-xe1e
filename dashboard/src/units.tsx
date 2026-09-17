@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
+import { trackEvent } from './analytics'
 
 export type UnitSystem = 'metric' | 'imperial'
 
@@ -74,6 +75,7 @@ export function UnitsProvider({ children }: { children: ReactNode }) {
     setSystem((prev) => {
       const next = prev === 'metric' ? 'imperial' : 'metric'
       localStorage.setItem('units', next)
+      trackEvent('units_toggle', { to: next })
       return next
     })
 

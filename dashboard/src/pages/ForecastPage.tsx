@@ -5,6 +5,7 @@ import { useUnits } from '../units'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { describeDay, ForecastResult } from '../forecast'
 import { LOCATION } from '../config'
+import { trackEvent } from '../analytics'
 
 function dayName(iso: string, i: number): string {
   if (i === 0) return 'Hoy'
@@ -128,8 +129,8 @@ export function ForecastPage() {
         <div className="flex flex-col items-end gap-2">
           {/* Selector de fuente */}
           <div className="flex gap-1 rounded-lg bg-white/[0.03] p-0.5">
-            <button className={srcBtn(source === 'om')} onClick={() => setSource('om')}>Open-Meteo</button>
-            <button className={srcBtn(source === 'smn')} onClick={() => setSource('smn')}>SMN oficial</button>
+            <button className={srcBtn(source === 'om')} onClick={() => { setSource('om'); trackEvent('forecast_source_change', { source: 'om' }) }}>Open-Meteo</button>
+            <button className={srcBtn(source === 'smn')} onClick={() => { setSource('smn'); trackEvent('forecast_source_change', { source: 'smn' }) }}>SMN oficial</button>
           </div>
           {/* Vista por día / por hora */}
           <div className="flex gap-1">

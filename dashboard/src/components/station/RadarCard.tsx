@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { LOCATION } from '../../config'
+import { trackEvent } from '../../analytics'
 
 /**
  * Mapa meteorológico vía embed de Windy, centrado en la estación. Windy usa
@@ -39,7 +40,7 @@ export function RadarCard() {
       <p className="text-xs text-slate-500 -mt-1 mb-2">Vía Windy</p>
       <div className="flex flex-wrap gap-1 mb-2">
         {LAYERS.map((l) => (
-          <button key={l.key} className={btn(layer === l.key)} onClick={() => setLayer(l.key)}>{l.label}</button>
+          <button key={l.key} className={btn(layer === l.key)} onClick={() => { setLayer(l.key); trackEvent('radar_layer_change', { layer: l.key }) }}>{l.label}</button>
         ))}
       </div>
       <div className="rounded-lg overflow-hidden" style={{ height: 420 }}>
