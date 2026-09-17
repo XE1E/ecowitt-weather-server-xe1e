@@ -117,6 +117,7 @@ GET /api/history
 | `stop` | string | `now()` | Fin del rango. Formatos: `now()`, `2024-01-02T00:00:00Z` |
 | `measurement` | string | `weather` | Nombre del measurement en InfluxDB |
 | `station` | string | *(principal)* | Estación **secundaria** (p. ej. `gw1100`); omitir = principal |
+| `format` | string | `json` | `json` (default) o `csv` para descargar el mismo rango como archivo (`Content-Disposition: attachment`) |
 
 **Examples:**
 
@@ -129,6 +130,9 @@ curl "http://localhost:8080/api/history?start=-7d"
 
 # Rango específico
 curl "http://localhost:8080/api/history?start=2024-01-01T00:00:00Z&stop=2024-01-02T00:00:00Z"
+
+# Descargar como CSV
+curl -OJ "http://localhost:8080/api/history?start=-7d&format=csv"
 ```
 
 **Response:**
@@ -230,7 +234,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
-| `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`) |
+| `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`). Acepta `format=csv` para descargarlo directo |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET`/`HEAD /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At`. Sirve para enlazarla como webcam en servicios externos (p. ej. AWEKAS) — acepta HEAD porque varios de esos servicios validan el enlace así antes de aceptarlo |
 | `GET`/`HEAD /api/camera/webcam.jpg` | Igual, pero recompuesta en 4:3 (800×600) con un cintillo de datos de la estación abajo — para AWEKAS/Weathercloud (ver abajo) |

@@ -1,7 +1,33 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-09-14.
+> Última actualización: 2026-09-16.
+
+## -1. Ronda "aprovechar lo que ya tenemos" (2026-09-16, en curso)
+
+5 ideas de software (sin hardware nuevo) para exprimir datos/infra que ya
+existe, en vez de comprar sensores nuevos (eso queda para una 2ª etapa de la
+estación). Orden: de menor a mayor complejidad/decisiones de producto.
+
+- [x] **1. Exportar CSV.** `GET /api/history` y `GET /api/summaries/daily`
+      aceptan `format=csv` (`receiver/app/services/csv_export.py`, con tests).
+      Botón "⬇ CSV" nuevo en `HistoryDayDetail.tsx` (vista de Día). La vista
+      Mes/Año de `HistoryPage.tsx` **ya tenía** su propio CSV client-side
+      (unit-aware) — no se duplicó, se dejó igual.
+- [ ] **2. Historial de alertas como página.** El motor ya guarda hasta 100
+      eventos/24h (`alerts.py: get_history()`), pero hoy solo se usa en un
+      endpoint de diagnóstico interno. Falta exponerlo público y una vista.
+- [ ] **3. Efeméride con foto real.** Cruzar `/api/climate/onthisday` (dato
+      de hace 1 año) con el archivo de fotos ya respaldado
+      (`/api/camera/best/<fecha>`) — hoy nunca se combinan.
+- [ ] **4. PostHog con eventos propios.** Hoy solo mide `$pageview`
+      (`dashboard/src/analytics.ts`). Instrumentar clics en tarjetas clave
+      (pronóstico propio, radar, cámara…) para decidir con datos qué construir
+      después.
+- [ ] **5. Digest semanal/mensual por correo.** Reutilizar el SMTP de
+      alertas (ya arreglado, `36cde6d`) para un correo con récords de la
+      semana, comparación vs normal y mejor foto. El más grande: requiere
+      decidir cadencia/plantilla/opt-in antes de programarlo.
 
 ## 0. Estaciones vecinas + "nuestro pronóstico" — en observación (2026-09-14)
 

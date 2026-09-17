@@ -47,10 +47,12 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
   const [cur, setCur] = useState(date)
   const [rows, setRows] = useState<Row[] | null>(null)
 
+  // Día local CDMX (UTC-6): de 06:00Z a 06:00Z del día siguiente. Fuera del
+  // efecto porque el botón de descarga necesita el mismo rango exacto.
+  const start = `${cur}T06:00:00Z`
+  const stop = `${shiftDay(cur, 1)}T06:00:00Z`
+
   useEffect(() => {
-    // Día local CDMX (UTC-6): de 06:00Z a 06:00Z del día siguiente
-    const start = `${cur}T06:00:00Z`
-    const stop = `${shiftDay(cur, 1)}T06:00:00Z`
     let cancel = false
     setRows(null)
     fetch(`/api/history?start=${start}&stop=${stop}`)
@@ -146,6 +148,15 @@ export function HistoryDayDetail({ date, onBack }: { date: string; onBack: () =>
           <div className="flex gap-2">
             <button onClick={() => setCur(shiftDay(cur, -1))} className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10">← {shortDay(shiftDay(cur, -1))}</button>
             <button onClick={() => setCur(shiftDay(cur, 1))} className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10">{shortDay(shiftDay(cur, 1))} →</button>
+            {has && (
+              <a
+                href={`/api/history?start=${start}&stop=${stop}&format=csv`}
+                className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10"
+                title="Descargar los datos de este día en CSV"
+              >
+                ⬇ CSV
+              </a>
+            )}
           </div>
         </div>
       </div>

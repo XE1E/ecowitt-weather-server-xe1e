@@ -57,6 +57,7 @@ from .services import settings_store
 from .services import security as secsvc
 from .services.camera import CameraStore
 from .services.timelapse import TimelapseService, TimelapseError
+from .services import csv_export
 from .services import sky_analyzer
 from .services import backup_status
 from .services import r2_quota
@@ -746,7 +747,8 @@ async def get_history(
     start: str = "-24h",
     stop: str = "now()",
     measurement: str = "weather",
-    station: Optional[str] = None
+    station: Optional[str] = None,
+    format: str = "json"
 ):
     """
     Get historical weather data.
@@ -756,7 +758,10 @@ async def get_history(
         stop: End time (e.g., "now()", "2024-01-02T00:00:00Z")
         measurement: Measurement name
         station: None/omitido = principal; nombre = estación secundaria
+        format: "json" (default) o "csv" para descargar el mismo rango como archivo
     """
+    if format not in ("json", "csv"):
+        raise HTTPException(status_code=400, detail="format debe ser 'json' o 'csv'")
     try:
         secsvc.validate_flux_time(start, "start")
         secsvc.validate_flux_time(stop, "stop")
@@ -768,6 +773,18 @@ async def get_history(
         data = await storage.query(
             start=start, stop=stop, measurement=measurement, station=station
         )
+        if format == "csv":
+            fname = "_".join([
+                measurement,
+                station or "principal",
+                csv_export.safe_filename_part(start),
+                csv_export.safe_filename_part(stop),
+            ])
+            return Response(
+                content=csv_export.rows_to_csv(data),
+                media_type="text/csv; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="{fname}.csv"'},
+            )
         return {"data": data}
     except Exception as e:
         logger.error(f"Error querying history: {e}")
@@ -2978,7 +2995,7 @@ async def _timelapse_generar(date: str) -> None:
 
 
 @app.get("/api/summaries/daily")
-async def get_daily_summaries(days: int = 30, station: Optional[str] = None):
+async def get_daily_summaries(days: int = 30, station: Optional[str] = None, format: str = "json"):
     """
     Resúmenes diarios crudos de los últimos `days` días LOCALES, una fila por día.
 
@@ -2998,6 +3015,8 @@ async def get_daily_summaries(days: int = 30, station: Optional[str] = None):
     escribe el rollup al cerrarlo, y media jornada mezclada con días completos
     falsearía cualquier mínima o promedio de la serie.
     """
+    if format not in ("json", "csv"):
+        raise HTTPException(status_code=400, detail="format debe ser 'json' o 'csv'")
     try:
         secsvc.validate_station(station)
     except ValueError as e:
@@ -3011,6 +3030,13 @@ async def get_daily_summaries(days: int = 30, station: Optional[str] = None):
     wanted = set(aggregator.local_recent_dates(days))
     out = sorted((r for r in rows if str(r.get("date")) in wanted),
                  key=lambda r: str(r.get("date")))
+    if format == "csv":
+        fname = f"resumenes_diarios_{station or 'principal'}_{days}d"
+        return Response(
+            content=csv_export.rows_to_csv(out),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{fname}.csv"'},
+        )
     return {"days": days, "data": out}
 
 
