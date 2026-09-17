@@ -14,9 +14,15 @@ estación). Orden: de menor a mayor complejidad/decisiones de producto.
       Botón "⬇ CSV" nuevo en `HistoryDayDetail.tsx` (vista de Día). La vista
       Mes/Año de `HistoryPage.tsx` **ya tenía** su propio CSV client-side
       (unit-aware) — no se duplicó, se dejó igual.
-- [ ] **2. Historial de alertas como página.** El motor ya guarda hasta 100
-      eventos/24h (`alerts.py: get_history()`), pero hoy solo se usa en un
-      endpoint de diagnóstico interno. Falta exponerlo público y una vista.
+- [x] **2. Historial de alertas.** `GET /api/alerts/history?hours=24&limit=50`
+      (nuevo, público) envuelve `alert_service.get_history()`, que ya existía
+      pero solo se usaba dentro de `/api/admin/status` (privado). En vez de una
+      página aparte, se sumó como sección plegable ("Historial reciente") en
+      la tarjeta `AlertsPanel` que ya está en Inicio y Mi Tablero -- misma
+      insignia de estación e icono por variable que las activas, con
+      "normalizada HH:MM" o "activa" por entrada. Ojo: vive en memoria del
+      proceso (hasta 100 entradas), no es un log persistente -- se vacía si el
+      receiver se reinicia.
 - [ ] **3. Efeméride con foto real.** Cruzar `/api/climate/onthisday` (dato
       de hace 1 año) con el archivo de fotos ya respaldado
       (`/api/camera/best/<fecha>`) — hoy nunca se combinan.

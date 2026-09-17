@@ -971,3 +971,40 @@ def test_retired_sensor_is_eventually_forgotten():
     asyncio.run(svc.process({"temperature_ch1": 20.0}, now=later + timedelta(hours=2)))
     asyncio.run(svc.process({"temperature_outdoor": 25.0}, now=later + timedelta(hours=3)))
     assert "sensor_temperature_ch1" in svc.active
+
+
+def test_get_history_filters_by_hours_window():
+    """Base de GET /api/alerts/history: descarta lo anterior a la ventana pedida."""
+    from datetime import datetime, timedelta
+
+    svc = AlertService(make_settings(), notifier=Collector())
+    old = (datetime.utcnow() - timedelta(hours=48)).isoformat() + "Z"
+    recent = (datetime.utcnow() - timedelta(hours=1)).isoformat() + "Z"
+    svc._history.append({"key": "temp_high", "message": "vieja", "timestamp": old, "station": None})
+    svc._history.append({"key": "temp_low", "message": "reciente", "timestamp": recent, "station": None})
+
+    out = svc.get_history(limit=10, hours=24)
+    assert [e["message"] for e in out] == ["reciente"]
+
+
+def test_get_history_respects_limit_newest_first():
+    from datetime import datetime
+
+    svc = AlertService(make_settings(), notifier=Collector())
+    now_iso = datetime.utcnow().isoformat() + "Z"
+    for i in range(5):
+        svc._history.append({"key": f"k{i}", "message": f"m{i}", "timestamp": now_iso, "station": None})
+
+    out = svc.get_history(limit=2, hours=24)
+    # El deque se recorre invertido: lo último insertado sale primero.
+    assert [e["message"] for e in out] == ["m4", "m3"]
+
+
+def test_add_to_history_marks_resolved_on_matching_key():
+    svc = AlertService(make_settings(), notifier=Collector())
+    svc._add_to_history("temp_high", "Temperatura alta", resolved=False)
+    svc._add_to_history("temp_high", "Temperatura alta", resolved=True)
+
+    entry = svc.get_history(limit=1, hours=24)[0]
+    assert entry["key"] == "temp_high"
+    assert "resolved_at" in entry

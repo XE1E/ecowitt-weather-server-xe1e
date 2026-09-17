@@ -230,6 +230,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/wind/rose?start=-7d` | Rosa de vientos (16 sectores, frecuencia y velocidad) |
 | `GET /api/almanac` | Almanaque: sol, crepúsculos, luna y planetas |
 | `GET /api/alerts` | Alertas activas |
+| `GET /api/alerts/history?hours=24&limit=50` | Historial reciente (activadas y, si ya se normalizaron, con `resolved_at`). En memoria del proceso (hasta 100 entradas) -- un reinicio del receiver lo vacía, no es un log persistente |
 | `GET /api/metar?station=MMMX` | METAR del aeropuerto (proxy a aviationweather.gov) |
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |

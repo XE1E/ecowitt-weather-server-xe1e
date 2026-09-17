@@ -3475,6 +3475,20 @@ async def get_alerts():
     }
 
 
+@app.get("/api/alerts/history")
+async def get_alerts_history(hours: int = 24, limit: int = 50):
+    """
+    Historial reciente de alertas (activadas y, si ya se normalizaron, con
+    `resolved_at`). Vive en memoria del proceso (`AlertService._history`, hasta
+    100 entradas) -- no es un log persistente en InfluxDB, así que un reinicio
+    del receiver lo vacía. Antes solo se veía dentro de /api/admin/status
+    (requiere sesión); esto lo expone público, igual que /api/alerts.
+    """
+    hours = max(1, min(hours, 24 * 30))
+    limit = max(1, min(limit, 100))
+    return {"history": alert_service.get_history(limit=limit, hours=hours)}
+
+
 @app.get("/api/metar")
 async def get_metar_data(station: str = "MMMX"):
     """Latest METAR for an airport (default MMMX / Ciudad de México)."""
