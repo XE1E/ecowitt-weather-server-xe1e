@@ -9,6 +9,13 @@
 existe, en vez de comprar sensores nuevos (eso queda para una 2ª etapa de la
 estación). Orden: de menor a mayor complejidad/decisiones de producto.
 
+**Ideas 1-3 ya en producción (2026-09-16):** pusheado, VPS actualizado
+(`git pull` + `docker compose build --no-cache receiver dashboard` +
+`--force-recreate`) y verificado (contenedores healthy, `/api/alerts/history`
+y `/api/history?format=csv` responden, `backup-camera-archivo.sh` corrido a
+mano). Cron de `backup-camera-archivo.sh` agregada (48 3 * * *, entre
+`analisis` y `rubik-site`).
+
 - [x] **1. Exportar CSV.** `GET /api/history` y `GET /api/summaries/daily`
       aceptan `format=csv` (`receiver/app/services/csv_export.py`, con tests).
       Botón "⬇ CSV" nuevo en `HistoryDayDetail.tsx` (vista de Día). La vista
