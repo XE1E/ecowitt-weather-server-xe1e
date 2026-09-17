@@ -719,9 +719,12 @@ de datos para `/api/camera/analysis/accuracy` y para una futura corrección de s
 del pronóstico (pendiente, ver `docs/internal/PENDIENTES.md` §2.e).
 
 **Mejor foto del día:** elegida por mayor visibilidad reportada ese día (excluye las
-tomas de noche salvo que el día entero haya sido de noche) -- no es un juicio
-estético, es la métrica más honesta que ya se guardaba. Se ve en `/pro/camara` junto
-al selector de día que comparten Timelapse e Histórico.
+tomas de noche salvo que el día entero haya sido de noche). Desde 2026-09-16, a igual
+visibilidad --el caso casi siempre, ~95% de las capturas salen "good"-- desempata el
+tipo de nube más interesante (cumulonimbus/altocumulus por encima de estratos lisos,
+`sky_analyzer.CLOUD_TYPE_INTEREST`); a empate total, gana la primera del día. Se ve en
+`/pro/camara` junto al selector de día que comparten Timelapse e Histórico, y también
+decide la foto del resumen semanal por correo (`CameraStore.best_of_week`).
 
 **Cruce con METAR:** la tarjeta de METAR (Homepage y `/pro/aeronautica`, aeropuerto
 MMMX) muestra, junto a sus capas de nubes con altura, lo que ve la cámara en ese mismo

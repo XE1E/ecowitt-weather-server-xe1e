@@ -580,6 +580,29 @@ CLOUD_TYPE_ES = {
     "unknown": "Desconocido",
 }
 
+# Qué tan "interesante" (visualmente) es cada tipo de nube -- para desempatar
+# la elección de "mejor foto del día/semana" (services/camera.py:
+# best_of_day/best_of_week) cuando la visibilidad es igual, que es case casi
+# siempre (medido: 1124 de 1178 capturas en 2 semanas salieron "good"). NO
+# reemplaza a la visibilidad -- sigue mandando ella primero, esto sólo pesa
+# dentro de un mismo nivel de visibilidad. Es un gusto editorial, fácil de
+# retocar: valores más altos = más dramático/con textura.
+# Cualquier tipo no listado (p. ej. si la IA devuelve algo fuera del enum del
+# prompt, como "cirrostratus") cae al mismo nivel que "clear"/"unknown": ni
+# penaliza ni favorece un valor que no se reconoce.
+CLOUD_TYPE_INTEREST = {
+    "cumulonimbus": 5,   # tormenta, lo más dramático
+    "altocumulus": 4,    # cielo aborregado, mucha textura
+    "mixed": 4,
+    "cumulus": 3,        # nubes de bulto clásicas
+    "cirrus": 3,         # plumas/estelas
+    "stratocumulus": 2,  # capa con relieve
+    "nimbostratus": 1,   # capa lisa de lluvia
+    "stratus": 1,        # capa lisa, sin relieve
+    "clear": 0,          # sin nubes que valorar
+    "unknown": 0,
+}
+
 VISIBILITY_ES = {
     "excellent": "Excelente",
     "good": "Buena",

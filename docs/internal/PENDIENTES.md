@@ -15,9 +15,34 @@ servicios tocados + `--force-recreate`) y verificado (contenedores healthy,
 sin errores en logs, `/api/alerts/history` y `/api/history?format=csv`
 responden, `backup-camera-archivo.sh` corrido a mano). Cron de
 `backup-camera-archivo.sh` agregada (48 3 * * *, entre `analisis` y
-`rubik-site`). Pendiente del lado del usuario: activar y probar el Resumen
-semanal (idea 5) desde Admin → Notificaciones cuando quiera — queda
-desactivado por omisión (opt-in).
+`rubik-site`). **Resumen semanal (idea 5) ya activado y probado en
+producción (2026-09-16):** correo de prueba enviado con datos reales
+(récords, comparación, foto), `email_digest_enabled=true` persistido y
+aplicado tras reiniciar el receiver -- la prueba no marcó la semana como
+enviada, así que el envío real sigue su curso normal el próximo lunes 7am.
+
+### Ajuste posterior: criterio de "mejor foto" (2026-09-16)
+
+- [x] **Desempate por tipo de nube.** La visibilidad casi nunca varía
+      (medido: ~95% de las capturas salen "good"), así que el desempate real
+      era "la primera del día", sin mirar qué tan interesante se veía el
+      cielo. Se agregó `sky_analyzer.CLOUD_TYPE_INTEREST` (cumulonimbus/
+      altocumulus por encima de estratos lisos) como SEGUNDO criterio, sólo
+      dentro de un mismo nivel de visibilidad -- la visibilidad sigue
+      mandando primero. Afecta `best_of_day` y `best_of_week` (la foto del
+      resumen semanal). 4 tests nuevos.
+- [ ] **Luna/estrellas de noche — parqueado, necesita su propio diseño.** La
+      cámara (C325WB) usa visión nocturna **ColorPro** (color, no IR B/N;
+      el plan de cámara ya había verificado que "sí aporta" estructura del
+      horizonte de noche), y el prompt de la IA **ya le pide** mencionar
+      luna/estrellas si las ve -- pero eso cae en `description` (texto libre)
+      y se descarta al comprimir la entrada diaria. Haría falta: campo
+      estructurado nuevo en el schema de `sky_analyzer.py` (p. ej.
+      `moon_visible`/`stars_visible` o un `night_quality`), persistirlo en
+      `_append_to_daily`, y un criterio de "mejor" PROPIO para de noche
+      (distinto al de nubes de día). Falta ver fotos reales de noche para
+      calibrar el criterio antes de confiar en él -- no se hizo ahora para no
+      arriesgar el esquema del análisis sin poder probarlo.
 
 - [x] **1. Exportar CSV.** `GET /api/history` y `GET /api/summaries/daily`
       aceptan `format=csv` (`receiver/app/services/csv_export.py`, con tests).

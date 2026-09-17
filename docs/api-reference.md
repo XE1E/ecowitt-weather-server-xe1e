@@ -364,7 +364,11 @@ GET /api/camera/analysis/accuracy?days=30
 ```
 
 `GET /api/camera/best/<fecha>` elige, de ese día, la entrada con mayor visibilidad
-reportada (excluye la noche salvo que el día entero lo haya sido):
+reportada (excluye la noche salvo que el día entero lo haya sido); a igual
+visibilidad --el caso casi siempre, medido: ~95% de las capturas salen "good"--
+desempata el tipo de nube más "interesante" (`sky_analyzer.CLOUD_TYPE_INTEREST`:
+cumulonimbus/altocumulus por encima de estratos lisos), y a empate total, la
+primera del día:
 
 ```json
 GET /api/camera/best/2026-08-29

@@ -219,3 +219,62 @@ def test_best_of_week_skips_days_without_analysis(tmp_path):
     st = _store(tmp_path)
     st.save_analysis(_analisis("2026-09-16T12:00:00+00:00"))
     assert st.best_of_week(["2026-09-15", "2026-09-16", "2026-09-17"]) == "2026-09-16"
+
+
+# ---------- desempate por tipo de nube (misma visibilidad, casi siempre "good") ----------
+def _con_cloud_type(st, fecha, cloud_type):
+    """Cambia el cloud_type de la (única) entrada de ese día ya guardada."""
+    entradas = st.get_daily_analysis(fecha)
+    entradas[0]["cloud_type"] = cloud_type
+    st._write_daily_analysis(fecha, entradas)
+
+
+def test_best_of_day_prefers_more_interesting_cloud_type_at_equal_visibility(tmp_path):
+    """Con la misma visibilidad ("good", el caso casi siempre), gana el tipo de
+    nube más interesante en vez de "la primera del día"."""
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-18T09:00:00+00:00"))  # 09:00, cumulus (interés 3)
+    st.save_analysis(_analisis("2026-09-18T15:00:00+00:00"))  # 15:00, luego se sube a cumulonimbus (5)
+
+    entradas = st.get_daily_analysis("2026-09-18")
+    entradas[1]["cloud_type"] = "cumulonimbus"
+    st._write_daily_analysis("2026-09-18", entradas)
+
+    mejor = st.best_of_day("2026-09-18")
+    assert mejor["ts"] == "2026-09-18T15:00:00+00:00"
+
+
+def test_best_of_day_visibility_still_wins_over_cloud_interest(tmp_path):
+    """La visibilidad manda: un "good" con nube aburrida (stratus) le gana a un
+    "moderate" con la nube más dramática posible (cumulonimbus)."""
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-18T09:00:00+00:00"))  # good, cumulus
+    st.save_analysis(_analisis("2026-09-18T15:00:00+00:00"))  # se baja a moderate + cumulonimbus
+
+    entradas = st.get_daily_analysis("2026-09-18")
+    entradas[0]["cloud_type"] = "stratus"
+    entradas[1]["visibility"] = "moderate"
+    entradas[1]["cloud_type"] = "cumulonimbus"
+    st._write_daily_analysis("2026-09-18", entradas)
+
+    mejor = st.best_of_day("2026-09-18")
+    assert mejor["ts"] == "2026-09-18T09:00:00+00:00"
+
+
+def test_best_of_day_unrecognized_cloud_type_does_not_crash(tmp_path):
+    """Un tipo que la IA devolvió fuera del enum del prompt (visto en producción:
+    "cirrostratus") no debe tumbar la elección -- cae al nivel neutro."""
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-18T12:00:00+00:00"))
+    _con_cloud_type(st, "2026-09-18", "cirrostratus")
+    assert st.best_of_day("2026-09-18")["ts"] == "2026-09-18T12:00:00+00:00"
+
+
+def test_best_of_week_tiebreaks_by_cloud_interest_when_visibility_ties(tmp_path):
+    st = _store(tmp_path)
+    st.save_analysis(_analisis("2026-09-15T12:00:00+00:00"))  # good, cumulus
+    st.save_analysis(_analisis("2026-09-18T12:00:00+00:00"))  # good, luego altocumulus (más interesante)
+    _con_cloud_type(st, "2026-09-18", "altocumulus")
+
+    semana = ["2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21"]
+    assert st.best_of_week(semana) == "2026-09-18"
