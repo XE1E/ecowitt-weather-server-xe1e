@@ -304,6 +304,7 @@ def public_settings(settings) -> Dict[str, Any]:
         "backup_api_token_masked": mask(settings.backup_api_token),
         "r2_timelapse_retention_days": settings.r2_timelapse_retention_days,
         "r2_analisis_retention_days": settings.r2_analisis_retention_days,
+        "r2_archivo_retention_days": settings.r2_archivo_retention_days,
         "r2_influx_keep": settings.r2_influx_keep,
         "cloudflare_api_token_masked": mask(settings.cloudflare_api_token),
     }

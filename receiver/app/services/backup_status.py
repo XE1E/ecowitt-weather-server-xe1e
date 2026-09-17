@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional
 # Categorías que pueden reportar estado, una por script de scripts/backup-*.sh.
 # "rubik" no es de la estación (ver scripts/backup-rubik-site.sh) pero comparte
 # el mismo mecanismo de estado/alerta de "desactualizado" por simplicidad.
-CATEGORIES = ("influx", "fotos", "timelapse", "analisis", "rubik")
+CATEGORIES = ("influx", "fotos", "timelapse", "analisis", "archivo", "rubik")
 
 
 def read_status(base_dir: str, category: str) -> Optional[Dict[str, Any]]:

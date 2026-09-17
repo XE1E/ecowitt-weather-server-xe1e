@@ -2276,6 +2276,7 @@ async def backup_r2_credentials(request: Request):
         "r2_bucket": settings.r2_bucket,
         "r2_timelapse_retention_days": settings.r2_timelapse_retention_days,
         "r2_analisis_retention_days": settings.r2_analisis_retention_days,
+        "r2_archivo_retention_days": settings.r2_archivo_retention_days,
         "r2_influx_keep": settings.r2_influx_keep,
     }
 
@@ -2771,8 +2772,10 @@ async def camera_analysis_accuracy(days: int = 30):
 @app.get("/api/camera/best/{date}.jpg")
 async def camera_best_of_day_jpg(date: str):
     """
-    La foto elegida como mejor del día. 404 si el fotograma ya se podó -- las FOTOS
-    se retienen 7 días por defecto, mucho menos que el análisis que las eligió.
+    La foto elegida como mejor del día. Si el fotograma original ya se podó (las
+    capturas completas se retienen 7 días por defecto), cae al archivo permanente
+    de 1 foto/día (`CameraStore.archive_path`) antes de rendirse con 404 -- así
+    la efeméride ("En este día", años atrás) puede mostrar una foto real.
     """
     try:
         datetime.strptime(date, "%Y-%m-%d")
@@ -2783,6 +2786,8 @@ async def camera_best_of_day_jpg(date: str):
         raise HTTPException(status_code=404, detail=f"No hay análisis para {date}")
     ruta = _camera.frame_path(date, entry.get("ts", ""))
     if not ruta or not os.path.exists(ruta):
+        ruta = _camera.archive_path(date)
+    if not ruta:
         raise HTTPException(status_code=404, detail="La foto ya no está disponible (retención de fotos)")
     return FileResponse(
         ruta,

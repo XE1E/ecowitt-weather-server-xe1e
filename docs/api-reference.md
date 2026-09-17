@@ -373,9 +373,13 @@ GET /api/camera/best/2026-08-29
 ```
 
 `GET /api/camera/best/<fecha>.jpg` sirve esa foto. El metadato se conserva para
-siempre (vive en el análisis diario), pero la foto puede haberse podado ya --las
-fotos se retienen 7 días por defecto, mucho menos que el análisis-- y entonces
-responde `404`.
+siempre (vive en el análisis diario), pero la foto original puede haberse podado ya
+--las capturas se retienen 7 días por defecto, mucho menos que el análisis--. Antes
+de responder `404`, cae al archivo permanente de "1 foto por día"
+(`<camera_dir>/archive/YYYY-MM-DD.jpg`, ver `CameraStore.archive_best_photo`): la
+mejor foto de cada día se copia ahí para siempre (día ya cerrado, nunca el de hoy),
+que es lo que permite mostrar una foto real en la efeméride "En este día"
+(`/api/climate/onthisday`) años después de que la carpeta del día se haya podado.
 
 ### Timelapse diario
 

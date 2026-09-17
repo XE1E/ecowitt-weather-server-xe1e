@@ -46,6 +46,7 @@ _BACKUP_LABELS = {
     "fotos": "fotos",
     "timelapse": "timelapse",
     "analisis": "análisis del cielo",
+    "archivo": "foto archivada",
     # No es de la estación (ver scripts/backup-rubik-site.sh), pero usa el mismo
     # mecanismo de "desactualizado" para avisar por Telegram si falla.
     "rubik": "sitio Rubik",
@@ -774,8 +775,8 @@ class AlertService:
     async def check_backup_stale(self, statuses: Dict[str, Optional[Dict[str, Any]]]) -> None:
         """
         Avisa si el respaldo a R2 de alguna categoría (sensores/fotos/timelapse/
-        análisis) lleva demasiado sin reportar una corrida exitosa, y cuando se
-        pone al día.
+        análisis/foto archivada) lleva demasiado sin reportar una corrida
+        exitosa, y cuando se pone al día.
 
         `statuses` es {categoria: status|None}, con status = {"last_success": iso}
         leído de los archivos que dejan scripts/backup-*.sh en el volumen

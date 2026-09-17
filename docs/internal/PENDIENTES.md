@@ -23,9 +23,19 @@ estación). Orden: de menor a mayor complejidad/decisiones de producto.
       "normalizada HH:MM" o "activa" por entrada. Ojo: vive en memoria del
       proceso (hasta 100 entradas), no es un log persistente -- se vacía si el
       receiver se reinicia.
-- [ ] **3. Efeméride con foto real.** Cruzar `/api/climate/onthisday` (dato
-      de hace 1 año) con el archivo de fotos ya respaldado
-      (`/api/camera/best/<fecha>`) — hoy nunca se combinan.
+- [x] **3. Efeméride con foto real.** El bloqueo real: la efeméride SIEMPRE
+      compara con años anteriores, y las capturas completas (y su respaldo en
+      R2, `rclone sync`) se podan a los 7 días -- esa fecha nunca cae dentro
+      de la ventana. Se agregó un archivo permanente de **1 foto/día**
+      (`CameraStore.archive_best_photo`, `<camera_dir>/archive/`), copiado del
+      día anterior en cada `save()` (nunca el de hoy, que aún puede cambiar de
+      "mejor"). `GET /api/camera/best/{date}.jpg` cae a ese archivo antes de
+      dar 404. Quinto script de respaldo R2 (`backup-camera-archivo.sh`,
+      `r2_archivo_retention_days`, 0 = para siempre). En `ClimatePage.tsx`,
+      la tabla "En este día" ahora es clicable por año y reusa
+      `BestPhotoCard` (ya se degradaba solo a texto sin foto). Ojo: como el
+      archivo arranca el 2026-09-16, ningún año anterior a esa fecha tendrá
+      foto real nunca -- sólo lo que se archive de aquí en adelante.
 - [ ] **4. PostHog con eventos propios.** Hoy solo mide `$pageview`
       (`dashboard/src/analytics.ts`). Instrumentar clics en tarjetas clave
       (pronóstico propio, radar, cámara…) para decidir con datos qué construir

@@ -1,6 +1,6 @@
 # Backups a Cloudflare R2
 
-Cuatro scripts respaldan, cada uno una categoría, **fuera del VPS**: si el servidor
+Cinco scripts respaldan, cada uno una categoría, **fuera del VPS**: si el servidor
 se pierde, el histórico sigue a salvo. Ver el diagnóstico completo y las decisiones
 de retención en `docs/internal/PLAN-RESPALDO-R2.md`.
 
@@ -10,8 +10,9 @@ de retención en `docs/internal/PLAN-RESPALDO-R2.md`.
 | `scripts/backup-camera-fotos.sh` | Fotos del día (`<camera_dir>/YYYY-MM-DD/`) | igual que en el VPS (`camera_retention_days`) — sin ajuste propio |
 | `scripts/backup-camera-timelapse.sh` | Vídeos del timelapse | por días (`r2_timelapse_retention_days`, 0 = para siempre) |
 | `scripts/backup-camera-analisis.sh` | Histórico JSON del análisis del cielo | por días (`r2_analisis_retention_days`, 0 = para siempre) |
+| `scripts/backup-camera-archivo.sh` | Foto archivada de "1 por día" (`<camera_dir>/archive/`, alimenta la efeméride) | por días (`r2_archivo_retention_days`, 0 = para siempre — recomendado) |
 
-Los cuatro comparten helpers en `scripts/lib-backup.sh` (credenciales, el remote de
+Los cinco comparten helpers en `scripts/lib-backup.sh` (credenciales, el remote de
 `rclone`, marcar una corrida como exitosa).
 
 Además, `scripts/backup-rubik-site.sh` respalda `/opt/rubik-site` (el sitio estático
@@ -35,7 +36,7 @@ A diferencia de antes, las credenciales de R2 **no se ponen en el `.env`**: se
 configuran desde el panel → **Sistema → Respaldos** (Account ID, Access Key ID,
 Secret Access Key, Bucket) y quedan en `settings.json`, igual que las claves de
 Gemini/Anthropic. Ahí mismo se ajusta la retención en R2 (timelapse, análisis,
-cuántos backups de Influx conservar).
+foto archivada, cuántos backups de Influx conservar).
 
 Los scripts corren por cron en el VPS, **fuera** del contenedor, y no pueden leer
 `settings.json` (vive dentro del volumen Docker). Por eso piden las credenciales
@@ -85,14 +86,17 @@ chmod +x scripts/backup-*.sh
 ./scripts/backup-camera-fotos.sh
 ./scripts/backup-camera-timelapse.sh
 ./scripts/backup-camera-analisis.sh
+./scripts/backup-camera-archivo.sh
 ./scripts/backup-rubik-site.sh
 ```
 
 Cada uno debe terminar con `listo.` y, si subió algo, mostrar `subiendo a R2:` /
 `sincronizando con R2:`. Verifica en el panel de R2 que aparecen los objetos bajo
-`influx/`, `camara/fotos/`, `camara/timelapse/`, `camara/analisis/` y `rubik-site/`.
-En el panel de Admin (Sistema → Respaldos) debe aparecer "Última: hace unos
-segundos" en las cinco categorías (incluida 🧩 Sitio Rubik).
+`influx/`, `camara/fotos/`, `camara/timelapse/`, `camara/analisis/`, `camara/archivo/`
+y `rubik-site/`. En el panel de Admin (Sistema → Respaldos) debe aparecer "Última:
+hace unos segundos" en las seis categorías (incluida 🧩 Sitio Rubik). El de
+`archivo/` puede salir vacío ("no hay fotos archivadas que respaldar todavía") si
+el servidor aún no cerró ningún día desde que existe este archivo.
 
 ## 5. Programar con cron
 
@@ -104,6 +108,7 @@ crontab -e
 35 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-fotos.sh >> ~/ecowitt-backups/backup.log 2>&1
 40 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-timelapse.sh >> ~/ecowitt-backups/backup.log 2>&1
 45 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-analisis.sh >> ~/ecowitt-backups/backup.log 2>&1
+48 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-camera-archivo.sh >> ~/ecowitt-backups/backup.log 2>&1
 50 3 * * * cd ~/ecowitt-weather-server-xe1e && ./scripts/backup-rubik-site.sh >> ~/ecowitt-backups/backup.log 2>&1
 ```
 
@@ -113,9 +118,10 @@ crontab -e
   para fotos y `camera_timelapse_retention_days` para timelapse (Admin → Cámara).
   El análisis no se poda en el VPS por omisión.
 - **En R2:** desde Admin → Sistema → Respaldos — `r2_influx_keep` (por cantidad),
-  `r2_timelapse_retention_days` y `r2_analisis_retention_days` (por días, 0 = para
-  siempre). Fotos no tiene ajuste propio: el script sólo sube lo que exista hoy en
-  el VPS, así que ya sigue automáticamente `camera_retention_days`.
+  `r2_timelapse_retention_days`, `r2_analisis_retention_days` y
+  `r2_archivo_retention_days` (por días, 0 = para siempre). Fotos no tiene ajuste
+  propio: el script sólo sube lo que exista hoy en el VPS, así que ya sigue
+  automáticamente `camera_retention_days`.
 
 ## Si un respaldo falla o el cron deja de correr
 

@@ -29,7 +29,8 @@ json_field() {
 
 # Pide las credenciales R2 (y la retención configurada) al propio receiver.
 # Rellena R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET /
-# R2_TIMELAPSE_RETENTION_DAYS / R2_ANALISIS_RETENTION_DAYS / R2_INFLUX_KEEP.
+# R2_TIMELAPSE_RETENTION_DAYS / R2_ANALISIS_RETENTION_DAYS /
+# R2_ARCHIVO_RETENTION_DAYS / R2_INFLUX_KEEP.
 # Devuelve 1 si BACKUP_API_TOKEN no está puesto o la llamada falla.
 fetch_r2_config() {
   local token base_url resp
@@ -54,6 +55,7 @@ fetch_r2_config() {
   R2_BUCKET="$(json_field "$resp" r2_bucket)"
   R2_TIMELAPSE_RETENTION_DAYS="$(json_field "$resp" r2_timelapse_retention_days)"
   R2_ANALISIS_RETENTION_DAYS="$(json_field "$resp" r2_analisis_retention_days)"
+  R2_ARCHIVO_RETENTION_DAYS="$(json_field "$resp" r2_archivo_retention_days)"
   R2_INFLUX_KEEP="$(json_field "$resp" r2_influx_keep)"
   [ -z "$R2_BUCKET" ] && { echo "[backup] R2 no configurado en Admin (Sistema → Respaldos); nada que hacer." && return 1; }
   return 0

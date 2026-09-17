@@ -135,6 +135,24 @@ la API real todavía — verificar en cuanto haya un token real configurado que 
 números salgan razonables (revisar logs del receiver por avisos de
 `actionType(s) sin clasificar`).
 
+## Ampliación: archivo permanente de 1 foto/día (2026-09-16)
+
+La efeméride "En este día" del dashboard (`/api/climate/onthisday`, tarjeta en
+`ClimatePage.tsx`) compara SIEMPRE con años anteriores, y las fotos completas de
+`scripts/backup-camera-fotos.sh` no sirven para eso: reflejan la misma retención de
+7 días que el VPS (`rclone sync`), así que una fecha de hace un año jamás cae dentro
+de esa ventana. Se agregó `CameraStore.archive_best_photo` (`services/camera.py`):
+en cada `save()` intenta archivar la mejor foto del día ANTERIOR (nunca la de hoy,
+que puede seguir cambiando de "mejor") en `<camera_dir>/archive/YYYY-MM-DD.jpg`,
+para siempre — 1 foto por día, no todas las capturas, así que el costo de
+almacenamiento es trivial (~100-300 KB/día) frente a los ~25 MB/día de una carpeta
+completa. `GET /api/camera/best/{date}.jpg` cae a este archivo cuando el fotograma
+original ya se podó.
+
+Quinto script, mismo patrón que `analisis`: `scripts/backup-camera-archivo.sh` +
+`r2_archivo_retention_days` (0 = para siempre, recomendado — es la única copia de
+algo que se diseñó para durar). Ver `docs/backups-r2.md`.
+
 ## Siguiente paso concreto (sólo posible en el VPS real)
 
 1. Crear el bucket y las API keys en Cloudflare (`docs/backups-r2.md` §1).
@@ -144,4 +162,4 @@ números salgan razonables (revisar logs del receiver por avisos de
 3. Generar `BACKUP_API_TOKEN` y ponerlo EN LOS DOS LADOS: `.env` del VPS y Admin →
    Sistema → Respaldos (§2 de `docs/backups-r2.md`).
 4. Instalar `rclone` en el VPS (§3 del mismo doc).
-5. Probar los 4 scripts a mano (§4) y programar el cron (§5).
+5. Probar los 5 scripts a mano (§4) y programar el cron (§5).

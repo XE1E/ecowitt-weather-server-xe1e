@@ -439,6 +439,7 @@ class Settings(BaseSettings):
     # camera_retention_days (arriba). 0 = para siempre.
     r2_timelapse_retention_days: int = 0
     r2_analisis_retention_days: int = 0
+    r2_archivo_retention_days: int = 0
     # Cuántos backups de InfluxDB conservar en R2 (a diferencia de los de arriba,
     # este es por CANTIDAD de archivos y no por días: así era backup-influx.sh
     # desde antes de este plan).

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import {
   ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Camera } from 'lucide-react'
 import { useUnits } from '../units'
 import { LOCATION } from '../config'
 import { PageInfo } from '../components/station/PageInfo'
+import { BestPhotoCard } from '../components/station/BestPhotoCard'
 
 interface Rec { value: number; date: string }
 interface Period {
@@ -75,6 +76,11 @@ export function ClimatePage() {
   const u = useUnits()
   const [rec, setRec] = useState<RecordsBundle | null>(null)
   const [otd, setOtd] = useState<OnThisDay | null>(null)
+  // Año elegido para ver su foto (ver "En este día" más abajo). Por omisión el
+  // más reciente, que es también el que más chance tiene de tener foto real
+  // archivada (services/camera.py: archive_best_photo, para siempre desde
+  // 2026-09-16 -- años previos a eso nunca la tendrán).
+  const [otdPhotoDate, setOtdPhotoDate] = useState<string | null>(null)
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState<number | null>(null) // null = anual
   const [noaa, setNoaa] = useState<Noaa | null>(null)
@@ -85,6 +91,11 @@ export function ClimatePage() {
     fetch('/api/climate/records').then((r) => (r.ok ? r.json() : null)).then(setRec).catch(() => {})
     fetch('/api/climate/onthisday').then((r) => (r.ok ? r.json() : null)).then(setOtd).catch(() => {})
   }, [])
+
+  // Selecciona el año más reciente en cuanto llega la efeméride (una sola vez).
+  useEffect(() => {
+    if (otd && otd.years.length > 0) setOtdPhotoDate((prev) => prev ?? otd.years[0].date)
+  }, [otd])
 
   // Datos anuales para el climograma (siempre año completo, independiente del selector)
   useEffect(() => {
@@ -367,7 +378,10 @@ export function ClimatePage() {
           {otd && otd.count > 0 && (
             <div className="card mb-6">
               <p className="text-base font-bold text-slate-100">En este día</p>
-              <p className="text-xs text-slate-500 mb-2">Qué pasó un {otd.month_day.slice(3)}/{otd.month_day.slice(0, 2)} en años anteriores</p>
+              <p className="text-xs text-slate-500 mb-2">
+                Qué pasó un {otd.month_day.slice(3)}/{otd.month_day.slice(0, 2)} en años anteriores
+                {' '}· clic en un año para ver su foto
+              </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[360px]">
                   <thead>
@@ -376,22 +390,34 @@ export function ClimatePage() {
                       <th className="text-right font-normal">Máx</th>
                       <th className="text-right font-normal">Mín</th>
                       <th className="text-right font-normal">Lluvia</th>
+                      <th className="w-6" />
                     </tr>
                   </thead>
                   <tbody>
-                    {otd.years.map((y) => (
-                      <tr key={y.date} className="border-t border-white/5">
-                        <td className="py-1 text-slate-300">{y.date.slice(0, 4)}</td>
-                        <td className="text-right text-orange-300">{y.temp_max != null ? `${u.temp(y.temp_max)}${u.tempU}` : '--'}</td>
-                        <td className="text-right text-sky-300">{y.temp_min != null ? `${u.temp(y.temp_min)}${u.tempU}` : '--'}</td>
-                        <td className="text-right text-blue-300">{y.rain_total != null ? `${u.rain(y.rain_total)} ${u.rainU}` : '--'}</td>
-                      </tr>
-                    ))}
+                    {otd.years.map((y) => {
+                      const activa = y.date === otdPhotoDate
+                      return (
+                        <tr
+                          key={y.date}
+                          onClick={() => setOtdPhotoDate(y.date)}
+                          className={`border-t border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activa ? 'bg-white/5' : ''}`}
+                        >
+                          <td className={`py-1 ${activa ? 'text-slate-100 font-semibold' : 'text-slate-300'}`}>{y.date.slice(0, 4)}</td>
+                          <td className="text-right text-orange-300">{y.temp_max != null ? `${u.temp(y.temp_max)}${u.tempU}` : '--'}</td>
+                          <td className="text-right text-sky-300">{y.temp_min != null ? `${u.temp(y.temp_min)}${u.tempU}` : '--'}</td>
+                          <td className="text-right text-blue-300">{y.rain_total != null ? `${u.rain(y.rain_total)} ${u.rainU}` : '--'}</td>
+                          <td className="text-right pl-1">
+                            <Camera className={`w-3.5 h-3.5 inline ${activa ? 'text-violet-300' : 'text-slate-600'}`} />
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
+          {otd && otd.count > 0 && <BestPhotoCard selected={otdPhotoDate} />}
         </>
       )}
 

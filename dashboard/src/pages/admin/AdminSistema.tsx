@@ -21,6 +21,7 @@ interface SysSettings {
   backup_api_token_masked: string | null
   r2_timelapse_retention_days: number
   r2_analisis_retention_days: number
+  r2_archivo_retention_days: number
   r2_influx_keep: number
   cloudflare_api_token: string | null
   cloudflare_api_token_masked: string | null
@@ -385,7 +386,7 @@ export function AdminSistema() {
 
         <div className="h-px bg-white/10" />
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-4">
           <div>
             <label className="text-xs text-slate-400 block mb-1">Retención timelapse en R2 (días)</label>
             <input type="number" min="0" value={settings.r2_timelapse_retention_days}
@@ -401,6 +402,13 @@ export function AdminSistema() {
             <p className="text-xs text-slate-500 mt-1">0 = para siempre</p>
           </div>
           <div>
+            <label className="text-xs text-slate-400 block mb-1">Retención foto archivada en R2 (días)</label>
+            <input type="number" min="0" value={settings.r2_archivo_retention_days}
+              onChange={(e) => update('r2_archivo_retention_days', parseInt(e.target.value) || 0)}
+              className="w-full bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+            <p className="text-xs text-slate-500 mt-1">0 = para siempre (recomendado: es 1 foto/día)</p>
+          </div>
+          <div>
             <label className="text-xs text-slate-400 block mb-1">Backups de InfluxDB a conservar en R2</label>
             <input type="number" min="1" value={settings.r2_influx_keep}
               onChange={(e) => update('r2_influx_keep', parseInt(e.target.value) || 30)}
@@ -411,6 +419,8 @@ export function AdminSistema() {
         <p className="text-xs text-slate-500">
           Fotos no tiene retención propia en R2: sube exactamente los días que existan en el VPS, así
           que sigue la de Admin → Cámara{backup ? ` (hoy: ${backup.camera_retention_days} días)` : ''}.
+          La foto archivada es aparte: 1 foto/día que el servidor conserva para siempre (la usa la
+          efeméride "En este día" de Historia/Clima), y por eso conviene NO ponerle retención en R2.
           El umbral de aviso de "respaldo desactualizado" está en Alertas → 💾 Respaldo a R2.
         </p>
 

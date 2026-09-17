@@ -15,6 +15,7 @@ Qué se guarda:
     <camera_dir>/latest.json             su metadato (cuándo se capturó, tamaño)
     <camera_dir>/YYYY-MM-DD/HHMMSS.jpg   fotogramas del día, para el timelapse
     <camera_dir>/analysis/YYYY-MM-DD.json  el análisis del cielo de ese día
+    <camera_dir>/archive/YYYY-MM-DD.jpg  la mejor foto de ese día, para siempre (ver `archive_best_photo`)
     <camera_dir>/timelapse/YYYY-MM-DD.mp4  su vídeo (lo escribe services/timelapse.py)
 
 El histórico de FOTOS se poda por DÍAS COMPLETOS y no por número de fotos: si un día la
@@ -83,6 +84,20 @@ class CameraStore:
         """
         return os.path.join(self.base, "analysis")
 
+    @property
+    def archive_dir(self) -> str:
+        """Carpeta de la foto-del-día archivada para siempre (una por día, NO todas
+        las capturas -- eso sería la misma carpeta que ya se poda a los 7 días).
+
+        Igual que `analysis_dir`, el nombre no parsea como fecha: `_prune` la deja en
+        paz. Existe para que la efeméride (`/api/climate/onthisday` en el dashboard)
+        pueda mostrar una foto real de años atrás, algo que antes era imposible
+        --las fotos completas se podan a los 7 días, y R2 las refleja con el mismo
+        límite (`rclone sync`, ver `scripts/backup-camera-fotos.sh`)-- porque
+        ninguna comparación de "años anteriores" cae jamás dentro de esa ventana.
+        """
+        return os.path.join(self.base, "archive")
+
     # ── escritura ────────────────────────────────────────────────────────────
     def save(self, data: bytes, taken_at: Optional[datetime] = None) -> Dict[str, Any]:
         """
@@ -121,6 +136,7 @@ class CameraStore:
 
         if self.retention_days > 0:
             self._archive(data, ts)
+            self._archive_yesterday_best(ts)
             self._prune()
         if self.analysis_retention_days > 0:
             self.prune_analysis(self.analysis_retention_days)
@@ -156,6 +172,64 @@ class CameraStore:
                     logger.info("cámara: purgado %s", nombre)
         except OSError as e:
             logger.warning("no se pudo purgar el histórico: %s", e)
+
+    def _archive_yesterday_best(self, ts: datetime) -> None:
+        """Intenta archivar la mejor foto del día ANTERIOR a `ts` (nunca la de HOY:
+        un día en curso puede seguir cambiando de "mejor" según entren más capturas).
+
+        Se llama en cada `save()` porque este módulo no tiene otro disparador de
+        "cierre de día" -- con capturas cada pocos minutos, el archivo queda listo
+        minutos después de medianoche, muy dentro de los 7 días de retención antes
+        de que `_prune()` borre la carpeta de la que sale la foto. `archive_best_photo`
+        ya es idempotente (no repite trabajo si ya existe), así que llamarlo en cada
+        subida no cuesta más que un `os.path.exists`.
+        """
+        ayer = (ts.astimezone() - timedelta(days=1)).strftime("%Y-%m-%d")
+        try:
+            self.archive_best_photo(ayer)
+        except Exception as e:
+            logger.warning("no se pudo archivar la mejor foto de %s: %s", ayer, e)
+
+    def archive_best_photo(self, date_str: str) -> bool:
+        """Copia la mejor foto de `date_str` a `archive_dir`, para siempre.
+
+        Idempotente: no hace nada si ya está archivada. Devuelve True sólo si copió
+        algo nuevo (para que la llamada automática de `_archive_yesterday_best` no
+        tenga que distinguir "ya estaba" de "no había nada que archivar").
+        """
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return False
+        dest = os.path.join(self.archive_dir, f"{date_str}.jpg")
+        if os.path.exists(dest):
+            return False
+        entry = self.best_of_day(date_str)
+        if entry is None:
+            return False
+        src = self.frame_path(date_str, entry.get("ts", ""))
+        if not src or not os.path.exists(src):
+            return False
+        try:
+            os.makedirs(self.archive_dir, exist_ok=True)
+            tmp = dest + ".tmp"
+            shutil.copyfile(src, tmp)
+            os.replace(tmp, dest)
+            logger.info("cámara: archivada la mejor foto de %s", date_str)
+            return True
+        except OSError as e:
+            logger.warning("no se pudo archivar la foto de %s: %s", date_str, e)
+            return False
+
+    def archive_path(self, date_str: str) -> Optional[str]:
+        """Ruta a la foto archivada para siempre de ese día, o None si nunca se
+        archivó (día previo a esta función, o sin análisis con foto ese día)."""
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return None
+        path = os.path.join(self.archive_dir, f"{date_str}.jpg")
+        return path if os.path.exists(path) else None
 
     # ── lectura ──────────────────────────────────────────────────────────────
     def status(self) -> Dict[str, Any]:

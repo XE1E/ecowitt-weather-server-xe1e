@@ -115,6 +115,7 @@ EDITABLE_KEYS = {
     "backup_api_token",
     "r2_timelapse_retention_days",
     "r2_analisis_retention_days",
+    "r2_archivo_retention_days",
     "r2_influx_keep",
     "cloudflare_api_token",
     "telegram_enabled",
