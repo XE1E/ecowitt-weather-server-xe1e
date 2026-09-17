@@ -3,18 +3,21 @@
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
 > Última actualización: 2026-09-16.
 
-## -1. Ronda "aprovechar lo que ya tenemos" (2026-09-16, en curso)
+## -1. Ronda "aprovechar lo que ya tenemos" — ✅ HECHA Y EN PRODUCCIÓN (2026-09-16)
 
 5 ideas de software (sin hardware nuevo) para exprimir datos/infra que ya
 existe, en vez de comprar sensores nuevos (eso queda para una 2ª etapa de la
 estación). Orden: de menor a mayor complejidad/decisiones de producto.
 
-**Ideas 1-3 ya en producción (2026-09-16):** pusheado, VPS actualizado
-(`git pull` + `docker compose build --no-cache receiver dashboard` +
-`--force-recreate`) y verificado (contenedores healthy, `/api/alerts/history`
-y `/api/history?format=csv` responden, `backup-camera-archivo.sh` corrido a
-mano). Cron de `backup-camera-archivo.sh` agregada (48 3 * * *, entre
-`analisis` y `rubik-site`).
+**Las 5 en producción (2026-09-16):** pusheado en 5 commits, VPS actualizado
+tras cada una (`git pull` + `docker compose build --no-cache` de los
+servicios tocados + `--force-recreate`) y verificado (contenedores healthy,
+sin errores en logs, `/api/alerts/history` y `/api/history?format=csv`
+responden, `backup-camera-archivo.sh` corrido a mano). Cron de
+`backup-camera-archivo.sh` agregada (48 3 * * *, entre `analisis` y
+`rubik-site`). Pendiente del lado del usuario: activar y probar el Resumen
+semanal (idea 5) desde Admin → Notificaciones cuando quiera — queda
+desactivado por omisión (opt-in).
 
 - [x] **1. Exportar CSV.** `GET /api/history` y `GET /api/summaries/daily`
       aceptan `format=csv` (`receiver/app/services/csv_export.py`, con tests).
