@@ -235,6 +235,9 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
+| `GET /api/bim32` | JSON compacto para el firmware BIM32 (ESP32, ver abajo) |
+| `GET /api/bim32/history?period=30` | Historial exterior en baldes de `period` minutos, para BIM32 (ver abajo) |
+| `GET /api/epaper/forecast.json` | Dato con forma WeatherAPI `forecast.json` para el e-paper LilyGo 4.7" (ver abajo) |
 | `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`). Acepta `format=csv` para descargarlo directo |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
 | `GET`/`HEAD /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At`. Sirve para enlazarla como webcam en servicios externos (p. ej. AWEKAS) — acepta HEAD porque varios de esos servicios validan el enlace así antes de aceptarlo |
@@ -479,6 +482,74 @@ si aún no hay dato de la estación (p. ej. justo tras reiniciar el receiver).
 ```bash
 curl -s https://clima.xe1e.net/api/svitrix | jq '.current | {temp_c, uv, solar_radiation, precip_event_mm}'
 ```
+
+### BIM32 (display ESP32 propio)
+
+```
+GET /api/bim32
+GET /api/bim32/history?period=30
+```
+
+`BIM32` es el firmware propio (Arduino, `weather.hpp`) del display Waveshare
+ESP32-S3 — ver `docs/internal` para el proyecto. Ya sabía leer OpenWeatherMap,
+Weatherbit y Open-Meteo, y traduce los íconos de cualquiera de esos proveedores
+a un vocabulario propio de 8 códigos (`Weather::_convertIcon()`). `/api/bim32`
+reempaqueta como un proveedor más, en **una sola petición** en vez de las 2-3
+que el ESP32 hacía antes directo a Open-Meteo:
+
+- `current`: dato **real** de la estación (temperatura/humedad/presión/viento,
+  igual que `/api/svitrix`) — sin calidad del aire ni IMECA, que BIM32 no usa
+  (trae su propio BME680 local). El viento va en `wind_ms` (m/s), no en km/h:
+  es la unidad que usa el firmware internamente. El ícono de `current`
+  prioriza el análisis visual de la cámara (`sky_analyzer.py`) sobre el índice
+  de claridad solar cuando no hay lluvia medida — de noche ese índice no tiene
+  radiación con qué distinguir nubes y siempre cae en "Despejado". Sin lectura
+  de la estación (recién reiniciado el receiver) se cae al pronóstico de la
+  hora en curso, igual que `/api/epaper/forecast.json`.
+- `daily`: 5 días de Open-Meteo (máx/mín, viento, ícono), corregido con el
+  mismo sesgo real de la estación que usa `/api/forecast` (antes BIM32 recibía
+  la presión cruda de Open-Meteo, muy por debajo de la relativa ya calibrada).
+- `hourly`: hasta 40 puntos, muestreados cada 3 h desde ahora — ya resuelto
+  aquí para que el ESP32 no tenga que filtrar 144 horas él mismo.
+
+Ver `services/bim32.py` para las tablas de traducción de íconos (WMO y
+WeatherAPI → los 8 códigos de `_convertIcon()`). **Nunca devuelve 503**: el
+firmware necesita algo con qué refrescar su pantalla en cada ciclo.
+
+`/api/bim32/history` reemplaza el mecanismo de ThingSpeak
+(`Thingspeak::sendHistory`/`receiveHistory()`) — el ESP32 ya no manda su
+propia lectura a un canal externo cada `history_period` minutos, porque este
+servidor ya tiene el histórico real de la estación en InfluxDB. Devuelve hasta
+24 baldes de `period` minutos (temperatura/humedad/presión), de más viejo a
+más nuevo; un balde sin lecturas en esa ventana se omite en vez de rellenarse
+con 0, para que el firmware lo distinga de una lectura real.
+
+### E-paper LilyGo T5 4.7"
+
+```
+GET /api/epaper/forecast.json
+```
+
+Dato de la estación con la forma de WeatherAPI `forecast.json`, que es
+exactamente lo que `DecodeWeatherAPI()` del firmware ya sabe parsear — el
+display cambia de fuente sin tocar una línea de su dibujado (11+ pantallas,
+touch, deep sleep), y puede volver a WeatherAPI.com de respaldo cambiando solo
+la URL. Es el mismo patrón que `/api/svitrix` (reusa `svitrix.build_weatherapi`
+como base del bloque `current`) más:
+
+- `forecast.forecastday[]`: 3 días con las 24 horas de cada uno, para las
+  gráficas del display.
+- `astro`: calculado con pyephem para las coordenadas exactas del sitio.
+- `xe1e{}`: lo que WeatherAPI no puede dar — radiación, lluvia del evento,
+  IMECA, máximos MEDIDOS, tendencia real de presión.
+
+Igual que `/api/bim32`, **nunca devuelve 503**: el e-paper despierta, pide una
+vez y se vuelve a dormir, así que un error lo dejaría con la pantalla vieja
+hasta el siguiente ciclo. Sin dato de la estación se cae al pronóstico de la
+hora en curso (marcado en `xe1e.source`), y cada fuente externa (WAQI, IMECA)
+se pide con tolerancia a fallos para que un proveedor caído no cueste la
+pantalla entera. Ver `services/epaper.py` y, en el repo del firmware,
+`PLAN-FUENTE-DATOS-XE1E.md`.
 
 ### Administración (requiere sesión)
 
