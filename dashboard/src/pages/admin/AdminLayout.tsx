@@ -81,7 +81,7 @@ function LoginForm() {
           </form>
 
           <div className="mt-6 text-center">
-            <a href="/pro" className="text-sky-400 hover:text-sky-300 text-sm">
+            <a href="/" className="text-sky-400 hover:text-sky-300 text-sm">
               ← Volver al sitio
             </a>
           </div>
@@ -140,7 +140,7 @@ export function AdminLayout() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <a
-            href="/pro"
+            href="/"
             className="text-slate-400 hover:text-white text-sm flex items-center gap-1"
           >
             <span>Ver sitio</span>

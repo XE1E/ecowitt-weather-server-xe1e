@@ -370,7 +370,7 @@ export function AdminIntegraciones() {
             </div>
           </div>
         )}
-        <p className="text-xs text-slate-500 mt-2">Tarjeta "En tu zona" en /pro: compara tu lectura contra estaciones (PWS/METAR/mesonet) cercanas. Tier gratis Developer: 15,000 llamadas/mes.</p>
+        <p className="text-xs text-slate-500 mt-2">Tarjeta "En tu zona" en el sitio: compara tu lectura contra estaciones (PWS/METAR/mesonet) cercanas. Tier gratis Developer: 15,000 llamadas/mes.</p>
       </div>
 
       {/* Netatmo (estaciones vecinas, segunda red) */}

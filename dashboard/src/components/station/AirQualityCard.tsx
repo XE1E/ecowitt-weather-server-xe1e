@@ -33,7 +33,7 @@ export function AirQualityCard() {
 
   const cat = category(aq.aqi)
   return (
-    <Link to="/pro/calidad-aire" className="card block no-underline" style={{ color: 'inherit' }}>
+    <Link to="/calidad-aire" className="card block no-underline" style={{ color: 'inherit' }}>
       <p className="card-title">Calidad del aire</p>
       <div className="flex items-center justify-between gap-3">
         <div

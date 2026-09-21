@@ -38,7 +38,7 @@ export function EmbedWidget() {
   return (
     <div style={{ minHeight: '100vh' }} className="flex items-center justify-center p-2">
       <a
-        href="https://clima.xe1e.net/pro"
+        href="https://clima.xe1e.net"
         target="_blank"
         rel="noopener noreferrer"
         className="card block w-full max-w-[360px] no-underline"

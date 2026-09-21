@@ -26,7 +26,7 @@ export function EarthquakesCard() {
         <p className="card-title flex items-center gap-2">
           <Activity className="w-5 h-5 text-amber-400 shrink-0" /> Último sismo
         </p>
-        <Link to="/pro/sismos" className="text-xs text-blue-400 hover:text-blue-300">Ver todos →</Link>
+        <Link to="/sismos" className="text-xs text-blue-400 hover:text-blue-300">Ver todos →</Link>
       </div>
       {!q ? (
         <p className="text-sm text-slate-400">Sin sismos relevantes cerca por ahora.</p>

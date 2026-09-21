@@ -8,22 +8,22 @@ import { LOCATION } from '../config'
 
 // Cintillo: páginas listas (link) + próximas (deshabilitadas)
 const NAV_ACTIVE = [
-  { to: '/pro', label: 'Inicio', end: true },
-  { to: '/pro/tablero', label: 'Mi tablero', end: false },
-  { to: '/pro/pronostico', label: 'Pronóstico', end: false },
-  { to: '/pro/historia', label: 'Historia', end: false },
-  { to: '/pro/estadisticas', label: 'Estadísticas', end: false },
-  { to: '/pro/tablas', label: 'Tablas', end: false },
-  { to: '/pro/climatologia', label: 'Climatología', end: false },
-  { to: '/pro/radar', label: 'Radar', end: false },
-  { to: '/pro/camara', label: 'Cámara', end: false },
-  { to: '/pro/astronomia', label: 'Astronomía', end: false },
-  { to: '/pro/calidad-aire', label: 'Calidad del aire', end: false },
-  { to: '/pro/aeronautica', label: 'Aeronáutica', end: false },
-  { to: '/pro/remota', label: 'Estación remota', end: false },
-  { to: '/pro/compartir', label: 'Widget', end: false },
-  { to: '/pro/consola', label: 'Consola', end: false },
-  { to: '/pro/instrumentos', label: 'Instrumentos', end: false },
+  { to: '/', label: 'Inicio', end: true },
+  { to: '/tablero', label: 'Mi tablero', end: false },
+  { to: '/pronostico', label: 'Pronóstico', end: false },
+  { to: '/historia', label: 'Historia', end: false },
+  { to: '/estadisticas', label: 'Estadísticas', end: false },
+  { to: '/tablas', label: 'Tablas', end: false },
+  { to: '/climatologia', label: 'Climatología', end: false },
+  { to: '/radar', label: 'Radar', end: false },
+  { to: '/camara', label: 'Cámara', end: false },
+  { to: '/astronomia', label: 'Astronomía', end: false },
+  { to: '/calidad-aire', label: 'Calidad del aire', end: false },
+  { to: '/aeronautica', label: 'Aeronáutica', end: false },
+  { to: '/remota', label: 'Estación remota', end: false },
+  { to: '/compartir', label: 'Widget', end: false },
+  { to: '/consola', label: 'Consola', end: false },
+  { to: '/instrumentos', label: 'Instrumentos', end: false },
 ]
 const NAV_SOON: string[] = []
 
@@ -117,7 +117,7 @@ export function StationLayout() {
                 >
                   FX {fxEnabled ? 'on' : 'off'}
                 </button>
-                <a href="/?clasica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+                <a href="/basica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                   Vista clásica
                 </a>
               </div>
@@ -157,7 +157,7 @@ export function StationLayout() {
               >
                 FX {fxEnabled ? 'on' : 'off'}
               </button>
-              <a href="/?clasica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+              <a href="/basica" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 Vista clásica
               </a>
               </div>
@@ -218,7 +218,7 @@ export function StationLayout() {
                   </a>
                 </p>
                 <p>
-                  <NavLink to="/pro/disclaimer" className="text-blue-400 hover:text-blue-300">
+                  <NavLink to="/disclaimer" className="text-blue-400 hover:text-blue-300">
                     Aviso Legal / Disclaimer
                   </NavLink>
                 </p>
@@ -233,7 +233,7 @@ export function StationLayout() {
             </p>
             <p className="text-center text-slate-600 mt-6">
               © 2026 Estación XE1E · {LOCATION.name} ·{' '}
-              <NavLink to="/pro/compartir" className="hover:text-slate-400">Widget para tu sitio</NavLink> ·{' '}
+              <NavLink to="/compartir" className="hover:text-slate-400">Widget para tu sitio</NavLink> ·{' '}
               <a href="/admin" className="hover:text-slate-400">⚙ Admin</a>
             </p>
           </footer>

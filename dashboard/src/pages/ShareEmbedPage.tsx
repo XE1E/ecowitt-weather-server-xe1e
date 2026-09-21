@@ -17,7 +17,7 @@ export function ShareEmbedPage() {
   const dim = SIZES.find((s) => s.k === size)!
   const embedUrl = `${origin}/embed?units=${units}&theme=${theme}`
   const snippet = `<iframe src="${embedUrl}" width="${dim.w}" height="${dim.h}" style="border:0;border-radius:16px;max-width:100%" title="Clima ${LOCATION.name}" loading="lazy"></iframe>`
-  const siteUrl = `${origin}/pro`
+  const siteUrl = origin
 
   const copy = (text: string, what: string) => {
     navigator.clipboard?.writeText(text).then(

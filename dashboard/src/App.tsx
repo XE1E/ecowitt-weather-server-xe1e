@@ -121,9 +121,9 @@ function App() {
               <button onClick={fetchData} className="text-blue-400 hover:text-blue-300">
                 <RefreshCw className="w-4 h-4" />
               </button>
-              {/* La vista clásica comparte el `units` de /pro (mismo localStorage),
-                  así que sin este botón quedaba atada a lo elegido allá sin poder
-                  cambiarlo, y sus tarjetas y gráfica ni siquiera lo respetaban. */}
+              {/* La vista clásica comparte el `units` de la app de la estación (mismo
+                  localStorage), así que sin este botón quedaba atada a lo elegido allá
+                  sin poder cambiarlo, y sus tarjetas y gráfica ni siquiera lo respetaban. */}
               <button
                 onClick={units.toggle}
                 title="Cambiar unidades"
@@ -131,26 +131,26 @@ function App() {
               >
                 {units.system === 'metric' ? '°C · km/h' : '°F · mph'}
               </button>
-              <a href="/pro" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
+              <a href="/" className="text-blue-400 hover:text-blue-300 text-xs border border-white/10 rounded-lg px-2 py-1">
                 App completa →
               </a>
             </div>
           </header>
 
-          {/* Condiciones actuales + precipitación (mismo estilo que /pro) */}
+          {/* Condiciones actuales + precipitación (mismo estilo que la app de la estación) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
             <CurrentConditions data={data} history={history} />
             <PrecipitationCard data={data} forecast={forecast} />
           </div>
 
-          {/* Viento · Interior · Sensores adicionales (mismo estilo que /pro) */}
+          {/* Viento · Interior · Sensores adicionales (mismo estilo que la app de la estación) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-start">
             <WindFlipCard data={data} />
             <InteriorCard data={data} />
             <ExtraSensorsCard data={data} history={history} />
           </div>
 
-          {/* Pronóstico + Sol y Luna (estilo /pro) */}
+          {/* Pronóstico + Sol y Luna (mismo estilo que la app de la estación) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
             <ForecastCard forecast={forecast} />
             {forecast && <SunMoonCard astro={forecast.astro} />}

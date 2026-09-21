@@ -64,24 +64,24 @@ function RouteTracker() {
 }
 
 // Detectar tipo de página:
-// /embed -> widget compacto
-// /admin -> panel de administración
-// /pro   -> app de la estación
-// /      -> vista clásica
+// /embed  -> widget compacto
+// /admin  -> panel de administración
+// /basica -> vista clásica
+// /       -> app de la estación (todo lo demás, catch-all)
 const path = window.location.pathname
 const isEmbed = path.startsWith('/embed')
 const isAdmin = path.startsWith('/admin')
-const isStation = path.startsWith('/pro')
 const isKiosk = path.startsWith('/kiosko')
-const isClassic = !isKiosk && !isEmbed && !isAdmin && !isStation
+const isClassic = path.startsWith('/basica')
+const isStation = !isKiosk && !isEmbed && !isAdmin && !isClassic
 
-// Analítica solo en las vistas públicas (clásica y /pro) -- ver analytics.ts
-// para por qué se excluyen admin/kiosko/embed.
+// Analítica solo en las vistas públicas (clásica y app de la estación) -- ver
+// analytics.ts para por qué se excluyen admin/kiosko/embed.
 if (isStation || isClassic) {
   initAnalytics()
 }
 // La clásica es página única sin router -- no hay `<RouteTracker>` que
-// dispare el pageview de /pro, así que se manda una sola vez aquí.
+// dispare el pageview de la app de la estación, así que se manda una sola vez aquí.
 if (isClassic) {
   posthog.capture('$pageview')
 }
@@ -124,7 +124,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <BrowserRouter>
             <RouteTracker />
             <Routes>
-              <Route path="/pro" element={<StationLayout />}>
+              <Route path="/" element={<StationLayout />}>
                 <Route index element={<HomePage />} />
                 <Route path="tablero" element={<MiTableroPage />} />
                 <Route path="pronostico" element={<ForecastPage />} />
@@ -143,10 +143,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="consola" element={<ConsolePage />} />
                 <Route path="instrumentos" element={<InstrumentosPage />} />
                 <Route path="disclaimer" element={<DisclaimerPage />} />
-                {/* Redirigir /pro/admin al nuevo panel */}
-                <Route path="admin" element={<Navigate to="/admin" replace />} />
               </Route>
-              <Route path="*" element={<Navigate to="/pro" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
         </StationDataProvider>

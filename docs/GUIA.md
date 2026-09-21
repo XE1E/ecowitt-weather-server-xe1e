@@ -56,16 +56,16 @@ presenta, y hacer crecer la plataforma a voluntad.
   estadísticas y climatología, pronóstico, radar y satélite— más los campos vecinos
   que enriquecen la lectura del cielo: **astronomía** (sol, luna, almanaque),
   **calidad del aire** (AQI e IMECA), **meteorología aeronáutica** (METAR/TAF),
-  **sismos** de la región y la **cámara** del exterior (`/pro/camara`), que pone
+  **sismos** de la región y la **cámara** del exterior (`/camara`), que pone
   delante lo que los números describen.
 - **Más de un sitio:** además de la estación principal, el servidor admite una
   **estación remota** (p. ej. un GW1100 en otra ubicación) que envía al mismo VPS;
   sus datos se guardan por separado y tienen su propia página, para comparar el
   clima de dos puntos distintos.
 - **Dos vistas del sitio:**
-  - `/` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/pro`).
-  - `/pro` — **Vista completa**: varias secciones con cintillo de navegación,
+  - `/` — **Vista completa**: varias secciones con cintillo de navegación,
     unidades conmutables, tema claro/oscuro y efectos de clima; instalable como app (PWA).
+  - `/basica` — **Vista clásica**: tablero simple de un vistazo (unificado con el estilo de `/`).
 - **Pantallas físicas:** el mismo servidor alimenta un **kiosco táctil ESP32-S3
   Waveshare**, un **e-paper LilyGo 4.7"** y un **reloj de píxeles Ulanzi TC001**,
   que muestran las condiciones sin abrir un navegador (ver §7).
@@ -247,7 +247,7 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 ---
 
-## 5. La página web (`/pro`)
+## 5. La página web (`/`)
 
 ### Capturas de pantalla
 
@@ -309,15 +309,15 @@ caliente** desde el panel de administración, sin reiniciar (ver §6).
 
 Lo que sí corresponde a este documento:
 
-- **Rutas.** La SPA sirve la vista moderna en `/pro` (layout `StationLayout`, 16
+- **Rutas.** La SPA sirve la vista moderna en `/` (layout `StationLayout`, 16
   pestañas: Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Tablas,
   Climatología, Radar, Cámara, Astronomía, Calidad del aire, Aeronáutica,
   Estación remota, Widget, Consola e **Instrumentos**) y la clásica de una
-  sola página en `/`.
+  sola página en `/basica`.
   La lista viva es `NAV_ACTIVE` en `dashboard/src/pages/StationLayout.tsx`.
   **Consola** no tiene página propia: monta el mismo `ConsoleReplica` que pinta
   el kiosco (§7), así que lo que se ve en el navegador es lo que hay en la pared. El panel vive en `/admin`, el
-  kiosco en `/kiosko?page=N` y el widget embebible en `/widget`.
+  kiosco en `/kiosko?page=N` y el widget embebible en `/embed`.
 - **Estado compartido.** `StationDataProvider` (`dashboard/src/station-data.tsx`)
   centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
   los refresca cada 60 s (el pronóstico cada 30 min). Las páginas consumen el
@@ -332,7 +332,7 @@ Lo que sí corresponde a este documento:
 ## 6. Widget para tu sitio
 
 Cualquiera puede poner el clima en vivo de la estación en su web o blog con un
-**widget `<iframe>`**. La página [Widget para tu sitio](https://clima.xe1e.net/pro/compartir)
+**widget `<iframe>`**. La página [Widget para tu sitio](https://clima.xe1e.net/compartir)
 es un generador: eliges **unidades** (°C/°F), **tema** (claro/oscuro) y **tamaño**,
 ves una vista previa y copias el código listo para pegar.
 
@@ -494,7 +494,7 @@ lo **empuja**. Ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`.
 │                       ▼                ▼                ▼                        │
 │               ┌───────────┐    ┌───────────┐    ┌───────────┐                   │
 │               │ Dashboard │    │  Kiosco   │    │  Alertas  │                   │
-│               │ /pro/cam  │    │ Waveshare │    │ Telegram  │                   │
+│               │ /camara   │    │ Waveshare │    │ Telegram  │                   │
 │               └───────────┘    └───────────┘    └───────────┘                   │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -615,7 +615,7 @@ configurado la subida responde **503** y no guarda nada.
 
 ##### Timelapse diario
 
-Las capturas del día se juntan en un **MP4** con **ffmpeg**, y se ven en `/pro/camara`
+Las capturas del día se juntan en un **MP4** con **ffmpeg**, y se ven en `/camara`
 con un selector de día. Se genera **en el VPS**, donde ya están los fotogramas: hacerlo
 en la Raspberry Pi de casa habría metido un encode en un nodo IRLP en producción y
 habría añadido subida por el enlace de casa, que es el recurso escaso.
@@ -723,10 +723,10 @@ tomas de noche salvo que el día entero haya sido de noche). Desde 2026-09-16, a
 visibilidad --el caso casi siempre, ~95% de las capturas salen "good"-- desempata el
 tipo de nube más interesante (cumulonimbus/altocumulus por encima de estratos lisos,
 `sky_analyzer.CLOUD_TYPE_INTEREST`); a empate total, gana la primera del día. Se ve en
-`/pro/camara` junto al selector de día que comparten Timelapse e Histórico, y también
+`/camara` junto al selector de día que comparten Timelapse e Histórico, y también
 decide la foto del resumen semanal por correo (`CameraStore.best_of_week`).
 
-**Cruce con METAR:** la tarjeta de METAR (Homepage y `/pro/aeronautica`, aeropuerto
+**Cruce con METAR:** la tarjeta de METAR (Homepage y `/aeronautica`, aeropuerto
 MMMX) muestra, junto a sus capas de nubes con altura, lo que ve la cámara en ese mismo
 momento. Sin puntaje de acierto a propósito: el aeropuerto está a varios km de la
 estación, así que es una comparación a ojo, no una validación como la de arriba (que
@@ -786,7 +786,7 @@ recientemente, y sólo si su TTL ya expiró.
 La página 5 y la consola **reusan componentes del dashboard** (`MultiVariableChart` y
 `ConsoleReplica`), no copias: cualquier mejora que se les haga en la web llega
 sola al display. `ConsoleReplica` es además la misma vista del tab
-[Consola](#5-la-página-web-pro) (`/pro/consola`), con un prop `mode` como única
+[Consola](#5-la-página-web) (`/consola`), con un prop `mode` como única
 diferencia.
 
 Las pantallas del árbol nuevo heredan la estética de la consola —negro, cifras en
@@ -1566,7 +1566,7 @@ disponibilidad (ver `uptime-worker/`).
 (`/data/settings.json`), así que sobreviven a reinicios y reconstrucciones.
 
 **Analítica del sitio (PostHog):** instrumentado en las vistas **públicas**
-(`/` clásica y `/pro`) -- deliberadamente NO corre en `/admin` (panel
+(`/` y la clásica en `/basica`) -- deliberadamente NO corre en `/admin` (panel
 privado, mezclaría acciones del dueño con visitas reales), `/kiosko` (un solo
 dispositivo físico en loop, no un "visitante") ni `/embed` (widget incrustado
 en OTROS sitios, mediría tráfico ajeno). Incluye **Session Replay**

@@ -103,7 +103,7 @@ export function ForecastCompareCard({ forecast }: { forecast: ForecastResult | n
           Dos modelos globales vs. oficial (SMN)
           {smn?.stale && <span className="text-amber-400/80"> · SMN de la última publicación</span>}
         </span>
-        <Link to="/pro/pronostico" className="text-xs text-blue-400 hover:text-blue-300">Ver pronóstico →</Link>
+        <Link to="/pronostico" className="text-xs text-blue-400 hover:text-blue-300">Ver pronóstico →</Link>
       </div>
     </div>
   )

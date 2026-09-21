@@ -100,7 +100,7 @@ export function WindCard({ data, onFlip }: { data: WeatherData; onFlip?: () => v
         </p>
         {onFlip
           ? <button onClick={onFlip} className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</button>
-          : <Link to="/pro/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>}
+          : <Link to="/estadisticas" className="text-xs text-blue-400 hover:text-blue-300">Rosa de vientos →</Link>}
       </div>
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">

@@ -2,7 +2,7 @@
   "name": "Estación Clima XE1E",
   "short_name": "Clima XE1E",
   "description": "Estación meteorológica en la Ciudad de México: condiciones actuales, pronóstico, radar, astronomía y climatología.",
-  "start_url": "/pro",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

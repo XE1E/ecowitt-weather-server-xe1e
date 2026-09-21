@@ -226,7 +226,7 @@ export function MetarCard() {
 
       <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
         <span>{obs ? `Obs. ${obs}` : ''}</span>
-        <Link to="/pro/aeronautica" className="text-blue-400 hover:text-blue-300">Aeronáutica →</Link>
+        <Link to="/aeronautica" className="text-blue-400 hover:text-blue-300">Aeronáutica →</Link>
       </div>
     </div>
   )

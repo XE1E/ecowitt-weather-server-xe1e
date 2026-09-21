@@ -9,7 +9,7 @@ import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../re
 const REFRESH = 60000 // 1 min
 
 // Tarjeta compacta de la estación remota para "Mi tablero". Se auto-consulta
-// (no depende del proveedor de la principal). Detalle completo en /pro/remota.
+// (no depende del proveedor de la principal). Detalle completo en /remota.
 export function RemoteStationCard() {
   const u = useUnits()
   const [data, setData] = useState<WeatherData | null>(null)

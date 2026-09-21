@@ -610,7 +610,7 @@ export function AdminSistema() {
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <h2 className="text-sm font-medium mb-3">Enlaces</h2>
         <div className="flex flex-wrap gap-3">
-          <a href="/pro" target="_blank" className="text-sky-400 hover:text-sky-300 text-sm">🌤️ Ver sitio publico</a>
+          <a href="/" target="_blank" className="text-sky-400 hover:text-sky-300 text-sm">🌤️ Ver sitio publico</a>
           <a href="/guia.html" target="_blank" className="text-sky-400 hover:text-sky-300 text-sm">📖 Guia de la estacion</a>
           <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e" target="_blank" className="text-sky-400 hover:text-sky-300 text-sm">📦 GitHub</a>
           <a href="/api/current" target="_blank" className="text-sky-400 hover:text-sky-300 text-sm">📡 API /current</a>
