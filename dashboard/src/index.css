@@ -113,11 +113,14 @@ body {
 /* Neutrales de texto (mayor especificidad que las utilidades de Tailwind) */
 :root[data-theme="light"] .text-white { color: #16232f; }
 /* Excepcion: texto blanco SOBRE fondo de acento saturado (tabs/botones "activos",
-   patron `bg-blue-600 text-white` / `bg-sky-600 text-white` repetido en ~15
-   componentes) -- el override de arriba lo oscurecia a #16232f, dejando ~3:1 de
-   contraste (texto oscuro sobre azul oscuro, se leia como un boton "apagado"). */
+   patron `bg-{color}-600 text-white` repetido en ~17 componentes) -- el
+   override de arriba lo oscurecia a #16232f, dejando ~3:1 de contraste (texto
+   oscuro sobre fondo oscuro, se leia como un boton "apagado"). amber/violet:
+   selector Exterior/Interior/Presion de RemoteStationPage. */
 :root[data-theme="light"] .bg-blue-600.text-white,
-:root[data-theme="light"] .bg-sky-600.text-white { color: #ffffff; }
+:root[data-theme="light"] .bg-sky-600.text-white,
+:root[data-theme="light"] .bg-amber-600.text-white,
+:root[data-theme="light"] .bg-violet-600.text-white { color: #ffffff; }
 :root[data-theme="light"] .text-slate-100 { color: #1b2733; }
 :root[data-theme="light"] .text-slate-200 { color: #243447; }
 :root[data-theme="light"] .text-slate-300 { color: #33465a; }
