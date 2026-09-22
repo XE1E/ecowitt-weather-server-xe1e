@@ -395,9 +395,9 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
   }, [data, s, isRemote, u.system])
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-white/10 overflow-hidden">
+    <div className="panel">
       {/* Header */}
-      <div className="bg-slate-700/50 px-4 py-2 border-b border-white/10">
+      <div className="panel-header px-4 py-2">
         <div className="flex items-center justify-between">
           <span className="font-medium">{label || 'Resumen de la Estación'}</span>
           <span className="text-sm text-slate-400">

@@ -48,7 +48,7 @@ export function TablesPage() {
             className={`px-4 py-2 text-sm font-medium transition ${
               selected === 'principal'
                 ? 'bg-sky-600 text-white'
-                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+                : 'surface-muted text-slate-300'
             }`}
           >
             Principal (WS2910)
@@ -58,7 +58,7 @@ export function TablesPage() {
             className={`px-4 py-2 text-sm font-medium transition ${
               selected === 'remota'
                 ? 'bg-sky-600 text-white'
-                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50'
+                : 'surface-muted text-slate-300'
             }`}
           >
             Remota
@@ -79,7 +79,7 @@ export function TablesPage() {
           isRemote={selected === 'remota'}
         />
       ) : (
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-8 text-center text-slate-400">
+        <div className="panel p-8 text-center text-slate-400">
           {selected === 'remota'
             ? 'No hay datos disponibles de la estacion remota.'
             : 'Sin datos disponibles.'

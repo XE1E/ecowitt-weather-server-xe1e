@@ -81,6 +81,24 @@ body {
 :root[data-theme="light"] .card-title { color: #5a6b7b; }
 :root[data-theme="light"] .card-unit { color: #6b7a8d; }
 
+/* .panel/.panel-header/.surface-muted (StationSummaryTable, TablesPage): mismo
+   tratamiento que .card -- sin esto quedaban en su rgba oscuro literal (bg-slate-800/50
+   etc.), un panel gris apagado y poco legible sobre el fondo claro. */
+:root[data-theme="light"] .panel {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 30, 50, 0.14);
+}
+:root[data-theme="light"] .panel-header {
+  background: rgba(28, 46, 74, 0.06);
+  border-bottom-color: rgba(15, 30, 50, 0.1);
+}
+:root[data-theme="light"] .surface-muted {
+  background: rgba(28, 46, 74, 0.07);
+}
+:root[data-theme="light"] .surface-muted:hover {
+  background: rgba(28, 46, 74, 0.13);
+}
+
 /* Neutrales de texto (mayor especificidad que las utilidades de Tailwind) */
 :root[data-theme="light"] .text-white { color: #16232f; }
 :root[data-theme="light"] .text-slate-100 { color: #1b2733; }
@@ -177,6 +195,28 @@ body {
   .card-unit {
     @apply text-lg ml-1;
     color: rgba(226, 232, 240, 0.55);
+  }
+
+  /* Panel "plano" (tabla/lista densa con cabecera propia) -- distinto de .card:
+     sin padding ni blur, para que la cabecera y el contenido lleguen hasta el
+     borde (StationSummaryTable, el placeholder de TablesPage). Dark-first como
+     .card; el override de tema claro vive junto a los demás, más abajo. */
+  .panel {
+    @apply rounded-xl border overflow-hidden;
+    background: rgba(30, 41, 59, 0.5);   /* bg-slate-800/50 */
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  .panel-header {
+    background: rgba(51, 65, 85, 0.5);   /* bg-slate-700/50 */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  /* Fondo suelto (sin marco propio) para botones/pills sobre .panel, p. ej. el
+     selector Principal/Remota de TablesPage -- mismo tono que .panel/.panel-header. */
+  .surface-muted {
+    background: rgba(30, 41, 59, 0.5);
+  }
+  .surface-muted:hover {
+    background: rgba(51, 65, 85, 0.5);
   }
 
   /* Status badge (OFFLINE, low battery, etc.) */
