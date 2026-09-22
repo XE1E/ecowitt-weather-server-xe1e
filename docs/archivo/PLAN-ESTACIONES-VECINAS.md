@@ -1,6 +1,7 @@
 # Plan — Estaciones vecinas (Xweather + Netatmo)
 
-> Escrito el 2026-09-13. Vive en git.
+> Escrito el 2026-09-13. Cerrado como **✅ HECHO Y EN PRODUCCIÓN**, queda solo en
+> **observación pasiva** (ver `docs/internal/PENDIENTES.md` §0). Vive en git.
 >
 > **Estado:** fases 1, 2 y 3 **HECHAS, conectadas y en producción**
 > (2026-09-13). Netatmo desplegado, login OAuth completado desde Admin →

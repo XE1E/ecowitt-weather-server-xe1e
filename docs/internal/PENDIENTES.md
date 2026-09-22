@@ -97,10 +97,10 @@ enviada, así que el envío real sigue su curso normal el próximo lunes 7am.
       (`/api/admin/test-digest`) manda con datos reales sin esperar al
       día/hora ni marcar la semana como enviada.
 
-## 0. Estaciones vecinas + "nuestro pronóstico" — en observación (2026-09-14)
+## 0. Estaciones vecinas + "nuestro pronóstico" — en observación pasiva (2026-09-14)
 
 Sesión grande del 2026-09-14: fase 3 de estaciones vecinas (Netatmo, ver
-`docs/internal/PLAN-ESTACIONES-VECINAS.md`), señal de "lluvia acercándose"
+`docs/archivo/PLAN-ESTACIONES-VECINAS.md`), señal de "lluvia acercándose"
 (`forecaster.detect_incoming_rain`), recalibración de `sky_validation.py`, y
 `forecaster.own_forecast` (`GET /api/forecast/own`) como voz propia de la
 estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
@@ -115,7 +115,7 @@ estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
       ¿los umbrales de confianza/viento necesitan ajuste?) antes de tocar
       nada más.
 - [ ] Netatmo fase 3: validar en producción unos días (punto 6 del checklist
-      en PLAN-ESTACIONES-VECINAS.md) antes de darla por cerrada del todo.
+      en `docs/archivo/PLAN-ESTACIONES-VECINAS.md`) antes de darla por cerrada del todo.
 - [ ] Netatmo: ninguna vecina real tiene todavía módulo pluviómetro, así que
       `rain_live`/`rain_60min` en `netatmo.py` sigue sin verificarse contra
       datos reales -- revisar si alguna vecina nueva lo trae.
@@ -393,7 +393,7 @@ Ojo para la próxima: **la versión de Ruff está fijada** en el workflow (0.16.
 reglas en `receiver/ruff.toml`. Subirla debe ser deliberado.
 
 ## 2.f Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos) — ✅ HECHO Y EN PRODUCCIÓN (2026-08-31)
-Ver **`docs/internal/PLAN-RESPALDO-R2.md`** y **`docs/backups-r2.md`**. 4 scripts
+Ver **`docs/archivo/PLAN-RESPALDO-R2.md`** y **`docs/backups-r2.md`**. 4 scripts
 (`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`)
 corriendo por cron (3:30/35/40/45 am), credenciales de R2 en Admin → Sistema →
 Respaldos (settings.json, no `.env`), alerta de "respaldo desactualizado" en

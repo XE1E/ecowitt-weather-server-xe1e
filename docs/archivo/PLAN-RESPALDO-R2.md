@@ -1,15 +1,21 @@
 # Plan — Respaldo externo a Cloudflare R2 (sensores, fotos, vídeos)
 
-> Escrito el 2026-08-30. Vive en git.
+> Escrito el 2026-08-30. Cerrado como **✅ HECHO Y EN PRODUCCIÓN el 2026-08-31**. Vive
+> en git.
 >
-> **Estado (2026-08-30): implementado.** Las 3 decisiones pendientes de la primera
-> versión de este plan ya se tomaron (§Decisiones tomadas) y el código está escrito:
-> 4 scripts (`scripts/backup-influx.sh` + `scripts/backup-camera-{fotos,timelapse,analisis}.sh`),
+> **Estado final:** 4 scripts (`scripts/backup-influx.sh` +
+> `scripts/backup-camera-{fotos,timelapse,analisis}.sh`) corriendo por cron a diario,
 > credenciales y retención editables desde Admin → Sistema → Respaldos, alerta de
-> "respaldo desactualizado" en Admin → Alertas. **Falta la parte que sólo puede hacer
-> un humano en el VPS real** (§Siguiente paso concreto): crear el bucket/API keys en
-> Cloudflare, ponerlas en Admin, generar `BACKUP_API_TOKEN` (en ambos lados), instalar
-> `rclone` y programar el cron. Ver `docs/backups-r2.md` para los pasos exactos.
+> "respaldo desactualizado" en Admin → Alertas. Verificado contra el bucket real:
+> 2,453 objetos, ~311 MiB subidos con éxito en las 4 categorías. Detalle de bugs
+> encontrados en la puesta en marcha y el incidente de permisos del 2026-09-08 (8 días
+> sin correr) en `docs/backups-r2.md` §4 y `docs/internal/PENDIENTES.md` §2.f.
+>
+> **Único cabo suelto, no bloqueante, por decisión del usuario:** la vigilancia de
+> cuota del tier gratis de R2 está construida (widget en Admin → Sistema → Respaldos)
+> pero **sin activar** — requiere un Cloudflare API Token de TODA la cuenta (no se
+> puede acotar a un bucket) y el usuario prefirió no crearlo. Activar es solo pegar
+> el token, sin más código.
 
 ## Objetivo
 

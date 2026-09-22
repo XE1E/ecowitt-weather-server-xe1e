@@ -2,7 +2,7 @@
 
 Cinco scripts respaldan, cada uno una categoría, **fuera del VPS**: si el servidor
 se pierde, el histórico sigue a salvo. Ver el diagnóstico completo y las decisiones
-de retención en `docs/internal/PLAN-RESPALDO-R2.md`.
+de retención en `docs/archivo/PLAN-RESPALDO-R2.md`.
 
 | Script | Qué respalda | Retención en R2 |
 |---|---|---|
