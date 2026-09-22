@@ -21,10 +21,11 @@ Severidades:
 
 ## Estado final
 
-**48 de 49 hallazgos corregidos.** El único abierto es el de Svitrix, que necesita
-tocar el firmware: está documentado en `PENDIENTES.md` sección 1b, con el porqué del
-diferimiento y el cuidado a tener (equivocarse ahí deja el reloj reiniciándose cada
-15 minutos).
+**49 de 49 hallazgos corregidos — cerrado.** El único que quedó abierto en la nota
+original (Svitrix, #21b, necesitaba tocar el firmware) también se resolvió: ver
+`docs/internal/PENDIENTES.md` §1b, "✅ HECHO Y FLASHEADO (2026-08-22)" — el firmware
+distingue ahora un 503 real de un fallo de red, ya no reinicia el reloj cada 15 min,
+publicado como `v0.4.0-beta.22`.
 
 Cada arreglo se verificó contra su síntoma, no solo compilando. Los que cambiaron
 números visibles —IMECA, grados-día, condición del tiempo, fase lunar— llevan la
