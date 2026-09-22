@@ -1,10 +1,29 @@
 # Plan — Optimización del servidor y nueva integración (openSenseMap)
 
-> Vive en git, sobrevive cambios de PC. Iniciado 2026-09-08.
-> Tres frentes de la misma sesión: (A) cuatro sugerencias de optimización
-> revisadas contra el código real, (B) investigación para publicar datos en
-> openSenseMap, (C) sugerencias sueltas de code review revisadas después. Se
-> van marcando como `[x]` conforme se implementan.
+> Escrito el 2026-09-08. Cerrado como **✅ TERMINADO el 2026-09-21**. Vive en git.
+>
+> Tres frentes de la misma sesión: (A) siete sugerencias de optimización
+> revisadas contra el código real, (B) integración con openSenseMap, (C) siete
+> sugerencias sueltas de code review, (D) roadmap a futuro. Casi todo **HECHO
+> y desplegado en producción el 2026-09-09** (ver detalle por sección).
+>
+> **Cerrado con estas excepciones, ninguna bloqueante:**
+> - **A5 (SSE en vez de polling):** diseño completo, **sin implementar** — el
+>   beneficio real es ahorro de tráfico redundante (kioscos 24/7), no
+>   velocidad (la estación ya reporta ~1 vez/min a propósito). Retomar si el
+>   volumen de clientes conectados algún día lo justifica.
+> - **C1, cola suelta:** el barrido de `datetime.utcnow()` → `datetime.now(timezone.utc)`
+>   (16 usos en 8 archivos) quedó fuera a propósito — no urge (el Dockerfile
+>   usa Python 3.11, no emite el warning de deprecación todavía) y merece su
+>   propia sesión cuidadosa por los puntos que dependen de que sea naive.
+> - **A4, ítem opcional:** flag de "dato desde caché" en `/api/current` —
+>   baja prioridad, sin hacer.
+> - **C2 y C6:** decisiones explícitas de **NO implementar** (lock especulativo
+>   sin bug real; migrar a modelos de IA que son peores para nowcasting
+>   convectivo corto) — no son pendientes, son cierre de la sugerencia.
+> - **D (roadmap):** solo D1 (sismos) se hizo. El resto (UTCI/WBGT, alertas
+>   SIMAT, triggers de Home Assistant) sigue siendo ideas a futuro, sin plan
+>   detallado — no bloquea el cierre de este documento.
 
 ## A. Optimizaciones internas
 
