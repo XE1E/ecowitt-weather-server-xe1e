@@ -98,9 +98,26 @@ body {
 :root[data-theme="light"] .surface-muted:hover {
   background: rgba(28, 46, 74, 0.13);
 }
+:root[data-theme="light"] .chart-well {
+  background: linear-gradient(to top, rgba(28, 46, 74, 0.09), transparent);
+}
+
+/* Halo de contraste para los glifos Meteocons (nubes blancas pensadas para
+   fondo oscuro, ver WeatherIcon.tsx) -- solo en tema claro, el aro oscuro
+   tenue les da algo contra lo que resaltar. */
+:root[data-theme="light"] .weather-icon {
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(15, 35, 65, 0.16) 0%, rgba(15, 35, 65, 0.05) 65%, transparent 100%);
+}
 
 /* Neutrales de texto (mayor especificidad que las utilidades de Tailwind) */
 :root[data-theme="light"] .text-white { color: #16232f; }
+/* Excepcion: texto blanco SOBRE fondo de acento saturado (tabs/botones "activos",
+   patron `bg-blue-600 text-white` / `bg-sky-600 text-white` repetido en ~15
+   componentes) -- el override de arriba lo oscurecia a #16232f, dejando ~3:1 de
+   contraste (texto oscuro sobre azul oscuro, se leia como un boton "apagado"). */
+:root[data-theme="light"] .bg-blue-600.text-white,
+:root[data-theme="light"] .bg-sky-600.text-white { color: #ffffff; }
 :root[data-theme="light"] .text-slate-100 { color: #1b2733; }
 :root[data-theme="light"] .text-slate-200 { color: #243447; }
 :root[data-theme="light"] .text-slate-300 { color: #33465a; }
@@ -217,6 +234,19 @@ body {
   }
   .surface-muted:hover {
     background: rgba(51, 65, 85, 0.5);
+  }
+  /* Fondo de mini-graficas embebidas en una .card (p. ej. barras de
+     probabilidad de lluvia en PrecipitationCard) -- mismo problema que
+     .panel/.surface-muted: era un degradado a bg-slate-800/50 fijo, una caja
+     gris oscura suelta sobre el fondo claro que tapaba las horas debajo. */
+  .chart-well {
+    background: linear-gradient(to top, rgba(30, 41, 59, 0.5), transparent);
+  }
+
+  /* Wrapper de WeatherIcon -- inline-block para que width/height (size prop)
+     apliquen; el halo de tema claro vive en el override de arriba. */
+  .weather-icon {
+    display: inline-block;
   }
 
   /* Status badge (OFFLINE, low battery, etc.) */

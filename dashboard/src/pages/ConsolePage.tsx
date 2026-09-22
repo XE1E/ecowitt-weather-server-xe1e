@@ -33,8 +33,9 @@ export function ConsolePage() {
         <span className="md:hidden"> Puedes hacer zoom táctil.</span>
       </p>
 
-      {/* PC: componente React */}
-      <div className="hidden md:block">
+      {/* PC: componente React -- envuelto en .panel para que tenga marco propio
+          en tema claro (antes quedaba suelta sobre el fondo de la pagina) */}
+      <div className="hidden md:block panel p-4">
         <ConsoleReplica />
       </div>
 

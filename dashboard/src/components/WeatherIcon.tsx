@@ -141,15 +141,21 @@ interface WeatherIconProps {
 
 export function WeatherIcon({ name, size = 32, className = '', alt = '' }: WeatherIconProps) {
   const src = ICONS[name] ?? notAvailable
+  // El set Meteocons dibuja nubes en blanco/casi-blanco (pensado para fondo
+  // oscuro) -- `.weather-icon` les agrega un halo sutil SOLO en tema claro
+  // (ver index.css) para que no se pierdan contra la tarjeta clara. El
+  // className del caller (p. ej. `shrink-0`) va en el wrapper, que es el que
+  // realmente participa del layout flex del padre.
   return (
-    <img
-      src={src}
-      width={size}
-      height={size}
-      className={className}
-      alt={alt || name}
-      draggable={false}
-      style={{ display: 'block' }}
-    />
+    <span className={`weather-icon ${className}`} style={{ width: size, height: size }}>
+      <img
+        src={src}
+        width={size}
+        height={size}
+        alt={alt || name}
+        draggable={false}
+        style={{ display: 'block', width: '100%', height: '100%' }}
+      />
+    </span>
   )
 }

@@ -133,7 +133,7 @@ export function PrecipitationCard({ data, forecast, ownForecast: own = null }: P
           {ownVsModelNote && (
             <p className="text-[11px] text-slate-500 mb-2">{ownVsModelNote}</p>
           )}
-          <div className="flex items-end gap-1.5 h-20 rounded-lg bg-gradient-to-t from-slate-800/50 to-transparent px-2 pt-2">
+          <div className="flex items-end gap-1.5 h-20 rounded-lg chart-well px-2 pt-2">
             {next.map((h) => {
               const prob = h.precipProb ?? 0
               const height = peakProb > 0 ? (prob / Math.max(1, peakProb)) * 100 : 0
