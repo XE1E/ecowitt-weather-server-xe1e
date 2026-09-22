@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-09-16.
+> Última actualización: 2026-09-21.
 
 ## -1. Ronda "aprovechar lo que ya tenemos" — ✅ HECHA Y EN PRODUCCIÓN (2026-09-16)
 
@@ -119,6 +119,30 @@ estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
 - [ ] Netatmo: ninguna vecina real tiene todavía módulo pluviómetro, así que
       `rain_live`/`rain_60min` en `netatmo.py` sigue sin verificarse contra
       datos reales -- revisar si alguna vecina nueva lo trae.
+
+## 0b. Detector de lluvia (piezo + capacitivo) — plan escrito, bloqueado por hardware (2026-08-16)
+
+Plan completo en **`docs/internal/PLAN-DETECTOR-LLUVIA.md`**. No mide cuánta
+agua cae (eso ya lo hace el pluviómetro) -- detecta **que está lloviendo
+ahora mismo**, aunque caiga tan poco que el balancín nunca llegue a volcar
+(llovizna, típica en CDMX por las tardes). Decidido: desarrollo propio,
+alimentado de la red, con **fusión de dos sensores** (piezo detecta el
+impacto de la gota = evento; capacitivo detecta la placa mojada = estado;
+cada uno tapa el punto ciego del otro -- el piezo es inmune al rocío, el
+capacitivo sabe cuándo de verdad dejó de llover).
+
+- [x] **1a. Firmware de caracterización escrito y compilado** (2026-08-16),
+      `firmware/piezo-test/`, sin warnings para `esp32dev` y
+      `esp32-s3-devkitc-1`.
+- [ ] **1b. Piezo en el escritorio** (probar con un cuentagotas si la señal
+      de una gota se distingue de un golpe en la mesa). **Bloqueado: falta
+      comprar el piezo** -- lista de compra completa en el plan (~25-30 USD
+      todo el proyecto), nada más empezado.
+- [ ] 2. Prueba de POST al VPS (descartar el problema de Cloudflare que ya
+      dio guerra con la cámara, antes de invertir en hardware).
+- [ ] 3-7. Placa capacitiva, fusión/máquina de estados, endpoint +
+      almacenamiento + tarjeta en el tablero, calefactor, alerta de "empezó
+      a llover" -- en ese orden, cada uno depende del anterior.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
