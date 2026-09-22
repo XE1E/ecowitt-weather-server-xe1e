@@ -1,7 +1,7 @@
 # Pendientes — Estación Clima XE1E
 
 > Lista viva de trabajo pendiente. Vive en git (sobrevive cambios de PC).
-> Última actualización: 2026-09-21.
+> Última actualización: 2026-09-22.
 
 ## -1. Ronda "aprovechar lo que ya tenemos" — ✅ HECHA Y EN PRODUCCIÓN (2026-09-16)
 
@@ -143,6 +143,39 @@ capacitivo sabe cuándo de verdad dejó de llover).
 - [ ] 3-7. Placa capacitiva, fusión/máquina de estados, endpoint +
       almacenamiento + tarjeta en el tablero, calefactor, alerta de "empezó
       a llover" -- en ese orden, cada uno depende del anterior.
+
+## 0c. Convenciones de diseño — 4 divergencias reales + 1 hallazgo nuevo (2026-09-22)
+
+`docs/internal/AUDITORIA-CONVENCIONES.md` (2026-07-31) se revisó contra el código
+real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
+2026-08-10 que recoloreó Humedad) y 11 quedaron obsoletos porque
+`docs/CONVENCIONES.md` cambió después. Detalle completo y anotado en ese documento.
+Lo que de verdad sigue abierto:
+
+- [ ] **`ImecaCard.tsx`**: al tooltip del `AreaChart` le falta el `cursor` con
+      `strokeDasharray` que sí tienen ya `TemperatureChart`/`RemoteStationPage`/
+      `PressureCard`.
+- [ ] **`StationSummaryTable.tsx`**: umbral de tendencia sigue en 2% dinámico
+      (`getTrend` propio) en vez de los umbrales fijos por variable de
+      `TREND_THRESHOLDS`.
+- [ ] **Hallazgo nuevo — `TrendBadge.tsx` y `StationSummaryTable.tsx` no usan
+      `TrendArrow`/`getTrend` compartidos.** La convención vigente desde agosto
+      (`CONVENCIONES.md`) es explícita: "quien pinte tendencias debe usar
+      `TrendArrow` y `getTrend`, no dibujar flechas propias". `TrendBadge` dibuja
+      con iconos Lucide (`ArrowUp/ArrowDown/Minus`) y `StationSummaryTable` con
+      flechas Unicode (`↑↓→`) y su propio `getTrend` (el mismo del 2% de arriba) --
+      ninguno de los dos usa el componente/hook compartido.
+- [ ] **`KioskPage.tsx` → `RemoteCard`** (menor): el tile "Exterior" usa colores no
+      conformes (`#fbbf24`/`#22d3ee`) mientras el tile "Interior" de la misma
+      tarjeta, unas líneas abajo, ya usa los correctos (`#f97316`/`#2563eb`).
+- [ ] **`HistoryDayDetail.tsx:297`** (menor): la barra rotulada "Tasa de lluvia"
+      usa el color de Precipitación (`#38bdf8`) en vez del color propio que ya
+      existe para "Tasa de lluvia" (`#0ea5e9`) desde que se agregó esa fila a la
+      convención -- posible alineación de nombre/color, no bloqueante.
+
+**No tocar:** los 2 colores de viento de `HistoryDayDetail.tsx` (líneas 188-189)
+que "divergen" de la tabla son intencionales -- ajuste de contraste de
+accesibilidad medido en ΔE, documentado en el propio código.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del

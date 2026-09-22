@@ -6,6 +6,25 @@ Auditoría de divergencias respecto a las convenciones definidas en `docs/CONVEN
 
 ---
 
+## Estado (revisado contra el código real el 2026-09-22)
+
+De los 45 hallazgos puntuales de esta auditoría: **27 ya estaban corregidos** sin que
+quedara registrado en ningún lado (sobre todo por un commit del 2026-08-10 que
+recoloreó Humedad en masa en 7 archivos a la vez), **11 quedaron obsoletos** porque
+`docs/CONVENCIONES.md` cambió después de julio (la escala de tamaños de íconos de 6
+pasos ya no existe; la regla de tendencias pasó de "usar Lucide" a "usar
+`TrendArrow`"), y **solo 4 siguen realmente divergentes** -- marcados `[ ]` en el
+"Plan de Corrección" de abajo, con nota. Detalle completo por sección más abajo
+(anotado inline) y el hallazgo nuevo que salió de esta revisión: ver
+`docs/internal/PENDIENTES.md` §"Convenciones de diseño".
+
+**Ojo:** dos de los colores de viento en `HistoryDayDetail.tsx` (líneas 188-189, ver
+sección 1) siguen sin coincidir con la tabla de la convención, pero es **intencional y
+documentado en el propio código** -- ajuste de contraste de accesibilidad medido en
+ΔE. No se tocan.
+
+---
+
 ## 1. Colores de Gráficas
 
 **Total: 21 divergencias en 7 archivos**
@@ -184,18 +203,47 @@ Los siguientes tamaños se usan pero no están en convenciones:
 
 ## Plan de Corrección
 
+*(Anotado el 2026-09-22 tras revisar contra el código real -- ver "Estado" al
+principio del documento.)*
+
 ### Prioridad Alta
-- [ ] Corregir colores invertidos en TrendBadge.tsx
-- [ ] Unificar colores de gráficas (21 cambios)
-- [ ] Corregir umbrales de tendencia
+- [x] Corregir colores invertidos en TrendBadge.tsx -- **YA CORREGIDO**
+      (`up`→verde, `down`→rojo). Hallazgo NUEVO relacionado, sigue abierto:
+      usa `ArrowUp/ArrowDown/Minus` de **Lucide**, y la convención vigente
+      desde agosto exige `TrendArrow` (SVG propio), no Lucide, para
+      tendencias -- ver `docs/internal/PENDIENTES.md`.
+- [x] Unificar colores de gráficas (21 cambios) -- **17/21 YA CORREGIDOS**
+      (commit masivo del 2026-08-10). 2 quedan divergentes a propósito
+      (`HistoryDayDetail.tsx` viento, ajuste de contraste documentado en el
+      código, no tocar) y 2 eran de una gráfica de `KioskPage.tsx` que ya no
+      existe (se reestructuró el archivo) -- aunque apareció una
+      inconsistencia nueva y real en su sucesor (`RemoteCard`, tile
+      "Exterior" con colores no conformes vs. "Interior" en el mismo
+      archivo que sí los tiene).
+- [x] Corregir umbrales de tendencia -- **3/4 YA CORREGIDOS**
+      (`PressureCard`, `RemoteStationPage` ×2). Sigue abierto:
+      `StationSummaryTable.tsx` con umbral 2% dinámico en vez de los
+      umbrales fijos por variable de `TREND_THRESHOLDS`.
 
 ### Prioridad Media
-- [ ] Unificar estilos de tooltips
-- [ ] Normalizar tamaños de spinners
+- [ ] Unificar estilos de tooltips -- **3/4 YA CORREGIDOS**
+      (`TemperatureChart`, `RemoteStationPage`, `PressureCard`). Sigue
+      abierto: `ImecaCard.tsx` sin `cursor` con `strokeDasharray`.
+- [x] Normalizar tamaños de spinners -- **YA CORREGIDO** (`AirQualityPage`,
+      `RemoteStationPage`, ambos a 32px).
 
 ### Prioridad Baja
-- [ ] Normalizar tamaños de iconos pequeños
-- [ ] Actualizar CONVENCIONES.md con tamaños grandes de WeatherIcon
+- [x] Normalizar tamaños de iconos pequeños -- **CONVENCIÓN CAMBIÓ**: la
+      escala "16/20/24/28/32/48" ya no existe en `docs/CONVENCIONES.md`.
+      De los que citaba esta auditoría, la mayoría (Sun/Moon, TrendBadge,
+      TrendArrow ×2, spinners) ya está en valores razonables de facto;
+      `MiTableroPage` (Check 12px) y `BatteryIcon` ×2 (18px) siguen igual,
+      pero sin ninguna regla vigente que los obligue a cambiar.
+- [x] Actualizar CONVENCIONES.md con tamaños grandes de WeatherIcon -- **YA
+      HECHO**, de otra forma: la escala `ICON.inline/compact/card/hero/kiosk`
+      (32/48/64/96/140) que documenta `docs/internal/PENDIENTES.md` §7
+      (2026-08-19), explícitamente solo para `<WeatherIcon>`/Meteocons, no
+      para Lucide/SVG propios.
 
 ---
 
