@@ -144,27 +144,26 @@ capacitivo sabe cuándo de verdad dejó de llover).
       almacenamiento + tarjeta en el tablero, calefactor, alerta de "empezó
       a llover" -- en ese orden, cada uno depende del anterior.
 
-## 0c. Convenciones de diseño — 4 divergencias reales + 1 hallazgo nuevo (2026-09-22)
+## 0c. Convenciones de diseño — 2 divergencias reales + 1 hallazgo nuevo (2026-09-22)
 
 `docs/internal/AUDITORIA-CONVENCIONES.md` (2026-07-31) se revisó contra el código
 real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
 2026-08-10 que recoloreó Humedad) y 11 quedaron obsoletos porque
 `docs/CONVENCIONES.md` cambió después. Detalle completo y anotado en ese documento.
-Lo que de verdad sigue abierto:
 
+- [x] **`TrendBadge.tsx` y `StationSummaryTable.tsx` ahora usan `TrendArrow`/
+      `getTrend` compartidos — HECHO (2026-09-22).** Antes `TrendBadge` dibujaba
+      con iconos Lucide y `StationSummaryTable` con flechas Unicode (`↑↓→`) y su
+      propio umbral 2% DINÁMICO sobre la media (disparaba con cualquier ruido en
+      medias casi nulas -- viento en calma, radiación de noche -- y casi nunca en
+      medias grandes como la presión). Ahora ambos usan `TrendArrow` y
+      `StationSummaryTable` con umbrales FIJOS por variable vía `TREND_THRESHOLDS`
+      (`theme/constants.ts`, que hasta entonces no consumía nadie en todo el
+      repo). De paso, `getTrend()` aceptaba `previous: number | null` sin
+      `undefined` (asimetría con `current`) -- corregido.
 - [ ] **`ImecaCard.tsx`**: al tooltip del `AreaChart` le falta el `cursor` con
       `strokeDasharray` que sí tienen ya `TemperatureChart`/`RemoteStationPage`/
       `PressureCard`.
-- [ ] **`StationSummaryTable.tsx`**: umbral de tendencia sigue en 2% dinámico
-      (`getTrend` propio) en vez de los umbrales fijos por variable de
-      `TREND_THRESHOLDS`.
-- [ ] **Hallazgo nuevo — `TrendBadge.tsx` y `StationSummaryTable.tsx` no usan
-      `TrendArrow`/`getTrend` compartidos.** La convención vigente desde agosto
-      (`CONVENCIONES.md`) es explícita: "quien pinte tendencias debe usar
-      `TrendArrow` y `getTrend`, no dibujar flechas propias". `TrendBadge` dibuja
-      con iconos Lucide (`ArrowUp/ArrowDown/Minus`) y `StationSummaryTable` con
-      flechas Unicode (`↑↓→`) y su propio `getTrend` (el mismo del 2% de arriba) --
-      ninguno de los dos usa el componente/hook compartido.
 - [ ] **`KioskPage.tsx` → `RemoteCard`** (menor): el tile "Exterior" usa colores no
       conformes (`#fbbf24`/`#22d3ee`) mientras el tile "Interior" de la misma
       tarjeta, unas líneas abajo, ya usa los correctos (`#f97316`/`#2563eb`).
@@ -176,6 +175,18 @@ Lo que de verdad sigue abierto:
 **No tocar:** los 2 colores de viento de `HistoryDayDetail.tsx` (líneas 188-189)
 que "divergen" de la tabla son intencionales -- ajuste de contraste de
 accesibilidad medido en ΔE, documentado en el propio código.
+
+## 0d. Tema claro — `StationSummaryTable` sin adaptar (2026-09-22)
+
+Detectado al verificar visualmente el fix de §0c en `/tablas`. El fix del tema
+claro (commit `344b42b`, mismo día) mejoró `.card` y los colores de acento, pero
+`StationSummaryTable.tsx` **no usa `.card`** -- se envuelve en
+`bg-slate-800/50 border-white/10` directo, una superficie oscura semitransparente
+pensada para fondo oscuro. En tema claro eso queda como un panel gris apagado
+sobre el fondo azul-gris pálido del body, con etiquetas (`text-slate-400` en las
+unidades entre paréntesis) de contraste pobre. Arreglo probable: adaptar ese
+contenedor al mismo tratamiento que `.card` en `index.css`, o darle su propio
+override bajo `[data-theme="light"]`.
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del

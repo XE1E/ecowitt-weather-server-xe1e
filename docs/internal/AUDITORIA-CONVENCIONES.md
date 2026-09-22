@@ -13,10 +13,12 @@ quedara registrado en ningún lado (sobre todo por un commit del 2026-08-10 que
 recoloreó Humedad en masa en 7 archivos a la vez), **11 quedaron obsoletos** porque
 `docs/CONVENCIONES.md` cambió después de julio (la escala de tamaños de íconos de 6
 pasos ya no existe; la regla de tendencias pasó de "usar Lucide" a "usar
-`TrendArrow`"), y **solo 4 siguen realmente divergentes** -- marcados `[ ]` en el
-"Plan de Corrección" de abajo, con nota. Detalle completo por sección más abajo
-(anotado inline) y el hallazgo nuevo que salió de esta revisión: ver
-`docs/internal/PENDIENTES.md` §"Convenciones de diseño".
+`TrendArrow`"), y de los 4 que seguían realmente divergentes, **2 se corrigieron el
+mismo día** (`TrendBadge`/`StationSummaryTable` ya usan `TrendArrow`/`getTrend`
+compartidos y el umbral fijo de `TREND_THRESHOLDS`, ver commit `30887e3`) -- quedan
+**2 reales**, marcados `[ ]` en el "Plan de Corrección" de abajo. Detalle completo por
+sección más abajo (anotado inline) y el seguimiento vivo en
+`docs/internal/PENDIENTES.md` §0c/§0d.
 
 **Ojo:** dos de los colores de viento en `HistoryDayDetail.tsx` (líneas 188-189, ver
 sección 1) siguen sin coincidir con la tabla de la convención, pero es **intencional y
@@ -208,10 +210,10 @@ principio del documento.)*
 
 ### Prioridad Alta
 - [x] Corregir colores invertidos en TrendBadge.tsx -- **YA CORREGIDO**
-      (`up`→verde, `down`→rojo). Hallazgo NUEVO relacionado, sigue abierto:
-      usa `ArrowUp/ArrowDown/Minus` de **Lucide**, y la convención vigente
-      desde agosto exige `TrendArrow` (SVG propio), no Lucide, para
-      tendencias -- ver `docs/internal/PENDIENTES.md`.
+      (`up`→verde, `down`→rojo). Hallazgo NUEVO relacionado, encontrado en esta
+      revisión y **corregido el mismo día** (2026-09-22, commit `30887e3`): usaba
+      `ArrowUp/ArrowDown/Minus` de Lucide en vez de `TrendArrow` (SVG propio),
+      que es lo que exige la convención vigente desde agosto para tendencias.
 - [x] Unificar colores de gráficas (21 cambios) -- **17/21 YA CORREGIDOS**
       (commit masivo del 2026-08-10). 2 quedan divergentes a propósito
       (`HistoryDayDetail.tsx` viento, ajuste de contraste documentado en el
@@ -220,10 +222,11 @@ principio del documento.)*
       inconsistencia nueva y real en su sucesor (`RemoteCard`, tile
       "Exterior" con colores no conformes vs. "Interior" en el mismo
       archivo que sí los tiene).
-- [x] Corregir umbrales de tendencia -- **3/4 YA CORREGIDOS**
-      (`PressureCard`, `RemoteStationPage` ×2). Sigue abierto:
-      `StationSummaryTable.tsx` con umbral 2% dinámico en vez de los
-      umbrales fijos por variable de `TREND_THRESHOLDS`.
+- [x] Corregir umbrales de tendencia -- **4/4 YA CORREGIDOS**
+      (`PressureCard`, `RemoteStationPage` ×2, y `StationSummaryTable.tsx`
+      corregido el 2026-09-22, commit `30887e3`: umbral 2% dinámico → umbrales
+      fijos por variable de `TREND_THRESHOLDS`, que hasta entonces no
+      consumía nadie en todo el repo).
 
 ### Prioridad Media
 - [ ] Unificar estilos de tooltips -- **3/4 YA CORREGIDOS**
