@@ -176,17 +176,24 @@ real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
 que "divergen" de la tabla son intencionales -- ajuste de contraste de
 accesibilidad medido en ΔE, documentado en el propio código.
 
-## 0d. Tema claro — `StationSummaryTable` sin adaptar (2026-09-22)
+## 0d. Tema claro — `StationSummaryTable` sin adaptar — ✅ HECHO (2026-09-22)
 
 Detectado al verificar visualmente el fix de §0c en `/tablas`. El fix del tema
 claro (commit `344b42b`, mismo día) mejoró `.card` y los colores de acento, pero
-`StationSummaryTable.tsx` **no usa `.card`** -- se envuelve en
+`StationSummaryTable.tsx` **no usaba `.card`** -- se envolvía en
 `bg-slate-800/50 border-white/10` directo, una superficie oscura semitransparente
-pensada para fondo oscuro. En tema claro eso queda como un panel gris apagado
-sobre el fondo azul-gris pálido del body, con etiquetas (`text-slate-400` en las
-unidades entre paréntesis) de contraste pobre. Arreglo probable: adaptar ese
-contenedor al mismo tratamiento que `.card` en `index.css`, o darle su propio
-override bajo `[data-theme="light"]`.
+pensada para fondo oscuro; se veía como panel gris apagado en tema claro. Mismo
+problema en el placeholder vacío y los pills del selector Principal/Remota de
+`TablesPage.tsx`, en la misma pantalla.
+
+**Arreglado (commit `00c21df`):** nuevas clases `.panel`/`.panel-header`/
+`.surface-muted` en `index.css` (mismo patrón que `.card`, con su propio
+override bajo `[data-theme="light"]`), aplicadas en `StationSummaryTable.tsx` y
+`TablesPage.tsx`. Deliberadamente NO se tocaron las ~70 ocurrencias de
+`bg-slate-800/50` en `/admin` (paneles propios, siempre oscuros, fuera de
+alcance) -- de ahí usar clases nuevas dedicadas en vez de sobreescribir la
+utilidad Tailwind globalmente. Verificado con Playwright en `/tablas`, tema
+claro (panel legible) y oscuro (pixel-idéntico a antes).
 
 ## 1. WN32 — ✅ HECHO (2026-08-09)
 En la **estación Remota** habrá 2 sensores: **WN32 = exterior** y el **integrado del
