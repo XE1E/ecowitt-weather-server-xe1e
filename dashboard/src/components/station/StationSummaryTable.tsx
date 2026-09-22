@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { WeatherData, DailyStats } from '../../types'
 import { useUnits, type Units } from '../../units'
+import { TrendArrow, getTrend, type Trend } from '../TrendArrow'
+import { TREND_THRESHOLDS } from '../../theme/constants'
 
 /**
  * Tipo de magnitud de cada fila. Se declara el KIND y de él salen la unidad y el
@@ -47,21 +49,19 @@ interface Props {
   isRemote?: boolean
 }
 
-type TrendDir = 'up' | 'down' | 'stable'
-
-function getTrend(current: number | undefined | null, avg: number | undefined | null): TrendDir {
-  if (current == null || avg == null) return 'stable'
-  const diff = current - avg
-  const threshold = Math.abs(avg) * 0.02 // 2% threshold
-  if (diff > threshold) return 'up'
-  if (diff < -threshold) return 'down'
-  return 'stable'
-}
-
-function TrendIcon({ dir }: { dir: TrendDir }) {
-  if (dir === 'up') return <span className="text-green-500 text-2xl font-bold">↑</span>
-  if (dir === 'down') return <span className="text-red-500 text-2xl font-bold">↓</span>
-  return <span className="text-slate-400 text-2xl font-bold">→</span>
+// Tendencia: `TrendArrow`/`getTrend` compartidos (docs/CONVENCIONES.md) en vez de
+// flechas Unicode propias, y umbral FIJO por variable (`TREND_THRESHOLDS`) en vez
+// del 2% dinámico de antes -- un 2% de una media casi nula (radiación de noche,
+// viento en calma) disparaba con cualquier ruido, y un 2% de una media grande
+// (presión ~1024 hPa → ~20 hPa) casi nunca disparaba. `trendThreshold(kind)`
+// solo cubre los kind que de verdad llevan tendencia en esta tabla.
+function trendThreshold(kind: Kind): number {
+  switch (kind) {
+    case 'temp': return TREND_THRESHOLDS.temperature
+    case 'hum': return TREND_THRESHOLDS.humidity
+    case 'press': return TREND_THRESHOLDS.pressure
+    default: return Infinity // sin umbral definido -> nunca dispara up/down
+  }
 }
 
 function WindArrow({ deg }: { deg: number }) {
@@ -105,7 +105,7 @@ interface RowData {
   max?: number | null
   maxTime?: string
   avg?: number | null
-  trend?: TrendDir
+  trend?: Trend
   extra?: React.ReactNode
   color?: string
 }
@@ -141,7 +141,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.temperature_outdoor?.max,
           maxTime: s?.temperature_outdoor?.max_time,
           avg: s?.temperature_outdoor?.avg,
-          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -153,7 +153,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.humidity_outdoor?.max,
           maxTime: s?.humidity_outdoor?.max_time,
           avg: s?.humidity_outdoor?.avg,
-          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg, trendThreshold('hum')),
           color: COLORS.hum,
         },
         {
@@ -165,7 +165,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.dew_point?.max,
           maxTime: s?.dew_point?.max_time,
           avg: s?.dew_point?.avg,
-          trend: getTrend(data.dew_point, s?.dew_point?.avg),
+          trend: getTrend(data.dew_point, s?.dew_point?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -177,7 +177,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.temperature_indoor?.max,
           maxTime: s?.temperature_indoor?.max_time,
           avg: s?.temperature_indoor?.avg,
-          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -189,7 +189,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.humidity_indoor?.max,
           maxTime: s?.humidity_indoor?.max_time,
           avg: s?.humidity_indoor?.avg,
-          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg, trendThreshold('hum')),
           color: COLORS.hum,
         },
         {
@@ -201,7 +201,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.pressure_relative?.max,
           maxTime: s?.pressure_relative?.max_time,
           avg: s?.pressure_relative?.avg,
-          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg, trendThreshold('press')),
           color: COLORS.press,
         }
       )
@@ -217,7 +217,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.temperature_outdoor?.max,
           maxTime: s?.temperature_outdoor?.max_time,
           avg: s?.temperature_outdoor?.avg,
-          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg),
+          trend: getTrend(data.temperature_outdoor, s?.temperature_outdoor?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -229,7 +229,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.humidity_outdoor?.max,
           maxTime: s?.humidity_outdoor?.max_time,
           avg: s?.humidity_outdoor?.avg,
-          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg),
+          trend: getTrend(data.humidity_outdoor, s?.humidity_outdoor?.avg, trendThreshold('hum')),
           color: COLORS.hum,
         },
         {
@@ -241,7 +241,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.dew_point?.max,
           maxTime: s?.dew_point?.max_time,
           avg: s?.dew_point?.avg,
-          trend: getTrend(data.dew_point, s?.dew_point?.avg),
+          trend: getTrend(data.dew_point, s?.dew_point?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -259,7 +259,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.pressure_relative?.max,
           maxTime: s?.pressure_relative?.max_time,
           avg: s?.pressure_relative?.avg,
-          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg),
+          trend: getTrend(data.pressure_relative, s?.pressure_relative?.avg, trendThreshold('press')),
           color: COLORS.press,
         },
         {
@@ -346,7 +346,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.temperature_indoor?.max,
           maxTime: s?.temperature_indoor?.max_time,
           avg: s?.temperature_indoor?.avg,
-          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg),
+          trend: getTrend(data.temperature_indoor, s?.temperature_indoor?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -358,7 +358,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.humidity_indoor?.max,
           maxTime: s?.humidity_indoor?.max_time,
           avg: s?.humidity_indoor?.avg,
-          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg),
+          trend: getTrend(data.humidity_indoor, s?.humidity_indoor?.avg, trendThreshold('hum')),
           color: COLORS.hum,
         },
         {
@@ -370,7 +370,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.temperature_ch1?.max,
           maxTime: s?.temperature_ch1?.max_time,
           avg: s?.temperature_ch1?.avg,
-          trend: getTrend(data.temperature_ch1, s?.temperature_ch1?.avg),
+          trend: getTrend(data.temperature_ch1, s?.temperature_ch1?.avg, trendThreshold('temp')),
           color: COLORS.temp,
         },
         {
@@ -382,7 +382,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
           max: s?.humidity_ch1?.max,
           maxTime: s?.humidity_ch1?.max_time,
           avg: s?.humidity_ch1?.avg,
-          trend: getTrend(data.humidity_ch1, s?.humidity_ch1?.avg),
+          trend: getTrend(data.humidity_ch1, s?.humidity_ch1?.avg, trendThreshold('hum')),
           color: COLORS.hum,
         }
       )
@@ -454,7 +454,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
                   {row.avg !== undefined ? (
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-slate-300">{val(row.avg)}</span>
-                      {row.trend && <TrendIcon dir={row.trend} />}
+                      {row.trend && <TrendArrow trend={row.trend} size={20} />}
                     </div>
                   ) : '—'}
                 </td>

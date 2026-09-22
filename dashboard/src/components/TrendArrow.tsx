@@ -23,7 +23,7 @@ export function TrendArrow({ trend, size = 24 }: TrendArrowProps) {
   )
 }
 
-export function getTrend(current: number | undefined | null, previous: number | null, threshold: number): Trend {
+export function getTrend(current: number | undefined | null, previous: number | undefined | null, threshold: number): Trend {
   if (current == null || previous == null) return 'stable'
   const diff = current - previous
   if (diff > threshold) return 'up'
