@@ -80,6 +80,60 @@ def _fmt(value: Optional[float], template: str, none: str = "--") -> str:
     return template.format(value) if value is not None else none
 
 
+def _columns(weather: Dict[str, Any]):
+    # Ancho por columna, NO parejo: medido con la fuente real (DejaVu) contra
+    # cada etiqueta/valor -- "1028.3 hPa" en negrita 22px mide ~139px, más
+    # ancho que el 800/6=133px parejo de antes, por eso PRESION quedaba
+    # apretada contra las líneas divisorias. Se le quitó ese margen a HUMEDAD
+    # (su valor, "100%", es el más angosto de los seis). Anchos en la escala
+    # de 800 px; `_draw_banner` los escala al ancho real.
+    cols = [
+        ("TEMPERATURA", _fmt(weather.get("temperature_outdoor"), "{:.1f}°C"), "", 120),
+        ("HUMEDAD", _fmt(weather.get("humidity_outdoor"), "{:.0f}%"), "", 90),
+        ("PRESION", _fmt(weather.get("pressure_relative"), "{:.1f} hPa"), "", 170),
+        ("LLUVIA 24H", _fmt(weather.get("rain_24h"), "{:.1f} mm"),
+         _fmt(weather.get("rain_rate"), "{:.1f} mm/h"), 130),
+        ("VIENTO", _fmt(weather.get("wind_speed"), "{:.0f} km/h"),
+         _compass_es(weather.get("wind_direction")), 130),
+        ("RADIACION", _fmt(weather.get("solar_radiation"), "{:.0f} W/m²"),
+         _fmt(weather.get("uv_index"), "UV {:.0f}"), 160),
+    ]
+    assert sum(c[3] for c in cols) == CANVAS_W
+    return cols
+
+
+def _draw_banner(draw: ImageDraw.ImageDraw, y0: int, width: int, banner_h: int,
+                 weather: Dict[str, Any], scale: float = 1.0) -> None:
+    """Encabezado de marca + cuadrícula de 6 datos entre `y0` y `y0+banner_h`.
+    `scale` agranda fuentes/márgenes proporcionalmente (1.0 = diseño de 800 px)."""
+    k = lambda v: int(round(v * scale))
+    header_h = k(HEADER_H)
+    draw.rectangle([0, y0, width, y0 + header_h], fill=HEADER_BG)
+    f_header = _load_font(bold=True, size=k(16))
+    f_header_small = _load_font(bold=False, size=k(15))
+    draw.text((k(14), y0 + k(5)), "XE1E STATION · Mexico City", font=f_header, fill=HEADER_TEXT)
+    draw.text((width - k(14), y0 + k(5)), "clima.xe1e.net", font=f_header_small,
+              fill=HEADER_SUB_TEXT, anchor="ra")
+
+    grid_y0 = y0 + header_h
+    grid_h = banner_h - header_h
+    f_label = _load_font(bold=False, size=k(13))
+    f_value = _load_font(bold=True, size=k(22))
+    f_sub = _load_font(bold=False, size=k(14))
+
+    x = 0.0
+    for label, value, sub, w800 in _columns(weather):
+        w = w800 * width / CANVAS_W
+        cx = int(x + w / 2)
+        if x > 0:
+            draw.line([(int(x), grid_y0 + k(8)), (int(x), grid_y0 + grid_h - k(8))], fill=DIVIDER_COLOR, width=1)
+        draw.text((cx, grid_y0 + k(10)), label, font=f_label, fill=LABEL_COLOR, anchor="ma")
+        draw.text((cx, grid_y0 + grid_h / 2 - k(4)), value, font=f_value, fill=VALUE_COLOR, anchor="mm")
+        if sub:
+            draw.text((cx, grid_y0 + grid_h - k(12)), sub, font=f_sub, fill=SUB_COLOR, anchor="ms")
+        x += w
+
+
 def build_webcam_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int = 88) -> bytes:
     """Compone la foto + cintillo de datos y devuelve el JPEG resultante.
 
@@ -104,54 +158,44 @@ def build_webcam_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int 
 
     canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), BANNER_BG)
     canvas.paste(resized, (0, 0))
-    draw = ImageDraw.Draw(canvas)
-
-    # --- Encabezado: marca de la estación ---
-    y0 = photo_h
-    draw.rectangle([0, y0, CANVAS_W, y0 + HEADER_H], fill=HEADER_BG)
-    f_header = _load_font(bold=True, size=16)
-    f_header_small = _load_font(bold=False, size=15)
-    draw.text((14, y0 + 5), "XE1E STATION \u00b7 Mexico City", font=f_header, fill=HEADER_TEXT)
-    draw.text((CANVAS_W - 14, y0 + 5), "clima.xe1e.net", font=f_header_small,
-               fill=HEADER_SUB_TEXT, anchor="ra")
-
-    # --- Cuadrícula de datos ---
-    # Ancho por columna, NO parejo: medido con la fuente real (DejaVu) contra
-    # cada etiqueta/valor -- "1028.3 hPa" en negrita 22px mide ~139px, más
-    # ancho que el 800/6=133px parejo de antes, por eso PRESION quedaba
-    # apretada contra las líneas divisorias. Se le quitó ese margen a HUMEDAD
-    # (su valor, "100%", es el más angosto de los seis).
-    cols = [
-        ("TEMPERATURA", _fmt(weather.get("temperature_outdoor"), "{:.1f}\u00b0C"), "", 120),
-        ("HUMEDAD", _fmt(weather.get("humidity_outdoor"), "{:.0f}%"), "", 90),
-        ("PRESION", _fmt(weather.get("pressure_relative"), "{:.1f} hPa"), "", 170),
-        ("LLUVIA 24H", _fmt(weather.get("rain_24h"), "{:.1f} mm"),
-         _fmt(weather.get("rain_rate"), "{:.1f} mm/h"), 130),
-        ("VIENTO", _fmt(weather.get("wind_speed"), "{:.0f} km/h"),
-         _compass_es(weather.get("wind_direction")), 130),
-        ("RADIACION", _fmt(weather.get("solar_radiation"), "{:.0f} W/m\u00b2"),
-         _fmt(weather.get("uv_index"), "UV {:.0f}"), 160),
-    ]
-    assert sum(c[3] for c in cols) == CANVAS_W
-
-    grid_y0 = y0 + HEADER_H
-    grid_h = banner_h - HEADER_H
-
-    f_label = _load_font(bold=False, size=13)
-    f_value = _load_font(bold=True, size=22)
-    f_sub = _load_font(bold=False, size=14)
-
-    x = 0
-    for label, value, sub, w in cols:
-        cx = int(x + w / 2)
-        if x > 0:
-            draw.line([(x, grid_y0 + 8), (x, grid_y0 + grid_h - 8)], fill=DIVIDER_COLOR, width=1)
-        draw.text((cx, grid_y0 + 10), label, font=f_label, fill=LABEL_COLOR, anchor="ma")
-        draw.text((cx, grid_y0 + grid_h / 2 - 4), value, font=f_value, fill=VALUE_COLOR, anchor="mm")
-        if sub:
-            draw.text((cx, grid_y0 + grid_h - 12), sub, font=f_sub, fill=SUB_COLOR, anchor="ms")
-        x += w
+    _draw_banner(ImageDraw.Draw(canvas), photo_h, CANVAS_W, banner_h, weather)
 
     out = io.BytesIO()
     canvas.save(out, "JPEG", quality=quality)
+    return out.getvalue()
+
+
+# --- Versión 16:9 para Windy ------------------------------------------------
+# Windy muestra la webcam en un marco más ancho que 4:3: con la imagen 800x600
+# recortaba arriba y abajo y dejaba entero el ancho (reportado 2026-09-23). La
+# foto de la cámara ya es ~16:9 (1600x904), así que aquí va COMPLETA a 16:9 y
+# el cintillo se superpone semitransparente sobre la franja de abajo (suelo y
+# edificios: la cámara deja el horizonte por debajo del centro, ver
+# CameraPage.tsx) en vez de añadir alto -- añadirlo rompería el 16:9 y Windy
+# volvería a recortar.
+WIDE_W = 1600
+WIDE_H = 900
+WIDE_SCALE = 1.5          # fuentes 1.5x del diseño de 800 px (el ancho es 2x)
+WIDE_BANNER_H = 165       # = 110 * 1.5
+WIDE_BANNER_ALPHA = 200   # 0-255: deja ver un poco la foto detrás
+
+
+def build_webcam_wide_jpeg(photo_bytes: bytes, weather: Dict[str, Any], quality: int = 85) -> bytes:
+    """Foto a 16:9 (WIDE_W x WIDE_H) con el cintillo superpuesto abajo."""
+    photo = Image.open(io.BytesIO(photo_bytes)).convert("RGB")
+    ow, oh = photo.size
+    # Cubrir el lienzo sin deformar: escalar al lado que falte y recortar el
+    # sobrante centrado (1600x904 -> sobran 4 px de alto).
+    factor = max(WIDE_W / ow, WIDE_H / oh) if ow and oh else 1.0
+    rw, rh = max(WIDE_W, round(ow * factor)), max(WIDE_H, round(oh * factor))
+    resized = photo.resize((rw, rh), Image.LANCZOS)
+    left, top = (rw - WIDE_W) // 2, (rh - WIDE_H) // 2
+    canvas = resized.crop((left, top, left + WIDE_W, top + WIDE_H)).convert("RGBA")
+
+    overlay = Image.new("RGBA", (WIDE_W, WIDE_BANNER_H), BANNER_BG + (WIDE_BANNER_ALPHA,))
+    _draw_banner(ImageDraw.Draw(overlay), 0, WIDE_W, WIDE_BANNER_H, weather, scale=WIDE_SCALE)
+    canvas.alpha_composite(overlay, (0, WIDE_H - WIDE_BANNER_H))
+
+    out = io.BytesIO()
+    canvas.convert("RGB").save(out, "JPEG", quality=quality)
     return out.getvalue()

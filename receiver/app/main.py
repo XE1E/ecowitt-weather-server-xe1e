@@ -2917,6 +2917,23 @@ async def camera_webcam():
     los datos del cintillo siempre son los más recientes, sin caché propia
     más allá de la que ya impone la cabecera.
     """
+    return await _webcam_response(webcam_overlay.build_webcam_jpeg)
+
+
+@app.api_route("/api/camera/webcam-wide.jpg", methods=["GET", "HEAD"])
+async def camera_webcam_wide():
+    """
+    Igual que /api/camera/webcam.jpg pero en 16:9 (1600x900), para Windy
+    Webcams: su marco es más ancho que 4:3 y a la imagen 800x600 le recortaba
+    arriba y abajo. Aquí la foto va completa y el cintillo va superpuesto
+    abajo (ver `webcam_overlay.build_webcam_wide_jpeg`).
+    """
+    return await _webcam_response(webcam_overlay.build_webcam_wide_jpeg)
+
+
+async def _webcam_response(build) -> Response:
+    """Última foto + datos actuales compuestos por `build` (una de las
+    variantes de services/webcam_overlay.py)."""
     ultima = _camera.latest()
     if ultima is None:
         raise HTTPException(status_code=404, detail="Sin capturas")
@@ -2932,7 +2949,7 @@ async def camera_webcam():
     except Exception as e:
         logger.error(f"Error calculando rain_24h para el cintillo de webcam: {e}")
     try:
-        jpeg = webcam_overlay.build_webcam_jpeg(data, weather)
+        jpeg = build(data, weather)
     except Exception as e:
         logger.error(f"Error componiendo la imagen de webcam: {e}")
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")

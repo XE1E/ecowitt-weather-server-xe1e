@@ -3,7 +3,9 @@ import io
 
 from PIL import Image
 
-from app.services.webcam_overlay import build_webcam_jpeg, CANVAS_W, CANVAS_H, _compass_es
+from app.services.webcam_overlay import (
+    build_webcam_jpeg, build_webcam_wide_jpeg, CANVAS_W, CANVAS_H, WIDE_W, WIDE_H, _compass_es,
+)
 
 
 def _fake_photo(w, h, color=(120, 140, 180)) -> bytes:
@@ -73,3 +75,23 @@ def test_compass_es_matches_weather_ts_alphabet():
 
 def test_compass_es_none_is_placeholder():
     assert _compass_es(None) == "--"
+
+
+def test_wide_is_exact_16_9_for_any_photo():
+    # Windy recorta lo que no sea 16:9: la salida debe ser SIEMPRE 1600x900,
+    # venga la foto 16:9 casi exacta, 4:3 o más panorámica.
+    for w, h in ((1600, 904), (1280, 960), (2000, 800)):
+        im = Image.open(io.BytesIO(build_webcam_wide_jpeg(_fake_photo(w, h), _WEATHER)))
+        assert im.size == (WIDE_W, WIDE_H) == (1600, 900)
+
+
+def test_wide_keeps_photo_visible_above_banner():
+    # El cintillo va superpuesto abajo; arriba debe verse la foto tal cual.
+    im = Image.open(io.BytesIO(build_webcam_wide_jpeg(_fake_photo(1600, 904, (200, 30, 30)), _WEATHER)))
+    r, g, b = im.getpixel((800, 300))
+    assert r > 150 and g < 80 and b < 80
+
+
+def test_wide_missing_weather_does_not_crash():
+    im = Image.open(io.BytesIO(build_webcam_wide_jpeg(_fake_photo(1600, 904), {})))
+    assert im.size == (1600, 900)

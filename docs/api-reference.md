@@ -335,6 +335,18 @@ que `latest.jpg` (mismo bloqueo de Cloudflare aplica):
 http://<IP_DEL_VPS>:8080/api/camera/webcam.jpg
 ```
 
+**Variante 16:9 para Windy Webcams (`/api/camera/webcam-wide.jpg`,
+2026-09-23).** Windy muestra la webcam en un marco más ancho que 4:3: con la
+imagen 800×600 de arriba recortaba arriba y abajo (el ancho quedaba entero).
+Esta variante es 1600×900 exacto: la foto (ya ~16:9, 1600×904) va completa y el
+mismo cintillo, escalado 1.5×, se superpone semitransparente sobre la franja de
+abajo (suelo/edificios) en vez de añadir alto. La de 4:3 NO cambió (AWEKAS y
+Weathercloud siguen con ella). ~120 KB.
+
+```
+http://<IP_DEL_VPS>:8080/api/camera/webcam-wide.jpg
+```
+
 **También conectado a Weathercloud (2026-09-14).** De las 9 redes a las que
 publicamos (`publishers.py`), investigado cuáles soportan webcam en el perfil
 de la estación: **solo Weathercloud** tiene esa función activa y documentada
