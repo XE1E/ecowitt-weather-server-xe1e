@@ -107,7 +107,7 @@ body {
    tenue les da algo contra lo que resaltar. */
 :root[data-theme="light"] .weather-icon {
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(15, 35, 65, 0.16) 0%, rgba(15, 35, 65, 0.05) 65%, transparent 100%);
+  background: radial-gradient(circle, rgba(15, 35, 65, 0.30) 0%, rgba(15, 35, 65, 0.12) 65%, transparent 100%);
 }
 
 /* Neutrales de texto (mayor especificidad que las utilidades de Tailwind) */
