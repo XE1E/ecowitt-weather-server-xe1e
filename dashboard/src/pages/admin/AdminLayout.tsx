@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import logoDark from '../../assets/logo-xe1e-dark.png'
 
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
@@ -136,6 +137,7 @@ export function AdminLayout() {
           <span className="text-xl">⚙️</span>
           <span className="font-semibold">Admin</span>
           <span className="text-slate-500">|</span>
+          <img src={logoDark} alt="" className="h-8 w-auto" />
           <span className="text-slate-400 text-sm">Estacion Clima XE1E</span>
         </div>
         <div className="ml-auto flex items-center gap-3">

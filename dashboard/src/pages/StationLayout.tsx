@@ -5,6 +5,8 @@ import { deriveCondition } from '../weather'
 import { useUnits } from '../units'
 import { useStationData } from '../station-data'
 import { LOCATION } from '../config'
+import logoDark from '../assets/logo-xe1e-dark.png'
+import logoLight from '../assets/logo-xe1e-light.png'
 
 // Cintillo: páginas listas (link) + próximas (deshabilitadas)
 const NAV_ACTIVE = [
@@ -83,9 +85,12 @@ export function StationLayout() {
           <header className="appbar sticky top-0 z-30 -mx-3 md:-mx-6 px-3 md:px-6 py-2.5 mb-4 border-b border-white/10">
             {/* Desktop: 3 columnas con fecha/hora centrada */}
             <div className="hidden sm:grid sm:grid-cols-3 items-center gap-3">
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
-                <p className="text-base text-slate-300 truncate">{LOCATION.label}</p>
+              <div className="min-w-0 flex items-center gap-3">
+                <img src={theme === 'dark' ? logoDark : logoLight} alt="" className="h-10 w-auto shrink-0" />
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold truncate">Estación Clima XE1E en {LOCATION.name}</h1>
+                  <p className="text-base text-slate-300 truncate">{LOCATION.label}</p>
+                </div>
               </div>
               <div className="text-center leading-tight">
                 <p className="text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
@@ -125,7 +130,10 @@ export function StationLayout() {
             {/* Móvil: layout compacto */}
             <div className="sm:hidden flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
-                <h1 className="text-base font-bold truncate flex-1">Estación Clima XE1E</h1>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <img src={theme === 'dark' ? logoDark : logoLight} alt="" className="h-7 w-auto shrink-0" />
+                  <h1 className="text-base font-bold truncate">Estación Clima XE1E</h1>
+                </div>
                 <div className="text-center leading-tight">
                   <p className="text-xs font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} {MESES[now.getMonth()].slice(0, 3)}</p>
                   <p className="font-mono text-lg font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}</p>
