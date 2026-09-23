@@ -57,7 +57,9 @@ _CLOUDINESS_RANK = {"clear": 0, "partly_cloudy": 1, "mostly_cloudy": 2, "overcas
 SOURCE_LABELS = {
     "openmeteo": "Open-Meteo",
     "camera": "Cámara",
-    "pressure": "Presión propia",
+    # Se sigue calificando para ver si algún día aporta, pero desde 2026-09-23
+    # ya no dispara lluvia en `own_forecast` (ver su docstring).
+    "pressure": "Presión propia (ya no se usa)",
     "own": "Nuestro pronóstico",
     "camera_trend": "Cámara (nubes de lluvia formándose)",
     "weatherapi": "WeatherAPI",

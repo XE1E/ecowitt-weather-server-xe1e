@@ -109,15 +109,20 @@ function insights(h: HorizonReport, horizon: Horizon): string[] {
   if (!conCsi.length) return []
   const ref = h.ranking.find((r) => r.reference && r.csi != null)
   const best = conCsi[0]
-  const out = [
-    `${horizon === 'now' ? 'Para saber si llueve ahora' : 'Para anticipar lluvia en las próximas 3 h'}, lo más certero es ` +
-      `${best.label}: acierta ${pct(best.csi)} de los casos de lluvia.`,
-  ]
-  if (ref) {
-    const vencen = conCsi.filter((r) => (r.csi ?? 0) > (ref.csi ?? 0))
-    out.push(vencen.length
-      ? `Avisar sólo por horario acierta ${pct(ref.csi)}; ${vencen.length === conCsi.length ? 'todas las fuentes lo superan' : `sólo ${vencen.map((r) => r.label).join(' y ')} lo ${vencen.length === 1 ? 'supera' : 'superan'}`}.`
-      : `Ninguna fuente supera todavía a avisar sólo por horario (${pct(ref.csi)}): no aportan más que la hora del día.`)
+  const que = horizon === 'now' ? 'Para saber si llueve ahora' : 'Para anticipar lluvia en las próximas 3 h'
+  const vencen = ref ? conCsi.filter((r) => (r.csi ?? 0) > (ref.csi ?? 0)) : conCsi
+  const out: string[] = []
+  if (ref && !vencen.length) {
+    // Llamar "lo más certero" a algo que no le gana a la hora del día engaña.
+    out.push(`${que}, ninguna fuente supera todavía a avisar sólo por horario (${pct(ref.csi)}): ` +
+      `no aportan más que la hora del día. La mejor, ${best.label}, acierta ${pct(best.csi)}.`)
+  } else {
+    out.push(`${que}, lo más certero es ${best.label}: acierta ${pct(best.csi)} de los casos de lluvia.`)
+    if (ref) {
+      out.push(`Avisar sólo por horario acierta ${pct(ref.csi)}; ` +
+        (vencen.length === conCsi.length ? 'todas las fuentes lo superan.'
+          : `sólo ${vencen.map((r) => r.label).join(' y ')} lo ${vencen.length === 1 ? 'supera' : 'superan'}.`))
+    }
   }
   for (const r of conCsi.slice(1)) {
     if (r.far != null && r.far >= 50) {
