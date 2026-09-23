@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Sun, Moon } from 'lucide-react'
+import { WeatherIcon } from '../WeatherIcon'
+import { iconLuna } from '../../theme/icons'
 
 interface SunData {
   rise: string | null; set: string | null; noon: string | null
@@ -8,11 +10,16 @@ interface SunData {
 }
 interface MoonData {
   rise: string | null; set: string | null; illumination: number; phase: string; waxing: boolean
-  altitude?: number | null; age_days?: number | null; distance_km?: number | null
+  altitude?: number | null; azimuth?: number | null; age_days?: number | null; distance_km?: number | null
   next_new: string | null; next_first_quarter: string | null
   next_full: string | null; next_last_quarter: string | null
 }
+
 interface Almanac { available: boolean; sun?: SunData; moon?: MoonData }
+
+// Duración del mes sinódico (nueva a nueva), en días -- para convertir `age_days`
+// (lo que ya calcula almanac.py) a la fracción 0..1 que espera `iconLuna()`.
+const SYNODIC_MONTH_DAYS = 29.53058867
 
 const CARD16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
 const dir16 = (d: number) => CARD16[Math.round(d / 22.5) % 16]
@@ -30,7 +37,11 @@ function bez(t: number, a: number, b: number, c: number) {
   return u * u * a + 2 * u * t * b + t * t * c
 }
 
-function SkyArc({ rise, set, up, color }: { rise: string | null; set: string | null; up: boolean; color: string }) {
+function SkyArc({ rise, set, up, color, glyph }: {
+  rise: string | null; set: string | null; up: boolean; color: string
+  /** Nombre de icono Meteocons que "recorre" el arco (sol o fase lunar actual). */
+  glyph: string
+}) {
   const r = toMin(rise)
   const sRaw = toMin(set)
   let f: number | null = null
@@ -48,17 +59,31 @@ function SkyArc({ rise, set, up, color }: { rise: string | null; set: string | n
   const showDot = up && f != null
   const x = f != null ? bez(f, 12, 150, 288) : 150
   const y = f != null ? bez(f, 92, 6, 92) : 6
+  // El SVG estira sin preservar proporción (preserveAspectRatio="none") a un
+  // ancho variable x 92px fijo -- las coordenadas del viewBox (300x100) se
+  // traducen 1:1 a % del contenedor, así que el glifo (posicionado con CSS,
+  // no dentro del <svg>) puede compartir el mismo cálculo de x/y sin duplicar
+  // la lógica del arco.
+  const leftPct = (x / 300) * 100
+  const topPct = (y / 100) * 100
   return (
-    <svg viewBox="0 0 300 100" className="w-full" style={{ height: 92 }} preserveAspectRatio="none">
-      <line x1="0" y1="92" x2="300" y2="92" stroke="rgba(148,163,184,0.35)" strokeDasharray="4 4" />
-      <path d="M12 92 Q150 6 288 92" fill="none" stroke="rgba(148,163,184,0.5)" strokeWidth="2" />
-      {showDot && (
-        <>
+    <div className="relative w-full" style={{ height: 92 }}>
+      <svg viewBox="0 0 300 100" className="w-full h-full" preserveAspectRatio="none">
+        <line x1="0" y1="92" x2="300" y2="92" stroke="var(--muted)" strokeOpacity="0.4" strokeDasharray="4 4" />
+        <path d="M12 92 Q150 6 288 92" fill="none" stroke="var(--muted)" strokeOpacity="0.55" strokeWidth="2" />
+        {showDot && (
           <line x1={x} y1={y} x2={x} y2="92" stroke={color} strokeOpacity="0.35" strokeWidth="1" />
-          <circle cx={x} cy={y} r="7" fill={color} />
-        </>
+        )}
+      </svg>
+      {showDot && (
+        <div
+          className="absolute pointer-events-none"
+          style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%, -50%)' }}
+        >
+          <WeatherIcon name={glyph} size={26} />
+        </div>
       )}
-    </svg>
+    </div>
   )
 }
 
@@ -114,7 +139,7 @@ export function SunMoonDetailCard() {
           </div>
           <div className="relative mt-3">
             {s.noon && <p className="text-[11px] text-slate-500 text-center absolute inset-x-0 -top-1">☀ {s.noon}</p>}
-            <SkyArc rise={s.rise} set={s.set} up={(s.altitude ?? -1) > 0} color="#f59e0b" />
+            <SkyArc rise={s.rise} set={s.set} up={(s.altitude ?? -1) > 0} color="#f59e0b" glyph="clear-day" />
             <div className="flex justify-between text-[10px] text-slate-500 -mt-1 px-1">
               <span>{val(s.rise)}</span><span>{val(s.set)}</span>
             </div>
@@ -141,16 +166,20 @@ export function SunMoonDetailCard() {
             <TimeBox label="Puesta de la luna" time={val(m.set)} icon={<Moon className="w-4 h-4 text-slate-400" />} />
           </div>
           <div className="relative mt-3">
-            <SkyArc rise={m.rise} set={m.set} up={(m.altitude ?? -1) > 0} color="#e2e8f0" />
+            <SkyArc
+              rise={m.rise} set={m.set} up={(m.altitude ?? -1) > 0} color="#e2e8f0"
+              glyph={m.age_days != null ? iconLuna(m.age_days / SYNODIC_MONTH_DAYS) : 'moon-full'}
+            />
             <div className="flex justify-between text-[10px] text-slate-500 -mt-1 px-1">
               <span>{val(m.rise)}</span><span>{val(m.set)}</span>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-3 pt-3 border-t border-white/10">
             <Stat label="Iluminación" value={`${m.illumination}%`} color="text-sky-300" />
             <Stat label="Edad" value={m.age_days != null ? `${m.age_days} días` : '--'} />
             <Stat label="Distancia" value={m.distance_km != null ? `${m.distance_km.toLocaleString('es-MX')} km` : '--'} />
             <Stat label="Elevación" value={m.altitude != null ? `${m.altitude}°` : '--'} />
+            <Stat label="Azimut" value={m.azimuth != null ? `${m.azimuth}° ${dir16(m.azimuth)}` : '--'} />
           </div>
         </div>
       </div>
