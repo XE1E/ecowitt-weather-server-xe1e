@@ -193,6 +193,7 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
     sun_az = round(math.degrees(float(sun.az)), 1)
     moon.compute(obs_now)
     moon_alt = round(math.degrees(float(moon.alt)), 1)
+    moon_az = round(math.degrees(float(moon.az)), 1)
     moon_dist_km = round(moon.earth_distance * 149597870.7)
     mr, ms = _rise_set_current_cycle(obs_now, moon, moon_alt > 0)
     try:
@@ -239,7 +240,7 @@ def compute_almanac(lat: float, lon: float, elevation: float = 2240.0,
             "illumination": illum,
             "phase": _moon_phase_name(illum, waxing),
             "waxing": waxing,
-            "altitude": moon_alt, "age_days": moon_age, "distance_km": moon_dist_km,
+            "altitude": moon_alt, "azimuth": moon_az, "age_days": moon_age, "distance_km": moon_dist_km,
             "next_new": _fecha_local(ephem.next_new_moon(obs.date)),
             "next_first_quarter": _fecha_local(ephem.next_first_quarter_moon(obs.date)),
             "next_full": _fecha_local(ephem.next_full_moon(obs.date)),
