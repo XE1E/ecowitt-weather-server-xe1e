@@ -37,6 +37,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from .converter import sea_level_pressure
 from .forecaster import zone_trend as _zone_trend_helper
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,13 @@ _CACHE: Dict[str, Dict[str, Any]] = {}
 # CDMX, ~2250 msnm, eso cae típicamente entre 750-790 hPa -- muy por debajo).
 _PLAUSIBLE_PRESSURE_MB = (950.0, 1050.0)
 _MIN_TRUST_FACTOR = 50
+# Rango en el que un valor "a nivel del mar" es en realidad presión ABSOLUTA
+# de una estación en altura (CDMX ~2250 m: ~765-790 hPa). Si la estación trae
+# elevación (`profile.elevM`) por encima de _MIN_ELEV_FOR_ABS_M, se reduce a
+# nivel del mar con la misma fórmula ISA que la estación propia en vez de
+# descartarla.
+_ABSOLUTE_PRESSURE_MB = (650.0, 900.0)
+_MIN_ELEV_FOR_ABS_M = 1000.0
 
 # Ventana de tendencia: 3 h, igual que /api/forecast/local (estación propia),
 # para que la tendencia de la zona y la propia se puedan comparar directo.
@@ -70,6 +78,21 @@ def _clean_pressure(mb: Optional[float]) -> Optional[float]:
         return None
     lo, hi = _PLAUSIBLE_PRESSURE_MB
     return mb if lo <= mb <= hi else None
+
+
+def _fix_absolute_pressure(mb: Optional[float], elev_m: Optional[float]) -> Optional[float]:
+    """Si `mb` parece presión absoluta (la PWS la manda como si ya estuviera
+    a nivel del mar -- visto en producción 2026-09-23: EDELGRIM/CHS01/INAUCA9
+    con altimeterMB 765-787 a ~2250 m) y se conoce la elevación de la
+    estación, la reduce a nivel del mar (ISA/QNH, igual que nuestra
+    `pressure_relative`). Si no, la deja igual y `_clean_pressure` la descarta.
+    Solo es un dato informativo: la calibración de cada PWS sigue siendo la
+    que es.
+    """
+    if mb is None or not elev_m or elev_m < _MIN_ELEV_FOR_ABS_M:
+        return mb
+    lo, hi = _ABSOLUTE_PRESSURE_MB
+    return sea_level_pressure(mb, elev_m) if lo <= mb <= hi else mb
 
 
 def _station_trend(station_id: Optional[str], now: float, pressure_mb: Optional[float]) -> Optional[float]:
@@ -115,7 +138,8 @@ def _normalize(raw: Dict[str, Any], now: Optional[float] = None) -> Optional[Dic
     pressure_mb = ob.get("altimeterMB")
     if pressure_mb is None:
         pressure_mb = ob.get("pressureMB")
-    pressure_clean = _clean_pressure(pressure_mb)
+    elev_m = (raw.get("profile") or {}).get("elevM")
+    pressure_clean = _clean_pressure(_fix_absolute_pressure(pressure_mb, elev_m))
     station_id = raw.get("id")
     return {
         "id": station_id,

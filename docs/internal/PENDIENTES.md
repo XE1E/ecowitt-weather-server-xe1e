@@ -127,9 +127,13 @@ estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
       calibración/elevación mal puesta de cada estación (p. ej. `PWS_SCALA`
       con `elevM`=36 m). El filtro 950-1050 sí descarta las que mandan
       absoluta cruda (EDELGRIM/CHS01/INAUCA9, ~765-787). La tendencia de zona
-      no se afecta (usa deltas por estación y prefiere METAR). Si molesta el
-      número mostrado en `NearbyStationsCard`, la opción pensada era ocultar
-      el valor (no la tendencia) cuando se desvíe >~5 hPa del METAR.
+      no se afecta (usa deltas por estación y prefiere METAR).
+      **Decisión del usuario:** las vecinas quedan como dato INFORMATIVO; para
+      tendencia de presión basta MMMX, y lluvia/otros de vecinas no se
+      consideran confiables -- no invertir más aquí. Único ajuste hecho: las
+      que mandan absoluta (`altimeterMB` 650-900 con `elevM` >1000 m) se
+      reducen con ISA (`_fix_absolute_pressure` en `xweather.py`) en vez de
+      descartarse.
 
 ## 0b. Detector de lluvia (piezo + capacitivo) — plan escrito, bloqueado por hardware (2026-08-16)
 

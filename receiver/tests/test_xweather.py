@@ -4,7 +4,7 @@ from app.services.xweather import _normalize, _clean_pressure, _station_trend, _
 from app.services.forecaster import zone_trend as _zone_trend
 
 
-def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST", precip_mm=None):
+def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST", precip_mm=None, elev_m=None):
     ob = {
         "dateTimeISO": "2026-09-13T00:45:00-06:00",
         "tempC": 15.0,
@@ -18,12 +18,15 @@ def _raw(pressure_mb=1013.0, altimeter_mb=None, trust=100, station_id="PWS_TEST"
         ob["altimeterMB"] = altimeter_mb
     if precip_mm is not None:
         ob["precipMM"] = precip_mm
-    return {
+    raw = {
         "id": station_id,
         "dataSource": "PWS",
         "relativeTo": {"distanceKM": 5.0, "bearingENG": "NE"},
         "ob": ob,
     }
+    if elev_m is not None:
+        raw["profile"] = {"elevM": elev_m}
+    return raw
 
 
 def test_normalize_prefers_altimeter_over_pressure_mb():
@@ -144,3 +147,24 @@ def test_zone_trend_falls_back_to_median_without_metar():
 
 def test_zone_trend_none_without_any_data():
     assert _zone_trend([{"source": "PWS", "pressure_trend_mb": None}])["delta_mb"] is None
+
+
+def test_normalize_reduces_absolute_pressure_with_known_elevation():
+    # Caso real (2026-09-23): PWS_EDELGRIM, elevM=2254.9, altimeterMB=779 --
+    # manda la absoluta como si fuera a nivel del mar. Reducida con ISA queda
+    # en el rango de la propia (780 hPa a 2243 m -> ~1024).
+    out = _normalize(_raw(pressure_mb=761.0, altimeter_mb=779.0, elev_m=2254.9))
+    assert out is not None
+    assert 1020.0 <= out["pressure_mb"] <= 1028.0
+
+
+def test_normalize_leaves_sea_level_pressure_untouched_with_elevation():
+    out = _normalize(_raw(pressure_mb=1004.0, altimeter_mb=1025.0, elev_m=2238.0))
+    assert out["pressure_mb"] == 1025.0
+
+
+def test_normalize_drops_absolute_pressure_when_elevation_is_low():
+    # Sin elevación creíble (p. ej. elevM=36 mal configurada) no se puede
+    # reducir: se descarta como antes.
+    out = _normalize(_raw(pressure_mb=771.0, elev_m=36.0))
+    assert out["pressure_mb"] is None
