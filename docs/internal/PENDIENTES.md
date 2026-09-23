@@ -384,12 +384,17 @@ fuente. Objetivo: saber a qué señal darle más peso en `forecaster.own_forecas
 - *Lluvia a 3 h:* presión propia CSI 13% (avisa 35%, 83% falsas alarmas).
 - *Nubosidad:* Open-Meteo pone +23 puntos de nubes de más (error típico ±35).
 
-- [ ] **Presión: la marea atmosférica domina la señal.** "Presión bajando"
-      sale el ~100% del tiempo entre las 12 y 17 h, llueva o no: es la marea
-      semidiurna (cae cada tarde), no un frente. Idea: comparar el Δ3h contra
-      el Δ3h NORMAL de esa hora (curva media de los últimos 30 días) y avisar
-      sólo con la anomalía. Se puede probar retroactivamente con la misma
-      verificación antes de tocar `own_forecast`.
+- [x] **Presión sin marea atmosférica — PROBADO Y DESCARTADO (2026-09-23).**
+      Backtest de 30 días (1434 ventanas de 3 h, "normal" = mediana del Δ3h de
+      esa media hora en los 14/30 días PREVIOS, sin mirar el futuro): avisar
+      con la anomalía EMPEORA (CSI 10% con -0.5 hPa, 5% con -1 hPa, vs 12.8%
+      actual). Referencia clave: avisar lluvia sólo por HORARIO (14-20 h) da
+      **CSI 26%** (avisa 61%, 69% falsas alarmas) -- el doble que la presión;
+      y "presión bajando Y 14-20 h" (15.5%) es PEOR que el horario solo: en
+      las tormentas convectivas de CDMX la presión no anticipa la lluvia a 3 h.
+- [ ] **Decidir (usuario):** quitar la presión como disparador de lluvia en
+      `own_forecast` (hoy dice "Presión bajando: posible lluvia" casi todas las
+      tardes) y/o sumar el horario como referencia "a vencer" en la tarjeta.
 - [ ] Dejar acumular la bitácora (`/data/forecast_log/`) varias semanas de
       lluvias antes de juzgar Open-Meteo/WeatherAPI/SMN/"nuestro pronóstico"
       a 3 h (hoy solo tiene datos la presión, reconstruida).
