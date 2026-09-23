@@ -106,17 +106,16 @@ Sesión grande del 2026-09-14: fase 3 de estaciones vecinas (Netatmo, ver
 estación sobre Open-Meteo/WeatherAPI. Todo en producción y verificado, pero
 **nada de esto está "cerrado" todavía** -- falta observación real:
 
-- [ ] **`nearby_rain_signal_watchdog`** (log cada 10 min, sin Telegram) --
-      dejar correr unos días y revisar `docker compose logs receiver | grep
-      "Señal de lluvia"` para ver qué tanto dispara antes de decidir si
-      amerita una alerta de verdad.
+- [x] **`nearby_rain_signal_watchdog`** -- ELIMINADO (2026-09-23): nunca
+      disparó y el usuario decidió que la lluvia de vecinas no es confiable
+      (quedan solo como dato informativo). `detect_incoming_rain` sigue vivo
+      en `/api/nearby-stations` y en `get_own_forecast`.
 - [ ] **`forecaster.own_forecast`** -- ver cómo se siente en la práctica
       `PrecipitationCard.tsx` unos días (¿el titular aparece con sentido?,
       ¿los umbrales de confianza/viento necesitan ajuste?) antes de tocar
       nada más.
-- [ ] Netatmo fase 3: validar en producción unos días (punto 6 del checklist
-      en `docs/archivo/PLAN-ESTACIONES-VECINAS.md`) antes de darla por cerrada del todo.
-- [ ] Netatmo: ninguna vecina real tiene todavía módulo pluviómetro, así que
+- [x] Netatmo fase 3: cerrada como dato informativo (2026-09-23, ver abajo).
+- [ ] (baja prioridad) Netatmo: ninguna vecina real tiene todavía módulo pluviómetro, así que
       `rain_live`/`rain_60min` en `netatmo.py` sigue sin verificarse contra
       datos reales -- revisar si alguna vecina nueva lo trae.
 - [x] **Revisión 2026-09-23 de presión de vecinas (sin cambios de código,

@@ -193,9 +193,6 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(stats_refresh_task()))
     # Timelapse diario de la cámara (hoy y ayer, más la purga)
     background_tasks.append(asyncio.create_task(timelapse_task()))
-    # Señal de lluvia acercándose (estaciones vecinas + viento propio): solo
-    # log, para evaluar "qué tanto dispara" sin depender del dashboard abierto
-    background_tasks.append(asyncio.create_task(nearby_rain_signal_watchdog()))
     # Resumen semanal por correo (opt-in, ver email_digest_enabled)
     background_tasks.append(asyncio.create_task(email_digest_task()))
 
@@ -3289,9 +3286,8 @@ async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = N
 
 async def _fetch_nearby_stations_merged(lat: float, lon: float) -> Dict[str, Any]:
     """Fusiona Xweather + Netatmo -- toda la lógica de fetch/merge vive aquí
-    para que la use tanto el endpoint público como `nearby_rain_signal_watchdog`
-    (corre en segundo plano, sin depender de que el dashboard esté abierto),
-    sin duplicar nada entre los dos. Cada red se consulta por separado y si
+    para que la usen tanto el endpoint público como `get_own_forecast`, sin
+    duplicar nada entre los dos. Cada red se consulta por separado y si
     UNA falla se ignora (con log) en vez de tumbar el resultado completo --
     así una Netatmo mal configurada no le quita el dato a quien solo usa
     Xweather, y viceversa."""
@@ -3352,8 +3348,8 @@ async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optiona
     página. Incluye `incoming_rain` (ver forecaster.detect_incoming_rain):
     la vecina más cercana que reporta lluvia en la dirección de donde sopla
     el viento propio ahora mismo, o None -- NearbyStationsCard.tsx solo la
-    pinta, no la calcula (única fuente de verdad, la comparte con el
-    watchdog de segundo plano).
+    pinta, no la calcula (única fuente de verdad, la comparte con
+    `get_own_forecast`).
     """
     lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
     lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
@@ -3363,46 +3359,6 @@ async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optiona
         merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
     )
     return merged
-
-
-async def nearby_rain_signal_watchdog():
-    """
-    Misma señal de "lluvia acercándose" que expone /api/nearby-stations
-    (ver forecaster.detect_incoming_rain), pero corriendo SIEMPRE en segundo
-    plano -- no depende de que alguien tenga el dashboard abierto. Solo deja
-    LOG (sin Telegram/correo -- decisión explícita 2026-09-13: primero se
-    observa "qué tanto dispara" unos días antes de decidir si amerita una
-    alerta de verdad con umbrales/histéresis en Admin → Alertas).
-
-    Dedupe simple por id de la vecina que dispara: solo loguea al empezar y
-    al terminar una racha, no en cada vuelta mientras siga la misma -- si no,
-    una tarde de viento sostenido llenaría el log con la misma línea cada
-    10 min sin decir nada nuevo.
-    """
-    await asyncio.sleep(120)  # gracia inicial
-    last_id: Optional[str] = None
-    while True:
-        try:
-            lat = getattr(settings, "cwop_latitude", 19.380359)
-            lon = getattr(settings, "cwop_longitude", -99.174564)
-            merged = await _fetch_nearby_stations_merged(lat, lon)
-            own = latest_by_station.get(None) or {}
-            hit = forecaster.detect_incoming_rain(
-                merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
-            )
-            hit_id = hit["id"] if hit else None
-            if hit and hit_id != last_id:
-                logger.info(
-                    "Señal de lluvia acercándose: %s al %s (%.1f km, %.1f mm) -- viento propio %s° %.1f km/h",
-                    hit.get("source"), hit.get("bearing"), hit.get("distance_km") or -1,
-                    hit.get("precip_mm") or 0, own.get("wind_direction"), own.get("wind_speed") or 0,
-                )
-            elif hit_id is None and last_id is not None:
-                logger.info("Señal de lluvia acercándose: terminó (ya no hay vecina que la dispare)")
-            last_id = hit_id
-        except Exception as e:
-            logger.error(f"Nearby rain-signal watchdog error: {e}")
-        await asyncio.sleep(600)  # 10 min, igual TTL que xweather.py/netatmo.py
 
 
 def _read_digest_state() -> Optional[str]:
