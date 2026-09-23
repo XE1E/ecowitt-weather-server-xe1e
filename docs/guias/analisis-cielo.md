@@ -33,10 +33,12 @@ Cada captura ahora guarda si coincidió con el pronóstico de ese momento
 (`match`: exact/close/differ/conflict) en el histórico diario -- antes esa
 validación se calculaba al vuelo y se descartaba. `GET
 /api/camera/analysis/accuracy?days=30` tabula el % de acierto de los últimos N
-días; la tarjeta "Precisión del pronóstico" lo muestra como barra apilada. Esta
-persistencia es también la base para una futura corrección de sesgo del
-pronóstico (ver `docs/internal/PENDIENTES.md` §2.e, pendiente hasta acumular
-suficientes semanas de datos).
+días. Desde 2026-09-23 la tarjeta "Precisión del pronóstico" ya no muestra esa
+coincidencia sino **quién acierta**: `GET /api/forecast/verification` califica
+cada fuente contra el pluviómetro (lluvia, ahora y a 3 h) y contra la cámara
+(nubosidad) -- ranking por "acierto en lluvia" (CSI), desglose por hora del día,
+tendencia móvil de 7 días y sesgo de nubosidad de Open-Meteo. Detalle en
+`docs/api-reference.md` ("Precisión del pronóstico").
 
 ## Sol directo sin obstrucción (mitiga el halo de la cámara)
 

@@ -371,6 +371,30 @@ tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
 la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
 `docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
 
+## 2.f Verificación de pronósticos: ¿quién acierta? — en producción, acumulando (2026-09-23)
+
+`GET /api/forecast/verification` + tarjeta "Precisión del pronóstico" (`/camara`)
+califican cada fuente contra lo OBSERVADO (pluviómetro/cámara), no contra otra
+fuente. Objetivo: saber a qué señal darle más peso en `forecaster.own_forecast`.
+
+**Primer resultado (30 días, 2026-08-24 → 09-23):**
+- *Lluvia ahora:* cámara CSI 45% (avisa 45%, 1% falsas alarmas) vs Open-Meteo
+  CSI 14% (avisa 61%, **84% falsas alarmas**). Open-Meteo dice lluvia el
+  60-79% del tiempo entre las 15 y 21 h; llovió 10-30%.
+- *Lluvia a 3 h:* presión propia CSI 13% (avisa 35%, 83% falsas alarmas).
+- *Nubosidad:* Open-Meteo pone +23 puntos de nubes de más (error típico ±35).
+
+- [ ] **Presión: la marea atmosférica domina la señal.** "Presión bajando"
+      sale el ~100% del tiempo entre las 12 y 17 h, llueva o no: es la marea
+      semidiurna (cae cada tarde), no un frente. Idea: comparar el Δ3h contra
+      el Δ3h NORMAL de esa hora (curva media de los últimos 30 días) y avisar
+      sólo con la anomalía. Se puede probar retroactivamente con la misma
+      verificación antes de tocar `own_forecast`.
+- [ ] Dejar acumular la bitácora (`/data/forecast_log/`) varias semanas de
+      lluvias antes de juzgar Open-Meteo/WeatherAPI/SMN/"nuestro pronóstico"
+      a 3 h (hoy solo tiene datos la presión, reconstruida).
+- [ ] Con eso, re-pesar `own_forecast` según lo que resulte más certero.
+
 ## 2.e Corrección de sesgo del pronóstico con datos de la cámara — reencauzado (2026-09-14)
 
 Idea derivada de comparar la cámara del exterior con el pronóstico de Open-Meteo

@@ -246,6 +246,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/camera/analysis` | Último análisis del cielo + tendencia (nowcasting) |
 | `GET /api/camera/analysis/validation` | Validación en vivo vs pronóstico de Open-Meteo |
 | `GET /api/camera/analysis/accuracy?days=30` | % de acierto vs pronóstico de los últimos N días (ver abajo) |
+| `GET /api/forecast/verification?days=30` | ¿Qué fuente ACIERTA? Cada pronóstico calificado contra el pluviómetro (lluvia) y la cámara (nubosidad) (ver abajo) |
 | `GET /api/camera/analysis/history` | Días con análisis, o `?date=` para la curva de un día |
 | `GET /api/camera/best/<fecha>` · `GET /api/camera/best/<fecha>.jpg` | Metadato y foto de mejor visibilidad de ese día (ver abajo) |
 | `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
@@ -365,6 +366,25 @@ GET /api/camera/analysis/accuracy?days=30
   "pct": {"exact": 51.3, "close": 24.1, "differ": 18.2, "conflict": 6.4}
 }
 ```
+
+`/api/camera/analysis/accuracy` sólo dice si la cámara y Open-Meteo *coincidieron*,
+no quién tenía razón. Para eso está `GET /api/forecast/verification?days=30`
+(`services/forecast_verification.py`), que califica cada fuente contra lo
+OBSERVADO: el pluviómetro (`rain_total`, >= 0.2 mm) para lluvia y la cámara para
+nubosidad. Dos horizontes:
+
+- `now` -- ¿llueve ahora? (±30 min alrededor de cada foto de día). Fuentes:
+  Open-Meteo y la cámara; retroactivo desde el histórico diario de la cámara.
+- `next3h` -- ¿lloverá en 3 h? La presión propia se reconstruye de InfluxDB;
+  Open-Meteo/WeatherAPI/SMN (avisan con probabilidad >= 50%), "nuestro
+  pronóstico" (`/api/forecast/own`) y la tendencia de la cámara salen de una
+  bitácora nueva (`<forecast_log_dir>/YYYY-MM-DD.json`, una foto cada 30 min,
+  120 días) y sólo cuentan desde que existe.
+
+Por fuente: aciertos/fallos/falsas alarmas, POD, FAR y CSI ("acierto en lluvia",
+la métrica del ranking: no premia decir siempre "no llueve"); por hora local
+(`by_hour`) y CSI móvil de 7 días (`trend`). `sky` da el sesgo de nubosidad de
+Open-Meteo frente a la cámara. Caché de 10 min.
 
 `GET /api/camera/best/<fecha>` elige, de ese día, la entrada con mayor visibilidad
 reportada (excluye la noche salvo que el día entero lo haya sido); a igual
