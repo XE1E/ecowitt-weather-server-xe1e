@@ -2390,6 +2390,16 @@ async def camera_upload(request: Request):
 # espera el intervalo completo, que es lo que respeta la cuota del tier gratuito.
 _ultimo_analisis_ts = 0.0
 
+# Si está lloviendo (rain_rate > 0) según la ÚLTIMA vez que _debe_analizar() se
+# evaluó. None hasta el primer chequeo -- no dispara un análisis extra al arrancar.
+_ultimo_estaba_lloviendo: Optional[bool] = None
+
+# Cooldown mínimo (segundos) para el bypass por cambio de lluvia: sin esto, un
+# rain_rate rondando el umbral (0.0/0.1 mm/h alternando por ruido del sensor)
+# dispararía un análisis por cada parpadeo. 2 min es corto frente al intervalo
+# normal (15 min) pero evita ráfagas.
+_LLUVIA_BYPASS_COOLDOWN_S = 120
+
 # Resultado del último intento de análisis, para el panel de diagnóstico. `ok` None
 # hasta el primer intento tras arrancar.
 _ultimo_analisis_resultado: Dict[str, Any] = {"ok": None, "at": None, "provider": None, "error": None}
@@ -2406,16 +2416,34 @@ def _registrar_analisis(provider: Optional[str], error: Optional[str]) -> None:
 
 
 def _debe_analizar() -> bool:
-    """Throttle del análisis por `camera_analysis_interval_min`.
+    """Throttle del análisis por `camera_analysis_interval_min`, con un bypass si
+    la lluvia medida por la estación acaba de empezar o de parar.
 
     El análisis NO corre en cada captura: a 5 min son ~288/día y agotan la cuota diaria
     gratuita de Gemini (429), dejando el análisis congelado media tarde. Con 15 min caen
     ~72-96/día. Con el intervalo en 0 se analiza en cada captura (comportamiento previo).
+
+    Ese mismo intervalo de 15 min deja una ventana de hasta 15 min donde la tarjeta
+    muestra un análisis viejo que ya no corresponde: un chubasco pasajero que empieza
+    (o termina y despeja, dejando ver la luna/estrellas) a mitad del ciclo. Como
+    `rain_rate` SÍ es un dato medido y disponible en cada captura (no hace falta
+    Gemini para saberlo), un cambio de estado lluvia/no-lluvia dispara un análisis
+    inmediato saltándose el intervalo -- las ~2-8 veces/día que llueve, no una
+    ráfaga por cada captura.
     """
-    global _ultimo_analisis_ts
+    global _ultimo_analisis_ts, _ultimo_estaba_lloviendo
     interval = max(0, settings.camera_analysis_interval_min) * 60
     ahora = time.monotonic()
+
+    rain_rate = (latest_by_station.get(None) or {}).get("rain_rate")
+    lloviendo = bool(rain_rate and rain_rate > 0)
+    cambio_lluvia = _ultimo_estaba_lloviendo is not None and lloviendo != _ultimo_estaba_lloviendo
+    _ultimo_estaba_lloviendo = lloviendo
+
     if interval and (ahora - _ultimo_analisis_ts) < interval:
+        if cambio_lluvia and (ahora - _ultimo_analisis_ts) >= _LLUVIA_BYPASS_COOLDOWN_S:
+            _ultimo_analisis_ts = ahora
+            return True
         return False
     _ultimo_analisis_ts = ahora
     return True
