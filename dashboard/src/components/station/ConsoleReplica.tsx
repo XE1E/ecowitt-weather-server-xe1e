@@ -1049,7 +1049,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     const derived = deriveCondition(data, condCtx)
 
     // Solo tomar la señal de tormenta de "nuestro pronóstico" (estación +
-    // cámara + presión + vecinas, ver forecaster.own_forecast) -- NO del
+    // cámara + vecinas, ver forecaster.own_forecast) -- NO del
     // consenso con Open-Meteo/WeatherAPI, que quedó fuera de esta decisión.
     const stormApproaching = ownForecast?.storm_likely ?? false
 

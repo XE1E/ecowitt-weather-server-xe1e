@@ -140,3 +140,13 @@ def test_forecast_log_roundtrip_and_prune(tmp_path):
     log.append({"ts": now.isoformat(), "p": {"own": {"rain": False}}}, now=now)
     assert log.first_day() == "2026-09-20"  # el viejo se podó
     assert len(log.read_range(3, now=now)) == 1
+
+
+def test_build_report_adds_hour_only_reference():
+    # Lluvia a las 16 h locales (22 UTC): el horario 14-20 h la "avisa".
+    rain = _rain_series(hours=12, wet={24})  # T0+4h = 16:00 CDMX
+    entries = [_entry(240), _entry(60)]      # 16:00 y 13:00 CDMX
+    rep = fv.build_report(entries, rain, [], [], TZ, 30, None)
+    ref = next(r for r in rep["horizons"]["now"]["ranking"] if r["key"] == fv.CLIMATOLOGY_KEY)
+    assert ref["reference"] is True
+    assert (ref["hits"], ref["false_alarms"], ref["correct_negatives"]) == (1, 0, 1)

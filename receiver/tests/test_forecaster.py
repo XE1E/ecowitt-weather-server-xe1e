@@ -54,62 +54,41 @@ def test_picks_closest_among_multiple_candidates():
     assert out is near
 
 
-# --- own_forecast: "nuestro pronóstico" (estación + cámara + presión + vecinas) ---
-
-_PRESSURE_FALLING = {"available": True, "trend": {"code": "falling"}}
-_PRESSURE_FALLING_FAST = {"available": True, "trend": {"code": "falling_fast"}}
-_PRESSURE_STEADY = {"available": True, "trend": {"code": "steady"}}
-_PRESSURE_UNAVAILABLE = {"available": False, "reason": "sin presión actual"}
+# --- own_forecast: "nuestro pronóstico" (estación + cámara + vecinas) ---
 
 
 def test_own_forecast_station_rain_wins_over_everything():
-    # Ya está lloviendo de verdad -- ni cámara, ni presión, ni vecina importan.
-    out = own_forecast(2.0, {"precipitation_visible": False}, _PRESSURE_STEADY, {"source": "PWS", "bearing": "E"})
+    # Ya está lloviendo de verdad -- ni cámara ni vecina importan.
+    out = own_forecast(2.0, {"precipitation_visible": False}, {"source": "PWS", "bearing": "E"})
     assert out["source"] == "station"
     assert out["rain_now"] is True
 
 
 def test_own_forecast_camera_sees_precip_now():
-    out = own_forecast(0, {"precipitation_visible": True}, _PRESSURE_STEADY, None)
+    out = own_forecast(0, {"precipitation_visible": True}, None)
     assert out["source"] == "camera"
     assert out["storm_likely"] is True
 
 
 def test_own_forecast_camera_trend_developing():
     analysis = {"precipitation_visible": False, "trend": {"precip_appearing": True}}
-    out = own_forecast(0, analysis, _PRESSURE_STEADY, None)
+    out = own_forecast(0, analysis, None)
     assert out["source"] == "camera_trend"
 
 
-def test_own_forecast_pressure_and_nearby_agree_is_high_confidence():
-    out = own_forecast(0, None, _PRESSURE_FALLING, {"source": "PWS", "bearing": "E", "distance_km": 4.0})
-    assert out["source"] == "pressure+nearby"
-    assert out["confidence"] == "high"
-
-
-def test_own_forecast_pressure_falling_fast_alone():
-    out = own_forecast(0, None, _PRESSURE_FALLING_FAST, None)
-    assert out["source"] == "pressure"
-    assert out["confidence"] == "high"
-
-
-def test_own_forecast_pressure_falling_alone_is_medium_confidence():
-    out = own_forecast(0, None, _PRESSURE_FALLING, None)
-    assert out["source"] == "pressure"
-    assert out["confidence"] == "medium"
-
-
 def test_own_forecast_nearby_alone():
-    out = own_forecast(0, None, _PRESSURE_STEADY, {"source": "PWS", "bearing": "NE", "distance_km": 6.0})
+    out = own_forecast(0, None, {"source": "PWS", "bearing": "NE", "distance_km": 6.0})
     assert out["source"] == "nearby"
 
 
 def test_own_forecast_none_when_nothing_signals():
-    out = own_forecast(0, {"precipitation_visible": False}, _PRESSURE_STEADY, None)
+    # Sin lluvia, cámara tranquila ni vecinas: aunque la presión esté bajando
+    # (ya no entra aquí, ver docstring de own_forecast), no hay señal propia.
+    out = own_forecast(0, {"precipitation_visible": False}, None)
     assert out["source"] == "none"
     assert out["storm_likely"] is False
 
 
-def test_own_forecast_handles_missing_pressure_and_camera():
-    out = own_forecast(None, None, _PRESSURE_UNAVAILABLE, None)
+def test_own_forecast_handles_missing_camera():
+    out = own_forecast(None, None, None)
     assert out["source"] == "none"

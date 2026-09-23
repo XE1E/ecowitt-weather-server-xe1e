@@ -31,6 +31,8 @@ interface Ranked {
   pod: number | null
   far: number | null
   csi: number | null
+  /** Referencia "a vencer" (avisar sólo por horario), no una fuente real. */
+  reference?: boolean
 }
 
 interface HorizonReport {
@@ -103,13 +105,20 @@ function fmtDate(d: string) {
 
 /** Frases que resumen el ranking: quién es lo más certero y en qué falla cada otro. */
 function insights(h: HorizonReport, horizon: Horizon): string[] {
-  const conCsi = h.ranking.filter((r) => r.csi != null)
+  const conCsi = h.ranking.filter((r) => r.csi != null && !r.reference)
   if (!conCsi.length) return []
+  const ref = h.ranking.find((r) => r.reference && r.csi != null)
   const best = conCsi[0]
   const out = [
     `${horizon === 'now' ? 'Para saber si llueve ahora' : 'Para anticipar lluvia en las próximas 3 h'}, lo más certero es ` +
       `${best.label}: acierta ${pct(best.csi)} de los casos de lluvia.`,
   ]
+  if (ref) {
+    const vencen = conCsi.filter((r) => (r.csi ?? 0) > (ref.csi ?? 0))
+    out.push(vencen.length
+      ? `Avisar sólo por horario acierta ${pct(ref.csi)}; ${vencen.length === conCsi.length ? 'todas las fuentes lo superan' : `sólo ${vencen.map((r) => r.label).join(' y ')} lo ${vencen.length === 1 ? 'supera' : 'superan'}`}.`
+      : `Ninguna fuente supera todavía a avisar sólo por horario (${pct(ref.csi)}): no aportan más que la hora del día.`)
+  }
   for (const r of conCsi.slice(1)) {
     if (r.far != null && r.far >= 50) {
       out.push(`${r.label} avisa ${pct(r.pod)} de las lluvias, pero ${pct(r.far)} de sus avisos fueron falsas alarmas.`)
@@ -222,16 +231,19 @@ export function ForecastAccuracyCard() {
         {h.ranking.map((r) => (
           <div key={r.key}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-sm text-slate-200 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: colorOf(r.key) }} />
+              <span className={`flex items-center gap-1.5 text-sm min-w-0 ${r.reference ? 'text-slate-400' : 'text-slate-200'}`}>
+                <span className={`w-2.5 h-2.5 shrink-0 ${r.reference ? 'rounded-sm border border-slate-500' : 'rounded-full'}`}
+                  style={r.reference ? undefined : { backgroundColor: colorOf(r.key) }} />
                 <span className="truncate">{r.label}</span>
+                {r.reference && <span className="text-[10px] uppercase tracking-wide text-slate-500 shrink-0">referencia</span>}
               </span>
               <span className="text-sm font-semibold text-slate-100">
                 {r.csi == null ? <span className="text-xs font-normal text-slate-500">sin lluvias suficientes</span> : pct(r.csi)}
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-white/[0.05] mt-1 overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${r.csi ?? 0}%`, backgroundColor: colorOf(r.key) }} />
+              <div className={`h-full rounded-full ${r.reference ? 'opacity-50' : ''}`}
+                style={{ width: `${r.csi ?? 0}%`, backgroundColor: colorOf(r.key) }} />
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Avisó {r.hits} de {r.observed} lluvias ({pct(r.pod)}) · {r.false_alarms} {r.false_alarms === 1 ? 'falsa alarma' : 'falsas alarmas'} ({pct(r.far)} de sus avisos)

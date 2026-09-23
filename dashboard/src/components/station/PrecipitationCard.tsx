@@ -34,7 +34,7 @@ export function PrecipitationCard({ data, forecast, ownForecast: own = null }: P
       .catch(() => {})
   }, [])
 
-  // "Nuestro pronóstico" (estación + cámara + presión + vecinas, ver
+  // "Nuestro pronóstico" (estación + cámara + vecinas, ver
   // forecaster.own_forecast) manda sobre Open-Meteo: si alguna fuente
   // propia SÍ tiene señal, es el titular; Open-Meteo se ve abajo, aparte y
   // rotulado. Si no hay señal propia (`source === 'none'`), no se muestra
@@ -47,7 +47,7 @@ export function PrecipitationCard({ data, forecast, ownForecast: own = null }: P
   const ownVsModelNote = (() => {
     if (!own || next.length === 0) return null
     if (!ownHasSignal && peakProb >= 50) {
-      return 'Open-Meteo prevé más probabilidad de lluvia que lo que detectamos aquí (estación/cámara/presión/vecinas).'
+      return 'Open-Meteo prevé más probabilidad de lluvia que lo que detectamos aquí (estación/cámara/vecinas).'
     }
     if (own?.storm_likely && peakProb < 30) {
       return 'Open-Meteo todavía no lo refleja en su probabilidad.'

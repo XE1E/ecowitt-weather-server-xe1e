@@ -63,8 +63,15 @@ SOURCE_LABELS = {
     "weatherapi": "WeatherAPI",
     "smn": "SMN",
 }
-NOW_SOURCES = ("openmeteo", "camera")
-NEXT3H_SOURCES = ("own", "pressure", "openmeteo", "weatherapi", "smn", "camera_trend")
+# Referencia "a vencer": avisar lluvia sólo por la hora local, sin mirar nada
+# más. En el backtest de 2026-09-23 (30 días, lluvia a 3 h) daba CSI 26%, el
+# doble que la presión: una fuente que no la supera no aporta información.
+CLIMATOLOGY_KEY = "climatology"
+CLIMATOLOGY_HOURS = (14, 20)  # inclusive, hora local
+SOURCE_LABELS[CLIMATOLOGY_KEY] = f"Solo por horario ({CLIMATOLOGY_HOURS[0]}-{CLIMATOLOGY_HOURS[1]} h)"
+
+NOW_SOURCES = ("openmeteo", "camera", CLIMATOLOGY_KEY)
+NEXT3H_SOURCES = ("own", "pressure", "openmeteo", "weatherapi", "smn", "camera_trend", CLIMATOLOGY_KEY)
 
 
 # ---------------------------------------------------------------- verdad ---
@@ -241,7 +248,8 @@ def summarize(cases: List[Case], sources: Sequence[str], tz: ZoneInfo) -> Dict[s
         pairs = [(p[s], obs) for _, p, obs in cases if s in p]
         m = contingency(pairs)
         if m["n"]:
-            ranking.append({"key": s, "label": SOURCE_LABELS.get(s, s), **m})
+            ranking.append({"key": s, "label": SOURCE_LABELS.get(s, s),
+                            "reference": s == CLIMATOLOGY_KEY, **m})
     ranking.sort(key=lambda r: (r["csi"] is None, -(r["csi"] or 0), -(r["pod"] or 0)))
 
     by_hour = []
@@ -419,6 +427,9 @@ def build_report(camera_entries: List[Dict[str, Any]], rain_total: Sequence[Tupl
     if since is not None:
         now_cases = [c for c in now_cases if c[0] >= since]
         next_cases = [c for c in next_cases if c[0] >= since]
+    lo, hi = CLIMATOLOGY_HOURS
+    for t, preds, _ in now_cases + next_cases:
+        preds[CLIMATOLOGY_KEY] = lo <= t.astimezone(tz).hour <= hi
     return {
         "days": days,
         "rain_threshold_mm": RAIN_MM_THRESHOLD,

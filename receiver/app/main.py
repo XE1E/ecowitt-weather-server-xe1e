@@ -3271,7 +3271,7 @@ async def get_local_forecast():
 @app.get("/api/forecast/own")
 async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = None):
     """
-    "Nuestro pronóstico": estación + cámara + presión propia + vecinas, en
+    "Nuestro pronóstico": estación + cámara + vecinas, en
     ese orden de autoridad (ver forecaster.own_forecast) -- NO depende de
     Open-Meteo/WeatherAPI. Esos modelos externos se muestran aparte y
     siempre atribuidos (ver PrecipitationCard.tsx): este endpoint es la voz
@@ -3279,14 +3279,13 @@ async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = N
     """
     own = latest_by_station.get(None) or {}
     camera_analysis = _camera.get_analysis()
-    local_pressure = await _compute_local_forecast()
     lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
     lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
     merged = await _fetch_nearby_stations_merged(lat_, lon_)
     incoming_rain = forecaster.detect_incoming_rain(
         merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
     )
-    return forecaster.own_forecast(own.get("rain_rate"), camera_analysis, local_pressure, incoming_rain)
+    return forecaster.own_forecast(own.get("rain_rate"), camera_analysis, incoming_rain)
 
 
 _forecast_log = fverif.ForecastLog(settings.forecast_log_dir, _MX_TZ)
