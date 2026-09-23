@@ -4,11 +4,12 @@ InfluxDB Storage Service
 Handles writing and querying weather data in InfluxDB.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 import asyncio
 import logging
 import math
+import re
 
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -443,6 +444,49 @@ class InfluxDBStorage:
         except Exception as e:
             logger.error(f"Error fetching {field} ago: {e}")
             return None
+
+    async def get_field_series(
+        self, field: str, start: str = "-31d", every: str = "10m", fn: str = "mean",
+        measurement: str = "weather", station: Optional[str] = None
+    ) -> List[Tuple[datetime, float]]:
+        """Serie (instante UTC, valor) de un campo agregada en ventanas de `every`.
+
+        Para la verificación de pronósticos (services/forecast_verification.py):
+        31 días de `rain_total`/`pressure_relative` crudos son ~170 000 lecturas;
+        agregados a 10 min son ~4 500, suficiente para ventanas de 30 min a 3 h.
+        `fn` sólo acepta mean/max/min/last (se interpola en el Flux).
+        """
+        validate_measurement(measurement)
+        validate_flux_time(start, "start")
+        if fn not in ("mean", "max", "min", "last"):
+            raise ValueError(f"fn no permitida: {fn}")
+        if not re.fullmatch(r"\d+[mh]", every):
+            raise ValueError(f"every no válido: {every}")
+        if not re.fullmatch(r"[a-z0-9_]+", field):
+            raise ValueError(f"campo no válido: {field}")
+        try:
+            q = f'''
+                from(bucket: "{self.bucket}")
+                |> range(start: {start})
+                |> filter(fn: (r) => r["_measurement"] == "{measurement}")
+                {_station_filter(station)}
+                |> filter(fn: (r) => r["_field"] == "{field}")
+                |> aggregateWindow(every: {every}, fn: {fn}, createEmpty: false)
+            '''
+            # 31 días agregados tardan ~1 s en Influx: fuera del event loop,
+            # como `write`, para no frenar la recepción de la estación.
+            tables = await asyncio.to_thread(self.query_api.query, q)
+            out: List[Tuple[datetime, float]] = []
+            for table in tables:
+                for record in table.records:
+                    t, v = record.get_time(), record.get_value()
+                    if t is not None and v is not None:
+                        out.append((t, float(v)))
+            out.sort(key=lambda p: p[0])
+            return out
+        except Exception as e:
+            logger.error(f"Error fetching {field} series: {e}")
+            return []
 
     async def get_last_rain(
         self, start: str = "-90d", measurement: str = "weather",

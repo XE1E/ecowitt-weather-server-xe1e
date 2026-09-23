@@ -195,6 +195,9 @@ class Settings(BaseSettings):
     email_digest_weekday: int = 0             # 0=lunes ... 6=domingo
     email_digest_hour: int = 7                # hora LOCAL a partir de la cual se manda
     digest_state_file: str = "/data/digest_state.json"  # última semana ya enviada
+    # Bitácora de pronósticos (una foto cada 30 min de lo que dijo cada fuente) para
+    # calificarlos contra el pluviómetro, ver services/forecast_verification.py.
+    forecast_log_dir: str = "/data/forecast_log"
 
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None

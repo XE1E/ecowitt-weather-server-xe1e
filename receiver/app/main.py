@@ -49,6 +49,8 @@ from .services import satellite
 from .services.windrose import compute_wind_rose
 from .services import sky_validation
 from .services import smn
+from .services import weatherapi
+from .services import forecast_verification as fverif
 from .services import svitrix
 from .services import epaper
 from .services import bim32
@@ -193,6 +195,9 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(stats_refresh_task()))
     # Timelapse diario de la cámara (hoy y ayer, más la purga)
     background_tasks.append(asyncio.create_task(timelapse_task()))
+    # Bitácora de pronósticos cada 30 min, para calificar a 3 h contra el
+    # pluviómetro (ver services/forecast_verification.py)
+    background_tasks.append(asyncio.create_task(forecast_snapshot_task()))
     # Resumen semanal por correo (opt-in, ver email_digest_enabled)
     background_tasks.append(asyncio.create_task(email_digest_task()))
 
@@ -3282,6 +3287,102 @@ async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = N
         merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
     )
     return forecaster.own_forecast(own.get("rain_rate"), camera_analysis, local_pressure, incoming_rain)
+
+
+_forecast_log = fverif.ForecastLog(settings.forecast_log_dir, _MX_TZ)
+# Un análisis del cielo más viejo que esto ya no describe "ahora" (de noche o si
+# se cae la cámara no llegan capturas) -- no se registra su tendencia.
+_SNAPSHOT_CAMERA_MAX_AGE_MIN = 20
+
+
+async def _forecast_snapshot() -> Dict[str, Any]:
+    """Lo que dice AHORA cada fuente sobre lluvia en las próximas 3 h. Cada
+    fuente va en su propio try: si una no responde se omite de esta foto en
+    vez de perder las demás."""
+    lat, lon = settings.cwop_latitude, settings.cwop_longitude
+    now_utc = datetime.now(timezone.utc)
+    now_mx = now_utc.astimezone(_MX_TZ)
+    preds: Dict[str, Any] = {}
+    try:
+        om = await openmeteo.get_forecast(lat, lon, days=2)
+        h = om.get("hourly", {})
+        om_now = now_utc + timedelta(seconds=om.get("utc_offset_seconds") or 0)
+        preds["openmeteo"] = fverif.prob_prediction(fverif.max_prob_next_hours(
+            h.get("time", []), h.get("precipitation_probability", []), om_now))
+    except Exception as e:
+        logger.warning(f"Bitácora de pronósticos: Open-Meteo no disponible ({e})")
+    try:
+        wa = await weatherapi.get_forecast(lat, lon, days=1)
+        if wa:
+            h = wa.get("hourly", {})
+            preds["weatherapi"] = fverif.prob_prediction(fverif.max_prob_next_hours(
+                h.get("time", []), h.get("precipitation_probability", []), now_mx))
+    except Exception as e:
+        logger.warning(f"Bitácora de pronósticos: WeatherAPI no disponible ({e})")
+    try:
+        hours = (await smn.get_forecast()).get("hours") or []
+        preds["smn"] = fverif.prob_prediction(fverif.max_prob_next_hours(
+            [x.get("time") for x in hours], [x.get("prob_precip") for x in hours], now_mx))
+    except Exception as e:
+        logger.warning(f"Bitácora de pronósticos: SMN no disponible ({e})")
+    try:
+        own = await get_own_forecast()
+        preds["own"] = {"rain": bool(own.get("storm_likely") or own.get("rain_now")),
+                        "source": own.get("source"), "confidence": own.get("confidence")}
+    except Exception as e:
+        logger.warning(f"Bitácora de pronósticos: pronóstico propio no disponible ({e})")
+    analysis = _camera.get_analysis() or {}
+    analyzed = fverif._parse_ts(analysis.get("analyzed_at", ""))
+    if analyzed and (now_utc - analyzed) <= timedelta(minutes=_SNAPSHOT_CAMERA_MAX_AGE_MIN):
+        preds["camera_trend"] = {"rain": bool((analysis.get("trend") or {}).get("precip_appearing"))}
+    return {"ts": now_utc.isoformat(), "p": preds}
+
+
+async def forecast_snapshot_task():
+    """Una foto de los pronósticos cada 30 min (en :00 y :30, para que cuadre con
+    los instantes en que se reconstruye la presión en forecast_verification)."""
+    await asyncio.sleep(90)  # gracia inicial: que los cachés de pronóstico se llenen
+    while True:
+        now = datetime.now(timezone.utc)
+        wait = (30 - now.minute % 30) * 60 - now.second
+        await asyncio.sleep(max(5, wait))
+        try:
+            _forecast_log.append(await _forecast_snapshot())
+        except Exception as e:
+            logger.error(f"Bitácora de pronósticos falló: {e}")
+
+
+_verification_cache: Dict[int, Dict[str, Any]] = {}
+_VERIFICATION_TTL = 600
+
+
+@app.get("/api/forecast/verification")
+async def get_forecast_verification(days: int = 30):
+    """
+    ¿Qué fuente ACIERTA más? Cada pronóstico se califica contra lo observado
+    (pluviómetro para lluvia, cámara para nubosidad) -- ver
+    services/forecast_verification.py. Caché de 10 min: son 2 consultas de 30
+    días a InfluxDB y la respuesta cambia despacio.
+    """
+    days = max(1, min(int(days), 60))
+    cached = _verification_cache.get(days)
+    if cached and time.time() - cached["ts"] < _VERIFICATION_TTL:
+        return cached["data"]
+    now_utc = datetime.now(timezone.utc)
+    today = now_utc.astimezone(_MX_TZ).date()
+    entries: List[Dict[str, Any]] = []
+    for i in range(days - 1, -1, -1):
+        entries.extend(_camera.get_daily_analysis((today - timedelta(days=i)).isoformat()) or [])
+    start = f"-{days + 1}d"
+    rain = await storage.get_field_series("rain_total", start=start, every="10m", fn="max")
+    pressure = await storage.get_field_series("pressure_relative", start=start, every="10m", fn="mean")
+    report = fverif.build_report(
+        entries, rain, pressure, _forecast_log.read_range(days + 1), _MX_TZ, days,
+        _forecast_log.first_day(), since=now_utc - timedelta(days=days),
+    )
+    report["generated_at"] = now_utc.isoformat()
+    _verification_cache[days] = {"ts": time.time(), "data": report}
+    return report
 
 
 async def _fetch_nearby_stations_merged(lat: float, lon: float) -> Dict[str, Any]:
