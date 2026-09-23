@@ -392,13 +392,16 @@ fuente. Objetivo: saber a qué señal darle más peso en `forecaster.own_forecas
       **CSI 26%** (avisa 61%, 69% falsas alarmas) -- el doble que la presión;
       y "presión bajando Y 14-20 h" (15.5%) es PEOR que el horario solo: en
       las tormentas convectivas de CDMX la presión no anticipa la lluvia a 3 h.
-- [ ] **Decidir (usuario):** quitar la presión como disparador de lluvia en
-      `own_forecast` (hoy dice "Presión bajando: posible lluvia" casi todas las
-      tardes) y/o sumar el horario como referencia "a vencer" en la tarjeta.
+- [x] **HECHO (2026-09-23):** la presión ya no dispara lluvia en
+      `own_forecast` (se sigue calificando en la tarjeta como "ya no se usa"), y
+      "Solo por horario (14-20 h)" aparece como referencia a vencer. Dato extra:
+      para lluvia AHORA, Open-Meteo (CSI 14.2%) ni siquiera le gana al horario
+      (14.6%); sólo la cámara (45%) lo supera.
 - [ ] Dejar acumular la bitácora (`/data/forecast_log/`) varias semanas de
       lluvias antes de juzgar Open-Meteo/WeatherAPI/SMN/"nuestro pronóstico"
       a 3 h (hoy solo tiene datos la presión, reconstruida).
-- [ ] Con eso, re-pesar `own_forecast` según lo que resulte más certero.
+- [ ] Con eso, re-pesar `own_forecast` según lo que resulte más certero (¿meter el
+      horario como señal propia si nada lo supera?).
 
 ## 2.e Corrección de sesgo del pronóstico con datos de la cámara — reencauzado (2026-09-14)
 
