@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 _CACHE: Dict[str, Dict] = {}
 _TTL = 1800  # 30 min
+# Tope de imágenes guardadas (~200 KB c/u). lat/lon/fecha vienen del query string
+# público: sin tope, pedir coordenadas distintas llenaba la memoria del servidor.
+_MAX_ENTRIES = 12
 
 LAYERS = {
     "VIIRS_SNPP_CorrectedReflectance_TrueColor",
@@ -60,4 +63,6 @@ async def get_snapshot(layer: str, date: str, lat: float, lon: float) -> Optiona
         return cached["data"] if cached else None
 
     _CACHE[key] = {"ts": now, "data": data}
+    while len(_CACHE) > _MAX_ENTRIES:
+        _CACHE.pop(min(_CACHE, key=lambda k: _CACHE[k]["ts"]))
     return data

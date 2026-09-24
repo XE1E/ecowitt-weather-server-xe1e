@@ -13,6 +13,7 @@ from collections import deque
 from email.message import EmailMessage
 import asyncio
 import logging
+import time
 import smtplib
 import ssl
 
@@ -200,7 +201,14 @@ class AlertService:
         # tipo; sin esto, todas las instancias de AlertService compartirían el
         # mismo set (invisible en producción, que solo crea una, pero rompía
         # el aislamiento entre tests).
-        self._notified_quakes: Set[str] = set()
+        # Sismos ya avisados, EN ORDEN (dict = orden de inserción) para podar los más
+        # viejos: con un set, `list(set)[-50:]` quedaba en orden arbitrario y podía
+        # olvidar uno reciente y volver a avisarlo.
+        self._notified_quakes: Dict[str, float] = {}
+        # Cuándo entró cada sismo a `active`, para quitarlo pasado un rato: antes se
+        # quedaba como "alerta activa" hasta reiniciar y el dict crecía sin límite.
+        self._quake_active_at: Dict[str, float] = {}
+        self._sky_consecutive: Dict[str, int] = {}
         # Contenedores actualmente "unhealthy" según su último reporte (ver
         # check_docker_health). Se compara contra el reporte anterior para
         # avisar solo en la TRANSICIÓN, no en cada corrida del cron.
@@ -1060,8 +1068,9 @@ class AlertService:
 
     # --- Alertas visuales (análisis del cielo con IA) ---
     # Histéresis: contador de análisis consecutivos con la condición activa.
-    # Requiere N análisis seguidos para disparar (evita falsos positivos).
-    _sky_consecutive: Dict[str, int] = {}
+    # Requiere N análisis seguidos para disparar (evita falsos positivos). El
+    # contador `_sky_consecutive` es de instancia (en __init__): como atributo de
+    # clase lo compartían todas las instancias, igual que pasó con los sismos.
     _SKY_HYSTERESIS = 2  # análisis consecutivos requeridos
 
     async def check_sky(self, analysis: Optional[Dict[str, Any]]) -> None:
@@ -1153,7 +1162,8 @@ class AlertService:
                     await self._safe_notify(f"✅ Normalizado — {message}", category="visual")
 
     # --- Alertas de sismos ---
-    # self._notified_quakes se inicializa en __init__ (set de instancia).
+    # self._notified_quakes se inicializa en __init__ (de instancia).
+    QUAKE_ACTIVE_S = 6 * 3600  # un sismo avisado se muestra como activo 6 h
 
     async def check_earthquake(self, quakes: List[Dict[str, Any]]) -> None:
         """
@@ -1176,6 +1186,11 @@ class AlertService:
         repetir, se guarda un identificador de cada sismo notificado.
         """
         s = self._settings
+        now_ts = time.time()
+        for key, t0 in list(self._quake_active_at.items()):
+            if now_ts - t0 > self.QUAKE_ACTIVE_S:
+                self._quake_active_at.pop(key, None)
+                self.active.pop(key, None)
         if not self.enabled:
             return
         if not getattr(s, "alert_earthquake_enabled", True):
@@ -1205,9 +1220,9 @@ class AlertService:
             if quake_id in self._notified_quakes:
                 continue
 
-            self._notified_quakes.add(quake_id)
-            if len(self._notified_quakes) > 100:
-                self._notified_quakes = set(list(self._notified_quakes)[-50:])
+            self._notified_quakes[quake_id] = now_ts
+            while len(self._notified_quakes) > 200:
+                self._notified_quakes.pop(next(iter(self._notified_quakes)))
 
             depth_str = f", profundidad {depth:.0f} km" if depth else ""
             dist_str = f", a {distance} km" if distance else ""
@@ -1218,6 +1233,7 @@ class AlertService:
 
             key = f"earthquake_{quake_id}"
             self.active[key] = message
+            self._quake_active_at[key] = now_ts
             self._add_to_history(key, message, resolved=False)
             await self._safe_notify(f"⚠️ {message}", category="earthquake")
 

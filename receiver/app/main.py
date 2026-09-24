@@ -186,9 +186,11 @@ async def lifespan(app: FastAPI):
     # ordenadamente en el shutdown, algo que el `on_event` anterior no hacía
     # -- morían de golpe junto con el proceso, sin graceful shutdown real.
     background_tasks = []
-    # Vigilante de estación caída (solo si las alertas están activas)
-    if settings.alerts_enabled:
-        background_tasks.append(asyncio.create_task(station_watchdog()))
+    # Vigilante de estación caída. Se crea SIEMPRE y mira `alerts_enabled` en cada
+    # vuelta: antes sólo se creaba si las alertas estaban activas al arrancar, así que
+    # prenderlas desde el panel no traía avisos de estación/cámara/respaldo hasta
+    # reiniciar.
+    background_tasks.append(asyncio.create_task(station_watchdog()))
     # Vigilante de calidad del aire (se auto-guarda con los flags; permite
     # activarlo desde el panel sin reiniciar)
     background_tasks.append(asyncio.create_task(air_quality_watchdog()))
@@ -206,6 +208,8 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(email_digest_task()))
     # Historial del radar SACMEX: sólo expone ~10 cuadros, aquí se guardan todos
     background_tasks.append(asyncio.create_task(radar_archive_task()))
+    # Alertas de sismos (antes sólo si alguien abría /api/earthquakes)
+    background_tasks.append(asyncio.create_task(earthquake_watch_task()))
 
     # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
     # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
@@ -398,10 +402,13 @@ async def stats_refresh_task():
     A1 en el plan de optimización): el z-score en caliente solo lee esta
     caché, ya poblada.
     """
-    if not getattr(settings, "qc_stats_enabled", False):
-        return
+    # El interruptor se mira en cada vuelta (no sólo al arrancar): se puede prender o
+    # apagar desde el panel sin reiniciar.
     await asyncio.sleep(60)  # gracia inicial
     while True:
+        if not getattr(settings, "qc_stats_enabled", False):
+            await asyncio.sleep(300)
+            continue
         try:
             window = getattr(settings, "qc_stats_window", "-30d")
             await stats_cache.refresh(
@@ -423,13 +430,15 @@ async def timelapse_task():
     medianoche puede pillar capturas aún en camino (el script de casa reintenta), y
     porque si el servidor estuvo apagado nadie lo generó.
     """
-    if not settings.camera_timelapse_enabled:
-        return
     if not TimelapseService.ffmpeg_available():
-        logger.warning("Timelapse habilitado pero ffmpeg no está en la imagen; se omite")
+        logger.warning("ffmpeg no está en la imagen: no habrá timelapse")
         return
     await asyncio.sleep(300)  # gracia inicial: que no compita con el arranque
     while True:
+        # Se mira en cada vuelta: prenderlo o apagarlo desde el panel ya no pide reiniciar.
+        if not settings.camera_timelapse_enabled:
+            await asyncio.sleep(300)
+            continue
         try:
             hoy = datetime.now().astimezone().date()
             ayer = hoy - timedelta(days=1)
@@ -1142,16 +1151,30 @@ def _kiosk_local_save() -> None:
 _kiosk_local_load()
 
 
+# Rangos físicos aceptados del BME280 del display: lo de fuera se ignora. El endpoint
+# es público (el firmware del display aún no manda token), así que sin esto cualquiera
+# podía escribir valores absurdos en la página 2 del kiosco.
+_KIOSK_RANGES = {"temperature": (-20.0, 60.0), "humidity": (0.0, 100.0), "pressure": (500.0, 1100.0)}
+_kiosk_limiter = secsvc.RateLimiter()
+
+
 @app.post("/api/kiosk/local")
-async def kiosk_local_post(body: dict = Body(...)):
+async def kiosk_local_post(request: Request, body: dict = Body(...)):
     """Recibe la lectura del BME280 del display (temperature °C, humidity %, pressure hPa)."""
+    token = getattr(settings, "kiosk_local_token", "") or ""
+    if token and not secrets.compare_digest(request.headers.get("x-kiosk-token", ""), token):
+        raise HTTPException(status_code=401, detail="Token inválido")
+    # El display manda una lectura cada ~30 s: 12/min por IP es holgado.
+    if not _kiosk_limiter.allow(secsvc.client_ip(request) or "?", limit=12, window_s=60):
+        raise HTTPException(status_code=429, detail="Demasiadas peticiones")
     today = datetime.now(_MX_TZ).strftime("%Y-%m-%d")
     if _kiosk_local["day"] != today:
         _kiosk_local.update(day=today, min={}, max={})
     vals: Dict[str, float] = {}
     for k in ("temperature", "humidity", "pressure"):
         v = body.get(k)
-        if isinstance(v, (int, float)):
+        lo, hi = _KIOSK_RANGES[k]
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and lo <= v <= hi:
             fv = round(float(v), 1)
             vals[k] = fv
             _kiosk_local["min"][k] = round(min(_kiosk_local["min"].get(k, fv), fv), 1)
@@ -1714,7 +1737,12 @@ def _station_status(last_received: Optional[str], timeout_minutes: int = 15) -> 
         return "unknown"
     try:
         last_dt = datetime.fromisoformat(last_received.replace("Z", "+00:00"))
-        now = datetime.now(last_dt.tzinfo)
+        # `received_at` se guarda en UTC SIN zona (utcnow().isoformat()). Antes se
+        # comparaba con datetime.now(None) -- la hora LOCAL del contenedor (TZ =
+        # America/Mexico_City) -- y una estación caída seguía "en línea" ~6 h.
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
         delta = (now - last_dt).total_seconds() / 60
         return "online" if delta < timeout_minutes else "offline"
     except Exception:
@@ -1789,7 +1817,10 @@ async def get_station(name: str):
         config = settings_store.get_station_config(settings.settings_file, name)
 
     station_data = latest_by_station.get(name_key, {})
-    timeout = config.get("watchdog_minutes", 15)
+    # La principal usa el "sin datos" global (su watchdog_minutes propio se retiró,
+    # ver settings_store.RETIRED_PRINCIPAL_KEYS), igual que en list_stations.
+    timeout = (settings.alert_station_offline_minutes if name_key is None
+               else config.get("watchdog_minutes", 15))
     sensor_labels = settings_store.get_sensor_labels(
         settings.settings_file,
         None if name == "_principal" or name == "principal" else name
@@ -1907,8 +1938,9 @@ async def delete_station(name: str, authorization: Optional[str] = Header(defaul
     smap = {p: n for p, n in settings.secondary_station_map.items() if n != name}
     _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
 
-    # Recargar: _persist_registry acaba de escribir settings.json.
-    all_settings = settings_store.load_all_settings(settings.settings_file)
+    # Recargar: _persist_registry acaba de escribir settings.json. strict: se va a
+    # reescribir, y sobre un archivo ilegible borraría todo.
+    all_settings = settings_store.load_all_settings(settings.settings_file, strict=True)
     if name in (all_settings.get("stations") or {}):
         del all_settings["stations"][name]
     all_settings.pop("station_passkeys", None)  # residuo de la versión anterior, nadie lo lee
@@ -1925,7 +1957,7 @@ async def get_compare():
         return await storage.get_comparison()
     except Exception as e:
         logger.error(f"Error getting comparison: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/climate/records")
@@ -1936,7 +1968,7 @@ async def get_climate_records(start: str = "-3650d"):
         return aggregator.build_records(rows, lat=getattr(settings, "cwop_latitude", 19.380359))
     except Exception as e:
         logger.error(f"Error getting climate records: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/climate/onthisday")
@@ -1947,7 +1979,7 @@ async def get_on_this_day():
         return aggregator.on_this_day(rows)
     except Exception as e:
         logger.error(f"Error building on-this-day: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/climate/noaa")
@@ -1961,7 +1993,7 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
         return aggregator.noaa_year(rows, year, lat)
     except Exception as e:
         logger.error(f"Error building NOAA report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/smn")
@@ -2173,7 +2205,7 @@ async def get_wind_rose(start: str = "-7d"):
         return compute_wind_rose(records)
     except Exception as e:
         logger.error(f"Error building wind rose: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/rain/last")
@@ -3745,7 +3777,7 @@ async def get_metar_data(station: str = "MMMX"):
         return await get_metar(station)
     except Exception as e:
         logger.error(f"Error getting METAR: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/taf")
@@ -3755,7 +3787,7 @@ async def get_taf_data(station: str = "MMMX"):
         return await get_taf(station)
     except Exception as e:
         logger.error(f"Error getting TAF: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 @app.get("/api/satellite")
@@ -3855,7 +3887,7 @@ async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
         return await get_air_quality(lat, lon, settings.waqi_token)
     except Exception as e:
         logger.error(f"Error getting air quality: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
 
 
 def _station_pressure_hpa() -> Optional[float]:
@@ -3874,18 +3906,36 @@ async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
         return await imeca.get_imeca(lat, lon, pressure_hpa=_station_pressure_hpa())
     except Exception as e:
         logger.error(f"Error getting IMECA: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
+
+
+async def earthquake_watch_task():
+    """Revisa los sismos cada 10 min (el ritmo de la caché de earthquakes.py) y
+    avisa de los que pasen el umbral. Antes sólo se evaluaban cuando alguien abría
+    /api/earthquakes, así que de noche un sismo grande podía no avisarse."""
+    await asyncio.sleep(120)  # gracia inicial
+    while True:
+        try:
+            if settings.alerts_enabled and getattr(settings, "alert_earthquake_enabled", True):
+                result = await get_earthquakes(settings.cwop_latitude, settings.cwop_longitude)
+                await alert_service.check_earthquake(result.get("quakes", []))
+            else:
+                # Igual se llama, para que expiren los sismos viejos en `active`.
+                await alert_service.check_earthquake([])
+        except Exception as e:
+            logger.error(f"Revisión de sismos falló: {e}")
+        await asyncio.sleep(600)
 
 
 @app.get("/api/earthquakes")
 async def get_earthquakes_data():
-    """Sismos recientes cerca de la estación (SSN/USGS). Evalúa alertas de sismos grandes."""
+    """Sismos recientes cerca de la estación (SSN/USGS)."""
     try:
         lat = getattr(settings, "cwop_latitude", 19.380359)
         lon = getattr(settings, "cwop_longitude", -99.174564)
-        result = await get_earthquakes(lat, lon)
-        await alert_service.check_earthquake(result.get("quakes", []))
-        return result
+        # Las alertas ya NO se evalúan aquí (dependían de que alguien abriera la
+        # página): las revisa earthquake_watch_task cada 10 min.
+        return await get_earthquakes(lat, lon)
     except Exception as e:
         logger.error(f"Error getting earthquakes: {e}")
         return {"quakes": []}

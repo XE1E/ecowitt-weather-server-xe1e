@@ -200,6 +200,10 @@ class Settings(BaseSettings):
     forecast_log_dir: str = "/data/forecast_log"
     # Historial de cuadros del radar SACMEX (ver services/sacmex_radar.py): ~220 KB
     # por cuadro, ~288 al día (~65 MB/día). 0 días = no borrar nunca.
+    # Token para POST /api/kiosk/local (lecturas del BME280 del display ESP32). Vacío
+    # = sin token, como siempre: el firmware del display (otro repo) todavía no lo
+    # manda. Al actualizarlo, poner aquí el mismo valor (header X-Kiosk-Token).
+    kiosk_local_token: str = ""
     radar_archive_enabled: bool = True
     radar_archive_dir: str = "/data/radar_sacmex"
     radar_archive_days: int = 45

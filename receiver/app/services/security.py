@@ -15,11 +15,20 @@ from typing import Optional
 class RateLimiter:
     """Permite hasta `limit` eventos por `window_s` segundos para cada clave."""
 
+    # Cada cuánto se barren las claves (IPs) que ya no tienen eventos en su ventana:
+    # antes nunca se borraban y el dict crecía con cada IP distinta que llegaba.
+    _SWEEP_S = 600
+
     def __init__(self) -> None:
         self._hits: "defaultdict[str, deque]" = defaultdict(deque)
+        self._last_sweep = time.time()
 
     def allow(self, key: str, limit: int, window_s: float) -> bool:
         now = time.time()
+        if now - self._last_sweep > self._SWEEP_S:
+            self._last_sweep = now
+            for k in [k for k, d in self._hits.items() if not d or d[-1] <= now - window_s]:
+                del self._hits[k]
         dq = self._hits[key]
         cutoff = now - window_s
         while dq and dq[0] <= cutoff:

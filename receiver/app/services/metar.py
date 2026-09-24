@@ -4,6 +4,7 @@ METAR fetcher (proxy to aviationweather.gov).
 Runs server-side to avoid browser CORS issues and caches the result briefly.
 Default station MMMX (Aeropuerto Internacional de la Ciudad de México).
 """
+import re
 import time
 import logging
 from typing import Any, Dict
@@ -14,9 +15,20 @@ logger = logging.getLogger(__name__)
 
 _CACHE: Dict[str, Any] = {"ts": 0.0, "station": None, "data": {}}
 _TTL = 600  # 10 minutes
+_TAF_MAX = 8  # estaciones distintas en caché de TAF (hoy sólo se pide MMMX)
+_ICAO = re.compile(r"[A-Z0-9]{4}")
+
+
+def _valid_icao(station: str) -> bool:
+    """Código OACI de 4 caracteres. `station` viene del query string: sin validar
+    iba tal cual a la URL de aviationweather y como clave de la caché de TAF."""
+    return bool(_ICAO.fullmatch(station or ""))
 
 
 async def get_metar(station: str = "MMMX") -> Dict[str, Any]:
+    station = (station or "").upper()
+    if not _valid_icao(station):
+        return {}
     now = time.time()
     if _CACHE["data"] and _CACHE["station"] == station and (now - _CACHE["ts"]) < _TTL:
         return _CACHE["data"]
@@ -29,7 +41,9 @@ async def get_metar(station: str = "MMMX") -> Dict[str, Any]:
             arr = resp.json()
     except Exception as e:
         logger.error(f"METAR fetch failed: {e}")
-        return _CACHE["data"] or {}
+        # Lo guardado sólo si es de ESTA estación: la caché tiene un solo lugar y
+        # antes devolvía el METAR de otro aeropuerto si fallaba la consulta.
+        return _CACHE["data"] if _CACHE["station"] == station else {}
 
     if not arr:
         return {}
@@ -61,6 +75,9 @@ _TAF_CACHE: Dict[str, Any] = {}
 
 
 async def get_taf(station: str = "MMMX") -> Dict[str, Any]:
+    station = (station or "").upper()
+    if not _valid_icao(station):
+        return {}
     now = time.time()
     cached = _TAF_CACHE.get(station)
     if cached and (now - cached["ts"]) < _TTL:
@@ -99,4 +116,6 @@ async def get_taf(station: str = "MMMX") -> Dict[str, Any]:
         "periods": periods,
     }
     _TAF_CACHE[station] = {"ts": now, "data": data}
+    while len(_TAF_CACHE) > _TAF_MAX:  # tope: la más vieja fuera
+        _TAF_CACHE.pop(min(_TAF_CACHE, key=lambda k: _TAF_CACHE[k]["ts"]))
     return data

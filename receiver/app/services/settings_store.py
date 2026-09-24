@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 import re
 from typing import Any, Dict, Optional
 
@@ -43,15 +44,38 @@ def passkey_from_identifier(value: str) -> str:
 
 
 def _write_json_secure(path: str, data: Dict[str, Any]) -> None:
-    """Escribe JSON y restringe permisos a 600 (el archivo guarda secretos:
-    tokens de Telegram/SMTP/WAQI, claves de redes, etc.)."""
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    """Escribe JSON de forma ATÓMICA con permisos 600 (el archivo guarda secretos:
+    tokens de Telegram/SMTP/WAQI, claves de redes, el registro de estaciones…).
+
+    Se escribe a un temporal en la misma carpeta y se renombra encima: si el proceso
+    muere a media escritura queda el archivo anterior entero, nunca uno a medias.
+    Antes se abría el original con "w" y un corte lo dejaba truncado; la siguiente
+    lectura daba {} y el siguiente guardado lo reescribía sin estaciones ni secretos.
+    """
+    folder = os.path.dirname(path) or "."
+    os.makedirs(folder, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".settings-", suffix=".tmp", dir=folder)
     try:
-        os.chmod(path, 0o600)
-    except OSError as e:  # p. ej. sistemas de archivos sin soporte de permisos
-        logger.warning("No se pudo aplicar chmod 600 a %s: %s", path, e)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.chmod(tmp, 0o600)  # mkstemp ya lo crea 600; por si el FS lo ignora
+        except OSError as e:  # p. ej. sistemas de archivos sin soporte de permisos
+            logger.warning("No se pudo aplicar chmod 600 a %s: %s", path, e)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+class SettingsUnreadable(RuntimeError):
+    """settings.json existe pero no se puede leer como JSON: NO se debe reescribir
+    encima (se perderían estaciones, registro y secretos)."""
 
 # Solo estas claves se pueden editar/persistir desde el panel
 EDITABLE_KEYS = {
@@ -303,7 +327,7 @@ def save_overrides(path: str, overrides: Dict[str, Any]) -> None:
     # (p. ej. "stations" con los sensor_labels/configs, o "setup_completed").
     # Antes se reescribía el archivo solo con EDITABLE_KEYS y se perdían.
     clean = {k: v for k, v in overrides.items() if k in EDITABLE_KEYS}
-    data = load_all_settings(path)
+    data = load_all_settings(path, strict=True)
     data.update(clean)
     _write_json_secure(path, data)
 
@@ -312,14 +336,23 @@ def save_overrides(path: str, overrides: Dict[str, Any]) -> None:
 # Gestión de estaciones (Etapa 2)
 # ---------------------------------------------------------------------------
 
-def load_all_settings(path: str) -> Dict[str, Any]:
-    """Carga todo el archivo de settings (no solo EDITABLE_KEYS)."""
+def load_all_settings(path: str, strict: bool = False) -> Dict[str, Any]:
+    """Carga todo el archivo de settings (no solo EDITABLE_KEYS).
+
+    Para LEER (strict=False) un archivo ilegible cuenta como vacío, para no tumbar la
+    ingesta ni las páginas. Para GUARDAR (strict=True, lo usan todas las funciones que
+    reescriben el archivo) lanza SettingsUnreadable: fusionar con {} y escribir
+    borraría todo lo que había.
+    """
+    if not os.path.exists(path):
+        return {}
     try:
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        logger.error(f"No se pudo leer settings: {e}")
+        logger.error(f"No se pudo leer settings ({path}): {e}")
+        if strict:
+            raise SettingsUnreadable(f"{path} no se puede leer; no se reescribe encima") from e
     return {}
 
 
@@ -350,7 +383,7 @@ def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
     enviados en esta llamada) se CONSERVA. Antes se reemplazaba el objeto entero,
     lo que borraba calibración/umbrales al guardar la config general.
     """
-    data = load_all_settings(path)
+    data = load_all_settings(path, strict=True)
     if "stations" not in data:
         data["stations"] = {}
     existing = _without_retired(data["stations"].get(name, {}), name)
@@ -361,7 +394,7 @@ def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
 
 def delete_station_config(path: str, name: str) -> bool:
     """Elimina la configuración de una estación. Retorna True si existía."""
-    data = load_all_settings(path)
+    data = load_all_settings(path, strict=True)
     if "stations" in data and name in data["stations"]:
         del data["stations"][name]
         save_all_settings(path, data)
@@ -381,7 +414,7 @@ def get_setup_completed(path: str) -> bool:
 
 def set_setup_completed(path: str, completed: bool = True) -> None:
     """Marca el wizard de configuración como completado."""
-    data = load_all_settings(path)
+    data = load_all_settings(path, strict=True)
     data["setup_completed"] = completed
     save_all_settings(path, data)
 
@@ -425,7 +458,7 @@ def save_sensor_label(path: str, sensor_id: str, label: str, station: Optional[s
         label: Nombre personalizado
         station: Nombre de la estación (None para principal)
     """
-    data = load_all_settings(path)
+    data = load_all_settings(path, strict=True)
     station_key = station or "_principal"
 
     if "stations" not in data:

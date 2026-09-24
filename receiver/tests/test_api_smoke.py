@@ -217,3 +217,62 @@ def _clean_sessions():
     adminsvc._SESSIONS.clear()
     yield
     adminsvc._SESSIONS.clear()
+
+
+def test_station_status_compares_utc_received_at_with_utc_now(monkeypatch):
+    """received_at va en UTC sin zona: con el contenedor en hora de México, una
+    estación callada hace 30 min debe salir offline, no "en línea" 6 h más."""
+    from datetime import datetime, timedelta
+    import time as _time
+    monkeypatch.setenv("TZ", "America/Mexico_City")
+    if hasattr(_time, "tzset"):
+        _time.tzset()
+    hace_30 = (datetime.utcnow() - timedelta(minutes=30)).isoformat()
+    hace_2 = (datetime.utcnow() - timedelta(minutes=2)).isoformat()
+    assert m._station_status(hace_30, 15) == "offline"
+    assert m._station_status(hace_2, 15) == "online"
+    assert m._station_status(hace_2 + "Z", 15) == "online"
+
+
+def test_admin_settings_exposes_principal_altitude(api):
+    h = _login(api)
+    assert "station_altitude_m" in api.get("/api/admin/settings", headers=h).json()
+
+
+def test_principal_station_uses_global_offline_minutes(api, monkeypatch):
+    monkeypatch.setattr(m.settings, "alert_station_offline_minutes", 5)
+    from datetime import datetime, timedelta
+    api.post("/data/report/", data=WS2910)
+    m.latest_by_station[None]["received_at"] = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
+    assert api.get("/api/stations/_principal").json()["status"] == "offline"
+    assert api.get("/api/stations").json()["stations"][0]["status"] == "offline"
+
+
+def test_rate_limiter_forgets_idle_ips(monkeypatch):
+    from app.services import security
+    rl = security.RateLimiter()
+    t = [1000.0]
+    monkeypatch.setattr(security.time, "time", lambda: t[0])
+    rl._last_sweep = t[0]
+    for i in range(50):
+        rl.allow(f"10.0.0.{i}", limit=5, window_s=60)
+    t[0] += security.RateLimiter._SWEEP_S + 1
+    rl.allow("1.1.1.1", limit=5, window_s=60)
+    assert set(rl._hits) == {"1.1.1.1"}
+
+
+def test_metar_rejects_bad_station_codes():
+    import asyncio
+    from app.services import metar
+    assert asyncio.run(metar.get_metar("MM MX&x=1")) == {}
+    assert asyncio.run(metar.get_taf("../etc")) == {}
+
+
+def test_kiosk_local_ignores_impossible_values_and_honours_optional_token(api, monkeypatch):
+    monkeypatch.setattr(m, "_kiosk_limiter", m.secsvc.RateLimiter())
+    assert api.post("/api/kiosk/local", json={"temperature": 22.4, "humidity": 999, "pressure": 780.2}).status_code == 200
+    latest = api.get("/api/kiosk/local").json()["latest"]
+    assert latest["temperature"] == 22.4 and latest["pressure"] == 780.2 and "humidity" not in latest
+    monkeypatch.setattr(m.settings, "kiosk_local_token", "abc")
+    assert api.post("/api/kiosk/local", json={"temperature": 20}).status_code == 401
+    assert api.post("/api/kiosk/local", json={"temperature": 20}, headers={"X-Kiosk-Token": "abc"}).status_code == 200

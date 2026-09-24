@@ -484,7 +484,10 @@ async def _cwop(data, callsign, passcode, lat, lon) -> bool:
         reader, writer = await asyncio.wait_for(
             asyncio.open_connection(_CWOP_HOST, _CWOP_PORT), timeout=_TIMEOUT)
         try:
-            await reader.readline()  # banner del servidor
+            # Con timeout, igual que la respuesta del login: sin él, un servidor que
+            # acepta la conexión pero no manda el banner dejaba la tarea colgada para
+            # siempre (y se acumulaba una por cada intervalo de CWOP).
+            await asyncio.wait_for(reader.readline(), timeout=_TIMEOUT)  # banner del servidor
             login = f"user {callsign} pass {passcode} vers ecowitt-xe1e 1.0\r\n"
             writer.write(login.encode())
             await writer.drain()

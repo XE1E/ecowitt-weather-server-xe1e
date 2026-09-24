@@ -1008,3 +1008,27 @@ def test_add_to_history_marks_resolved_on_matching_key():
     entry = svc.get_history(limit=1, hours=24)[0]
     assert entry["key"] == "temp_high"
     assert "resolved_at" in entry
+
+
+def test_earthquake_active_alert_expires_and_is_not_renotified():
+    """Un sismo avisado sale de `active` pasadas QUAKE_ACTIVE_S, y aunque vuelva a
+    llegar en la lista no se re-notifica (el registro de avisados guarda el orden)."""
+    c = Collector()
+    svc = AlertService(make_settings(alert_earthquake_magnitude=6.0), notifier=c)
+    q = {"mag": 6.5, "time": "2026-09-24T10:00:00Z", "place": "Costa de Guerrero",
+         "distance_km": 350, "depth_km": 20, "url": ""}
+    asyncio.run(svc.check_earthquake([q]))
+    assert any(k.startswith("earthquake_") for k in svc.active)
+    n = len(c.msgs)
+    for k in svc._quake_active_at:
+        svc._quake_active_at[k] -= svc.QUAKE_ACTIVE_S + 1
+    asyncio.run(svc.check_earthquake([q]))
+    assert not any(k.startswith("earthquake_") for k in svc.active)
+    assert len(c.msgs) == n
+
+
+def test_sky_counter_is_per_instance():
+    a = AlertService(make_settings())
+    b = AlertService(make_settings())
+    a._sky_consecutive["x"] = 1
+    assert "x" not in b._sky_consecutive

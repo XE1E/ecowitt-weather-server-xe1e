@@ -67,7 +67,12 @@ def login(settings, user: str, password: str) -> Optional[str]:
     ok_pass = _verify_password(settings, password)
     if ok_user and ok_pass:
         token = secrets.token_urlsafe(32)
-        _SESSIONS[token] = time.time() + SESSION_TTL
+        now = time.time()
+        # Purga de sesiones vencidas al crear una nueva: antes sólo se borraba un
+        # token cuando alguien lo volvía a usar, y los abandonados se quedaban.
+        for t in [t for t, exp in _SESSIONS.items() if exp < now]:
+            _SESSIONS.pop(t, None)
+        _SESSIONS[token] = now + SESSION_TTL
         return token
     return None
 
@@ -233,6 +238,9 @@ def public_settings(settings) -> Dict[str, Any]:
         "cal_hum_ch7": settings.cal_hum_ch7,
         "cal_hum_ch8": settings.cal_hum_ch8,
         "cal_pressure_offset": settings.cal_pressure_offset,
+        # Editable (EDITABLE_KEYS) pero no se devolvía: Calibración mostraba vacía la
+        # altitud de la principal y el resumen de su ficha decía "de la consola".
+        "station_altitude_m": settings.station_altitude_m,
         "cal_wind_mult": settings.cal_wind_mult,
         "cal_wind_dir_offset": settings.cal_wind_dir_offset,
         "cal_rain_mult": settings.cal_rain_mult,
