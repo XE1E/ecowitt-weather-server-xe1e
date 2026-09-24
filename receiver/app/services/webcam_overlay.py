@@ -106,7 +106,9 @@ def _draw_banner(draw: ImageDraw.ImageDraw, y0: int, width: int, banner_h: int,
                  weather: Dict[str, Any], scale: float = 1.0) -> None:
     """Encabezado de marca + cuadrícula de 6 datos entre `y0` y `y0+banner_h`.
     `scale` agranda fuentes/márgenes proporcionalmente (1.0 = diseño de 800 px)."""
-    k = lambda v: int(round(v * scale))
+    def k(v: float) -> int:
+        return int(round(v * scale))
+
     header_h = k(HEADER_H)
     draw.rectangle([0, y0, width, y0 + header_h], fill=HEADER_BG)
     f_header = _load_font(bold=True, size=k(16))
