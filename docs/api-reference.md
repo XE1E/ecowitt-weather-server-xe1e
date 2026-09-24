@@ -347,6 +347,23 @@ Weathercloud siguen con ella). ~120 KB.
 http://<IP_DEL_VPS>:8080/api/camera/webcam-wide.jpg
 ```
 
+**Tracking URL de Windy (`/api/camera/windy-visit`, 2026-09-23).** El
+formulario de la webcam en Windy tiene un campo "Tracking URL — Called on every
+webcam visit". Apunta ahí:
+
+```
+http://<IP_DEL_VPS>:8080/api/camera/windy-visit
+```
+
+Responde al instante un GIF de 1×1 (sirve tanto si Windy lo llama desde su
+servidor como si lo carga como pixel en el navegador del visitante) y manda en
+segundo plano el evento `windy_webcam_view` a PostHog (mismo proyecto que el
+sitio, `distinct_id` fijo `windy-webcams`, sin perfil de persona; `$ip` para el
+país). Tope global de 600/min. Las primeras 20 llamadas tras cada arranque se
+dejan en el log (`grep "Windy visit"`) para ver qué parámetros manda Windy, que
+no lo documenta. La "Stream URL" se deja vacía: es para video en vivo y la cámara
+publica fotos periódicas a propósito.
+
 **También conectado a Weathercloud (2026-09-14).** De las 9 redes a las que
 publicamos (`publishers.py`), investigado cuáles soportan webcam en el perfil
 de la estación: **solo Weathercloud** tiene esa función activa y documentada
