@@ -89,9 +89,10 @@ sorpresa futura.
 
 Objetivo: demostrar de punta a punta que un POST HTTP plano llega a un Worker.
 
-**Paso 1 — Worker mínimo de prueba.** Ya está listo en la carpeta
-[`test-ingest/`](../test-ingest/) del repo (Worker + `wrangler.toml` +
-instrucciones). Solo:
+**Paso 1 — Worker mínimo de prueba.** Vivía en la carpeta `test-ingest/` del repo
+(Worker + `wrangler.toml` + instrucciones). **Se borró el 2026-09-24** al terminar el
+experimento (resultado arriba, §"Resultado real ya medido"); para recuperarla:
+`git checkout 0730a83 -- test-ingest`. Los pasos eran:
 ```bash
 cd test-ingest
 npm install
@@ -100,7 +101,7 @@ npm run deploy         # despliega a estacion-test.xe1e.net
 npm run tail           # logs en vivo, en otra terminal
 ```
 (Antes: crear el registro DNS `estacion-test` como **proxied** en Cloudflare.
-Detalle completo en [`test-ingest/README.md`](../test-ingest/README.md).)
+Detalle completo en `test-ingest/README.md`, en el mismo commit.)
 
 **Paso 2 — Reproducir el problema (con "Always Use HTTPS" activo):**
 ```bash
