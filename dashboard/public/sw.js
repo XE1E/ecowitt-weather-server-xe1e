@@ -5,8 +5,8 @@
 //   - Recursos con hash (JS/CSS/íconos): caché al instante + refresco en segundo
 //     plano (stale-while-revalidate).
 //   - API y orígenes externos: siempre a la red.
-const CACHE = 'clima-xe1e-v2';
-const SHELL = ['/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'clima-xe1e-v3';  // v3: logo nuevo (2026-09-23)
+const SHELL = ['/manifest.webmanifest', '/icon-192.png?v=4', '/icon-512.png?v=4'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));
