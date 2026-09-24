@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 
 interface PubSettings {
@@ -43,8 +44,6 @@ interface PubSettings {
   awekas_username: string | null
   awekas_password: string | null
   awekas_password_masked: string | null
-  awekas_latitude: number
-  awekas_longitude: number
   awekas_interval: number
   opensensemap_enabled: boolean
   opensensemap_box_id: string | null
@@ -108,15 +107,15 @@ function TextField({ value, onChange, placeholder, type = 'text', masked }: {
   )
 }
 
-function NumField({ value, onChange, step = 0.000001 }: { value: number; onChange: (v: number) => void; step?: number }) {
+// Coordenadas de la estación: una sola, la de Sistema (antes CWOP y AWEKAS tenían
+// cada una sus propios campos). Aquí sólo se muestran.
+function Ubicacion({ lat, lon }: { lat: number; lon: number }) {
   return (
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      step={step}
-      className="w-28 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
-    />
+    <div className="flex items-center gap-2 text-xs text-slate-400">
+      <span>Ubicación</span>
+      <span className="font-mono text-slate-300">{lat?.toFixed(5)}, {lon?.toFixed(5)}</span>
+      <Link to="/admin/sistema" className="text-sky-400 hover:underline">cambiar en Sistema →</Link>
+    </div>
   )
 }
 
@@ -381,12 +380,7 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400 w-16">Password</span>
                 <TextField value={settings.awekas_password} onChange={(v) => update('awekas_password', v)} placeholder="Password" type="password" masked={settings.awekas_password_masked} />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Lat</span>
-                <NumField value={settings.awekas_latitude} onChange={(v) => update('awekas_latitude', v)} />
-                <span className="text-xs text-slate-400 w-8 ml-2">Lon</span>
-                <NumField value={settings.awekas_longitude} onChange={(v) => update('awekas_longitude', v)} />
-              </div>
+              <Ubicacion lat={settings.cwop_latitude} lon={settings.cwop_longitude} />
               <IntervalField value={settings.awekas_interval} onChange={(v) => update('awekas_interval', v)} />
             </div>
           )}
@@ -411,14 +405,7 @@ export function AdminPublicacion() {
                 <span className="text-xs text-slate-400">Passcode</span>
                 <TextField value={settings.cwop_passcode} onChange={(v) => update('cwop_passcode', v)} placeholder="-1" masked={settings.cwop_passcode_masked} />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Lat</span>
-                <NumField value={settings.cwop_latitude} onChange={(v) => update('cwop_latitude', v)} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Lon</span>
-                <NumField value={settings.cwop_longitude} onChange={(v) => update('cwop_longitude', v)} />
-              </div>
+              <div className="sm:col-span-2"><Ubicacion lat={settings.cwop_latitude} lon={settings.cwop_longitude} /></div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400">Intervalo</span>
                 <input

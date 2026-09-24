@@ -272,8 +272,6 @@ def public_settings(settings) -> Dict[str, Any]:
         "awekas_enabled": settings.awekas_enabled,
         "awekas_username": settings.awekas_username,
         "awekas_password_masked": mask(settings.awekas_password),
-        "awekas_latitude": settings.awekas_latitude,
-        "awekas_longitude": settings.awekas_longitude,
         "awekas_interval": settings.awekas_interval,
         "opensensemap_enabled": settings.opensensemap_enabled,
         "opensensemap_box_id": settings.opensensemap_box_id,

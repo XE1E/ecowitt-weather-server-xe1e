@@ -295,9 +295,7 @@ async def station_watchdog():
 
             # Estación principal
             principal_config = stations_config.get("_principal", {})
-            principal_timeout = principal_config.get(
-                "watchdog_minutes", settings.alert_station_offline_minutes
-            ) * 60
+            principal_timeout = settings.alert_station_offline_minutes * 60
             principal_label = principal_config.get("label", "Principal")
             await alert_service.check_station(
                 latest_by_station.get(None, {}).get("received_at"),
@@ -1738,7 +1736,7 @@ async def list_stations():
     # Estación principal (siempre presente)
     principal_data = latest_by_station.get(None, {})
     principal_config = stations_config.get("_principal", {})
-    principal_timeout = principal_config.get("watchdog_minutes", settings.alert_station_offline_minutes)
+    principal_timeout = settings.alert_station_offline_minutes
     principal_sensor_labels = settings_store.get_sensor_labels(settings.settings_file, None)
     result.append({
         "name": None,

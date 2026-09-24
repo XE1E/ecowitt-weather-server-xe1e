@@ -550,7 +550,7 @@ async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional
                 and _due("awekas", getattr(settings, "awekas_interval", 5), now)):
             tareas["awekas"] = _awekas(
                 client, data, settings.awekas_username, settings.awekas_password,
-                getattr(settings, "awekas_latitude", None), getattr(settings, "awekas_longitude", None),
+                settings.cwop_latitude, settings.cwop_longitude,  # ubicación única (Sistema)
                 condition=awekas_condition)
         if (getattr(settings, "opensensemap_enabled", False) and settings.opensensemap_box_id
                 and settings.opensensemap_access_token

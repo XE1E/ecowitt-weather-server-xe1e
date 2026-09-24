@@ -52,10 +52,6 @@ export function AdminEstacionConfig() {
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
   const [stationLabel, setStationLabel] = useState('')
-  const [watchdogEnabled, setWatchdogEnabled] = useState(true)
-  const [watchdogMinutes, setWatchdogMinutes] = useState(15)
-  const [alertsEnabled, setAlertsEnabled] = useState(false)
-  const [altitudeM, setAltitudeM] = useState(0)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
 
   // Registro (passkey por MAC)
@@ -129,10 +125,6 @@ export function AdminEstacionConfig() {
       .then(data => {
         setStation(data)
         setStationLabel(data.config?.label || '')
-        setWatchdogEnabled(data.config?.watchdog_enabled ?? true)
-        setWatchdogMinutes(data.config?.watchdog_minutes ?? 15)
-        setAlertsEnabled(data.config?.alerts_enabled ?? false)
-        setAltitudeM(data.config?.altitude_m ?? 0)
         setSensorLabels(data.sensor_labels || {})
       })
       .finally(() => setLoading(false))
@@ -147,17 +139,9 @@ export function AdminEstacionConfig() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // En la principal sólo cuentan nombre y minutos de "sin datos": sus
-          // alertas y su watchdog los manda la configuración global.
-          config: station?.name === null
-            ? { label: stationLabel, watchdog_minutes: watchdogMinutes }
-            : {
-                label: stationLabel,
-                watchdog_enabled: watchdogEnabled,
-                watchdog_minutes: watchdogMinutes,
-                alerts_enabled: alertsEnabled,
-                altitude_m: altitudeM,
-              },
+          // La ficha sólo guarda el nombre (y los nombres de sensores): alertas y
+          // "sin datos" viven en Alertas, altitud y offsets en Calibración.
+          config: { label: stationLabel },
           sensor_labels: sensorLabels,
         }),
       })
@@ -220,38 +204,18 @@ export function AdminEstacionConfig() {
 
       {/* Config general */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-3">Configuración general</h2>
+        <h2 className="font-medium mb-3">Nombre</h2>
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm text-slate-400 mb-1">Nombre</label>
             <input
               type="text"
+              aria-label="Nombre de la estación"
               value={stationLabel}
               onChange={e => setStationLabel(e.target.value)}
               placeholder={isPrincipal ? 'Principal' : name || ''}
               className="w-full rounded bg-slate-900/50 border border-white/10 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
             />
           </div>
-          {!isPrincipal && (
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={watchdogEnabled} onChange={e => setWatchdogEnabled(e.target.checked)} className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500" />
-              <span className="text-sm">Watchdog</span>
-            </label>
-          )}
-          {(isPrincipal || watchdogEnabled) && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Timeout:</span>
-              <input
-                type="number"
-                value={watchdogMinutes}
-                onChange={e => setWatchdogMinutes(Number(e.target.value))}
-                min={1}
-                max={60}
-                className="w-16 rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
-              />
-              <span className="text-sm text-slate-500">min</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -323,43 +287,26 @@ export function AdminEstacionConfig() {
         )}
       </div>
 
-      {/* Alertas y altitud (solo secundarias: en la principal los manda la
-          configuración global -- Alertas y Calibración). */}
-      {!isPrincipal && (
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <h2 className="font-medium mb-3">Alertas y altitud</h2>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={alertsEnabled}
-              onChange={e => setAlertsEnabled(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
-            />
-            <span className="text-sm">🔔 Alertas para esta estación</span>
-          </label>
-          <p className="text-xs text-slate-500 mt-2">
-            Sus umbrales se ajustan en <Link to="/admin/alertas" className="text-sky-400 hover:underline">Alertas</Link>.
-            La publicación a redes y MQTT son sólo de la estación principal.
-          </p>
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">⛰️ Altitud (m)</span>
-              <input
-                type="number"
-                value={altitudeM}
-                onChange={e => setAltitudeM(Number(e.target.value))}
-                min={0}
-                max={6000}
-                step={1}
-                className="w-24 rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
-            </p>
-          </div>
+      {/* Accesos directos: lo demás de esta estación vive en su categoría (Alertas,
+          Calibración), con esta estación ya elegida. Así cada ajuste está en un solo lugar. */}
+      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+        <h2 className="font-medium mb-3">Ajustes de esta estación</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Link to={isPrincipal ? '/admin/alertas' : `/admin/alertas?estacion=${name}`}
+            className="rounded-lg bg-slate-900/50 border border-white/5 hover:border-sky-500/40 px-3 py-2 text-sm">
+            🔔 <span className="text-slate-200">Alertas</span>
+            <span className="block text-xs text-slate-500">umbrales y aviso de «sin datos»</span>
+          </Link>
+          <Link to={isPrincipal ? '/admin/calibracion' : `/admin/calibracion?estacion=${name}`}
+            className="rounded-lg bg-slate-900/50 border border-white/5 hover:border-sky-500/40 px-3 py-2 text-sm">
+            🔧 <span className="text-slate-200">Calibración</span>
+            <span className="block text-xs text-slate-500">offsets de sensores y altitud</span>
+          </Link>
         </div>
-      )}
+        {!isPrincipal && (
+          <p className="text-xs text-slate-500 mt-2">La publicación a redes y MQTT son sólo de la estación principal.</p>
+        )}
+      </div>
 
       {/* Sensores WN31 */}
       {wn31Sensors.length > 0 && (

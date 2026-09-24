@@ -64,14 +64,20 @@ Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
       otra estación). Las claves retiradas se filtran al leer/guardar
       (`settings_store.RETIRED_STATION_KEYS`).
 
-### Etapa 2 — un solo lugar por ajuste
-- [ ] "Sin datos": hoy en Alertas (`alert_station_offline_minutes`), Sistema y la ficha
-      (`stations._principal.watchdog_minutes`, que **le gana en silencio** al global).
-      Queda en Alertas, por estación.
-- [ ] Coordenadas: Publicación (CWOP), Sistema y asistente → Sistema.
-- [ ] Altitud del GW1100: Calibración y ficha → Calibración.
-- [ ] `/api/stations` arma `publish_enabled` de la principal con sólo 5 de las 9 redes:
-      corregir o quitar (tras quitar la casilla, probablemente quitar).
+### Etapa 2 — un solo lugar por ajuste — HECHA 2026-09-24
+- [x] "Sin datos": la principal usa sólo `alert_station_offline_minutes` (Alertas);
+      `stations._principal.watchdog_minutes` ya no cuenta (se ignora al leer y se quita
+      al guardar: `settings_store.RETIRED_PRINCIPAL_KEYS`, junto con `watchdog_enabled`,
+      `alerts_enabled` y `altitude_m`). Las secundarias: alertas on/off, watchdog y
+      minutos en Alertas (vista de la estación). Fuera de Sistema y de la ficha.
+- [x] Coordenadas: sólo en Sistema (`cwop_latitude`/`cwop_longitude`, el nombre es
+      histórico). AWEKAS dejó de tener las suyas (`awekas_latitude/longitude` retiradas;
+      eran idénticas) y Publicación sólo las muestra. El asistente las sigue pidiendo
+      (es la primera configuración).
+- [x] Altitud del GW1100: sólo en Calibración.
+- [x] `publish_enabled` de la principal en `/api/stations`: quitado en la etapa 1.
+- [x] Adelanto de la etapa 3: la ficha trae accesos directos a Alertas/Calibración con
+      `?estacion=<nombre>`, que ambas páginas ya entienden.
 
 ### Etapa 3 — pestañas por estación + ficha
 - [ ] Componente común de pestañas con `?estacion=` para Alertas y Calibración.
@@ -79,6 +85,8 @@ Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
 
 ### Etapa 4 — menú y documentación
 - [ ] Menú agrupado; `docs/GUIA.md` / `docs/api-reference.md` al día.
+- [ ] En celular el menú lateral arranca ABIERTO encima de la página
+      (`AdminLayout`: `sidebarOpen` empieza en `true`); que empiece cerrado en pantallas chicas.
 
 ## 4. Cuidados (producción en vivo)
 

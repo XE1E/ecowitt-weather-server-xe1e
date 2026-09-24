@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 
 interface AlertSettings {
@@ -142,7 +143,12 @@ export function AdminAlertas() {
   const [globalCache, setGlobalCache] = useState<AlertSettings | null>(null)
   const [secondaries, setSecondaries] = useState<StationOpt[]>([])
   const [selected, setSelected] = useState<string | null>(null)  // null = principal
-  const [offlineMin, setOfflineMin] = useState(15)  // watchdog de la secundaria
+  // "Sin datos" y alertas de la secundaria: viven SÓLO aquí (antes también en la
+  // ficha de la estación). La principal usa los globales de abajo.
+  const [offlineMin, setOfflineMin] = useState(15)
+  const [secWatchdog, setSecWatchdog] = useState(true)
+  const [secAlerts, setSecAlerts] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [disabled, setDisabled] = useState<string[]>([])  // reglas apagadas
   // Reglas visuales apagadas (sky_storm/sky_precipitation/sky_visibility). Son
   // globales (no hay una por estación), así que solo se editan con isPrincipal.
@@ -172,8 +178,18 @@ export function AdminAlertas() {
     }).finally(() => setLoading(false))
   }, [fetchWithAuth])
 
+  // ?estacion=<nombre> abre directo esa estación (enlaces desde su ficha).
+  const wanted = searchParams.get('estacion')
+  useEffect(() => {
+    if (globalCache && wanted && selected === null && secondaries.some((x) => x.name === wanted)) {
+      onSelectStation(wanted)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalCache, secondaries, wanted])
+
   const onSelectStation = async (sel: string | null) => {
     setSelected(sel); setMessage(null); setLoading(true)
+    setSearchParams(sel ? { estacion: sel } : {}, { replace: true })
     try {
       if (sel === null) {
         const [s, cur] = await Promise.all([
@@ -208,6 +224,8 @@ export function AdminAlertas() {
         }
         setSettings({ ...base, ...ov } as AlertSettings)
         setOfflineMin(station?.config?.watchdog_minutes ?? 15)
+        setSecWatchdog(station?.config?.watchdog_enabled ?? true)
+        setSecAlerts(station?.config?.alerts_enabled ?? false)
         setDisabled(Array.isArray(station?.config?.disabled_rules) ? station.config.disabled_rules : [])
       }
     } finally { setLoading(false) }
@@ -234,13 +252,13 @@ export function AdminAlertas() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(th),
         })
-        // Guardar también el "offline después de" (watchdog) de la estación.
+        // Guardar también alertas on/off y el "sin datos" (watchdog) de la estación.
         // El backend fusiona, así que no pisa calibración ni umbrales.
         if (res.ok) {
-          await fetchWithAuth(`/api/stations/${selected}`, {
+          res = await fetchWithAuth(`/api/stations/${selected}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config: { watchdog_minutes: offlineMin } }),
+            body: JSON.stringify({ config: { alerts_enabled: secAlerts, watchdog_enabled: secWatchdog, watchdog_minutes: offlineMin } }),
           })
         }
       }
@@ -341,13 +359,29 @@ export function AdminAlertas() {
         </>
       ) : (
         <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Actívale las alertas en <a href="/admin/estaciones" className="text-sky-400">Estaciones</a>. Batería, sensor perdido y aire usan la configuración global. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla (independiente de la principal).</span>
+          ℹ️ Umbrales propios de <span className="text-slate-400">{selLabel}</span>. Batería, sensor perdido y aire usan la configuración global. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla (independiente de la principal).</span>
           {/* Aviso de por qué hay grupos atenuados. Explicarlo aquí evita la pregunta de
               "¿por qué puedo configurar una alarma de rocío en una estación que no mide
               fuera?" y, sobre todo, la contraria: que alguien busque una alarma que no ve. */}
           <div className="mt-1">
             Cada grupo dice de qué sensor sale. Los marcados <span className="text-amber-500/80">sin lecturas</span> están atenuados porque ese sensor aún no reporta —
             sus umbrales se pueden dejar preparados y empezarán a vigilar en cuanto llegue el primer dato.
+          </div>
+        </div>
+      )}
+
+      {/* On/off y "sin datos" de la secundaria, primero: es lo que más se busca */}
+      {!isPrincipal && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Toggle enabled={secAlerts} onChange={setSecAlerts} label="🔔 Alertas para esta estación" />
+            <div className="h-4 w-px bg-white/10" />
+            <Toggle enabled={secWatchdog} onChange={setSecWatchdog} label="📡 Avisar si deja de enviar datos" />
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-400">tras</span>
+              <NumField value={offlineMin} onChange={setOfflineMin} min={1} max={120} off={!secWatchdog} />
+              <span className="text-xs text-slate-500">min sin datos</span>
+            </div>
           </div>
         </div>
       )}
@@ -608,15 +642,6 @@ export function AdminAlertas() {
         </div>
       </div>
 
-      {!isPrincipal && (
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">📡 Offline despues de</span>
-            <NumField value={offlineMin} onChange={setOfflineMin} min={1} max={120} />
-            <span className="text-xs text-slate-500">min sin datos (watchdog de esta estación)</span>
-          </div>
-        </div>
-      )}
 
       {isPrincipal && (
         <>

@@ -9,7 +9,6 @@ interface SysSettings {
   timezone_offset: number
   cwop_latitude: number
   cwop_longitude: number
-  alert_station_offline_minutes: number
   // Respaldo externo a R2 (ver docs/internal/PLAN-RESPALDO-R2.md)
   r2_account_id: string | null
   r2_access_key_id: string | null
@@ -523,19 +522,8 @@ export function AdminSistema() {
               </span>
             </div>
           </div>
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">Timeout estacion offline (min)</label>
-            <input
-              type="number"
-              min="1"
-              max="60"
-              value={settings.alert_station_offline_minutes ?? 15}
-              onChange={(e) => update('alert_station_offline_minutes', parseInt(e.target.value) || 15)}
-              className="w-20 bg-slate-700 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200"
-            />
-          </div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Coordenadas para calculos de almanac (sol/luna). Timeout define cuando se considera la estacion offline.</p>
+        <p className="text-xs text-slate-500 mt-3">Ubicación de la estación: la usan el almanaque (sol/luna), el pronóstico y las redes que la piden (CWOP, AWEKAS). Se cambia sólo aquí. El aviso de «sin datos» está en Alertas.</p>
       </div>
 
       {/* Control de calidad */}

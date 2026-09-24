@@ -339,8 +339,7 @@ class Settings(BaseSettings):
     awekas_enabled: bool = False       # AWEKAS (red austriaca)
     awekas_username: Optional[str] = None
     awekas_password: Optional[str] = None
-    awekas_latitude: float = 19.380359
-    awekas_longitude: float = -99.174564
+    # AWEKAS usa la ubicación única de la estación (cwop_latitude/longitude, en Sistema)
     awekas_interval: int = 5
     # openSenseMap (senseBox, Universidad de Münster) -- ver
     # docs/internal/PLAN-OPTIMIZACION-SERVIDOR.md, sección B. A diferencia de

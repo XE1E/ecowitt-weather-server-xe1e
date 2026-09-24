@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 
 interface CalSettings {
@@ -76,6 +77,7 @@ export function AdminCalibracion() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // Carga la calibración de la estación seleccionada (principal = settings global).
   const loadCal = async (sel: string | null) => {
@@ -117,8 +119,16 @@ export function AdminCalibracion() {
     }).finally(() => setLoading(false))
   }, [fetchWithAuth])
 
+  // ?estacion=<nombre> abre directo esa estación (enlaces desde su ficha).
+  const wanted = searchParams.get('estacion')
+  useEffect(() => {
+    if (wanted && selected === null && secondaries.some((x) => x.name === wanted)) onSelectStation(wanted)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondaries, wanted])
+
   const onSelectStation = async (sel: string | null) => {
     setSelected(sel)
+    setSearchParams(sel ? { estacion: sel } : {}, { replace: true })
     setSettings(null)
     setLoading(true)
     try { await loadCal(sel) } finally { setLoading(false) }

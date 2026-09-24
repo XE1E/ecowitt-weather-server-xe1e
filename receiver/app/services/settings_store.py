@@ -182,7 +182,6 @@ EDITABLE_KEYS = {
     "cwop_enabled", "cwop_callsign", "cwop_passcode",
     "cwop_latitude", "cwop_longitude", "cwop_interval",
     "awekas_enabled", "awekas_username", "awekas_password", "awekas_interval",
-    "awekas_latitude", "awekas_longitude",
     "opensensemap_enabled", "opensensemap_box_id", "opensensemap_access_token",
     "opensensemap_sensor_ids", "opensensemap_interval",
     # Seguridad del endpoint de push
@@ -276,8 +275,16 @@ DEFAULT_STATION_CONFIG = {
 RETIRED_STATION_KEYS = ("publish_enabled", "mqtt_enabled", "treat_indoor_as_outdoor")
 
 
-def _without_retired(config: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: v for k, v in config.items() if k not in RETIRED_STATION_KEYS}
+# En la principal (`stations._principal`) tampoco cuentan éstas: su aviso de "sin
+# datos" es `alert_station_offline_minutes`, sus alertas `alerts_enabled` y su
+# altitud `station_altitude_m`, todos globales (2026-09-24, un solo lugar por ajuste).
+# Antes `_principal.watchdog_minutes` le ganaba en silencio al global.
+RETIRED_PRINCIPAL_KEYS = ("watchdog_enabled", "watchdog_minutes", "alerts_enabled", "altitude_m")
+
+
+def _without_retired(config: Dict[str, Any], name: str = "") -> Dict[str, Any]:
+    drop = RETIRED_STATION_KEYS + (RETIRED_PRINCIPAL_KEYS if name == "_principal" else ())
+    return {k: v for k, v in config.items() if k not in drop}
 
 
 def load_overrides(path: str) -> Dict[str, Any]:
@@ -331,7 +338,8 @@ def get_station_config(path: str, name: str) -> Dict[str, Any]:
     """Obtiene la configuración de una estación específica."""
     stations = get_stations_config(path)
     config = stations.get(name, {})
-    return {**DEFAULT_STATION_CONFIG, **_without_retired(config)}
+    base = _without_retired(DEFAULT_STATION_CONFIG, name)
+    return {**base, **_without_retired(config, name)}
 
 
 def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
@@ -345,8 +353,8 @@ def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
     data = load_all_settings(path)
     if "stations" not in data:
         data["stations"] = {}
-    existing = _without_retired(data["stations"].get(name, {}))
-    incoming = {k: v for k, v in config.items() if k in DEFAULT_STATION_CONFIG}
+    existing = _without_retired(data["stations"].get(name, {}), name)
+    incoming = _without_retired({k: v for k, v in config.items() if k in DEFAULT_STATION_CONFIG}, name)
     data["stations"][name] = {**existing, **incoming}
     save_all_settings(path, data)
 
