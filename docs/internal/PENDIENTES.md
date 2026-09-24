@@ -398,11 +398,15 @@ Otras ideas propuestas (para decidir):
 - [ ] **Aviso de "lluvia acercándose" con radar** (Telegram, opt-in) cuando haya ecos
       ≥ 35 dBZ a < 10 km moviéndose hacia la estación -- sustituiría con dato real al
       vigilante de vecinas que se quitó.
-- [ ] **Guardar historial de cuadros.** SACMEX sólo expone los últimos ~10: sin archivo
-      propio no hay con qué calibrar nada de lo anterior ni hacer timelapse de una
-      tormenta. Guardar sólo el recorte de la CDMX (o la matriz de dBZ ya extraída) para
-      que no pese (~190 KB por cuadro completo, ~288 cuadros/día). **Es requisito previo
-      de casi todo lo de esta sección.**
+- [x] **Guardar historial de cuadros — HECHO 2026-09-24.** `radar_archive_task` (cada
+      5 min, aunque nadie abra la página) guarda cada cuadro en
+      `/data/radar_sacmex/<día local>/`; `GET /api/radar/sacmex/archive` dice cuántos
+      lleva. Se guarda el JPG original sin recortar (~220 KB, ~65 MB/día, 45 días ≈
+      3 GB; el VPS tenía 29 GB libres): recortar obliga a recomprimir (el recorte en
+      JPEG q95 pesaba 88 KB, en PNG 240 KB porque el mapa de fondo es muy detallado) y
+      cada pasada de JPEG corre los colores con que después se lee el dBZ. Cuando exista
+      el decodificador de dBZ se puede guardar la matriz (mucho más chica) para lo viejo
+      y bajar la retención de los JPG.
 
 ## 2.f Verificación de pronósticos: ¿quién acierta? — en producción, acumulando (2026-09-23)
 

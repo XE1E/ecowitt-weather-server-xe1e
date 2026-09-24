@@ -198,6 +198,11 @@ class Settings(BaseSettings):
     # Bitácora de pronósticos (una foto cada 30 min de lo que dijo cada fuente) para
     # calificarlos contra el pluviómetro, ver services/forecast_verification.py.
     forecast_log_dir: str = "/data/forecast_log"
+    # Historial de cuadros del radar SACMEX (ver services/sacmex_radar.py): ~220 KB
+    # por cuadro, ~288 al día (~65 MB/día). 0 días = no borrar nunca.
+    radar_archive_enabled: bool = True
+    radar_archive_dir: str = "/data/radar_sacmex"
+    radar_archive_days: int = 45
     # PostHog (mismo proyecto que el dashboard, ver dashboard/src/analytics.ts). La
     # project key es PÚBLICA por diseño (va embebida en el cliente); aquí sólo se
     # usa para registrar desde el servidor las visitas que Windy notifica a su

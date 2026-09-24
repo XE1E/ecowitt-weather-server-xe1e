@@ -203,6 +203,8 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(forecast_snapshot_task()))
     # Resumen semanal por correo (opt-in, ver email_digest_enabled)
     background_tasks.append(asyncio.create_task(email_digest_task()))
+    # Historial del radar SACMEX: sólo expone ~10 cuadros, aquí se guardan todos
+    background_tasks.append(asyncio.create_task(radar_archive_task()))
 
     # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
     # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
@@ -3784,6 +3786,34 @@ async def get_sacmex_radar():
     """Últimos cuadros del radar del SACMEX (CDMX), ver services/sacmex_radar.py.
     Cada cuadro se pide aparte a /api/radar/sacmex/<id>, servido desde caché."""
     return await sacmex_radar.get_frames()
+
+
+@app.get("/api/radar/sacmex/archive")
+async def get_sacmex_radar_archive():
+    """Cuántos cuadros del radar lleva guardados el historial, por día."""
+    return {"enabled": settings.radar_archive_enabled,
+            "keep_days": settings.radar_archive_days,
+            **sacmex_radar.archive_summary(settings.radar_archive_dir)}
+
+
+async def radar_archive_task():
+    """Cada 5 min (el ritmo del radar) baja los cuadros nuevos y los guarda en el
+    historial. Aquí, y no en el endpoint, porque de noche o en días sin visitas
+    nadie pide /api/radar/sacmex y se perderían cuadros: SACMEX sólo guarda ~50 min."""
+    if not settings.radar_archive_enabled:
+        return
+    await asyncio.sleep(120)  # gracia inicial
+    while True:
+        try:
+            await sacmex_radar.refresh()
+            n = sacmex_radar.archive_new(settings.radar_archive_dir)
+            if n:
+                logger.info(f"Radar SACMEX: {n} cuadro(s) nuevo(s) al historial")
+            sacmex_radar.prune_archive(settings.radar_archive_dir, settings.radar_archive_days,
+                                       datetime.now(_MX_TZ).date().isoformat())
+        except Exception as e:
+            logger.error(f"Historial del radar SACMEX falló: {e}")
+        await asyncio.sleep(300)
 
 
 @app.get("/api/radar/sacmex/{frame_id}")

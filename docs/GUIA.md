@@ -1562,6 +1562,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/airquality` · `GET /api/airquality/imeca` | AQI e IMECA estimado (+ pronóstico) |
 | `GET /api/satellite` | imagen satelital NASA GIBS (proxy) |
 | `GET /api/radar/sacmex` · `/api/radar/sacmex/<id>` | radar del SACMEX (CDMX): lista de cuadros y cada JPG, proxy con caché de 5 min |
+| `GET /api/radar/sacmex/archive` | historial propio de cuadros del radar SACMEX (por día; 45 días de retención) |
 | `GET /api/earthquakes` | sismos recientes (USGS / SSN) |
 | `GET /api/svitrix` | datos para SVITRIX-XE1E (Ulanzi TC001), con forma WeatherAPI `current.json` |
 | `GET /api/epaper/forecast.json` | datos para el e-paper LilyGo, con forma WeatherAPI `forecast.json` (3 días × 24 h + bloque `xe1e`). **Nunca devuelve 503** |

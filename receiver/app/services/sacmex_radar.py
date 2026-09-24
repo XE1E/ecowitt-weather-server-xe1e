@@ -13,7 +13,9 @@ Así, además, SACMEX recibe UNA consulta cada _TTL (no una por visitante) y si
 su sitio falla se siguen sirviendo los últimos cuadros buenos, marcados
 `stale`. Mismo patrón que satellite.py / xweather.py.
 """
+import os
 import re
+import shutil
 import time
 import logging
 from datetime import datetime, timedelta, timezone
@@ -35,6 +37,7 @@ _UA = {"User-Agent": "ecowitt-weather-server (clima.xe1e.net)"}
 # (el propio JPG la rotula "CST"). El id se valida con esto antes de pedir nada
 # a SACMEX: el endpoint de imagen nunca arma una URL con texto libre.
 FRAME_RE = re.compile(r"EWR-MAXZ(\d{6})_(\d{6})r\d{3}XMax1\.JPG")
+_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _CDMX = timezone(timedelta(hours=-6))  # CDMX sin horario de verano
 
 _state: Dict[str, Any] = {"ts": 0.0, "frames": [], "ok_ts": 0.0}
@@ -118,3 +121,67 @@ def get_image(frame_id: str) -> Optional[bytes]:
     if not FRAME_RE.fullmatch(frame_id or ""):
         return None
     return _images.get(frame_id)
+
+
+# --- Historial propio -------------------------------------------------------
+# SACMEX sólo expone los últimos ~10 cuadros (~50 min): sin archivo propio no hay
+# con qué medir movimiento de ecos, calibrar contra el pluviómetro ni armar el
+# timelapse de una tormenta (PENDIENTES §2.g). Se guarda el JPG TAL CUAL llega
+# (~220 KB): recortarlo obliga a recomprimir y cada pasada de JPEG corre los
+# colores con que luego se lee el dBZ; y el cuadro entero sirve si hay que
+# recalibrar el encuadre. Una carpeta por día LOCAL (el del nombre del cuadro).
+
+
+def _day_of(frame_id: str) -> str:
+    d = FRAME_RE.fullmatch(frame_id).group(1)
+    return f"20{d[:2]}-{d[2:4]}-{d[4:]}"
+
+
+def archive_new(base_dir: str) -> int:
+    """Escribe en el historial los cuadros en memoria que aún no estén. Devuelve
+    cuántos guardó. Idempotente: si el radar deja de publicar, no duplica nada."""
+    saved = 0
+    for frame_id, data in list(_images.items()):
+        if not FRAME_RE.fullmatch(frame_id):
+            continue
+        day_dir = os.path.join(base_dir, _day_of(frame_id))
+        path = os.path.join(day_dir, frame_id)
+        if os.path.exists(path):
+            continue
+        os.makedirs(day_dir, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "wb") as fh:
+            fh.write(data)
+        os.replace(tmp, path)  # nunca queda a medias un cuadro con nombre válido
+        saved += 1
+    return saved
+
+
+def prune_archive(base_dir: str, keep_days: int, today: str) -> int:
+    """Borra las carpetas de día más viejas que keep_days (0 = no borrar nunca).
+    Sólo toca carpetas con nombre de fecha."""
+    if keep_days <= 0 or not os.path.isdir(base_dir):
+        return 0
+    cutoff = (datetime.fromisoformat(today) - timedelta(days=keep_days)).date().isoformat()
+    removed = 0
+    for name in os.listdir(base_dir):
+        if _DAY_RE.fullmatch(name) and name < cutoff:
+            shutil.rmtree(os.path.join(base_dir, name), ignore_errors=True)
+            removed += 1
+    return removed
+
+
+def archive_summary(base_dir: str) -> Dict[str, Any]:
+    """Cuadros y peso por día, para ver que el historial va juntando datos."""
+    days = []
+    if os.path.isdir(base_dir):
+        for name in sorted(os.listdir(base_dir)):
+            d = os.path.join(base_dir, name)
+            if not (_DAY_RE.fullmatch(name) and os.path.isdir(d)):
+                continue
+            files = [f for f in os.listdir(d) if FRAME_RE.fullmatch(f)]
+            size = sum(os.path.getsize(os.path.join(d, f)) for f in files)
+            days.append({"date": name, "frames": len(files), "mb": round(size / 1e6, 1)})
+    return {"days": days,
+            "frames": sum(x["frames"] for x in days),
+            "mb": round(sum(x["mb"] for x in days), 1)}
