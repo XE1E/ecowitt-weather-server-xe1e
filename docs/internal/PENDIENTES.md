@@ -368,6 +368,42 @@ tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
 la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
 `docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
 
+## 2.g Radar SACMEX: movimiento de nubes y cruce con la cámara — PARA REVISAR (anotado 2026-09-23)
+
+Contexto: desde 2026-09-23 el radar del SACMEX se sirve por nuestro backend
+(`services/sacmex_radar.py`, últimos ~10 cuadros de reflectividad, uno cada ~5 min)
+y se ve en `/radar` con zoom a la CDMX, anillos cada 5 km y el punto de la estación
+(calibración de pixeles en `SacmexRadarCard.tsx`: centro (254, 252) px, ~3.3 px/km).
+
+Pedido del usuario, revisar si es posible y útil:
+- [ ] **Movimiento de las nubes a partir del radar.** Estimar dirección y velocidad
+      de los ecos comparando cuadros consecutivos (correlación de fase / flujo óptico
+      sobre la máscara de dBZ ≥ ~20). Con eso se puede extrapolar: "hay lluvia de
+      35 dBZ a 12 km al NE moviéndose hacia la estación, llegaría en ~20 min".
+      Ojo: sólo hay 10 cuadros (~50 min) y en la imagen hay mucho eco disperso
+      (probable clutter): habrá que filtrar antes de medir movimiento.
+- [ ] **Comparar la cámara con el radar.** La cámara mira al sureste: tomar el sector
+      del radar que cae en su campo de visión y cruzarlo con lo que ve la IA
+      (`precipitation_visible`, cobertura, "nubes de lluvia formándose"). Serviría para
+      (a) validar/calibrar el análisis de la cámara con un dato físico y (b) confirmar
+      cuando la cámara ve lluvia "en el horizonte" si de verdad hay ecos en esa dirección.
+
+Otras ideas propuestas (para decidir):
+- [ ] **Radar como fuente en la verificación de pronósticos** (§2.f): dBZ en el pixel de
+      la estación ≈ "llueve ahora"; eco acercándose ≈ "lloverá en <1 h". Se calificaría
+      contra el pluviómetro igual que las demás fuentes -- así sabemos si el radar le
+      gana a la cámara (hoy la mejor, CSI 45% ahora) y al horario (26% a 3 h).
+- [ ] **Estimar mm/h desde el radar** (relación Z-R de Marshall-Palmer) en el pixel de
+      la estación y compararlo con la tasa del pluviómetro: calibración local del radar.
+- [ ] **Aviso de "lluvia acercándose" con radar** (Telegram, opt-in) cuando haya ecos
+      ≥ 35 dBZ a < 10 km moviéndose hacia la estación -- sustituiría con dato real al
+      vigilante de vecinas que se quitó.
+- [ ] **Guardar historial de cuadros.** SACMEX sólo expone los últimos ~10: sin archivo
+      propio no hay con qué calibrar nada de lo anterior ni hacer timelapse de una
+      tormenta. Guardar sólo el recorte de la CDMX (o la matriz de dBZ ya extraída) para
+      que no pese (~190 KB por cuadro completo, ~288 cuadros/día). **Es requisito previo
+      de casi todo lo de esta sección.**
+
 ## 2.f Verificación de pronósticos: ¿quién acierta? — en producción, acumulando (2026-09-23)
 
 `GET /api/forecast/verification` + tarjeta "Precisión del pronóstico" (`/camara`)
