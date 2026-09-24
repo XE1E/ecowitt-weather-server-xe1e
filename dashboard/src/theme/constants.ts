@@ -21,7 +21,7 @@ export const CHART_COLORS = {
   tempMin: '#38bdf8',          // sky-400 (convención: azul = frío)
   tempAvg: '#94a3b8',          // slate-400
   windDirection: '#22c55e',    // green-500 (mismo que viento)
-  rainRate: '#38bdf8',         // sky-400 (mismo que precipitación)
+  rainRate: '#0ea5e9',         // sky-500: color PROPIO, distinto de precipitación (docs/CONVENCIONES.md)
 } as const
 
 // Colores de tendencia

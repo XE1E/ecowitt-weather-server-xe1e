@@ -181,10 +181,9 @@ real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
 - [ ] **`KioskPage.tsx` → `RemoteCard`** (menor): el tile "Exterior" usa colores no
       conformes (`#fbbf24`/`#22d3ee`) mientras el tile "Interior" de la misma
       tarjeta, unas líneas abajo, ya usa los correctos (`#f97316`/`#2563eb`).
-- [ ] **`HistoryDayDetail.tsx:297`** (menor): la barra rotulada "Tasa de lluvia"
-      usa el color de Precipitación (`#38bdf8`) en vez del color propio que ya
-      existe para "Tasa de lluvia" (`#0ea5e9`) desde que se agregó esa fila a la
-      convención -- posible alineación de nombre/color, no bloqueante.
+- [x] **`HistoryDayDetail.tsx:297`** -- HECHO (2026-09-23): la barra "Tasa de lluvia"
+      (grafica `rain_rate`) ya usa `#0ea5e9`, igual que `COLORS.rainRate` en
+      `theme/constants.ts` (que también decía `#38bdf8`, aunque nadie la usaba).
 
 **No tocar:** los 2 colores de viento de `HistoryDayDetail.tsx` (líneas 188-189)
 que "divergen" de la tabla son intencionales -- ajuste de contraste de

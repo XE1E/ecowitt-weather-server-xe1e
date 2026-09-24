@@ -108,8 +108,8 @@ cursor: { stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }
 
 - Clase base: `.card`
 - Título: `.card-title`
-- Fondo: `bg-white/5` o similar con transparencia
-- Border radius: `rounded-lg` (8px) o `rounded-xl` (12px)
+- Fondo: `rgba(255,255,255,0.05)` con `backdrop-filter: blur(12px)` (tema oscuro); el tema claro lo sobrescribe en `index.css`
+- Border radius: `rounded-2xl` (16px), lo pone la propia `.card`; sólo algún caso puntual lo baja a `rounded-xl`
 
 ## Iconos
 
@@ -170,7 +170,7 @@ El icono **cambia con el valor**, así que informa en vez de decorar:
 
 Un icono que no se distingue al tamaño en que se usa no vale la pena. Se verifica
 midiendo, no a ojo: `scratchpad/audita_contraste.py` (script local, no está en el repo) renderiza cada icono sobre el
-color real de `.card` (`#131c2e`) y calcula la diferencia media de luminancia.
+color **efectivo** de `.card` en tema oscuro (`#131c2e`: no está escrito en el CSS, es el blanco al 5% de la tarjeta sobre el fondo de la página) y calcula la diferencia media de luminancia.
 Referencia: la mayoría del conjunto queda entre 50 y 130.
 
 **Descartados por esta regla:**
