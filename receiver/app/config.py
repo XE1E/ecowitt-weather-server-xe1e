@@ -375,7 +375,7 @@ class Settings(BaseSettings):
 
     # Análisis del cielo con modelos de visión. Soporta dos proveedores:
     # - Anthropic (Claude): mejor calidad, de pago
-    # - Google Gemini: tier gratuito generoso (15 RPM, 1M tokens/día)
+    # - Google Gemini: tier gratuito (límites por proyecto, ver aistudio.google.com/rate-limit)
     #
     # El proveedor se selecciona con camera_analysis_provider:
     # - "auto" (default): usa Gemini si tiene key, sino Anthropic

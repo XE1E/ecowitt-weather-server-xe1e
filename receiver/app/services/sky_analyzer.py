@@ -7,7 +7,9 @@ de pronóstico a corto plazo basada en lo observado.
 
 Soporta dos proveedores:
 - **Anthropic (Claude)**: Mejor calidad, de pago (~$0.50-1/día con Sonnet)
-- **Google Gemini**: Tier gratuito generoso (15 RPM, 1M tokens/día)
+- **Google Gemini**: tiene tier gratuito. Google ya no publica cifras fijas (dependen
+  del proyecto; se ven en aistudio.google.com/rate-limit). En la práctica (ago-sep 2026) analizar cada
+  5 min lo agotaba y cada 12-15 min va holgado.
 
 El proveedor se selecciona automáticamente según qué API key esté configurada,
 o se puede forzar con `CAMERA_ANALYSIS_PROVIDER`.
@@ -485,7 +487,8 @@ async def analyze_sky(
         gemini_api_key: API key de Google Gemini (opcional)
         provider: "auto" (default), "anthropic", o "gemini"
         anthropic_model: Modelo de Anthropic (default: claude-sonnet-4-20250514)
-        gemini_model: Modelo de Gemini (default: gemini-2.0-flash)
+        gemini_model: Modelo de Gemini (default: DEFAULT_MODELS["gemini"]; en producción
+            se usa gemini-flash-lite-latest, elegido en Admin → Cámara)
         timeout: Timeout en segundos. Subido de 45 a 75 el 2026-08-26: con
             `gemini-flash-lite-latest` (nivel gratuito más ligero) el 82% de los
             fallos observados en 72h eran timeout, no error del proveedor -- la
@@ -631,6 +634,6 @@ PROVIDER_INFO = {
             {"id": "gemini-flash-lite-latest", "name": "Gemini Flash Lite (más rápido)"},
         ],
         "free_tier": True,
-        "pricing": "Gratis hasta 15 req/min, 1M tokens/día",
+        "pricing": "Tier gratuito; límites por proyecto en aistudio.google.com/rate-limit",
     },
 }

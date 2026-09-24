@@ -86,7 +86,7 @@ categoría "Visual (cielo)".
 ## Configuración
 Admin → Cámara:
 - Proveedor: auto (usa Gemini si hay key), gemini, anthropic
-- API Key Gemini: tier gratuito (analizar cada 5 min, ~288/día, lo agota; 15 min, ~72-96/día, va holgado)
+- API Key Gemini: tier gratuito. Google ya no publica cifras fijas (el límite de tu proyecto se ve en `aistudio.google.com/rate-limit`); en la práctica, analizar cada 5 min (~288/día) lo agotaba y cada 12-15 min (~72-96/día) va holgado
 - API Key Anthropic: de pago
 
 ## Documentación técnica completa

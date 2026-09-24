@@ -329,8 +329,9 @@ export function AdminCamara() {
           </div>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Analizar en cada foto (5 min) agota el tier gratuito de Gemini (~288/día) y deja el análisis
-          congelado. 15 min deja ~72-96/día, holgado. Gemini es gratis; Claude da mejor calidad pero es de pago.
+          Visto en la práctica: analizar en cada foto (5 min, ~288/día) agotaba el tier gratuito de Gemini y
+          dejaba el análisis congelado; cada 12-15 min (~72-96/día) va holgado. Google ya no publica un límite
+          fijo: el de tu proyecto se ve en aistudio.google.com/rate-limit. Gemini es gratis; Claude da mejor calidad pero es de pago.
         </p>
       </div>
 

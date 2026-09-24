@@ -779,7 +779,7 @@ Van por Telegram/correo en la categoría "Cámara (sin señal/análisis)".
 **Configuración:** en Admin → Cámara ("Análisis del cielo con IA") hay opciones para:
 - Habilitar/deshabilitar el análisis
 - Elegir proveedor (auto, gemini, anthropic)
-- API keys de Gemini (tier gratuito: 1500 req/día) y Anthropic (de pago)
+- API keys de Gemini (tier gratuito; Google ya no publica cifras fijas: el límite de tu proyecto se ve en `aistudio.google.com/rate-limit`) y Anthropic (de pago)
 
 **Archivos guardados:**
 - `latest_analysis.json` — último análisis
