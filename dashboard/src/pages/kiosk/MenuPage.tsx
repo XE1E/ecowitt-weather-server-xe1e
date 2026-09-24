@@ -18,7 +18,7 @@ import { KioskBar, KioskHead, type Boton } from './chrome'
 /** Las cinco clásicas. La cámara se añade sólo si está activa en el kiosco (toggle
  *  del admin, kiosk_camera_enabled). */
 const CLASICAS_ENTRADAS = CLASICAS.map((c) => ({ to: c.page as string, label: c.label as string, desc: c.desc as string }))
-const CAMARA_ENTRADA = { to: 'camara', label: 'CÁMARA', desc: 'Vista del exterior' }
+const CAMARA_ENTRADA = { to: 'camara', label: 'CÁMARA', desc: 'Vista al sureste' }
 
 export function MenuPage({ slug }: { slug: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null)

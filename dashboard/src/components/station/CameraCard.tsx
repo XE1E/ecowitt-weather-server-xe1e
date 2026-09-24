@@ -202,7 +202,7 @@ export function CameraCard({ ocultarSiVacia = false }: {
           )}
           <img
             src={src}
-            alt="Vista del exterior de la estación"
+            alt="Vista del exterior de la estación hacia el sureste"
             onLoad={() => setImgCargando(false)}
             onError={() => { setImgCargando(false); setSt({ available: false }) }}
             className="w-full rounded-xl border border-white/10"

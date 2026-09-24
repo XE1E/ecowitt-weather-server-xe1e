@@ -49,7 +49,7 @@ export function CameraPage() {
         <Camera className="w-6 h-6 text-sky-400" /> Cámara
       </h2>
       <p className="text-xs text-slate-400 mb-4">
-        Vista del exterior de la estación en {LOCATION.label}.
+        Vista del exterior de la estación hacia el sureste, en {LOCATION.label}.
       </p>
 
       <CameraCard />
@@ -91,7 +91,7 @@ export function CameraPage() {
 
       <PageInfo>
         <p>
-          La cámara mira <span className="font-semibold">al horizonte</span>, no al cielo ni a la estación:
+          La cámara mira <span className="font-semibold">al horizonte, hacia el sureste</span>, no al cielo ni a la estación:
           con la línea del horizonte por debajo del centro entra cielo suficiente, que es donde se ve
           llegar el tiempo, y es lo que da valor a la foto junto a los datos.
         </p>

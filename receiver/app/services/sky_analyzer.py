@@ -32,8 +32,9 @@ Provider = Literal["anthropic", "gemini", "auto"]
 # Prompt compartido para ambos proveedores
 _SYSTEM_PROMPT = """\
 Eres un observador meteorológico experto analizando imágenes de una cámara de
-estación de clima. La cámara apunta al horizonte con 127° de campo de visión,
-mostrando cielo y paisaje.
+estación de clima. La cámara apunta al horizonte hacia el SURESTE con 127° de campo de visión,
+mostrando cielo y paisaje (el este queda a la izquierda del encuadre y el sur a la
+derecha).
 
 Tu trabajo es describir lo que VES en la imagen para complementar los datos de
 sensores. Sé específico y conciso. Responde SOLO en el formato JSON indicado.

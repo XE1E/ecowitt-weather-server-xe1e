@@ -1,4 +1,13 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="dashboard/src/assets/logo-xe1e-dark.png">
+  <img src="dashboard/src/assets/logo-xe1e-light.png" alt="Logo XE1E" width="120" align="left">
+</picture>
+
 # Estación Clima XE1E — Ciudad de México
+
+**🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net) · Benito Juárez, CDMX
+
+<br clear="left"/>
 
 <p align="center">
   <img src="docs/images/estacion-principal.jpg" alt="Estación Principal" width="400"/>
@@ -9,8 +18,6 @@
 </p>
 
 Estación meteorológica propia que publica en tiempo casi real las condiciones de un punto exacto de la Ciudad de México (Benito Juárez). El hardware **Ecowitt** envía sus datos por *push* a un servidor en un **VPS con HTTPS**, que los guarda en **InfluxDB** y los muestra en un sitio web propio (React), con pronóstico, radar, astronomía, climatología, calidad del aire y meteorología aeronáutica. El mismo servidor alimenta además **pantallas físicas** (kiosco táctil, e-paper y reloj de píxeles) y **Home Assistant**.
-
-**🌦️ Sitio en vivo:** [clima.xe1e.net](https://clima.xe1e.net)
 
 Stack propio: **FastAPI + InfluxDB + React** (Vite · TypeScript · Tailwind). Todo el dato de las páginas de Historia, Estadísticas y Climatología proviene de la propia estación.
 
@@ -30,7 +37,7 @@ La app principal vive en `/pro` (instalable como PWA) y tiene:
 | **Tablas** | Resumen tabular de todas las variables (actual, mín/máx del día), con selector entre **estación principal y remota** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día", **exportable a CSV** |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
-| **Cámara** | Vista del exterior de la estación: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
+| **Cámara** | Vista del exterior de la estación hacia el sureste: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **Índice de Calidad del Aire de la CDMX** estimado — norma NADF-009-AIRE-2017, con promedios móviles reales por contaminante (24 h para SO₂/PM10/PM2.5, 8 h para CO); se le sigue diciendo **IMECA** por costumbre, aunque la norma vigente ya no usa ese nombre — con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
