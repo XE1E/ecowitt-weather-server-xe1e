@@ -158,7 +158,7 @@ capacitivo sabe cuándo de verdad dejó de llover).
       almacenamiento + tarjeta en el tablero, calefactor, alerta de "empezó
       a llover" -- en ese orden, cada uno depende del anterior.
 
-## 0c. Convenciones de diseño — 2 divergencias reales + 1 hallazgo nuevo (2026-09-22)
+## 0c. Convenciones de diseño — ✅ HECHO (2026-09-23)
 
 `docs/internal/AUDITORIA-CONVENCIONES.md` (2026-07-31) se revisó contra el código
 real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
@@ -175,12 +175,10 @@ real: de 45 hallazgos, 27 ya estaban corregidos sin registro (commit masivo del
       (`theme/constants.ts`, que hasta entonces no consumía nadie en todo el
       repo). De paso, `getTrend()` aceptaba `previous: number | null` sin
       `undefined` (asimetría con `current`) -- corregido.
-- [ ] **`ImecaCard.tsx`**: al tooltip del `AreaChart` le falta el `cursor` con
-      `strokeDasharray` que sí tienen ya `TemperatureChart`/`RemoteStationPage`/
-      `PressureCard`.
-- [ ] **`KioskPage.tsx` → `RemoteCard`** (menor): el tile "Exterior" usa colores no
-      conformes (`#fbbf24`/`#22d3ee`) mientras el tile "Interior" de la misma
-      tarjeta, unas líneas abajo, ya usa los correctos (`#f97316`/`#2563eb`).
+- [x] **`ImecaCard.tsx`** -- HECHO (2026-09-23): el tooltip del `AreaChart` ya tiene
+      el `cursor` punteado, igual que `TemperatureChart`/`RemoteStationPage`/`PressureCard`.
+- [x] **`KioskPage.tsx` → `RemoteCard`** -- HECHO (2026-09-23): el tile "Exterior" ya
+      usa `#f97316`/`#2563eb` (temperatura/humedad), como el "Interior".
 - [x] **`HistoryDayDetail.tsx:297`** -- HECHO (2026-09-23): la barra "Tasa de lluvia"
       (grafica `rain_rate`) ya usa `#0ea5e9`, igual que `COLORS.rainRate` en
       `theme/constants.ts` (que también decía `#38bdf8`, aunque nadie la usaba).

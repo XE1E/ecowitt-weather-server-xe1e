@@ -138,6 +138,7 @@ export function ImecaCard() {
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--surface, #0f1a2a)', border: '1px solid var(--line, #334155)', borderRadius: 8 }}
                   labelStyle={{ color: 'var(--ink, #e2e8f0)', fontWeight: 600 }}
+                  cursor={{ stroke: 'rgba(148,163,184,0.7)', strokeDasharray: '4 4' }}
                   formatter={(v: number, _n, p) => [`${v} · ${(p?.payload as Fc)?.category ?? ''}`, 'IMECA']}
                 />
                 <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 4" label={{ value: 'Mala', fill: '#f97316', fontSize: 10, position: 'insideTopRight' }} />

@@ -297,13 +297,13 @@ export function KioskPage() {
         <p className="text-[15px] uppercase tracking-wider text-slate-400 mb-1">Exterior</p>
         <div className="flex items-center justify-around mb-4">
           <div className="text-center">
-            <p className="text-[46px] leading-none font-bold" style={{ color: '#fbbf24' }}>
+            <p className="text-[46px] leading-none font-bold" style={{ color: '#f97316' }}>
               {remote?.temperature_outdoor != null ? `${u.temp(remote.temperature_outdoor)}°` : '--'}
             </p>
             <p className="text-[15px] text-slate-400 mt-1">Temp</p>
           </div>
           <div className="text-center">
-            <p className="text-[46px] leading-none font-bold" style={{ color: '#22d3ee' }}>
+            <p className="text-[46px] leading-none font-bold" style={{ color: '#2563eb' }}>
               {remote?.humidity_outdoor != null ? `${remote.humidity_outdoor.toFixed(0)}%` : '--'}
             </p>
             <p className="text-[15px] text-slate-400 mt-1">Humedad</p>
