@@ -93,10 +93,10 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
                 {grid}{xax}
                 <YAxis yAxisId="h" domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
                 <YAxis yAxisId="d" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={40} />
-                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Humedad promedio' ? `${nf(v)} %` : `${nf(v)} ${u.tempU}`, n]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad" stroke="#2563eb" strokeWidth={2} dot={false} connectNulls />
-                <Line yAxisId="d" type="monotone" dataKey="dew" name="Punto de rocío" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
+                <Line yAxisId="h" type="monotone" dataKey="hum" name="Humedad promedio" stroke="#2563eb" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="d" type="monotone" dataKey="dew" name="Rocío promedio" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -113,10 +113,10 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
                 {grid}{xax}
                 <YAxis yAxisId="s" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                 <YAxis yAxisId="u" orientation="right" tick={{ fill: '#94a3b8', fontSize: 11 }} width={30} />
-                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Radiación solar' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
+                <Tooltip cursor={cursor} {...tip} formatter={(v: number, n: string) => [n === 'Radiación solar máx.' ? `${nf(v)} W/m²` : `${nf(v)}`, n]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
-                <Line yAxisId="u" type="monotone" dataKey="uv" name="Índice UV" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="s" type="monotone" dataKey="solar" name="Radiación solar máx." stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="u" type="monotone" dataKey="uv" name="UV máx." stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -137,11 +137,11 @@ export function HistoryCharts({ data, labelFormatter, onCsv, period = 'month' }:
                 <YAxis yAxisId="r" tick={{ fill: '#94a3b8', fontSize: 11 }} width={44} />
                 <YAxis yAxisId="p" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} width={48} />
                 <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} {...tip} formatter={(v: number, n: string) => [
-                  n === 'Presión' ? `${nf(v)} ${u.pressU}` : n === 'Tasa máx' ? `${nf(v)} ${u.rateU}` : `${nf(v)} ${u.rainU}`, n]} />
+                  n === 'Presión promedio' ? `${nf(v)} ${u.pressU}` : n === 'Tasa máx' ? `${nf(v)} ${u.rateU}` : `${nf(v)} ${u.rainU}`, n]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                 <Bar yAxisId="r" dataKey="lluvia" name="Precipitación" fill="#38bdf8" radius={[3, 3, 0, 0]} />
                 <Line yAxisId="r" type="monotone" dataKey="rrate" name="Tasa máx" stroke="#0ea5e9" strokeWidth={2} dot={false} connectNulls />
-                <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión" stroke="#7f00b2" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="p" type="monotone" dataKey="pprom" name="Presión promedio" stroke="#7f00b2" strokeWidth={2} dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
