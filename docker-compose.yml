@@ -189,8 +189,12 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./caddy/certs:/etc/caddy/certs:ro
+      # La CARPETA, no el archivo suelto: `git pull` reemplaza el Caddyfile por uno
+      # nuevo (otro inodo) y un bind mount de archivo seguía viendo el viejo, así que
+      # `caddy reload` recargaba la config anterior (pasó el 2026-09-24). Trae
+      # también certs/ (no versionados). Tras cambiar el Caddyfile:
+      #   docker exec ecowitt-caddy caddy reload --config /etc/caddy/Caddyfile
+      - ./caddy:/etc/caddy:ro
       # rubik.xe1e.net: sitio estático sin relación con la estación, ver Caddyfile.
       # Ruta ABSOLUTA fuera del repo a propósito -- crear en el VPS con
       # `mkdir -p /opt/rubik-site` antes del primer `up`.
