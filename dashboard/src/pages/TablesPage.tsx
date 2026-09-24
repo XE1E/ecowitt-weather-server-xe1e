@@ -75,7 +75,7 @@ export function TablesPage() {
         <StationSummaryTable
           data={currentData}
           stats={currentStats}
-          label={selected === 'principal' ? 'Estacion Principal — WS2910' : 'Estacion Remota — GW1100 + WN32'}
+          label={selected === 'principal' ? 'Estación Principal — WS2910' : 'Estación Remota — GW1100 + WN32'}
           isRemote={selected === 'remota'}
         />
       ) : (

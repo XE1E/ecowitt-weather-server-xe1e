@@ -3,6 +3,7 @@ import { WeatherData, DailyStats } from '../../types'
 import { useUnits, type Units } from '../../units'
 import { TrendArrow, getTrend, type Trend } from '../TrendArrow'
 import { TREND_THRESHOLDS } from '../../theme/constants'
+import { parseServerDate } from '../../weather'
 
 /**
  * Tipo de magnitud de cada fila. Se declara el KIND y de él salen la unidad y el
@@ -83,17 +84,24 @@ function formatTime(iso?: string): string {
   return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+/**
+ * "23 de septiembre de 2026, 21:48" en hora de la ESTACIÓN (CDMX) y 24 h.
+ * `received_at` llega como UTC sin zona ("2026-09-24T03:48:…"): con `new Date()`
+ * directo el navegador lo tomaba por hora local y mostraba la hora UTC (03:48
+ * del día siguiente). `parseServerDate` le pone la 'Z' que le falta.
+ */
 function formatTimestamp(iso?: string): string {
   if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleString('es-MX', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
+  const t = parseServerDate(iso)
+  if (Number.isNaN(t)) return '—'
+  const d = new Date(t)
+  const fecha = d.toLocaleDateString('es-MX', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City',
   })
+  const hora = d.toLocaleTimeString('es-MX', {
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Mexico_City',
+  })
+  return `${fecha}, ${hora}`
 }
 
 interface RowData {
@@ -401,7 +409,7 @@ export function StationSummaryTable({ data, stats, label, isRemote = false }: Pr
         <div className="flex items-center justify-between">
           <span className="font-medium">{label || 'Resumen de la Estación'}</span>
           <span className="text-sm text-slate-400">
-            Dato desde: {formatTimestamp(data.received_at)}
+            Datos hasta: {formatTimestamp(data.received_at)}
           </span>
         </div>
       </div>
