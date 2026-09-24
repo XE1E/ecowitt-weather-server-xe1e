@@ -1,0 +1,7 @@
+# Herramientas de pruebas y lint (CI y local). FIJADAS a propósito: una versión nueva
+# que cambie reglas o comportamiento no debe poner el CI en rojo sin que nadie toque
+# el código. Subirlas debe ser deliberado.
+-r requirements.txt
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.16.2
