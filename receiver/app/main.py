@@ -48,6 +48,7 @@ from .services import webcam_overlay
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
+from .services import sacmex_radar
 from .services.windrose import compute_wind_rose
 from .services import sky_validation
 from .services import smn
@@ -3776,6 +3777,24 @@ async def get_satellite(layer: str = "VIIRS_SNPP_CorrectedReflectance_TrueColor"
         raise HTTPException(status_code=502, detail="Imagen satelital no disponible")
     return Response(content=data, media_type="image/jpeg",
                     headers={"Cache-Control": "public, max-age=1800"})
+
+
+@app.get("/api/radar/sacmex")
+async def get_sacmex_radar():
+    """Últimos cuadros del radar del SACMEX (CDMX), ver services/sacmex_radar.py.
+    Cada cuadro se pide aparte a /api/radar/sacmex/<id>, servido desde caché."""
+    return await sacmex_radar.get_frames()
+
+
+@app.get("/api/radar/sacmex/{frame_id}")
+async def get_sacmex_radar_frame(frame_id: str):
+    """Un cuadro del radar SACMEX. El nombre es único por cuadro (lleva su hora),
+    así que se puede cachear mucho tiempo en el navegador."""
+    data = sacmex_radar.get_image(frame_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Cuadro de radar no disponible")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=86400, immutable"})
 
 
 @app.get("/api/airquality")
