@@ -671,7 +671,7 @@ en `tests/test_sky_analyzer.py`, anclados a los datos reales medidos ese día.
 Documentado en `docs/guias/analisis-cielo.md`. Pendiente real: la curva es de UN solo
 día calibrado -- revisar si con más mañanas despejadas el umbral sigue separando limpio.
 
-## 3. Rediseño de Admin — por categorías, con la estación adentro (aprobado 2026-09-24)
+## 3. Rediseño de Admin — por categorías, con la estación adentro — ✅ HECHO (2026-09-24)
 Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`** (reescrito el 2026-09-24: se descartó
 "una página por estación"; casi todo es global y el GW1100 sólo tiene propios umbrales,
 calibración y su ficha). La depuración del registro del plan viejo ya estaba hecha.
@@ -680,7 +680,7 @@ calibración y su ficha). La depuración del registro del plan viejo ya estaba h
       nada, quitar `treat_indoor_as_outdoor`, borrar `AdminPage.tsx`, un solo alta.
 - [x] Etapa 2 (HECHA 2026-09-24) — un solo lugar por ajuste ("sin datos", coordenadas, altitud).
 - [x] Etapa 3 (HECHA 2026-09-24) — pestañas por estación en Alertas y Calibración + ficha con accesos.
-- [ ] Etapa 4 — menú agrupado y documentación.
+- [x] Etapa 4 (HECHA 2026-09-24) — menú agrupado y documentación.
 
 ## 3b. Revisión general del código (depurar, optimizar, mejorar) — PLAN PARA DESPUÉS (anotado 2026-09-24)
 Pedido del usuario: una pasada completa por todo el código, cuando termine el Admin.

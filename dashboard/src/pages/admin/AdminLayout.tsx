@@ -3,17 +3,29 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import logoDark from '../../assets/logo-xe1e-dark.png'
 
-const NAV_ITEMS = [
-  { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
-  { to: '/admin/estaciones', label: 'Estaciones', icon: '📡' },
-  { to: '/admin/alertas', label: 'Alertas', icon: '🔔' },
-  { to: '/admin/calibracion', label: 'Calibración', icon: '🔧' },
-  { to: '/admin/publicacion', label: 'Publicación', icon: '📤' },
-  { to: '/admin/notificaciones', label: 'Notificaciones', icon: '💬' },
-  { to: '/admin/integraciones', label: 'Integraciones', icon: '🔌' },
-  { to: '/admin/camara', label: 'Cámara', icon: '📷' },
-  { to: '/admin/sistema', label: 'Sistema', icon: '⚙️' },
-  { to: '/admin/updates', label: 'Actualizaciones', icon: '🔄' },
+// Menú agrupado por lo que hace cada página (ver docs/internal/PLAN-REDISENO-ADMIN.md).
+// Un grupo de una sola página va sin encabezado: el título repetiría la opción.
+const NAV_GROUPS: { title: string; items: { to: string; label: string; icon: string; end?: boolean }[] }[] = [
+  { title: 'Estado', items: [
+    { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
+    { to: '/admin/estaciones', label: 'Estaciones', icon: '📡' },
+  ] },
+  { title: 'Datos', items: [
+    { to: '/admin/calibracion', label: 'Calibración', icon: '🔧' },
+    { to: '/admin/alertas', label: 'Alertas', icon: '🔔' },
+  ] },
+  { title: 'Salidas', items: [
+    { to: '/admin/publicacion', label: 'Publicación', icon: '📤' },
+    { to: '/admin/notificaciones', label: 'Notificaciones', icon: '💬' },
+    { to: '/admin/integraciones', label: 'Integraciones', icon: '🔌' },
+  ] },
+  { title: 'Cámara', items: [
+    { to: '/admin/camara', label: 'Cámara', icon: '📷' },
+  ] },
+  { title: 'Sistema', items: [
+    { to: '/admin/sistema', label: 'Sistema', icon: '⚙️' },
+    { to: '/admin/updates', label: 'Actualizaciones', icon: '🔄' },
+  ] },
 ]
 
 function LoginForm() {
@@ -166,28 +178,35 @@ export function AdminLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-14 left-0 bottom-0 w-56 bg-slate-800/50 border-r border-white/10 transition-transform z-40 ${
+        className={`fixed top-14 left-0 bottom-0 w-56 bg-slate-800 lg:bg-slate-800/50 border-r border-white/10 transition-transform z-40 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
       >
-        <nav className="p-3 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false) }}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-sky-600/20 text-sky-400 font-medium'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                }`
-              }
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
+        <nav className="p-3 space-y-4 overflow-y-auto h-full">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="space-y-1">
+              {group.items.length > 1 && (
+                <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{group.title}</p>
+              )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false) }}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? 'bg-sky-600/20 text-sky-400 font-medium'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
       </aside>

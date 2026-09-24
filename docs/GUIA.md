@@ -1181,6 +1181,12 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 
 ### Páginas del panel
 
+El menú lateral las agrupa por lo que hacen: **Estado** (Dashboard, Estaciones) ·
+**Datos** (Calibración, Alertas) · **Salidas** (Publicación, Notificaciones,
+Integraciones) · **Cámara** · **Sistema** (Sistema, Actualizaciones). Cada ajuste vive
+en una sola página; lo que es propio de una estación va en la pestaña de esa estación
+dentro de su categoría (Alertas, Calibración), y su ficha en Estaciones enlaza ahí.
+
 | Página | Qué configura |
 |--------|---------------|
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |

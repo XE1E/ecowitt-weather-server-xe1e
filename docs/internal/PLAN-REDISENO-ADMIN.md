@@ -1,6 +1,6 @@
 # Plan: rediseño del panel Admin — por categorías, con la estación adentro
 
-> Estado: **aprobado 2026-09-24, en ejecución por etapas** (deploy y verificación en
+> Estado: **✅ TERMINADO 2026-09-24** (etapas 1-4, cada una desplegada y verificada) (deploy y verificación en
 > cada una). Sustituye la propuesta del 2026-07-24 ("una página por estación con todas
 > sus tarjetas"), que se descartó: ver §1.
 
@@ -90,8 +90,10 @@ Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
       esa estación (activas, «sin datos», reglas desactivadas; calibración, presión,
       altitud). Para la principal sale de la configuración global.
 
-### Etapa 4 — menú y documentación
-- [ ] Menú agrupado; `docs/GUIA.md` / `docs/api-reference.md` al día.
+### Etapa 4 — menú y documentación — HECHA 2026-09-24
+- [x] Menú agrupado (`AdminLayout`, `NAV_GROUPS`); en celular con fondo sólido.
+- [x] `docs/GUIA.md` y `README.md` al día (`api-reference.md` no cambia: no hubo
+      endpoints nuevos; `registry/secondary` ya sólo cambia la MAC).
 - [x] En celular el menú lateral arrancaba ABIERTO encima de la página: ahora empieza
       cerrado bajo `lg` y se cierra al elegir una opción (adelantado en la etapa 3).
 
