@@ -198,6 +198,12 @@ class Settings(BaseSettings):
     # Bitácora de pronósticos (una foto cada 30 min de lo que dijo cada fuente) para
     # calificarlos contra el pluviómetro, ver services/forecast_verification.py.
     forecast_log_dir: str = "/data/forecast_log"
+    # PostHog (mismo proyecto que el dashboard, ver dashboard/src/analytics.ts). La
+    # project key es PÚBLICA por diseño (va embebida en el cliente); aquí sólo se
+    # usa para registrar desde el servidor las visitas que Windy notifica a su
+    # "Tracking URL" (/api/camera/windy-visit). Vacía = no se envía nada.
+    posthog_project_key: str = "phc_twZYc4mKkWZYKjQqK7MbNnGEBicxQaod7im4aJEEk7GK"
+    posthog_host: str = "https://us.i.posthog.com"
 
     # Air quality (WAQI / aqicn.org) - token gratuito de aqicn.org/data-platform/token
     waqi_token: Optional[str] = None

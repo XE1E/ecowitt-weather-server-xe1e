@@ -20,6 +20,8 @@ import platform
 import secrets
 import shutil
 import time
+
+import httpx
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 
@@ -2929,6 +2931,70 @@ async def camera_webcam_wide():
     abajo (ver `webcam_overlay.build_webcam_wide_jpeg`).
     """
     return await _webcam_response(webcam_overlay.build_webcam_wide_jpeg)
+
+
+# GIF transparente de 1x1: respuesta de la Tracking URL de Windy. Sirve tanto si
+# Windy la llama desde su servidor como si la carga como pixel en el navegador
+# de quien ve la cámara (su formulario sólo dice "Called on every webcam visit").
+_PIXEL_GIF = bytes.fromhex(
+    "47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b"
+)
+_windy_limiter = secsvc.RateLimiter()
+_windy_visits_logged = 0
+
+
+async def _posthog_capture(event: str, properties: Dict[str, Any]) -> None:
+    """Evento a PostHog desde el servidor (API pública de captura). Nunca
+    lanza: la analítica no debe romper nada."""
+    if not settings.posthog_project_key:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(f"{settings.posthog_host}/i/v0/e/", json={
+                "api_key": settings.posthog_project_key,
+                "event": event,
+                # Sin perfil de persona: no sabemos quién ve la cámara en Windy,
+                # sólo que alguien la vio. Un distinct_id fijo agrupa todo ahí.
+                "distinct_id": "windy-webcams",
+                "properties": {**properties, "$process_person_profile": False},
+            })
+    except Exception as e:
+        logger.warning(f"PostHog: no se pudo registrar {event} ({e})")
+
+
+@app.api_route("/api/camera/windy-visit", methods=["GET", "HEAD", "POST"])
+async def camera_windy_visit(request: Request, background: BackgroundTasks):
+    """
+    "Tracking URL" de la webcam en Windy: Windy la llama en cada visita a la
+    cámara. Se registra como evento `windy_webcam_view` en PostHog (mismo
+    proyecto que el sitio) y se responde al instante con un pixel -- el envío
+    a PostHog va en segundo plano para no hacer esperar a Windy.
+
+    Tope GLOBAL (no por IP) de 600/min: si Windy llama desde sus propios
+    servidores, todas las visitas llegan de pocas IPs y un tope por IP las
+    descartaría; el global sólo evita que alguien infle el conteo a lo loco.
+    """
+    global _windy_visits_logged
+    if request.method != "HEAD" and _windy_limiter.allow("windy", limit=600, window_s=60):
+        ip = secsvc.client_ip(request)
+        ua = request.headers.get("user-agent", "")[:300]
+        query = {k: v[:200] for k, v in list(request.query_params.items())[:20]}
+        # Las primeras llamadas se dejan en el log para ver QUÉ manda Windy
+        # (parámetros, si viene de navegador o de servidor) -- no está documentado.
+        if _windy_visits_logged < 20:
+            _windy_visits_logged += 1
+            logger.info("Windy visit: ip=%s ua=%r query=%s referer=%r", ip, ua, query,
+                        request.headers.get("referer", ""))
+        background.add_task(_posthog_capture, "windy_webcam_view", {
+            "source": "windy",
+            "$ip": ip,  # PostHog lo usa para el país (GeoIP) y lo descarta después
+            "$user_agent": ua,
+            "$referrer": request.headers.get("referer", ""),
+            "method": request.method,
+            **({"query": query} if query else {}),
+        })
+    return Response(content=_PIXEL_GIF, media_type="image/gif",
+                    headers={"Cache-Control": "no-store, max-age=0"})
 
 
 async def _webcam_response(build) -> Response:
