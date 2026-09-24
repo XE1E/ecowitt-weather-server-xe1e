@@ -353,8 +353,9 @@
       <h3>Lo que viene</h3>
       <ul>
         <li><strong>Pronóstico.</strong> Por hora y por día. Esto <strong>sí</strong> viene de modelos externos, no de la estación —un sensor mide el presente, no el futuro—.</li>
-        <li><strong>Pronóstico local.</strong> El único que sale de la propia estación: aplica la regla clásica del barómetro sobre la tendencia de presión medida aquí. Es tosco comparado con un modelo, pero es <em>tuyo</em> y a veces se anticipa.</li>
-        <li><strong>Comparativa de pronósticos.</strong> Pone lado a lado dos fuentes para el mismo día. Cuando coinciden, más confianza; cuando difieren, ya sabes que el día está incierto.</li>
+        <li><strong>Nuestro pronóstico.</strong> En la tarjeta de Precipitaciones, lo que la propia estación puede afirmar sobre lluvia ahora o en las próximas horas, sin modelos: manda primero el pluviómetro, luego si la cámara ve precipitación o nubes de lluvia formándose, y al final las estaciones vecinas. El porcentaje de Open-Meteo se muestra aparte, como referencia.</li>
+        <li><strong>Pronóstico local.</strong> Aplica la regla clásica del barómetro sobre la tendencia de presión medida aquí. Es tosco comparado con un modelo, y para las tormentas de tarde de CDMX casi no anticipa nada (ver <em>Presión</em> más abajo), así que tómalo como dato de la presión, no como aviso de lluvia.</li>
+        <li><strong>Comparativa de pronósticos.</strong> Pone lado a lado tres fuentes para el mismo día: Open-Meteo, WeatherAPI y el SMN oficial. Cuando coinciden, más confianza; cuando difieren, ya sabes que el día está incierto.</li>
       </ul>
 
       <h3>El entorno</h3>
@@ -424,12 +425,12 @@
       <p>El vídeo se monta en el servidor y se guarda, así que abrirlo no cuesta nada la segunda vez. El del día en curso se va rehaciendo cada media hora conforme entran capturas, de modo que por la tarde ya se puede ver la mañana completa. Y se conserva <strong>mucho más tiempo que las fotos</strong>: un día son unas 240 capturas que ocupan 25 MB, y su vídeo unos 6, así que las fotos se borran a la semana pero el timelapse se queda meses. Puedes descargarlo con el enlace de debajo del reproductor.</p>
 
       <h4>Análisis del cielo</h4>
-      <p>Cada foto se analiza automáticamente con <strong>inteligencia artificial</strong> (Google Gemini o Anthropic Claude, los mismos modelos detrás de los chatbots más avanzados) para extraer información sobre el estado del cielo: <strong>tipo de nubes</strong> (cúmulos, estratos, cumulonimbos…), <strong>porcentaje de cobertura</strong>, <strong>visibilidad</strong> y si hay desarrollo de tormenta o lluvia visible en el horizonte.</p>
+      <p>Las fotos se analizan automáticamente (una cada cuarto de hora, y enseguida si empieza o para de llover) con <strong>inteligencia artificial</strong> (Google Gemini o Anthropic Claude, los mismos modelos detrás de los chatbots más avanzados) para extraer información sobre el estado del cielo: <strong>tipo de nubes</strong> (cúmulos, estratos, cumulonimbos…), <strong>porcentaje de cobertura</strong>, <strong>visibilidad</strong> y si hay desarrollo de tormenta o lluvia visible en el horizonte.</p>
       <p>El resultado aparece en la <strong>tarjeta "Estado del cielo"</strong> del Inicio: una descripción breve, la condición general y un pronóstico a corto plazo basado en lo que se ve en la foto.</p>
-      <p>El sistema detecta <strong>tendencias</strong> comparando las últimas fotos (~1 hora): te dice si se está nublando, despejando, o si viene posible tormenta. También <strong>valida</strong> lo que ve la cámara contra lo que predicen los modelos meteorológicos (Open-Meteo), y te dice si coinciden o hay discrepancia.</p>
+      <p>El sistema detecta <strong>tendencias</strong> comparando los últimos análisis (~3 horas): te dice si se está nublando, despejando, o si viene posible tormenta. También <strong>valida</strong> lo que ve la cámara contra lo que predicen los modelos meteorológicos (Open-Meteo), y te dice si coinciden o hay discrepancia.</p>
       <p>En la página de Cámara hay un <strong>histórico de análisis</strong>: para cada día, una barra por cada análisis —de 00:00 a 24:00— cuya altura es la cobertura de nubes y cuyo color va del verde (despejado) al gris (cubierto), más el promedio, el mínimo y el máximo del día y el recuento de condiciones observadas. Es la curva de cómo se nubló la jornada, y se puede navegar día a día.</p>
       <p>Ese histórico <strong>se conserva indefinidamente</strong>, aunque las fotos de ese día ya se hayan borrado: ocupa unos pocos kilobytes por día, así que es el registro más barato y más duradero que produce la cámara. Junto a él, la <strong>mejor foto del día</strong>: la captura con mayor visibilidad reportada esa jornada (sin contar la noche, salvo que el día entero lo haya sido) — no es un juicio estético, es el dato más honesto que ya se estaba guardando.</p>
-      <p>Cada captura analizada guarda también si <strong>coincidió con el pronóstico</strong> de ese momento, y la tarjeta "Precisión del pronóstico" resume qué tan seguido acertó en los últimos 30 días. Antes esa comparación se calculaba al vuelo cada vez que alguien abría el sitio y se descartaba enseguida; ahora queda guardada con cada foto, aunque nadie esté mirando.</p>
+      <p>La tarjeta <strong>"Precisión del pronóstico"</strong> responde <em>quién acierta</em>: califica cada fuente (Open-Meteo, WeatherAPI, el SMN, la cámara, nuestro pronóstico…) contra lo que <strong>de verdad pasó</strong> —el pluviómetro para la lluvia, la cámara para las nubes—. Las ordena por <strong>acierto en lluvia</strong>, que no premia decir siempre «no llueve», y se puede ver para <em>ahora</em> o para <em>las próximas 3 horas</em>, en los últimos 7 o 30 días. Trae además una gráfica por hora del día, la tendencia de los últimos 7 días, cuánto se pasa o se queda corto Open-Meteo con las nubes, y una referencia <strong>«Solo por horario (14-20 h)»</strong>: avisar lluvia todas las tardes sin mirar nada. Una fuente que no le gana a esa referencia no está aportando mucho.</p>
       <p>Si activas las <strong>alertas visuales</strong>, recibes aviso por Telegram o correo cuando la IA detecta nubes de tormenta formándose, lluvia aproximándose o visibilidad reducida. Se activan (y cada una se puede apagar por separado) en Admin → Alertas, en la tarjeta "📷 Cámara"; el canal se elige en Admin → Notificaciones.</p>
       <p>Aparte de lo que <em>ve</em>, la cámara también avisa de sí misma: si <strong>deja de mandar fotos</strong> por un rato (no confunde "aún sin configurar" con "se cayó": no avisa hasta que llegó al menos una foto), o si el <strong>análisis de IA lleva varios intentos seguidos fallando</strong> —cuota agotada, timeout—. Se normaliza solo en cuanto vuelve una foto reciente o un análisis exitoso.</p>
 
@@ -541,7 +542,7 @@
       <p>Los mismos datos de siempre, presentados como <strong>12 medidores analógicos</strong> — bisel metálico, aguja y pantalla digital, al estilo de la instrumentación meteorológica clásica: temperatura, punto de rocío, humedad, viento, dirección (brújula), rosa de vientos, presión, lluvia acumulada, tasa de lluvia, UV, radiación solar y base de nubes. Es la misma información que ya ves en Inicio y en la Consola, solo que dibujada como si fueran instrumentos físicos colgados en la pared.</p>
 
       <h3>Vista clásica</h3>
-      <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas. Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>
+      <p>El botón <em>Vista clásica</em> lleva a una versión más compacta y de una sola página, sin pestañas (en <code>/basica</code>). Útil en pantallas chicas o cuando sólo quieres lo esencial.</p>
     </section>
 
     <!-- ══════════════════ 05 ══════════════════ -->
@@ -577,7 +578,7 @@
       <div class="callout">
         <p><strong>Lo que de verdad importa no es el valor, es el cambio.</strong> Un 1015 estable no dice nada; un 1015 que viene cayendo desde 1020 dice bastante.</p>
       </div>
-      <p>La regla clásica del barómetro, que es la que usa el «pronóstico local» del sitio:</p>
+      <p>La regla clásica del barómetro, que es la que usa el «pronóstico local» del sitio. Vale sobre todo para frentes y sistemas grandes: en las tormentas de tarde de CDMX la presión baja casi todos los días por la marea atmosférica, llueva o no, y comparada contra el pluviómetro casi no anticipa la lluvia. Por eso ya no se usa para avisar lluvia en «Nuestro pronóstico».</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>La presión…</th><th>Suele anunciar</th></tr></thead>
@@ -683,7 +684,7 @@
           <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
           <tbody>
             <tr><td>Presión alta / baja</td><td>≥ 1035 · ≤ 1000 hPa</td><td>Valores extremos del barómetro</td></tr>
-            <tr><td>Presión cayendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible tormenta.</strong> Es la alerta más útil de todas: se anticipa a la lluvia</td></tr>
+            <tr><td>Presión cayendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible tormenta.</strong> Tómala como pista, no como certeza: en CDMX la presión baja casi todas las tardes, llueva o no</td></tr>
             <tr><td>Presión subiendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible frente frío.</strong> Estabilización y entrada de aire más frío</td></tr>
           </tbody>
         </table>
@@ -849,7 +850,7 @@
       </div>
     </section>
 
-    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-09-09 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
+    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-09-23 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
 

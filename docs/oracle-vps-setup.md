@@ -135,6 +135,7 @@ Una vez la instancia esté lista y accesible por SSH, seguir la guía de
 - **receiver** (FastAPI): recibe datos del gateway Ecowitt
 - **influxdb**: base de series temporales
 - **dashboard** (React + Nginx): sirve la web y hace proxy de `/api`
+- **renderer**: Chromium headless que genera la imagen del kiosco ESP32
 - **caddy**: TLS/HTTPS con certificado Origin de Cloudflare
 
 ---
@@ -165,8 +166,8 @@ Una vez la instancia esté lista y accesible por SSH, seguir la guía de
 2. Verificar puerto abierto en Security List Y NSG
 3. Verificar iptables permite el puerto
 4. Verificar logs: `docker logs ecowitt-receiver`
-5. Recordar: Ecowitt NO soporta HTTPS nativo; usa puerto 8080 directo o Caddy
-   con HTTP en el path `/data/report/`
+5. Recordar: Ecowitt NO soporta HTTPS nativo; usa el puerto 8080 directo
+   (path `/data/report/`). Por el 80 no sirve: Caddy redirige a HTTPS
 
 ### IP pública no disponible
 

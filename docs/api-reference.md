@@ -224,6 +224,15 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/compare` | Últimas 24 h vs 24 h previas ("vs ayer") |
 | `GET /api/forecast?lat=&lon=` | Pronóstico Open-Meteo con caché en el servidor. Si el origen falla sirve la última copia buena, marcada con `stale` y `age_minutes` |
 | `GET /api/forecast/local` | Pronóstico local por tendencia barométrica (dato propio) |
+| `GET /api/forecast/own` | "Nuestro pronóstico": pluviómetro + cámara + estaciones vecinas, en ese orden de autoridad (`forecaster.own_forecast`). No depende de Open-Meteo/WeatherAPI y, desde 2026-09-23, **ya no usa la presión** (verificada contra el pluviómetro no anticipaba las tormentas). Sin nada que decir devuelve `source: "none"` |
+| `GET /api/forecast/consensus` | Pronóstico combinado: estación + tendencia de presión + Open-Meteo + WeatherAPI |
+| `GET /api/smn?ides=9&idmun=14&hourly=1` | Pronóstico oficial del SMN (CONAGUA) por municipio (por defecto Benito Juárez, CDMX). `hourly=0` omite el horario |
+| `GET /api/smn/municipios` | Lista de municipios del SMN (para búsqueda/autocompletar) |
+| `GET /api/nearby-stations?lat=&lon=` | Estaciones vecinas (Xweather + Netatmo) con `incoming_rain`. Sin ninguna red configurada devuelve la lista vacía, no error |
+| `GET /api/stations` · `GET /api/stations/<nombre>` | Estaciones registradas con su estado actual / detalle de una (`principal` = la principal). `PUT /api/stations/<nombre>` actualiza su configuración y **requiere admin** |
+| `GET /api/rain/last` | Fecha/hora de la última lluvia registrada (`rain_rate > 0`). Acepta `station` |
+| `GET /api/rain/hours?hours=2` | Lluvia acumulada en las últimas N horas (máx 24). Acepta `station` |
+| `GET /api/rain/daily?days=7` | Lluvia por día local de los últimos N días (histograma de la consola). Acepta `station` |
 | `GET /api/climate/records` | Récords: de siempre, por mes calendario, este mes/año, ayer |
 | `GET /api/climate/onthisday` | Efeméride: mismo día en años previos |
 | `GET /api/climate/noaa?year=YYYY&month=MM` | Reporte climatológico NOAA (mensual con `month`, anual sin él) |
@@ -232,18 +241,27 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/alerts` | Alertas activas |
 | `GET /api/alerts/history?hours=24&limit=50` | Historial reciente (activadas y, si ya se normalizaron, con `resolved_at`). En memoria del proceso (hasta 100 entradas) -- un reinicio del receiver lo vacía, no es un log persistente |
 | `GET /api/metar?station=MMMX` | METAR del aeropuerto (proxy a aviationweather.gov) |
+| `GET /api/taf?station=MMMX` | TAF (pronóstico de aeródromo) del aeropuerto |
+| `GET /api/satellite?layer=&date=&lat=&lon=` | Imagen satelital NASA GIBS (JPEG, proxy con caché en el servidor) |
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
+| `GET /api/airquality/imeca?lat=&lon=` | IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
 | `GET /api/bim32` | JSON compacto para el firmware BIM32 (ESP32, ver abajo) |
 | `GET /api/bim32/history?period=30` | Historial exterior en baldes de `period` minutos, para BIM32 (ver abajo) |
 | `GET /api/epaper/forecast.json` | Dato con forma WeatherAPI `forecast.json` para el e-paper LilyGo 4.7" (ver abajo) |
 | `GET /api/summaries/daily?days=30` | Resúmenes diarios crudos, una fila por día. Alimenta los detalles de 7 y 30 días del kiosco. Incluye `humidex_max` y `humidex_max_time` desde 2026-08-08 (los días anteriores se rellenaron con `backfill(force=True)`). Acepta `format=csv` para descargarlo directo |
+| `GET /api/kiosk/config` | Config pública de las páginas del kiosco (de momento sólo `camera_enabled`) |
+| `GET /api/kiosk/local` · `POST /api/kiosk/local` | Última lectura del BME280 del display + mín/máx del día / la recibe (`temperature`, `humidity`, `pressure`) |
 | `GET /api/camera/status` | Estado de la cámara del exterior (ver abajo) |
+| `GET /api/camera/capture-config` | Config que lee la Pi en cada corrida para decidir si captura (sin secretos) |
 | `GET`/`HEAD /api/camera/latest.jpg` | Última captura, con la cabecera `X-Captured-At`. Sirve para enlazarla como webcam en servicios externos (p. ej. AWEKAS) — acepta HEAD porque varios de esos servicios validan el enlace así antes de aceptarlo |
 | `GET`/`HEAD /api/camera/webcam.jpg` | Igual, pero recompuesta en 4:3 (800×600) con un cintillo de datos de la estación abajo — para AWEKAS/Weathercloud (ver abajo) |
+| `GET`/`HEAD /api/camera/webcam-wide.jpg` | Variante 16:9 (1600×900) con el cintillo superpuesto abajo — para Windy Webcams (ver abajo) |
+| `GET`/`HEAD`/`POST /api/camera/windy-visit` | "Tracking URL" de Windy: responde un GIF 1×1 y registra la visita en PostHog (ver abajo) |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
 | `GET /api/camera/analysis` | Último análisis del cielo + tendencia (nowcasting) |
+| `GET /api/camera/analysis/providers` | Proveedores de análisis disponibles, el activo y si hay claves configuradas (para el panel) |
 | `GET /api/camera/analysis/validation` | Validación en vivo vs pronóstico de Open-Meteo |
 | `GET /api/camera/analysis/accuracy?days=30` | % de acierto vs pronóstico de los últimos N días (ver abajo) |
 | `GET /api/forecast/verification?days=30` | ¿Qué fuente ACIERTA? Cada pronóstico calificado contra el pluviómetro (lluvia) y la cámara (nubosidad) (ver abajo) |
@@ -251,6 +269,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/camera/best/<fecha>` · `GET /api/camera/best/<fecha>.jpg` | Metadato y foto de mejor visibilidad de ese día (ver abajo) |
 | `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
 | `GET /api/camera/timelapse/<fecha>.mp4` | El timelapse de ese día (ver abajo) |
+| `GET /api/camera/timelapse/<fecha>.jpg` | Cartel (`poster`) del vídeo de ese día; `404` si aún no hay vídeo |
 | `POST /api/camera/timelapse/<fecha>` | Rehace el vídeo del día. **Requiere admin** |
 | `POST /api/camera/upload` | Recibe una captura. **Requiere token** (ver abajo) |
 
@@ -404,16 +423,22 @@ nubosidad. Dos horizontes:
 
 - `now` -- ¿llueve ahora? (±30 min alrededor de cada foto de día). Fuentes:
   Open-Meteo y la cámara; retroactivo desde el histórico diario de la cámara.
-- `next3h` -- ¿lloverá en 3 h? La presión propia se reconstruye de InfluxDB;
+- `next3h` -- ¿lloverá en 3 h? La presión propia se reconstruye de InfluxDB
+  (se sigue calificando, rotulada "ya no se usa": desde 2026-09-23 no alimenta
+  `/api/forecast/own`);
   Open-Meteo/WeatherAPI/SMN (avisan con probabilidad >= 50%), "nuestro
   pronóstico" (`/api/forecast/own`) y la tendencia de la cámara salen de una
   bitácora nueva (`<forecast_log_dir>/YYYY-MM-DD.json`, una foto cada 30 min,
   120 días) y sólo cuentan desde que existe.
 
+En ambos horizontes se agrega una referencia "a vencer", `climatology`: avisar
+lluvia sólo por la hora local (14-20 h), sin mirar nada más. Una fuente que no
+la supera no aporta información.
+
 Por fuente: aciertos/fallos/falsas alarmas, POD, FAR y CSI ("acierto en lluvia",
 la métrica del ranking: no premia decir siempre "no llueve"); por hora local
 (`by_hour`) y CSI móvil de 7 días (`trend`). `sky` da el sesgo de nubosidad de
-Open-Meteo frente a la cámara. Caché de 10 min.
+Open-Meteo frente a la cámara. `days` se acota a 1-60. Caché de 10 min.
 
 `GET /api/camera/best/<fecha>` elige, de ese día, la entrada con mayor visibilidad
 reportada (excluye la noche salvo que el día entero lo haya sido); a igual
@@ -605,6 +630,7 @@ pantalla entera. Ver `services/epaper.py` y, en el repo del firmware,
 | Endpoint | Descripción |
 |----------|-------------|
 | `POST /api/admin/login` | `{user, password}` → `{token}` (sesión 12 h) |
+| `POST /api/admin/logout` | Revoca el token de sesión en el servidor (no solo en el cliente) |
 | `GET /api/admin/settings` | Ajustes actuales (tokens/claves enmascarados). Header `Authorization: Bearer <token>` |
 | `POST /api/admin/settings` | Actualiza ajustes editables (en blanco = conservar secretos) |
 | `GET /api/admin/status` | Estado de alertas/estación |
@@ -729,19 +755,23 @@ Todos los errores siguen el formato:
 | Code | Description |
 |------|-------------|
 | 200 | Success |
+| 401 | Sin sesión admin / token inválido |
 | 404 | Resource not found |
+| 429 | Rate limit excedido (ver abajo) |
+| 502 | Falló un proveedor externo (Open-Meteo, SMN, satélite…) |
 | 500 | Internal server error |
 
 ---
 
 ## Rate Limiting
 
-Por IP, en memoria (no persiste entre reinicios):
+En memoria (no persiste entre reinicios); por IP salvo donde se indica:
 
 | Endpoint | Límite |
 |----------|--------|
 | `POST /data/report/` (`/data/report`) | 60 peticiones/min — muy holgado para el datalogger real (~1-4/min), pensado como defensa ante flood/DoS |
 | `POST /api/admin/login` | 5 intentos/min — anti-fuerza-bruta |
+| `/api/camera/windy-visit` | 600/min **global** (no por IP: Windy puede llamar desde pocas IPs). Pasado el tope sigue respondiendo el pixel, pero no registra la visita |
 
 El resto de endpoints no tiene límite propio.
 

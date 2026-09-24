@@ -1,7 +1,10 @@
 # Análisis del Cielo con IA — Referencia Rápida
 
-El sistema analiza cada foto de la cámara exterior con **Gemini** o **Claude** para
-extraer información sobre el estado del cielo.
+El sistema analiza las fotos de la cámara exterior con **Gemini** o **Claude** para
+extraer información sobre el estado del cielo. No en cada captura: cada
+`camera_analysis_interval_min` (15 min por defecto; 0 = cada captura), más un
+análisis inmediato cuando el pluviómetro pasa de no-lluvia a lluvia o al revés
+(`_debe_analizar` en `main.py`).
 
 ## Qué detecta
 - Condición general (clear, partly_cloudy, stormy, etc.)
@@ -37,7 +40,8 @@ días. Desde 2026-09-23 la tarjeta "Precisión del pronóstico" ya no muestra es
 coincidencia sino **quién acierta**: `GET /api/forecast/verification` califica
 cada fuente contra el pluviómetro (lluvia, ahora y a 3 h) y contra la cámara
 (nubosidad) -- ranking por "acierto en lluvia" (CSI), desglose por hora del día,
-tendencia móvil de 7 días y sesgo de nubosidad de Open-Meteo. Detalle en
+tendencia móvil de 7 días, sesgo de nubosidad de Open-Meteo y la referencia
+"Solo por horario (14-20 h)" a vencer. Detalle en
 `docs/api-reference.md` ("Precisión del pronóstico").
 
 ## Sol directo sin obstrucción (mitiga el halo de la cámara)
@@ -75,12 +79,14 @@ Notifica por Telegram/correo cuando detecta:
 - Lluvia visible en horizonte
 - Visibilidad reducida
 
-Requiere 2 análisis consecutivos (histéresis). Activar en Admin → Notificaciones → "Visual (cielo)".
+Requiere 2 análisis consecutivos (histéresis). Activar (y apagar cada regla) en
+Admin → Alertas → tarjeta "📷 Cámara"; el canal se elige en Admin → Notificaciones →
+categoría "Visual (cielo)".
 
 ## Configuración
-Admin → Sistema:
+Admin → Cámara:
 - Proveedor: auto (usa Gemini si hay key), gemini, anthropic
-- API Key Gemini: tier gratuito (1500 req/día)
+- API Key Gemini: tier gratuito (analizar cada 5 min, ~288/día, lo agota; 15 min, ~72-96/día, va holgado)
 - API Key Anthropic: de pago
 
 ## Documentación técnica completa

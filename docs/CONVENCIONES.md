@@ -169,7 +169,7 @@ El icono **cambia con el valor**, así que informa en vez de decorar:
 ### Regla de contraste: si no se lee, no se pone
 
 Un icono que no se distingue al tamaño en que se usa no vale la pena. Se verifica
-midiendo, no a ojo: `scratchpad/audita_contraste.py` renderiza cada icono sobre el
+midiendo, no a ojo: `scratchpad/audita_contraste.py` (script local, no está en el repo) renderiza cada icono sobre el
 color real de `.card` (`#131c2e`) y calcula la diferencia media de luminancia.
 Referencia: la mayoría del conjunto queda entre 50 y 130.
 

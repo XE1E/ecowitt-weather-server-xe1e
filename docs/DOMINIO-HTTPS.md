@@ -88,6 +88,10 @@ nano caddy/certs/origin.pem   # pega el "Origin Certificate"
 nano caddy/certs/origin.key   # pega la "Private Key"
 chmod 600 caddy/certs/origin.key
 
+# El Caddyfile también sirve rubik.xe1e.net: necesita /opt/rubik-site y su propio
+# cert (caddy/certs/rubik-origin.pem/.key), o Caddy no arranca. Ver caddy/Caddyfile.
+sudo mkdir -p /opt/rubik-site
+
 docker compose --profile caddy up -d --build
 docker compose logs -f caddy   # sin errores de TLS
 ```

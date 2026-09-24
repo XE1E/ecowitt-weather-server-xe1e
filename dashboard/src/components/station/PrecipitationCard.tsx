@@ -119,7 +119,7 @@ export function PrecipitationCard({ data, forecast, ownForecast: own = null }: P
           <CloudRain className={`w-5 h-5 shrink-0 mt-0.5 ${own!.confidence === 'high' ? 'text-amber-400' : 'text-sky-400'}`} />
           <div>
             <p className="text-sm font-medium text-slate-100">{own!.headline}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Nuestro pronóstico (estación · cámara · presión · vecinas)</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Nuestro pronóstico (estación · cámara · vecinas)</p>
           </div>
         </div>
       )}

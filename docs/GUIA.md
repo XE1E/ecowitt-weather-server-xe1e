@@ -20,7 +20,7 @@
 2. [Hardware](#2-hardware)
 3. [Arquitectura y flujo de datos](#3-arquitectura-y-flujo-de-datos)
 4. [Procesamiento del dato local](#4-procesamiento-del-dato-local)
-5. [La página web](#5-la-página-web-pro) (rutas y estado; el recorrido está en el manual)
+5. [La página web](#5-la-página-web-) (rutas y estado; el recorrido está en el manual)
 6. [Widget para tu sitio](#6-widget-para-tu-sitio)
 7. [Pantallas físicas](#7-pantallas-físicas)
 8. [Impresión 3D](#8-impresión-3d)
@@ -81,14 +81,14 @@ Kit **Ecowitt WS2910** + sensor **WS69** + termohigrómetros **WN31**.
 | **Consola WS2910** | Pantalla + puente Wi-Fi | Presión (barómetro interno), temp/humedad interior; **envía todos los datos** al servidor por Wi-Fi (protocolo Ecowitt) |
 | **WS69 (7-en-1)** | Sensor exterior integrado | Temperatura y humedad exterior, velocidad y dirección del viento, ráfaga, lluvia (tasa/evento/día/…), radiación solar e índice UV |
 | **WN31 (×8)** | Termohigrómetros de canal | Temperatura y humedad en hasta **8 canales** independientes (habitaciones, exterior secundario, etc.) |
-| **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede **disparar alertas propias** (y publicar/MQTT) activándolas **por estación** (ver §6) |
+| **GW1100** *(estación remota, opcional)* | Gateway Wi-Fi Ecowitt | **Estación secundaria**: envía al mismo servidor; sus lecturas se guardan **aparte** y se ven en su propia página (solo lectura). Por defecto solo almacena datos, pero puede **disparar alertas propias** (y publicar/MQTT) activándolas **por estación** (ver §9) |
 
 Fuera del kit Ecowitt hay dos añadidos, ambos opcionales y ambos detallados en
 §7: la **cámara Tapo C325WB** del exterior y las **pantallas físicas** (kiosco
 táctil Waveshare ESP32-S3, e-paper LilyGo 4.7" y reloj de píxeles Ulanzi TC001).
 
 **Baterías:** la WS69, la consola y cada canal WN31 reportan estado de batería
-(OK / baja). El sistema **avisa** cuando alguna está baja (ver §7).
+(OK / baja). El sistema **avisa** cuando alguna está baja (ver §10).
 
 **Señal RF:** el sistema **soporta** el nivel de señal por sensor (escala 0-4,
 mayor = mejor; campos `signal_wh65`, `signal_ch1`… en `/api/current` y en el
@@ -172,6 +172,7 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
 |-----|------|
 | Datos actuales, stats del día, comparación, pronóstico local | **60 s** |
 | Historia (página) | 5 min |
+| "Nuestro pronóstico" (`/api/forecast/own`) y consenso | 5 min |
 | Pronóstico (Open-Meteo y SMN) y astronomía | 30 min |
 | METAR, calidad del aire, almanaque (caché en el servidor) | 10 min |
 | Resumen diario (Dayfile) | al arrancar (90 días) + hoy/ayer cada hora |
@@ -209,7 +210,7 @@ parsear → convertir a métrico → calibrar → QC rangos → QC picos → QC 
    sostiene varias lecturas seguidas (ver §10). Tarda hasta 1 h en tener
    historial suficiente tras activarlo.
 7. **Variables derivadas:** calcula punto de rocío, sensación térmica, índice de
-   calor, sensación por frío/viento, **humidex** y **base de nubes** (ver §12).
+   calor, sensación por frío/viento, **humidex** y **base de nubes** (ver §15).
 8. **Guardado:** en InfluxDB, además del **resumen diario** ("Dayfile"): un
    registro por día con mín/máx/prom/total y la hora de cada extremo, que hace
    rápidas las consultas de récords y climatología.
@@ -222,7 +223,7 @@ porque la consulta lee el dato crudo, cuya retención es infinita.
 
 Del resumen diario se guardan `humidex_max` y `humidex_max_time`, **no la media**: de un día
 se recuerda cuánto llegó a apretar, y la media saldría engañosamente baja porque de noche el
-índice no existe y esas horas no cuentan. En los récords hay `humidex_max` (de siempre, con
+índice cae a valores cercanos a la temperatura, que no dicen nada de bochorno. En los récords hay `humidex_max` (de siempre, con
 fecha) y, por periodo, `humidex_max` con fecha más `humidex_days` —los días con máximo ≥ 30,
 que es a este índice lo que «días con lluvia» a la lluvia—.
 
@@ -243,7 +244,7 @@ No se pone en el arranque a propósito: son ~90 consultas a InfluxDB y no hay mo
 pagarlas en cada reinicio.
 
 Todos los ajustes (calibración, QC, alertas, tokens, redes) se editan **en
-caliente** desde el panel de administración, sin reiniciar (ver §6).
+caliente** desde el panel de administración, sin reiniciar (ver §9).
 
 ---
 
@@ -320,7 +321,8 @@ Lo que sí corresponde a este documento:
   kiosco en `/kiosko?page=N` y el widget embebible en `/embed`.
 - **Estado compartido.** `StationDataProvider` (`dashboard/src/station-data.tsx`)
   centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
-  los refresca cada 60 s (el pronóstico cada 30 min). Las páginas consumen el
+  los refresca cada 60 s (el pronóstico cada 30 min; `forecast/consensus` y
+  `forecast/own` cada 5 min). Las páginas consumen el
   contexto en vez de pedir cada una lo suyo.
 - **Unidades.** `useUnits()` (`dashboard/src/units.tsx`) convierte en la vista, no
   en el servidor: el backend siempre guarda y sirve métrico. La preferencia se
@@ -542,7 +544,7 @@ de Cloudflare no valida con CAs públicas. En lugar de deshabilitar TLS, se fija
 clave pública del servidor (`--pinnedpubkey`). Sin `TLS_PIN`, el script **no envía**.
 
 **Reintentos con backoff:** si ffmpeg falla, reintenta hasta `RETRIES` veces con
-esperas crecientes (5s, 10s, 15s). Si todos fallan, **no sube nada** — es mejor dejar
+esperas crecientes (5 s × intento: 5 s, 10 s…). Si todos fallan, **no sube nada** — es mejor dejar
 la foto anterior (que el servidor marcará como stale) que subir un JPEG roto.
 
 **Modo sin cámara:** si las credenciales están en valores placeholder (`CAMBIAR`),
@@ -572,10 +574,12 @@ Sin esto, una petición GET durante el volcado serviría media imagen.
 ├── latest.json             # Metadato: {"captured_at": "...", "bytes": 123456}
 ├── latest_analysis.json    # Último análisis de IA
 ├── analysis_history.json   # Últimos 12 análisis (para nowcasting)
-└── 2026-08-11/
-    ├── 080532.jpg          # Histórico del día (HHMMSS.jpg)
-    ├── 081033.jpg
-    └── analysis.json       # Todos los análisis del día
+├── 2026-08-11/
+│   ├── 080532.jpg          # Histórico del día (HHMMSS.jpg)
+│   └── 081033.jpg
+├── analysis/2026-08-11.json  # Todos los análisis del día (fuera de la carpeta del día)
+├── archive/2026-08-11.jpg    # Mejor foto del día, para siempre
+└── timelapse/2026-08-11.mp4  # Vídeo del día
 ```
 
 **Retención:** el histórico se poda por **días completos**, no por número de fotos.
@@ -592,6 +596,9 @@ tiene más edad, `stale: true` en el status y el kiosco puede mostrarlo visualme
 |---|---|
 | `POST /api/camera/upload` | Recibe la captura. Multipart (campo `file`) o el JPEG en crudo |
 | `GET /api/camera/latest.jpg` | La última, con `X-Captured-At` |
+| `GET /api/camera/webcam.jpg` | La última con cintillo de datos de la estación, 4:3 (800×600), para AWEKAS/Weathercloud |
+| `GET /api/camera/webcam-wide.jpg` | Igual pero 16:9 (1600×900), para Windy Webcams |
+| `GET /api/camera/windy-visit` | "Tracking URL" de Windy: cada visita a la cámara allí se registra en PostHog como `windy_webcam_view` y responde un pixel GIF |
 | `GET /api/camera/status` | `available`, `captured_at`, `age_seconds`, `stale` |
 | `GET /api/camera/days` | Días con histórico y cuántas capturas tiene cada uno |
 | `GET /api/camera/timelapse/days` | Qué días tienen vídeo (o fotogramas para montarlo) |
@@ -663,8 +670,9 @@ en los dos sitios).
 
 ##### Análisis del cielo con IA
 
-Cada foto se analiza automáticamente con un modelo de visión (**Gemini** o **Claude**)
-para extraer información sobre el estado del cielo:
+La última foto se analiza automáticamente con un modelo de visión (**Gemini** o **Claude**)
+cada `camera_analysis_interval_min` minutos (15 por omisión; no en cada captura, para no
+agotar el tier gratuito de Gemini) para extraer información sobre el estado del cielo:
 
 | Campo | Qué detecta | Ejemplo |
 |-------|-------------|---------|
@@ -685,14 +693,15 @@ de **Cámara**, junto con el histórico diario.
 |----------|-----|
 | `GET /api/camera/analysis` | Último análisis + tendencia (nowcasting) |
 | `GET /api/camera/analysis/validation` | Validación vs pronóstico de Open-Meteo (calculada al vuelo) |
-| `GET /api/camera/analysis/accuracy?days=30` | % de acierto vs pronóstico de los últimos N días, tabulado sobre lo ya guardado (ver "Persistencia de la validación" abajo) |
+| `GET /api/camera/analysis/accuracy?days=30` | % de coincidencia cámara vs pronóstico de los últimos N días, tabulado sobre lo ya guardado (ver "Persistencia de la validación" abajo). La tarjeta de `/camara` ya no la usa: usa `/api/forecast/verification` |
+| `GET /api/forecast/verification?days=30` | Tarjeta **"Precisión del pronóstico"** de `/camara`: califica cada fuente contra lo **observado** (pluviómetro para lluvia, cámara para nubosidad), no contra otra fuente. Ver `services/forecast_verification.py` |
 | `GET /api/camera/analysis/history` | Sin params: lista días; con `?date=YYYY-MM-DD`: datos del día |
 | `GET /api/camera/analysis/providers` | Info de proveedores configurados |
 | `GET /api/camera/best/<fecha>` | Metadato de la foto con mejor visibilidad de ese día (se conserva para siempre) |
 | `GET /api/camera/best/<fecha>.jpg` | Esa foto. 404 si el fotograma ya se podó (retención de 7 días, mucho menor que la del análisis) |
 
-**Nowcasting (tendencias):** el sistema guarda los últimos 12 análisis (~1 hora con
-cadencia de 5 min) y arma una frase completa con la tendencia: "Nublándose: la
+**Nowcasting (tendencias):** el sistema guarda los últimos 12 análisis (~3 horas con
+la cadencia de análisis por omisión de 15 min) y arma una frase completa con la tendencia: "Nublándose: la
 cobertura de nubes subió 18%", "Despejando: bajó 12%", "Sin cambios notables en el
 cielo", "Nublándose y las nubes se ven más activas: posible tormenta" (cobertura +
 desarrollo intensificándose), "Puede haber empezado a llover: apareció precipitación
@@ -716,7 +725,11 @@ mirando, no quedaba ningún registro. Ahora **cada captura analizada** calcula t
 su validación (en `_analyze_sky_background`, `main.py`) y la guarda junto al resto de
 la entrada diaria: `match`, `forecast_condition`, `forecast_coverage_pct`. Es la base
 de datos para `/api/camera/analysis/accuracy` y para una futura corrección de sesgo
-del pronóstico (pendiente, ver `docs/internal/PENDIENTES.md` §2.e).
+del pronóstico (pendiente, ver `docs/internal/PENDIENTES.md` §2.e). Coincidir no es
+acertar, así que desde 2026-09-23 la tarjeta "Precisión del pronóstico" usa
+`/api/forecast/verification`, que califica contra el pluviómetro; para el horizonte de
+3 h se apoya en una bitácora de pronósticos que se escribe cada 30 min en
+`/data/forecast_log` (`forecast_log_dir`).
 
 **Mejor foto del día:** elegida por mayor visibilidad reportada ese día (excluye las
 tomas de noche salvo que el día entero haya sido de noche). Desde 2026-09-16, a igual
@@ -757,7 +770,7 @@ ve, sino si el hardware/análisis funciona), en la misma tarjeta de Admin → Al
 
 Van por Telegram/correo en la categoría "Cámara (sin señal/análisis)".
 
-**Configuración:** en Admin → Sistema hay opciones para:
+**Configuración:** en Admin → Cámara ("Análisis del cielo con IA") hay opciones para:
 - Habilitar/deshabilitar el análisis
 - Elegir proveedor (auto, gemini, anthropic)
 - API keys de Gemini (tier gratuito: 1500 req/día) y Anthropic (de pago)
@@ -786,7 +799,7 @@ recientemente, y sólo si su TTL ya expiró.
 La página 5 y la consola **reusan componentes del dashboard** (`MultiVariableChart` y
 `ConsoleReplica`), no copias: cualquier mejora que se les haga en la web llega
 sola al display. `ConsoleReplica` es además la misma vista del tab
-[Consola](#5-la-página-web) (`/consola`), con un prop `mode` como única
+[Consola](#5-la-página-web-) (`/consola`), con un prop `mode` como única
 diferencia.
 
 Las pantallas del árbol nuevo heredan la estética de la consola —negro, cifras en
@@ -948,10 +961,11 @@ aparato:
   `/api/current` viene en UTC pero **sin sufijo de zona**, y `new Date()` interpreta
   un ISO sin zona como hora local; sin añadirle la `Z` la antigüedad sale desfasada
   las 6 h del huso y el aviso nunca salta.
-- **HUMIDEX** aparece sólo con 20 °C o más, porque el receiver no lo calcula por
-  debajo (§4). Sin valor vivo la celda muestra el **máximo del día** en blanco con el
-  rótulo «MÁXIMO», igual que SOLAR y UV de noche; el `--` queda sólo para cuando el día
-  todavía no ha llegado a 20 °C.
+- **HUMIDEX**: desde 2026-09-11 el receiver lo calcula **a cualquier temperatura**
+  (antes sólo con 20 °C o más); por debajo de 20 °C simplemente da un valor cercano a la
+  temperatura. Si aun así falta el valor vivo, la celda muestra el **máximo del día** en
+  blanco con el rótulo «MÁXIMO», igual que SOLAR y UV de noche, y `--` si tampoco hay
+  máximo.
 
 **Los tres derivados son TRES CELDAS**, no una con tres columnas, y el motivo es el
 humidex: al ser un ÍNDICE le toca su riel de escala como a UV y al IMECA, y un riel dentro
@@ -965,7 +979,7 @@ heredaba de la clase `gt`— y debajo va el **nivel en palabras**, con los corte
 Environment Canada (`humidexLabel` en `weather.ts`, compartido con la tarjeta de la web para
 que no puedan divergir): hasta 29 confort, 30-39 incómodo, 40-45 muy incómodo, 46+ peligro y
 54+ extremo. Color, palabra y banda encendida del riel salen de los mismos cortes, así que
-no pueden contradecirse. El riel llega a 60 aunque el índice no exista por debajo de 20:
+no pueden contradecirse. El riel llega a 60 aunque el índice sólo signifique bochorno por encima de 20:
 arranca en 0 como todos los demás, y uno que empezara en 20 mentiría sobre lo que significa
 «vacío».
 
@@ -1170,7 +1184,9 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | **Calibración** | Toggle global y **por estación** con selector. Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, etiquetado *Exterior* o *Interior* según el «a la intemperie») + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, **AWEKAS** y **openSenseMap**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos. Dentro de Correo, **Resumen semanal** (opt-in aparte, mismo remitente/destinatarios): día y hora de envío, con récords de los últimos 7 días, comparación vs la semana anterior y la mejor foto de la semana (si hay) |
-| **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
+| **Integraciones** | **MQTT/Home Assistant**: broker, puerto, topic, auth, auto-discovery. **Indicador de conexión**, **«Probar conexión»** y **«Reconectar»**. **WeatherAPI.com** (pronóstico). **Xweather** y **Netatmo** (estaciones vecinas). **WAQI**: token API. **🔒 Seguridad del endpoint**: token secreto (`/data/report/?token=…`) y allowlist de IP (desactivado por defecto) |
+| **Cámara** | Estado, **captura de fotos** (encendido, intervalo y franja horaria), **análisis del cielo con IA** (proveedor y API keys) y **timelapse diario** (ver §7) |
+| **Actualizaciones** | Commits del repositorio que aún no están desplegados en el servidor (compara el SHA desplegado con GitHub) |
 | **Sistema** | Info (versión, estaciones, última lectura, InfluxDB). Control de calidad (QC habilitado, filtro de picos, **QC estadístico** opt-in — el umbral de z-score y demás ajustes finos solo por `settings.json`, ver §4). **Visor de logs**: filtros por nivel (todos/warning/error), refresco en tiempo real y **ventana de 30 min** (por timestamp, no por cantidad fija de líneas — con el tráfico normal del sitio unas pocas líneas de acceso HTTP bastan para llenar un límite fijo en minutos). **Respaldos (Cloudflare R2)**: estado de las 4 categorías (última corrida exitosa), credenciales S3 (Account ID/claves/bucket) y retención en R2 por categoría, retención de fotos vigente (heredada de Cámara, sin ajuste propio), y vigilancia opcional de la cuota del tier gratis (storage y operaciones Clase A/B del mes, requiere un Cloudflare API Token aparte con alcance Account Analytics: Read — ver `docs/backups-r2.md`). Enlaces útiles y stack |
 
 Los **tokens/claves se muestran enmascarados** (últimos 4 caracteres) y si se
@@ -1211,7 +1227,7 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Sensor perdido** | un sensor visto antes deja de reportar (se normaliza al volver) |
 | **Sensor atascado** | un sensor sigue reportando pero repite el mismo valor exacto N lecturas seguidas (default 240, ~4 h) — distinto de «sensor perdido», que es la AUSENCIA del campo |
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
-| **Sismos** | magnitud ≥ umbral (default 6.0), cercanos a la estación (≤ 800 km); fuente SSN/USGS |
+| **Sismos** | magnitud ≥ umbral (default 6.0) dentro del radio de búsqueda (≤ 800 km), **o** uno local más chico (default M ≥ 4.0 a ≤ 150 km); fuente SSN/USGS |
 | **Visual (cielo)** | tormenta formándose / lluvia visible / visibilidad reducida — ver [Análisis del cielo con IA](#análisis-del-cielo-con-ia) |
 | **Cámara sin señal** | deja de llegar una foto nueva por N minutos (default 30) |
 | **Análisis de cámara fallando** | el análisis IA (Gemini/Claude) lleva N intentos seguidos con error (default 3) |
@@ -1321,7 +1337,9 @@ modelo externo.
 | Fuente | Qué aporta | Archivo |
 |--------|------------|---------|
 | **Estación local** | Condición REAL ahora (lluvia, radiación solar → nubosidad) | — |
-| **Tendencia de presión** | Alerta de tormenta inminente (0-3h), método Zambretti | `forecaster.py` |
+| **Tendencia de presión** | Alerta de tormenta inminente (0-3h) **en el consenso**, método Zambretti | `forecaster.py` · `forecast_consensus.py` |
+| **Cámara del cielo** | Precipitación visible y tendencia de nubes (usadas por "nuestro pronóstico") | `sky_analyzer.py` · `camera.py` |
+| **Estaciones vecinas** (Xweather + Netatmo) | Dato **informativo** para comparar; en "nuestro pronóstico" sólo cuenta una vecina que reporta lluvia en la dirección de donde sopla el viento | `xweather.py` · `netatmo.py` |
 | **Open-Meteo** | Pronóstico horario gratuito (1-7 días), códigos WMO | `openmeteo.py` |
 | **WeatherAPI** | Más preciso para ciudades grandes (1-3 días), requiere API key | `weatherapi.py` |
 | **SMN (CONAGUA)** | Pronóstico oficial por municipio (4 días + 48h) | `smn.py` |
@@ -1343,19 +1361,40 @@ El sistema de **consenso** combina todas las fuentes con esta lógica de priorid
 - La **tendencia de presión** detecta tormentas ANTES de que lleguen (caída de presión)
 - Cuando Open-Meteo y WeatherAPI difieren, se usa el **promedio de severidad** (no el peor caso)
 
+### "Nuestro pronóstico" (`forecaster.own_forecast`)
+
+**Endpoint:** `GET /api/forecast/own`. Lo que la propia estación puede afirmar sobre lluvia
+ahora o en las próximas horas, **sin modelos externos** (ésos se muestran aparte y
+atribuidos). Gana la primera fuente que tenga algo que decir:
+
+1. **Pluviómetro** (`rain_rate` > 0) — lloviendo ahora.
+2. **Cámara, precipitación visible** en la foto.
+3. **Cámara, tendencia** de nubes de lluvia formándose (`trend.precip_appearing`).
+4. **Vecinas + viento** (`detect_incoming_rain`): una vecina reporta lluvia en la dirección
+   de donde sopla el viento.
+
+Si ninguna dice nada, `source: "none"`. **La presión propia ya no dispara lluvia aquí**
+(2026-09-23): verificada contra el pluviómetro con `/api/forecast/verification`, "presión
+bajando" acertaba 13 % de las lluvias a 3 h con 83 % de falsas alarmas (la marea
+atmosférica la baja casi todas las tardes). Su tendencia se sigue mostrando como dato en
+`/api/forecast/local`.
+
 ### Pronóstico local por presión (`forecaster.py`)
 
 Método clásico del barómetro (base Zambretti): la presión a nivel del mar y su **tendencia
-en las últimas 3 horas** anticipan el tiempo a corto plazo:
+en las últimas 3 horas**. La tendencia la clasifica `classify_trend` (`forecaster.py`); los
+mensajes de lluvia son los de `pressure_forecast` (`forecast_consensus.py`), que sólo usa el
+consenso:
 
-| Cambio 3h (hPa) | Tendencia | Pronóstico |
+| Cambio 3h (hPa) | Tendencia | Pronóstico (consenso) |
 |-----------------|-----------|------------|
-| ≤ -7 | Cayendo muy rápido | Tormenta inminente (0-1h) |
+| ≤ -7 | Cayendo rápido | Tormenta inminente (0-1h) |
 | -7 a -5 | Cayendo rápido | Lluvia probable en 1-2h |
-| -5 a -3 | Bajando | Posible lluvia en 2-4h |
-| -3 a +3 | Estable | Sin cambios esperados |
-| +3 a +5 | Subiendo | Tiempo mejorando |
-| > +5 | Subiendo rápido | Cielos despejando |
+| -5 a -3.5 | Cayendo rápido | Posible lluvia en pocas horas |
+| -3.5 a -1 | Bajando | Posible lluvia en 2-4h |
+| -1 a +1 | Estable | Sin cambios esperados |
+| +1 a +3.5 | Subiendo | Tiempo mejorando |
+| ≥ +3.5 | Subiendo rápido | Cielos despejando |
 
 #### Umbrales de presión calibrados para CDMX
 
@@ -1450,7 +1489,7 @@ Combina todas las fuentes y devuelve:
 
 Todos los servicios de pronóstico siguen el patrón de **caché con fallback**:
 
-1. Si hay copia en caché y no expiró (15 min) → se sirve
+1. Si hay copia en caché y no expiró (15 min; 30 en SMN) → se sirve
 2. Se intenta obtener dato fresco del origen
 3. Si falla pero hay copia expirada → se sirve marcada como `stale: true`
 4. Si no hay copia → error (solo `/api/epaper/forecast.json` nunca da 503)
@@ -1483,6 +1522,7 @@ El endpoint e-paper **nunca devuelve 503**: si falta dato cae al pronóstico y l
 | **WAQI / aqicn** | calidad del aire (AQI) | 10 min |
 | **Open-Meteo Air Quality** (CAMS) | concentraciones → IMECA estimado | 30 min |
 | **USGS / SSN** | sismos recientes cercanos | 10 min |
+| **Xweather + Netatmo** | estaciones vecinas (dato **informativo**, para comparar). Las PWS de Xweather que mandan presión absoluta cruda se reducen a nivel del mar con ISA (`_fix_absolute_pressure`) | 10 min |
 | **pyephem** (local) | almanaque: crepúsculos, luna, planetas | 10 min |
 | **InfluxDB** (propio) | histórico, estadísticas, climatología | consultas en vivo |
 
@@ -1500,6 +1540,10 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/stats/records?start=-30d` | mín/máx/prom del rango |
 | `GET /api/compare` | 24 h vs 24 h previas ("vs ayer") |
 | `GET /api/forecast/local` | pronóstico por tendencia barométrica |
+| `GET /api/forecast/own` | "nuestro pronóstico" de lluvia: pluviómetro → cámara → vecinas, sin modelos (ver §11½) |
+| `GET /api/forecast/consensus` | consenso estación + presión + Open-Meteo + WeatherAPI (ver §11½) |
+| `GET /api/forecast/verification?days=30` | acierto de cada fuente de pronóstico contra el pluviómetro/cámara (ver §7) |
+| `GET /api/nearby-stations` | estaciones vecinas (Xweather + Netatmo), con `incoming_rain` |
 | `GET /api/forecast` | pronóstico Open-Meteo con caché |
 | `GET /api/smn` · `GET /api/smn/municipios` | pronóstico oficial SMN por municipio (4 días + 48 h) y lista de municipios |
 | `GET /api/climate/records` | récords (siempre, por mes, este mes/año, ayer) |
@@ -1518,7 +1562,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/epaper/forecast.json` | datos para el e-paper LilyGo, con forma WeatherAPI `forecast.json` (3 días × 24 h + bloque `xe1e`). **Nunca devuelve 503** |
 | `GET /api/display.jpg?page=N` | imagen JPEG para pantalla Waveshare (la sirve el contenedor `renderer`) |
 | `POST /api/kiosk/local` · `GET /api/kiosk/local` | recibe y devuelve las lecturas del BME280 de la pantalla Waveshare |
-| `POST /api/camera/upload` · `GET /api/camera/latest.jpg` · `status` · `days` | cámara del exterior (ver §7) |
+| `POST /api/camera/upload` · `GET /api/camera/latest.jpg` · `webcam.jpg` · `webcam-wide.jpg` · `windy-visit` · `status` · `days` | cámara del exterior (ver §7) |
 | `POST /api/admin/login` · `GET/POST /api/admin/settings` · `GET /api/admin/status` | administración |
 | `POST /data/report/` | **entrada** del push de la estación (Ecowitt) |
 
@@ -1538,7 +1582,9 @@ inactividad de la capa gratuita). Dominio `clima.xe1e.net` tras Cloudflare.
 ```bash
 cd ~/ecowitt-weather-server-xe1e
 git pull
-docker compose up -d --build      # --build cuando cambian dependencias o imágenes
+# Sólo el servicio que cambió (receiver o dashboard): --no-deps evita recrear los
+# demás (recrear el receiver vacía su caché en RAM de la última lectura).
+GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate --no-deps <servicio>
 docker compose ps                 # verificar estado
 ```
 
@@ -1581,7 +1627,10 @@ visita) y el autocapture de clics (genérico, sin nombre de negocio), hay
 mapa), `forecast_source_change` (Open-Meteo vs SMN), `csv_export` (día, mes
 o año), `alert_history_open` (adopción del historial de alertas) y
 `onthisday_photo_view` (clic en la foto de un año en la efeméride "En este
-día"). Ver `dashboard/src/analytics.ts` (`trackEvent`).
+día"). Ver `dashboard/src/analytics.ts` (`trackEvent`). Desde el **servidor** se
+manda además `windy_webcam_view`: cada visita a la cámara en Windy llama a
+`/api/camera/windy-visit` (su "Tracking URL"); para que el país salga bien, nginx
+reenvía `X-Forwarded-For` en `/api` y el receiver ve la IP real.
 
 **Estación en operación:** el WS2910 está **instalado y enviando datos reales**
 desde ~2026-07-19. La consola apunta a `clima.xe1e.net`, ruta `/data/report/`
@@ -1626,4 +1675,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-08-31.*
+*Última actualización: 2026-09-23.*

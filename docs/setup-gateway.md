@@ -69,7 +69,7 @@ Esta es la configuración clave para enviar datos a tu servidor.
 docker logs -f ecowitt-receiver
 
 # Deberías ver algo como:
-# INFO - Stored data - Temp: 25.3°C, Humidity: 65%, Wind: 12.5 km/h
+# INFO - Stored data from <modelo> - Temp: 25.3°C, Humidity: 65%, Wind: 12.5 km/h
 ```
 
 ### Probar endpoint:
@@ -149,29 +149,26 @@ Esta es la configuración para enviar datos al mismo servidor que tu estación p
 |-------|-------|
 | Enable | ON |
 | Protocol Type | Ecowitt |
-| Server IP/Hostname | `tu-dominio.com` o IP pública del VPS |
-| Port | `443` (HTTPS via Caddy) o `8080` (directo) |
+| Server IP/Hostname | IP pública del VPS |
+| Port | `8080` (HTTP directo al dashboard/nginx) |
 | Upload Interval | `60` segundos |
 | Path | `/data/report/` |
 
 4. Guarda la configuración
 
-> **Nota:** Si usas HTTPS con Caddy, el puerto es `443`. Si apuntas directo al receiver (sin Caddy), usa `8080`.
+> **Nota:** Ecowitt no soporta HTTPS, así que no sirve apuntar al dominio por `443` (Caddy + Cloudflare); el `80` de Caddy redirige a HTTPS. Usa la IP y el `8080`, igual que el WS2910.
 
 ### Paso 4: Capturar el Passkey
 
-Para que el servidor identifique al GW1100 como estación secundaria, necesitas su **passkey**:
+Para que el servidor identifique al GW1100 como estación secundaria, necesitas su **passkey**
+(el MD5 de su MAC, 32 caracteres hexadecimales):
 
-1. Apunta el GW1100 al servidor y espera a que envíe datos
-2. Revisa los logs del receiver:
-   ```bash
-   docker logs ecowitt-receiver | grep -i passkey
-   ```
-3. Busca una línea como:
-   ```
-   INFO - Device: GW1100A_V2.3.5 | passkey: ABC123DEF456...
-   ```
-4. Copia el passkey (32 caracteres hexadecimales)
+- **Por MAC (recomendado):** Admin → Estaciones → la estación → *Registro*: pega la MAC de
+  la etiqueta y el servidor deriva el passkey y lo aplica en vivo (sin tocar `.env`).
+- **Por logs:** sólo sale completo si la whitelist de la principal NO está configurada
+  (`PRIMARY_PASSKEY` vacío): `docker logs ecowitt-receiver | grep -i passkey` →
+  `Passkey de la principal (whitelist no configurada): <passkey>`. Con la whitelist activa,
+  un push no registrado se rechaza (403) y el log sólo muestra los primeros 6 caracteres.
 
 ### Paso 5: Registrar como Estación Secundaria
 
@@ -180,9 +177,9 @@ Para que el servidor identifique al GW1100 como estación secundaria, necesitas 
    SECONDARY_STATIONS=<passkey_capturado>:gw1100
    ```
 
-2. Reinicia el receiver:
+2. Recrea el receiver (`restart` no vuelve a leer el `.env`):
    ```bash
-   docker compose restart receiver
+   docker compose up -d --force-recreate --no-deps receiver
    ```
 
 3. Verifica que los datos llegan separados:
@@ -259,28 +256,21 @@ SECONDARY_STATIONS=F00DCAFEF00DCAFEF00DCAFEF00DCAFE:gw1100
 
 1. Verifica conectividad desde el sitio remoto:
    ```bash
-   curl -X POST https://tu-dominio/data/report/ -d "test=1"
+   curl -X POST http://<IP_VPS>:8080/data/report/ -d "test=1"
    ```
 
-2. Verifica que el puerto esté abierto en el VPS:
-   - Puerto 443 si usas Caddy (HTTPS)
-   - Puerto 8080 si apuntas directo al receiver
+2. Verifica que el puerto 8080 esté abierto en el VPS (Security List + NSG + iptables)
 
 3. Revisa los logs del receiver:
    ```bash
    docker logs -f ecowitt-receiver
    ```
 
-4. Si usas dominio, verifica que resuelva correctamente:
-   ```bash
-   nslookup tu-dominio.com
-   ```
-
 ### Los datos del GW1100 aparecen mezclados con la estación principal
 
 - Verifica que el passkey esté registrado en `SECONDARY_STATIONS`
 - El passkey debe coincidir exactamente (32 caracteres hex)
-- Reinicia el receiver después de modificar `.env`
+- Recrea el receiver después de modificar `.env` (`docker compose up -d --force-recreate --no-deps receiver`)
 
 ### El GW1100 aparece offline pero tiene WiFi
 

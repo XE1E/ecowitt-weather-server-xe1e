@@ -42,9 +42,7 @@ def detect_incoming_rain(stations: List[Dict[str, Any]], wind_dir_deg: Optional[
 
     Única fuente de verdad para esto -- la usan tanto `/api/nearby-stations`
     (expone el resultado para NearbyStationsCard.tsx, que ya NO lo calcula
-    por su cuenta) como el watchdog en segundo plano de main.py (para poder
-    evaluar "qué tanto dispara" sin depender de que el dashboard esté
-    abierto). Con viento en calma no hay nada que "traiga" la lluvia, y el
+    por su cuenta) como `get_own_forecast` en main.py. Con viento en calma no hay nada que "traiga" la lluvia, y el
     viento superficial no siempre coincide con el movimiento real de una
     célula convectiva -- por eso es una pista, no una certeza.
     """

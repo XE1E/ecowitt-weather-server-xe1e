@@ -1914,9 +1914,8 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
             40 a 34: medido sobre la fuente, el caso peor con unidad ("-5.2 °C" o
             "45.3 °C") mide ~90 px a 34, así que tres suman 270 en los 311 útiles y
             quedan ~41 px para las separaciones. A 40 sumaban 357 y no cabían.
-            HUMIDEX aparece SÓLO con 20 °C o más: es un índice de bochorno y el receiver
-            no lo calcula por debajo de eso (ver calculate_derived_values), así que de
-            madrugada marcará "--" y eso es correcto, no una avería. */}
+            HUMIDEX se calcula a cualquier temperatura desde 2026-09-11 (ver
+            calculate_derived_values); con frío sale cerca de la temperatura, no "--". */}
         {/* TRES CELDAS, una por derivado, en vez de una sola con tres columnas. El motivo es
             el humidex: al ser un ÍNDICE le toca su riel de escala, como a UV y al IMECA, y un
             riel dentro de una celda compartida se leería como si midiera las tres cifras.

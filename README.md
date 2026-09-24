@@ -29,7 +29,7 @@ La app principal vive en la raíz del sitio, `/` (instalable como PWA); la vista
 
 | Página | Qué muestra |
 |--------|-------------|
-| **Inicio** | Condiciones actuales, viento (brújula-instrumento que gira a la rosa de vientos), presión con tendencia, pronóstico y **comparativa Open-Meteo vs SMN**, precipitación, UV/radiación solar, sol y luna, **METAR** del aeropuerto, calidad del aire, IMECA, sismos, cámara del exterior, interior y sensores adicionales. Incluye los **índices derivados**: punto de rocío, sensación térmica y **humidex** (con su nivel en palabras) |
+| **Inicio** | Condiciones actuales, viento (brújula-instrumento que gira a la rosa de vientos), presión con tendencia, pronóstico y **comparativa Open-Meteo vs SMN**, precipitación, UV/radiación solar, sol y luna, **METAR** del aeropuerto, calidad del aire, IMECA, sismos, cámara del exterior, **estaciones vecinas** ("En tu zona", Xweather + Netatmo, como dato informativo), interior y sensores adicionales. Incluye los **índices derivados**: punto de rocío, sensación térmica y **humidex** (con su nivel en palabras) |
 | **Mi tablero** | Tablero personalizable: elige qué tarjetas ver y **arrástralas para reordenarlas** a tu gusto (se guarda por dispositivo) |
 | **Pronóstico** | Por día y por hora, con **selector de fuente**: **Open-Meteo** (descripciones en lenguaje natural) y **SMN oficial** (CONAGUA) con **buscador de cualquier municipio de México** |
 | **Historia** | Archivo de la estación con granularidad Día/Mes/Año, tabla diaria y gráficas interactivas (incl. tasa de lluvia), **exportable a CSV** |
@@ -37,20 +37,21 @@ La app principal vive en la raíz del sitio, `/` (instalable como PWA); la vista
 | **Tablas** | Resumen tabular de todas las variables (actual, mín/máx del día), con selector entre **estación principal y remota** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día", **exportable a CSV** |
 | **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
-| **Cámara** | Vista del exterior de la estación hacia el sureste: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos |
+| **Cámara** | Vista del exterior de la estación hacia el sureste: foto cada 5 min empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos. **Precisión del pronóstico**: califica cada fuente (cámara, Open-Meteo, WeatherAPI, SMN, pronóstico propio) contra lo que midió el pluviómetro, ahora y a 3 h, por hora del día y con tendencia |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **Índice de Calidad del Aire de la CDMX** estimado — norma NADF-009-AIRE-2017, con promedios móviles reales por contaminante (24 h para SO₂/PM10/PM2.5, 8 h para CO); se le sigue diciendo **IMECA** por costumbre, aunque la norma vigente ya no usa ese nombre — con medidor y pronóstico |
 | **Aeronáutica** | METAR y TAF decodificados + perfil atmosférico visual, para aeropuertos de México |
+| **Sismos** | Sismos recientes a ≤ 800 km de la estación (SSN, con respaldo USGS); se abre desde la tarjeta de sismos del inicio |
 | **Estación remota** | Segunda estación (p. ej. un Ecowitt **GW1100**) que envía al mismo servidor; sus datos se guardan **por separado** y se ven en su propia página, solo lectura: condiciones, tendencias, estadística e histórico |
 | **Consola** | Réplica en pantalla de la consola física Ecowitt (rejilla 3×5) — el mismo componente que se pinta en el kiosco |
 | **Instrumentos** | 12 medidores analógicos (bisel metálico, aguja, pantalla LCD) con el mismo dato que el resto del sitio: temperatura, punto de rocío, humedad, viento, dirección, rosa de vientos, presión, lluvia, tasa de lluvia, UV, radiación solar y base de nubes |
 | **Widget** | Generador de un `<iframe>` con las condiciones actuales para insertar en otra web |
 
-Además: **panel de administración** (`/admin`, usuario/contraseña) con **wizard de configuración inicial** (5 pasos: bienvenida, estación, alertas, publicación, resumen) y 8 páginas: Dashboard (indicador en tiempo real, historial de alertas, acciones rápidas), Estaciones (agregar/eliminar secundarias, configuración individual con servicios por estación), Alertas (umbrales), Calibración (offsets/multiplicadores), Publicación (redes públicas), Notificaciones (Telegram y correo SMTP, con envío de prueba y selector de categorías por canal), Integraciones (MQTT/HA con estado de conexión, test y reconexión en caliente; WAQI), y Sistema (QC, visor de logs, **respaldos a Cloudflare R2** con estado por categoría, credenciales, retención y vigilancia opcional de la cuota del tier gratis). Todo editable en caliente sin reiniciar. **Tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/`.
+Además: **panel de administración** (`/admin`, usuario/contraseña) con **wizard de configuración inicial** (5 pasos: bienvenida, estación, alertas, publicación, resumen) y 10 páginas: Dashboard (indicador en tiempo real, historial de alertas, acciones rápidas), Estaciones (agregar/eliminar secundarias, configuración individual con servicios por estación), Alertas (umbrales), Calibración (offsets/multiplicadores), Publicación (redes públicas), Notificaciones (Telegram y correo SMTP, con envío de prueba y selector de categorías por canal), Integraciones (MQTT/HA con estado de conexión, test y reconexión en caliente; WAQI, Xweather y Netatmo), Cámara (captura, análisis del cielo con IA y retención), Sistema (QC, visor de logs, **respaldos a Cloudflare R2** con estado por categoría, credenciales, retención y vigilancia opcional de la cuota del tier gratis) y Actualizaciones (commits pendientes respecto al repositorio). Todo editable en caliente sin reiniciar. **Tema claro/oscuro**, **unidades** métricas/imperiales, y una **Vista clásica** simple en `/basica`.
 
 **Alertas** configurables (temperatura, viento, ráfaga, lluvia, presión, humedad, UV/radiación, batería baja, sensor perdido, **sensor atascado** (mismo valor exacto muchas lecturas seguidas), estación caída, calidad del aire, **sismos**, **visuales** —tormentas, precipitación, visibilidad— e **infraestructura** —InfluxDB sin aceptar escrituras, respaldo a R2 desactualizado, contenedor Docker "unhealthy"—) con notificación por **Telegram** y por **correo (SMTP)**. Cada categoría de alerta se **enruta por canal**: puedes mandar unas a Telegram, otras al correo, o a ambos. Además, un **QC estadístico opcional** (desactivado por omisión) compara cada lectura contra el historial de la propia estación y avisa si un valor se sostiene estadísticamente raro.
 
-**Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, AWEKAS, WOW-BE, Weathercloud y **openSenseMap** (red ciudadana de datos ambientales).
+**Publicación a redes públicas**: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, AWEKAS, WOW-BE, Weathercloud y **openSenseMap** (red ciudadana de datos ambientales). La foto de la cámara, con un cintillo de datos de la estación, se publica también como **webcam** en AWEKAS, Weathercloud y Windy.
 
 ---
 
@@ -135,7 +136,7 @@ WS69 (exterior)   WN31 (interior)          Cámara C325WB (casa)
 
 ## Fuentes de datos externas
 
-Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **SMN / CONAGUA** (pronóstico oficial por municipio, cualquier municipio de México), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local).
+Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **WeatherAPI** (pronóstico de respaldo), **SMN / CONAGUA** (pronóstico oficial por municipio, cualquier municipio de México), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local), **Xweather** y **Netatmo** (estaciones vecinas) y **Gemini/Claude** (análisis de la foto del cielo).
 
 ---
 
@@ -175,9 +176,10 @@ docker compose --profile grafana up -d     # credenciales: GRAFANA_ADMIN_* del .
 
 ```ts
 export const LOCATION = {
-  name: 'Ciudad de México',
-  latitude: 19.4326,
-  longitude: -99.1332,
+  name: 'CDMX',
+  label: 'Benito Juárez, Ciudad de México, México',
+  latitude: 19.380359,
+  longitude: -99.174564,
 }
 ```
 
@@ -212,6 +214,9 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/history` · `/api/stats/daily` | Histórico y estadísticas del día |
 | GET | `/api/climate/*` | Resúmenes diarios, récords y reporte NOAA |
 | GET | `/api/forecast` · `/api/almanac` | Pronóstico y almanaque |
+| GET | `/api/forecast/own` | "Nuestro pronóstico": lluvia ahora / próximas horas a partir de pluviómetro, cámara y vecinas (sin modelos externos) |
+| GET | `/api/forecast/verification?days=30` | Qué fuente acierta: cada pronóstico calificado contra el pluviómetro y la cámara |
+| GET | `/api/nearby-stations` | Estaciones vecinas (Xweather + Netatmo), dato informativo |
 | GET | `/api/smn` · `/api/smn/municipios` | Pronóstico oficial SMN por municipio (4 días + 48 h) |
 | GET | `/api/airquality` · `/api/airquality/imeca` | AQI e IMECA |
 | GET | `/api/metar` · `/api/taf` · `/api/satellite` | METAR/TAF y satélite |
@@ -219,6 +224,7 @@ Alternativa **MQTT Discovery**: si corres un broker accesible por HA, el receive
 | GET | `/api/epaper/forecast.json` | Dato con forma WeatherAPI `forecast.json` para el display e-paper LilyGo |
 | GET | `/api/display.jpg?page=<slug>` | Pantalla del kiosco ya renderizada como JPEG (+ cabecera `X-Kiosk-Nav`) |
 | POST/GET | `/api/camera/upload` · `/api/camera/latest.jpg` | Sube y sirve la foto del exterior (token propio `CAMERA_UPLOAD_TOKEN`) |
+| GET | `/api/camera/webcam.jpg` · `/api/camera/webcam-wide.jpg` | Foto + cintillo de datos para redes de webcams: 4:3 (AWEKAS, Weathercloud) y 16:9 (Windy) |
 | GET | `/api/camera/analysis` · `/api/camera/analysis/validation` | Análisis del cielo con IA + validación vs pronóstico |
 | GET | `/api/camera/analysis/history` | Histórico diario de análisis (lista días o `?date=YYYY-MM-DD`) |
 | GET | `/api/camera/timelapse/days` · `/api/camera/timelapse/<fecha>.mp4` | Timelapse diario: qué días hay y el vídeo del día (MP4, montado con ffmpeg) |
@@ -250,7 +256,7 @@ Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 ├── 3d-prints/                  # STL del escudo de radiación
 ├── docs/                       # Documentación (y docs/archivo/ = estudios)
 ├── caddy/ · uptime-worker/     # Reverse proxy y monitor de disponibilidad
-└── scripts/                    # Utilidades (simulador, sonda WS2910, captura de cámara)
+└── scripts/                    # Utilidades (simulador, sonda WS2910, captura de cámara, respaldos a R2)
 ```
 
 ---

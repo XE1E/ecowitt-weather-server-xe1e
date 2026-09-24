@@ -63,13 +63,15 @@ Ambas opciones vienen **desactivadas por defecto** (el endpoint acepta cualquier
 ## Estación principal vs. secundarias (PASSKEY)
 
 - Cada dispositivo Ecowitt envía un campo **`PASSKEY`** (huella del dispositivo).
-- La **estación principal** es cualquier PASSKEY **no mapeado** (sin tag; sus datos
-  alimentan alertas, publicación, MQTT).
-- Las **estaciones secundarias** (p. ej. un GW1100) se registran mapeando su
-  PASSKEY → nombre en **Admin → Estaciones**. Solo registran datos (no disparan
-  alertas ni publicación).
-- El mapeo se guarda en `settings.json` (`station_passkeys`) y en la variable
-  `secondary_station_map` (`.env`, formato `PASSKEY:nombre` separado por comas).
+- La **estación principal** (sin tag; sus datos alimentan alertas, publicación,
+  MQTT) es la del PASSKEY registrado en `primary_passkey` (whitelist). Con la
+  whitelist activa, un PASSKEY no registrado se rechaza con **403**; si está vacía,
+  cualquier PASSKEY no mapeado se toma como principal.
+- Las **estaciones secundarias** (p. ej. un GW1100) se registran por MAC en
+  **Admin → Estaciones → (estación) → Registro** (el servidor deriva el PASSKEY =
+  MD5 de la MAC). Solo registran datos (no disparan alertas ni publicación).
+- El mapeo se guarda en `settings.json` (`secondary_stations`) o en la variable
+  `SECONDARY_STATIONS` del `.env` (formato `PASSKEY:nombre` separado por comas).
 
 ---
 

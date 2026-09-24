@@ -79,7 +79,7 @@ interface StationData {
   compare: Comparison | null
   localForecast: LocalForecast | null
   consensus: ConsensusForecast | null
-  // "Nuestro pronóstico" (estación + cámara + presión + vecinas, ver
+  // "Nuestro pronóstico" (estación + cámara + vecinas, ver
   // forecaster.own_forecast) -- manda sobre `consensus`/Open-Meteo cuando
   // hay señal propia. Ver docs de PrecipitationCard.tsx y ConsoleReplica.
   ownForecast: OwnForecast | null
@@ -147,7 +147,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(i)
   }, [])
 
-  // "Nuestro pronóstico" -- estación + cámara + presión + vecinas (ver
+  // "Nuestro pronóstico" -- estación + cámara + vecinas (ver
   // forecaster.own_forecast). Reemplaza a consensus.current.storm_approaching
   // como fuente de la señal de tormenta en ConsoleReplica: NO depende de
   // Open-Meteo/WeatherAPI, es la voz propia de la estación.

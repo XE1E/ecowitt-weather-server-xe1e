@@ -89,7 +89,9 @@ Servicios resultantes:
 | dashboard   | 8080 (host) → 80 | **pública** | entrada única; sirve UI + proxy `/api` y `/data/report` |
 | receiver    | interno (8080) | privada | recibe el push, escribe a InfluxDB |
 | influxdb    | interno (8086) | privada | base de datos de series temporales |
+| renderer    | interno (8090) | privada | Chromium headless: imagen del kiosco ESP32 (`/api/display.jpg`) |
 | grafana     | (perfil `grafana`) | privada | opcional: `docker compose --profile grafana up -d` |
+| caddy       | 80/443 (perfil `caddy`) | **pública** | HTTPS del dominio, ver [DOMINIO-HTTPS.md](DOMINIO-HTTPS.md) |
 
 > El puerto público se puede cambiar con `WEB_PORT` en `.env` (por defecto 8080).
 > Para acceder al admin de InfluxDB o a Grafana, usa un túnel SSH, p. ej.
@@ -127,8 +129,9 @@ En la app **WS View Plus** → Weather Services → Customized:
 
 ```bash
 docker compose logs -f receiver        # ver datos entrando
-# Actualizar tras git pull (hornea el commit actual para /admin/updates):
-GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build
+# Actualizar (flujo real: commit+push en local; luego en el VPS), servicio por servicio.
+# GIT_SHA hornea el commit actual para /admin/updates:
+cd ~/ecowitt-weather-server-xe1e && git pull && GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate --no-deps <servicio>
 docker compose down                    # detener (conserva volúmenes/datos)
 ```
 
@@ -138,10 +141,10 @@ docker compose down                    # detener (conserva volúmenes/datos)
 > la recreación —y ante la duda, reconstruye sin caché:
 >
 > ```bash
-> docker compose up -d --build --force-recreate receiver dashboard
+> GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate --no-deps receiver
 > # o, si sospechas caché vieja:
-> docker compose build --no-cache receiver dashboard
-> docker compose up -d --force-recreate receiver dashboard
+> GIT_SHA=$(git rev-parse HEAD) docker compose build --no-cache receiver
+> GIT_SHA=$(git rev-parse HEAD) docker compose up -d --force-recreate --no-deps receiver
 > ```
 >
 > Verifica que el contenedor trae el código esperado, p. ej.:
@@ -153,7 +156,7 @@ docker compose down                    # detener (conserva volúmenes/datos)
 > siguiente POST de la WS2910 (1-2 min). Se repuebla solo, pero es un susto evitable:
 >
 > ```bash
-> docker compose up -d --build --force-recreate --no-deps dashboard
+> GIT_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate --no-deps dashboard
 > ```
 
 > ⚠️ **Cambios VISUALES del kiosco: reinicia el `renderer` después.** Cada pantalla
@@ -254,8 +257,9 @@ sabe mandar Telegram/correo). Requiere un token propio, mismo patrón que
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Pon el mismo valor en **dos lugares**: `.env` → `DOCKER_HEALTH_API_TOKEN=...` y
-Admin → Sistema → *Token de API de salud de Docker*. Luego prográmalo en cron
+Ponlo en `.env` → `DOCKER_HEALTH_API_TOKEN=...`: de ahí lo leen tanto el script
+como el receiver (vía `env_file`; recrea el `receiver` para que lo tome). El panel
+de Admin no tiene campo para este token. Luego prográmalo en cron
 (cada 5 min alcanza, ya que el propio healthcheck ya espera `retries` intentos
 antes de marcar unhealthy):
 
@@ -296,7 +300,7 @@ docker compose exec influxdb influx delete --bucket ecowitt \
   Resumen: DNS A record → VPS, abrir 80/443 en Oracle, y levantar con el perfil
   Caddy (`docker compose --profile caddy up -d`). El WS2910 sigue en HTTP por IP:8080.
 - **Home Assistant (remoto):** lee la API REST pública, p. ej.
-  `http://163.192.147.208:8080/api/current` (ver Arquitectura B en ESTUDIO_VIABILIDAD.md).
+  `http://163.192.147.208:8080/api/current` (ver Arquitectura B en [archivo/ESTUDIO_VIABILIDAD.md](archivo/ESTUDIO_VIABILIDAD.md)).
 - **Volver a WeatherNode:** ya no es un interruptor. Su aplicación se borró el
   2026-08-18 (ver §1), así que habría que reinstalarla antes de reactivar Apache
   (`sudo systemctl enable --now apache2`, que sigue instalado y ocupa ~6 MB).

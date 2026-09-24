@@ -139,7 +139,7 @@ disparar.
 # Descargar un backup de InfluxDB desde R2 (con rclone) y extraer:
 tar -xzf influx-YYYYMMDD-HHMMSS.tar.gz
 # Copiar al contenedor y restaurar:
-docker compose cp influx-YYYYMMDD-HHMMSS ecowitt-influxdb:/tmp/restore
+docker compose cp influx-YYYYMMDD-HHMMSS influxdb:/tmp/restore
 docker compose exec -T influxdb influx restore /tmp/restore -t "$INFLUXDB_TOKEN" --full
 ```
 

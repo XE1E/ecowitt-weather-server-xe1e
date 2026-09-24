@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Helpers compartidos por scripts/backup-influx.sh y scripts/backup-camera-*.sh.
-# Ver docs/internal/PLAN-RESPALDO-R2.md y docs/backups-r2.md.
+# Ver docs/archivo/PLAN-RESPALDO-R2.md y docs/backups-r2.md.
 #
 # Uso:  source "$(dirname "$0")/lib-backup.sh"
 #
