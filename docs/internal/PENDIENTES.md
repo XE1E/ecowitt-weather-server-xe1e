@@ -376,6 +376,13 @@ y se ve en `/radar` con zoom a la CDMX, anillos cada 5 km y el punto de la estac
 (calibración de pixeles en `SacmexRadarCard.tsx`: centro (254, 252) px, ~3.3 px/km).
 
 Pedido del usuario, revisar si es posible y útil:
+- [~] **Leer dBZ de los colores — PRIMERA VERSIÓN 2026-09-24** (`services/radar_decode.py`,
+      revisar a ojo con `GET /api/radar/sacmex/decoded/<id>`). Los ecos van en color
+      pleno y la leyenda al 40 % sobre blanco (de ahí sale la paleta); se resta un fondo
+      (mediana de cuadros repartidos en el historial) porque 35-45 dBZ tienen el color de
+      las carreteras, y una apertura de 3 px quita el eco disperso. En la madrugada del
+      24 (sin lluvia, arcos de clutter) dejó 0-27 pixeles de ~2,600. **Falta: afinar
+      umbrales con los cuadros de una tarde de lluvia** (BG_DIFF, PAL_DIST, SPECKLE_PX).
 - [ ] **Movimiento de las nubes a partir del radar.** Estimar dirección y velocidad
       de los ecos comparando cuadros consecutivos (correlación de fase / flujo óptico
       sobre la máscara de dBZ ≥ ~20). Con eso se puede extrapolar: "hay lluvia de

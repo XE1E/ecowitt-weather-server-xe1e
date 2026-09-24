@@ -49,6 +49,7 @@ from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
 from .services import satellite
 from .services import sacmex_radar
+from .services import radar_decode
 from .services.windrose import compute_wind_rose
 from .services import sky_validation
 from .services import smn
@@ -3794,6 +3795,39 @@ async def get_sacmex_radar_archive():
     return {"enabled": settings.radar_archive_enabled,
             "keep_days": settings.radar_archive_days,
             **sacmex_radar.archive_summary(settings.radar_archive_dir)}
+
+
+_decoded_png: Dict[str, bytes] = {}
+
+
+def _render_decoded(data: bytes) -> Optional[bytes]:
+    bg = radar_decode.cached_background(settings.radar_archive_dir)
+    if bg is None:
+        return None
+    import io
+    buf = io.BytesIO()
+    radar_decode.render(radar_decode.decode(radar_decode.to_array(data), bg)).save(buf, "PNG", optimize=True)
+    return buf.getvalue()
+
+
+@app.get("/api/radar/sacmex/decoded/{frame_id}")
+async def get_sacmex_radar_decoded(frame_id: str):
+    """Los ecos que el decodificador (services/radar_decode.py) lee en un cuadro,
+    en PNG transparente del mismo tamaño, para revisarlo encima del original.
+    503 mientras el historial no tenga cuadros suficientes para sacar el fondo."""
+    data = sacmex_radar.get_image(frame_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Cuadro de radar no disponible")
+    png = _decoded_png.get(frame_id)
+    if png is None:
+        png = await asyncio.to_thread(_render_decoded, data)
+        if png is None:
+            raise HTTPException(status_code=503, detail="Aún no hay historial suficiente para el fondo")
+        if len(_decoded_png) >= 24:
+            _decoded_png.pop(next(iter(_decoded_png)))
+        _decoded_png[frame_id] = png
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=3600"})
 
 
 async def radar_archive_task():
