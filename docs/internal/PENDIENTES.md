@@ -436,7 +436,7 @@ Usos (fase 5):
       y bajar la retención de los JPG.
 - [ ] **¿Qué tan fiable es el servicio del SACMEX?** Primero medirlo antes de montar
       nada encima (aviso, verificación). Ya el 24-09 dejó de publicar de las 04:53 a
-      ~las 10:00 (unas 5 h, de madrugada). Con el historial sale sin pedir nada nuevo (la hora va en el nombre de
+      las 09:49 (casi 5 h: de madrugada a media mañana). Con el historial sale sin pedir nada nuevo (la hora va en el nombre de
       cada cuadro): % de cuadros recibidos contra los esperados (~288/día), huecos más
       largos, a qué hora se cae, y si falla justo en tardes de tormenta (lo peor para
       nosotros). Se podría agregar a `GET /api/radar/sacmex/archive` y a la página de
