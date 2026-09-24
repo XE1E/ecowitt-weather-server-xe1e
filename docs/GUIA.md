@@ -441,7 +441,7 @@ así que sus periodos largos saldrían vacíos. Esas celdas llevan a la página 
 #### La cámara del exterior
 
 La cámara (Tapo C325WB) vive **detrás del NAT de casa** y el servidor en el VPS, así
-que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP cada 5 min y
+que el VPS no puede ir a buscarla: algo en casa saca un JPEG del RTSP (al ritmo que se fije en Admin → Cámara) y
 lo **empuja**. Ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`.
 
 ##### Arquitectura del flujo de captura
@@ -503,14 +503,20 @@ lo **empuja**. Ver `docs/archivo/PLAN-CAMARA-EXTERIOR.md`.
 
 ##### El script de captura (`scripts/captura-camara.sh`)
 
-Corre en una Raspberry Pi (o cualquier Linux en la red local) cada 5 min vía timer
-de systemd. Por qué es necesario: la cámara solo habla RTSP/ONVIF dentro de la LAN
+Corre en una Raspberry Pi (o cualquier Linux en la red local). El timer de systemd
+(`scripts/systemd/camara-clima.timer`) lo dispara **cada minuto**, pero quien decide si
+captura es el **panel**: el script lee `GET /api/camera/capture-config` (on/off, franja
+horaria e intervalo, en Admin → Cámara) y sale sin hacer nada si está apagada, fuera de
+horario o si aún no pasó el intervalo desde la última (`.ultima-captura`). Si el servidor
+no responde, captura igual (*fail-open*). Si la cámara cambia de IP, la **relocaliza por su
+MAC** (`CAMERA_MAC`) barriendo la red local y actualiza `CAMERA_IP` en `camara.env`. Por qué es necesario: la cámara solo habla RTSP/ONVIF dentro de la LAN
 (FAQ de TP-Link), el servidor está en un VPS externo, y el router no tiene reenvío
 de puertos. Alguien **dentro de casa** tiene que sacar la foto y **empujarla**.
 
 **Configuración** (`camara.env`):
 ```bash
-CAMERA_IP=192.168.1.100       # IP de la Tapo en la LAN
+CAMERA_IP=192.168.1.100       # IP de la Tapo en la LAN (caché: se actualiza sola)
+CAMERA_MAC=aa:bb:cc:dd:ee:ff  # Para relocalizarla si cambia de IP (opcional)
 CAMERA_USER=admin             # Credenciales del stream RTSP
 CAMERA_PASS=secreto
 CAMERA_STREAM=stream1         # stream1=alta res, stream2=baja

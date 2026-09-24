@@ -104,6 +104,135 @@ capturar() {
         -f image2 -y "$TMP" 2>"$ERR"
 }
 
+# ── Localizar la cámara por su MAC ───────────────────────────────────────────
+#
+# La Tapo NO permite fijar una IP estática desde la app --no está escondido en un
+# submenú, sencillamente no existe la opción-- y el router del sitio no da garantías
+# de reserva DHCP. Así que la dirección puede cambiar sola, sobre todo al mover la
+# cámara de sitio buscando cobertura. La MAC, en cambio, no cambia nunca.
+#
+# Por eso CAMERA_IP funciona aquí como CACHÉ de la última dirección buena: primero
+# se prueba esa --caso normal, coste cero-- y sólo si no responde se barre la red.
+# Cuando se encuentra, se reescribe la caché para que la siguiente vez vaya directa.
+#
+# Comprobar la MAC no es paranoia: en esta LAN hay DOS cámaras Tapo. Si el DHCP les
+# intercambia las direcciones y no lo comprobáramos, estaríamos subiendo tan
+# tranquilos la foto de la cámara equivocada.
+#
+# Si CAMERA_MAC está vacío no se ejecuta nada de esto y se usa CAMERA_IP tal cual,
+# que es como se comportaba el script antes.
+
+CAMERA_MAC="${CAMERA_MAC:-}"
+
+# MAC del vecino que tenga esa IP. El ping previo fuerza la resolución ARP: sin él
+# la entrada puede no existir todavía o estar en estado STALE.
+mac_de() {
+    ping -c1 -W1 "$1" >/dev/null 2>&1
+    ip neigh show "$1" 2>/dev/null | awk '{print tolower($5)}' | head -1
+}
+
+# Prefijo /24 de la interfaz por la que se sale hacia la cámara. Se calcula al vuelo
+# en vez de fijarlo, por lo mismo que la ruta del VPS: aquí no se da nada por hecho
+# sobre la red de una máquina que además es un nodo IRLP en producción.
+prefijo_lan() {
+    local dev addr
+    dev=$(ip route get "$1" 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1)
+    case "$dev" in
+        ''|tun*|ppp*|wg*)
+            dev=$(ip route show default 2>/dev/null | grep -vE 'dev (tun|ppp|wg)' \
+                  | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1) ;;
+    esac
+    [ -n "$dev" ] || return 1
+    addr=$(ip -o -4 addr show dev "$dev" 2>/dev/null | sed -n 's#.*inet \([0-9.]*\)/.*#\1#p' | head -1)
+    [ -n "$addr" ] || return 1
+    echo "${addr%.*}"
+}
+
+# Barrido por tandas de 24. Lanzar 254 pings a la vez en una Raspberry Pi que está
+# decodificando audio de un repetidor se nota; así el pico queda repartido. Sólo se
+# llega aquí cuando la caché ha fallado, que es raro.
+buscar_por_mac() {
+    local mac="$1" base i j encontrada
+    base=$(prefijo_lan "$CAMERA_IP") || return 1
+    i=1
+    while [ "$i" -le 254 ]; do
+        j=0
+        while [ "$j" -lt 24 ] && [ "$i" -le 254 ]; do
+            ping -c1 -W1 "$base.$i" >/dev/null 2>&1 &
+            i=$((i + 1)); j=$((j + 1))
+        done
+        wait
+        encontrada=$(ip neigh show 2>/dev/null \
+                     | awk -v m="$mac" 'tolower($5) == m { print $1; exit }')
+        [ -n "$encontrada" ] && { echo "$encontrada"; return 0; }
+    done
+    return 1
+}
+
+resolver_camara() {
+    local mac nueva
+    # "CAMBIAR" es el marcador de "sin rellenar": cuenta como vacio, o el script
+    # se pasaria 12 s barriendo la red buscando una MAC que no existe.
+    case "$CAMERA_MAC" in ""|CAMBIAR|cambiar) return 0 ;; esac
+    mac=$(echo "$CAMERA_MAC" | tr 'A-Z' 'a-z')
+
+    [ "$(mac_de "$CAMERA_IP")" = "$mac" ] && return 0   # la caché sigue valiendo
+
+    log "la camara no responde en $CAMERA_IP; la busco por su MAC $mac"
+    nueva=$(buscar_por_mac "$mac") || {
+        log "no encuentro la MAC $mac en la red; sigo con $CAMERA_IP"
+        return 1
+    }
+    log "camara localizada en $nueva (antes $CAMERA_IP): actualizo la cache"
+    CAMERA_IP="$nueva"
+    sed -i "s#^CAMERA_IP=.*#CAMERA_IP=$nueva#" "$ENV_FILE" 2>/dev/null \
+        || log "aviso: no pude guardar la nueva IP en $ENV_FILE"
+}
+
+# Sólo cuando se va a capturar de verdad: con -f no hay cámara que buscar, y sin
+# credenciales el script se va a salir limpiamente unas líneas más abajo.
+# ── ¿Toca capturar AHORA? Lo decide el PANEL, no el timer ─────────────
+# El timer corre seguido, pero quien manda es /api/camera/capture-config: on/off, franja
+# horaria (de noche la cámara sólo ve negro y gasta cuota) e intervalo entre capturas. Si
+# el servidor no responde, se captura igual (fail-open): un hipo del server no debe cegar
+# la cámara. Con -f (archivo dado) no hay nada que decidir.
+decidir_captura() {
+    [ -n "$ARCHIVO" ] && return 0
+    asegurar_ruta
+    local host cfg enabled ival h0 h1 hora last ahora
+    host=$(echo "$API_URL" | sed -E 's#^https?://##; s#/.*##')
+    local extra=()
+    [ -n "$VPS_IP" ] && [ -n "$TLS_PIN" ] && extra=(--resolve "${host}:443:${VPS_IP}" --pinnedpubkey "$TLS_PIN" -k)
+    cfg=$(curl -s -m 10 "${extra[@]}" "${API_URL}/api/camera/capture-config" 2>/dev/null)
+    [ -z "$cfg" ] && { log "no pude leer capture-config; capturo igual (fail-open)"; return 0; }
+    enabled=$(printf '%s' "$cfg" | python3 -c "import sys,json;print(json.load(sys.stdin).get('enabled'))" 2>/dev/null)
+    ival=$(printf '%s' "$cfg" | python3 -c "import sys,json;print(int(json.load(sys.stdin).get('interval_min') or 0))" 2>/dev/null)
+    h0=$(printf '%s' "$cfg" | python3 -c "import sys,json;print(int(json.load(sys.stdin).get('hour_start') or 0))" 2>/dev/null)
+    h1=$(printf '%s' "$cfg" | python3 -c "import sys,json;print(int(json.load(sys.stdin).get('hour_end') or 0))" 2>/dev/null)
+
+    if [ "$enabled" = "False" ]; then log "captura DESACTIVADA en el panel; no captura"; exit 0; fi
+
+    hora=$(date +%-H)
+    if [ -n "$h0" ] && [ -n "$h1" ] && [ "$h0" != "$h1" ]; then
+        if [ "$h0" -lt "$h1" ]; then
+            if [ "$hora" -lt "$h0" ] || [ "$hora" -ge "$h1" ]; then log "fuera de horario ($h0-$h1 h); no captura"; exit 0; fi
+        else
+            if [ "$hora" -ge "$h1" ] && [ "$hora" -lt "$h0" ]; then log "fuera de horario ($h0-$h1 h); no captura"; exit 0; fi
+        fi
+    fi
+
+    if [ "${ival:-0}" -gt 0 ] && [ -f "$DIR/.ultima-captura" ]; then
+        last=$(cat "$DIR/.ultima-captura" 2>/dev/null || echo 0)
+        ahora=$(date +%s)
+        [ $(( (ahora - last) / 60 )) -lt "$ival" ] && exit 0
+    fi
+}
+decidir_captura
+
+if [ -z "$ARCHIVO" ] && [ "$CAMERA_USER" != "CAMBIAR" ] && [ "$CAMERA_PASS" != "CAMBIAR" ]; then
+    resolver_camara || true
+fi
+
 if [ -n "$ARCHIVO" ]; then
     [ -r "$ARCHIVO" ] || { echo "No existe $ARCHIVO" >&2; exit 1; }
     cp "$ARCHIVO" "$TMP"
@@ -163,6 +292,7 @@ CODE=$(curl -s -o /tmp/camara-resp.$$ -w '%{http_code}' \
 RESP=$(cat /tmp/camara-resp.$$ 2>/dev/null); rm -f /tmp/camara-resp.$$
 
 if [ "$CODE" = "200" ]; then
+    date +%s > "$DIR/.ultima-captura" 2>/dev/null || true
     log "subida OK: $((BYTES / 1024)) KB"
     exit 0
 fi
