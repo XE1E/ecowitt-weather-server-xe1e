@@ -52,6 +52,12 @@ const EST = toPx(LOCATION.latitude, LOCATION.longitude)
 const BORDE_INF = toPx(18.9186, -99.2342).y + 6
 const MEDIO = BORDE_INF - EST.y
 const VIEW = { x: EST.x - MEDIO, y: EST.y - MEDIO, s: 2 * MEDIO }
+// Logo de SEGIAGUA (crédito de la imagen): el recorte lo deja fuera, así que se
+// toma del MISMO cuadro -- el original, no una copia -- y se pone en la esquina
+// superior izquierda, sobre el mismo gris claro del mapa (~#ececec, muestreado)
+// para que no se note el "injerto". Caja en pixeles de la imagen original.
+const LOGO = { x: 12, y: 17, w: 74, h: 69 }
+const LOGO_ESCALA = 0.75
 const RING_KM = 5
 const RINGS = Array.from({ length: Math.floor(MEDIO / PX_PER_KM / RING_KM) }, (_, i) => (i + 1) * RING_KM)
 
@@ -166,6 +172,15 @@ export function SacmexRadarCard() {
               </g>
             )
           })}
+          <g>
+            <rect x={VIEW.x + 3} y={VIEW.y + 3} width={LOGO.w * LOGO_ESCALA + 4} height={LOGO.h * LOGO_ESCALA + 4}
+              rx={6} fill="#ececec" fillOpacity={0.95} />
+            <svg x={VIEW.x + 5} y={VIEW.y + 5} width={LOGO.w * LOGO_ESCALA} height={LOGO.h * LOGO_ESCALA}
+              viewBox={`${LOGO.x} ${LOGO.y} ${LOGO.w} ${LOGO.h}`}>
+              <image href={urls[Math.min(idx, urls.length - 1)]} x={0} y={0} width={IMG_W} height={IMG_H} />
+            </svg>
+            <title>Imagen: SEGIAGUA / SACMEX, Gobierno de la Ciudad de México</title>
+          </g>
           <circle cx={EST.x} cy={EST.y} r={3.2} fill="#dc2626" stroke="#ffffff" strokeWidth={1.3}>
             <title>Estación XE1E</title>
           </circle>
