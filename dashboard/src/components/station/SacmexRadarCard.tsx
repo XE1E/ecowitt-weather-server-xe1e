@@ -38,23 +38,38 @@ const IMG_H = 512
 const RADAR = { lat: 19.342639, lon: -99.089472, px: 254, py: 252 }
 const PX_PER_KM = 3.3
 
-function stationPos() {
-  const kmX = (LOCATION.longitude - RADAR.lon) * 111.32 * Math.cos((RADAR.lat * Math.PI) / 180)
-  const kmY = (LOCATION.latitude - RADAR.lat) * 110.57
-  return {
-    left: `${((RADAR.px + kmX * PX_PER_KM) / IMG_W) * 100}%`,
-    top: `${((RADAR.py - kmY * PX_PER_KM) / IMG_H) * 100}%`,
-  }
+/** Pixel (en la imagen original) de una coordenada. */
+function toPx(lat: number, lon: number) {
+  const kmX = (lon - RADAR.lon) * 111.32 * Math.cos((RADAR.lat * Math.PI) / 180)
+  const kmY = (lat - RADAR.lat) * 110.57
+  return { x: RADAR.px + kmX * PX_PER_KM, y: RADAR.py - kmY * PX_PER_KM }
 }
+
+// Zoom a la CDMX: recorte cuadrado CENTRADO EN LA ESTACIÓN cuyo borde inferior
+// cae justo debajo de Cuernavaca (18.9186 N, 99.2342 W). Deja fuera el panel en
+// inglés de la derecha (la leyenda la ponemos nosotros, en español, abajo).
+const EST = toPx(LOCATION.latitude, LOCATION.longitude)
+const BORDE_INF = toPx(18.9186, -99.2342).y + 6
+const MEDIO = BORDE_INF - EST.y
+const VIEW = { x: EST.x - MEDIO, y: EST.y - MEDIO, s: 2 * MEDIO }
+const RING_KM = 5
+const RINGS = Array.from({ length: Math.floor(MEDIO / PX_PER_KM / RING_KM) }, (_, i) => (i + 1) * RING_KM)
+
+// Colores de la escala del propio radar (muestreados de su leyenda, 2026-09-23).
+const DBZ_COLOR: [number, string][] = [
+  [5, '#9cf7f8'], [10, '#9adafd'], [15, '#9a9acd'], [20, '#ceff9a'], [25, '#99ff99'],
+  [30, '#9bcd9b'], [35, '#ffffb7'], [40, '#fbde99'], [45, '#ffcd99'], [50, '#ff989f'],
+  [55, '#ee9f99'], [60, '#cd9ace'], [65, '#ff99ff'], [70, '#db9afb'], [75, '#ffffff'],
+]
 
 // Escala sencilla de reflectividad: cuanto más alto el dBZ, más agua (o hielo)
 // devuelve el eco del radar. Rangos redondeados de la interpretación habitual.
-const ESCALA: { rango: string; que: string }[] = [
-  { rango: 'menos de 20', que: 'nubes o llovizna muy débil; a menudo no llega al suelo' },
-  { rango: '20 a 35', que: 'lluvia ligera a moderada' },
-  { rango: '35 a 50', que: 'lluvia fuerte' },
-  { rango: '50 a 60', que: 'aguacero o tormenta intensa; puede traer granizo pequeño' },
-  { rango: 'más de 60', que: 'tormenta muy fuerte, granizo probable' },
+const ESCALA: { rango: string; que: string; color: string }[] = [
+  { rango: 'menos de 20', que: 'nubes o llovizna muy débil; a menudo no llega al suelo', color: '#9adafd' },
+  { rango: '20 a 35', que: 'lluvia ligera a moderada', color: '#99ff99' },
+  { rango: '35 a 50', que: 'lluvia fuerte', color: '#fbde99' },
+  { rango: '50 a 60', que: 'aguacero o tormenta intensa; puede traer granizo pequeño', color: '#ee9f99' },
+  { rango: 'más de 60', que: 'tormenta muy fuerte, granizo probable', color: '#ff99ff' },
 ]
 
 export function SacmexRadarCard() {
@@ -132,17 +147,42 @@ export function SacmexRadarCard() {
 
       {/* Ancho tope: a ancho completo en escritorio la imagen salía más alta que la
           pantalla y había que hacer scroll para ver el deslizador. */}
-      <div className="max-w-3xl mx-auto">
-      <div className="relative rounded-xl overflow-hidden bg-white" style={{ aspectRatio: `${IMG_W} / ${IMG_H}` }}>
-        <img src={urls[Math.min(idx, urls.length - 1)]} alt={`Radar SACMEX, ${hora(actual.time)}`}
-          className="w-full h-full object-contain" />
-        {/* Punto de la estación: en % para que siga a la imagen a cualquier ancho. */}
-        <span
-          className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-red-600 ring-2 ring-white shadow pointer-events-none"
-          style={stationPos()}
-          title="Estación XE1E"
-          aria-label="Ubicación de la estación"
-        />
+      <div className="max-w-xl mx-auto">
+      <div className="rounded-xl overflow-hidden bg-white aspect-square">
+        <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.s} ${VIEW.s}`} className="w-full h-full block"
+          role="img" aria-label={`Radar SACMEX, ${hora(actual.time)}, con anillos cada ${RING_KM} km desde la estación`}>
+          <image href={urls[Math.min(idx, urls.length - 1)]} x={0} y={0} width={IMG_W} height={IMG_H} />
+          {RINGS.map((km) => {
+            const r = km * PX_PER_KM
+            const lx = EST.x + r * Math.SQRT1_2
+            const ly = EST.y - r * Math.SQRT1_2
+            return (
+              <g key={km}>
+                <circle cx={EST.x} cy={EST.y} r={r} fill="none" stroke="#1e293b"
+                  strokeOpacity={km % 10 === 0 ? 0.55 : 0.3} strokeWidth={km % 10 === 0 ? 0.9 : 0.6}
+                  strokeDasharray={km % 10 === 0 ? undefined : '2 2'} />
+                <text x={lx} y={ly} fontSize={6.5} fontWeight={600} textAnchor="middle" dominantBaseline="middle"
+                  fill="#0f172a" stroke="#ffffff" strokeWidth={2} paintOrder="stroke">{km} km</text>
+              </g>
+            )
+          })}
+          <circle cx={EST.x} cy={EST.y} r={3.2} fill="#dc2626" stroke="#ffffff" strokeWidth={1.3}>
+            <title>Estación XE1E</title>
+          </circle>
+        </svg>
+      </div>
+
+      {/* Leyenda propia en español, con los colores del radar (la suya, en inglés,
+          queda fuera del recorte). */}
+      <div className="mt-2">
+        <div className="flex h-2.5 rounded overflow-hidden ring-1 ring-black/10">
+          {DBZ_COLOR.map(([v, c]) => <div key={v} className="flex-1" style={{ backgroundColor: c }} title={`${v} dBZ`} />)}
+        </div>
+        {/* Mismas 15 columnas que la barra: cada número queda centrado bajo SU color. */}
+        <div className="flex text-[10px] text-slate-500 mt-0.5 tabular-nums">
+          {DBZ_COLOR.map(([v]) => <span key={v} className="flex-1 text-center">{v % 10 === 0 ? v : ''}</span>)}
+        </div>
+        <p className="text-[10px] text-slate-500 text-center -mt-0.5">reflectividad (dBZ)</p>
       </div>
 
       <div className="flex items-center gap-3 mt-2">
@@ -165,12 +205,16 @@ export function SacmexRadarCard() {
       <div className="text-xs text-slate-400 mt-3 leading-relaxed">
         <p className="mb-1">
           <span className="font-semibold text-slate-300">¿Qué son los dBZ?</span> Es la fuerza del eco que vuelve al
-          radar: cuanto más alto, más agua (o granizo) hay en esa zona. Los colores de la imagen siguen la escala
-          de la derecha; el <span className="text-red-500 font-semibold">punto rojo</span> es la estación. Como guía sencilla:
+          radar: cuanto más alto, más agua (o granizo) hay en esa zona. Los colores del mapa siguen la barra de
+          arriba; el <span className="text-red-500 font-semibold">punto rojo</span> es la estación y los anillos marcan
+          la distancia a ella cada {RING_KM} km. Como guía sencilla:
         </p>
         <ul className="space-y-0.5">
           {ESCALA.map((e) => (
-            <li key={e.rango}><span className="text-slate-300 tabular-nums">{e.rango} dBZ</span> — {e.que}</li>
+            <li key={e.rango} className="flex items-start gap-1.5">
+              <span className="mt-1 w-2.5 h-2.5 rounded-sm shrink-0 ring-1 ring-black/10" style={{ backgroundColor: e.color }} />
+              <span><span className="text-slate-300 tabular-nums">{e.rango} dBZ</span> — {e.que}</span>
+            </li>
           ))}
         </ul>
         <p className="mt-2 text-slate-500">
