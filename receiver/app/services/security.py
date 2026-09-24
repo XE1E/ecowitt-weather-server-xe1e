@@ -85,3 +85,33 @@ def validate_flux_time(value: str, name: str = "tiempo") -> str:
     if v == "now()" or _DURATION_RE.match(v) or _RFC3339_RE.match(v):
         return v
     raise ValueError(f"Parámetro '{name}' inválido")
+
+
+_UNIT_S = {"ns": 1e-9, "us": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600, "d": 86400,
+           "w": 604800, "mo": 2592000, "y": 31536000}
+
+
+def _to_epoch(value: str, now: float) -> Optional[float]:
+    """Instante (epoch) de un tiempo Flux ya validado; None si no se reconoce."""
+    from datetime import datetime
+    v = value.strip()
+    if v == "now()":
+        return now
+    if v.startswith("-"):
+        total = 0.0
+        for num, unit in re.findall(r"(\d+)(ns|us|ms|mo|s|m|h|d|w|y)", v):
+            total += int(num) * _UNIT_S[unit]
+        return now - total
+    try:
+        return datetime.fromisoformat(v.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def flux_span_days(start: str, stop: str = "now()") -> Optional[float]:
+    """Días que abarca [start, stop] (tiempos Flux ya validados), o None."""
+    now = time.time()
+    a, b = _to_epoch(start, now), _to_epoch(stop, now)
+    if a is None or b is None:
+        return None
+    return (b - a) / 86400

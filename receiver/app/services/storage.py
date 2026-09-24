@@ -64,6 +64,16 @@ class InfluxDBStorage:
 
         logger.info(f"Connected to InfluxDB at {url}")
 
+    async def _q(self, query: str):
+        """Ejecuta una consulta Flux FUERA del event loop.
+
+        El cliente de Influx es síncrono: llamado directo dentro de un `async def`
+        congelaba TODO el servidor mientras respondía (timeout de 30 s), incluida la
+        recepción de /data/report. /api/current hacía 7 de estas por petición.
+        Todas las consultas pasan por aquí (antes sólo `write` y `get_field_series`
+        usaban to_thread)."""
+        return await asyncio.to_thread(self.query_api.query, query)
+
     def close(self):
         """Close the InfluxDB connection."""
         self.client.close()
@@ -129,7 +139,7 @@ class InfluxDBStorage:
                 |> last()
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
-            tables = self.query_api.query(query)
+            tables = await self._q(query)
             latest: Dict[str, Any] = {}
             for table in tables:
                 for record in table.records:
@@ -185,7 +195,7 @@ class InfluxDBStorage:
             '''
 
             # Execute query
-            tables = self.query_api.query(query)
+            tables = await self._q(query)
 
             # Convert to list of dicts
             results = []
@@ -263,7 +273,7 @@ class InfluxDBStorage:
                 |> group(columns: ["_field"])
             '''
 
-            def collect(agg: str):
+            async def collect(agg: str):
                 """
                 {campo: (valor, _time)} para la agregación pedida.
 
@@ -272,7 +282,7 @@ class InfluxDBStorage:
                 y get_time() lanzaría KeyError al no encontrarla.
                 """
                 out: Dict[str, Any] = {}
-                for table in self.query_api.query(base + f"|> {agg}()"):
+                for table in await self._q(base + f"|> {agg}()"):
                     for record in table.records:
                         f = record.values.get("_field")
                         if f is not None:
@@ -280,7 +290,8 @@ class InfluxDBStorage:
                 return out
 
             # min()/max() conservan el _time del registro extremo; mean() no.
-            mins, maxs, means = collect("min"), collect("max"), collect("mean")
+            # Las tres en paralelo (cada una en su hilo).
+            mins, maxs, means = await asyncio.gather(collect("min"), collect("max"), collect("mean"))
 
             def num(v):
                 return round(v, 1) if isinstance(v, (int, float)) else None
@@ -340,13 +351,14 @@ class InfluxDBStorage:
         '''
         try:
             means: Dict[str, float] = {}
-            for table in self.query_api.query(base + "|> mean()"):
+            mean_t, std_t = await asyncio.gather(self._q(base + "|> mean()"), self._q(base + "|> stddev()"))
+            for table in mean_t:
                 for record in table.records:
                     f = record.values.get("_field")
                     if f is not None:
                         means[f] = record.get_value()
             stddevs: Dict[str, float] = {}
-            for table in self.query_api.query(base + "|> stddev()"):
+            for table in std_t:
                 for record in table.records:
                     f = record.values.get("_field")
                     if f is not None:
@@ -388,7 +400,7 @@ class InfluxDBStorage:
                 elif isinstance(v, str):
                     point.field(k, v)
             point.time(ts)
-            self.write_api.write(bucket=self.bucket, record=point)
+            await asyncio.to_thread(self.write_api.write, bucket=self.bucket, record=point)
         except Exception as e:
             logger.error(f"Error writing daily summary {date_str}: {e}")
             raise
@@ -414,7 +426,7 @@ class InfluxDBStorage:
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
             '''
             rows = []
-            for table in self.query_api.query(query):
+            for table in await self._q(query):
                 for record in table.records:
                     rows.append(record.values)
             rows.sort(key=lambda r: r.get("date", ""))
@@ -437,7 +449,7 @@ class InfluxDBStorage:
                 |> filter(fn: (r) => r["_field"] == "{field}")
                 |> first()
             '''
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     return record.get_value()
             return None
@@ -475,7 +487,7 @@ class InfluxDBStorage:
             '''
             # 31 días agregados tardan ~1 s en Influx: fuera del event loop,
             # como `write`, para no frenar la recepción de la estación.
-            tables = await asyncio.to_thread(self.query_api.query, q)
+            tables = await self._q(q)
             out: List[Tuple[datetime, float]] = []
             for table in tables:
                 for record in table.records:
@@ -511,7 +523,7 @@ class InfluxDBStorage:
                 |> filter(fn: (r) => r["_value"] > 0)
                 |> last()
             '''
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     t = record.get_time()
                     return t.isoformat() if t is not None else None
@@ -524,7 +536,7 @@ class InfluxDBStorage:
         self, measurement: str = "weather", station: Optional[str] = None
     ) -> Dict[str, Any]:
         """Promedios de las últimas 24 h vs las 24 h previas (aprox. 'vs ayer')."""
-        def avg(field: str, start: str, stop: str):
+        async def avg(field: str, start: str, stop: str):
             q = f'''
                 from(bucket: "{self.bucket}")
                 |> range(start: {start}, stop: {stop})
@@ -533,15 +545,18 @@ class InfluxDBStorage:
                 |> filter(fn: (r) => r["_field"] == "{field}")
                 |> mean()
             '''
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     return record.get_value()
             return None
 
+        fields = ("temperature_outdoor", "humidity_outdoor")
+        # Las 4 medias en paralelo (antes, 4 consultas en serie bloqueando el loop).
+        vals = await asyncio.gather(*(avg(f, a, b) for f in fields
+                                      for a, b in (("-24h", "now()"), ("-48h", "-24h"))))
         result: Dict[str, Any] = {}
-        for field in ("temperature_outdoor", "humidity_outdoor"):
-            today = avg(field, "-24h", "now()")
-            prev = avg(field, "-48h", "-24h")
+        for i, field in enumerate(fields):
+            today, prev = vals[2 * i], vals[2 * i + 1]
             delta = round(today - prev, 1) if (today is not None and prev is not None) else None
             result[field] = {
                 "today": round(today, 1) if today is not None else None,
@@ -582,15 +597,15 @@ class InfluxDBStorage:
                     |> filter(fn: (r) => r["_field"] == "rain_total")
                     |> sum()
                 '''
-                for table in self.query_api.query(q):
+                for table in await self._q(q):
                     for record in table.records:
                         val = record.get_value()
                         return round(val, 1) if val is not None else None
                 return None
 
-            result["rain_weekly"] = await sum_rain(week_start)
-            result["rain_monthly"] = await sum_rain(month_start)
-            result["rain_yearly"] = await sum_rain(year_start)
+            (result["rain_weekly"], result["rain_monthly"],
+             result["rain_yearly"]) = await asyncio.gather(
+                sum_rain(week_start), sum_rain(month_start), sum_rain(year_start))
 
             return result
 
@@ -633,7 +648,7 @@ class InfluxDBStorage:
             '''
             primero: Optional[float] = None
             ultimo: Optional[float] = None
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     val = record.get_value()
                     if val is None:
@@ -681,7 +696,7 @@ class InfluxDBStorage:
                 |> filter(fn: (r) => r["_field"] == "wind_speed")
                 |> mean()
             '''
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     val = record.get_value()
                     return round(val, 1) if val is not None else None
@@ -718,7 +733,7 @@ class InfluxDBStorage:
             sin_sum = 0.0
             cos_sum = 0.0
             n = 0
-            for table in self.query_api.query(q):
+            for table in await self._q(q):
                 for record in table.records:
                     val = record.get_value()
                     if val is None:

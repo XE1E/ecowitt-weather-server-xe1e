@@ -486,7 +486,10 @@ async def _bg_alertas_principal(parsed_data: dict, qc_rejected: set, stats_flagg
 
 async def _bg_publish_principal(parsed_data: dict) -> None:
     try:
-        awekas_condition = await _awekas_condition_code(parsed_data)
+        # Sólo si AWEKAS está activo: calcula astronomía y puede consultar Open-Meteo,
+        # y antes corría en CADA envío de la estación aunque AWEKAS estuviera apagado.
+        awekas_condition = (await _awekas_condition_code(parsed_data)
+                            if getattr(settings, "awekas_enabled", False) else None)
         results = await publish_all(parsed_data, settings, awekas_condition=awekas_condition)
         await alert_service.check_publish_networks(results)
     except Exception as e:
@@ -682,6 +685,39 @@ async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTas
         raise HTTPException(status_code=500, detail="Error interno")
 
 
+# Lo que /api/current calcula consultando Influx (7 consultas). Se guarda _CURRENT_TTL
+# por estación: la página de inicio, la consola, el kiosco y el widget lo piden cada
+# minuto por pestaña, y estos valores (acumulados, ventanas de 2/24 h, medias de 10
+# min) apenas cambian en 30 s. La lectura en sí sale de memoria y siempre está al día.
+_CURRENT_TTL = 30
+_current_extras_cache: Dict[Optional[str], tuple] = {}
+
+
+async def _current_extras(station: Optional[str]) -> Dict[str, Any]:
+    hit = _current_extras_cache.get(station)
+    if hit and time.time() - hit[0] < _CURRENT_TTL:
+        return hit[1]
+
+    async def safe(name, coro):
+        try:
+            return await coro
+        except Exception as e:
+            logger.error(f"/api/current: {name} falló: {e}")
+            return None
+
+    accum, r2, r24, w, wd = await asyncio.gather(
+        safe("acumulados de lluvia", storage.get_rain_accumulations(station=station)),
+        safe("lluvia 2 h", storage.get_rain_hours(hours=2, station=station)),
+        safe("lluvia 24 h", storage.get_rain_hours(hours=24, station=station)),
+        safe("viento 10 min", storage.get_wind_avg10m(station=station)),
+        safe("rumbo 10 min", storage.get_wind_dir_avg10m(station=station)),
+    )
+    extras = {**(accum or {}), "rain_2h": r2, "rain_24h": r24,
+              "wind_speed_avg10m": w, "wind_direction_avg10m": wd}
+    _current_extras_cache[station] = (time.time(), extras)
+    return extras
+
+
 @app.get("/api/current")
 async def get_current_data(station: Optional[str] = None):
     """
@@ -693,61 +729,29 @@ async def get_current_data(station: Optional[str] = None):
     if not data:
         raise HTTPException(status_code=404, detail="No data available yet")
 
-    # Calculate rain accumulations if device doesn't provide them
     result = dict(data)
-    try:
-        rain_accum = await storage.get_rain_accumulations(station=station)
-        if result.get("rain_weekly") is None and rain_accum.get("rain_weekly") is not None:
-            result["rain_weekly"] = rain_accum["rain_weekly"]
-        if result.get("rain_monthly") is None and rain_accum.get("rain_monthly") is not None:
-            result["rain_monthly"] = rain_accum["rain_monthly"]
-        if result.get("rain_yearly") is None and rain_accum.get("rain_yearly") is not None:
-            result["rain_yearly"] = rain_accum["rain_yearly"]
-    except Exception as e:
-        logger.error(f"Rain accumulation error: {e}")
-
-    # Lluvia acumulada en ventana móvil, integrando rain_rate. Son dos ventanas
-    # porque las consumen sitios distintos: la tarjeta del tablero usa 2 h y la
-    # consola usa 24 h. Ojo, 24 h móviles NO es `rain_daily`, que se reinicia a
-    # medianoche: a las 00:30 el diario dice casi cero aunque haya llovido toda
-    # la tarde, y era justo lo que hacía inútil el dato en la consola.
-    try:
-        rain_2h = await storage.get_rain_hours(hours=2, station=station)
-        if rain_2h is not None:
-            result["rain_2h"] = rain_2h
-    except Exception as e:
-        logger.error(f"Rain 2h calculation error: {e}")
-
-    try:
-        rain_24h = await storage.get_rain_hours(hours=24, station=station)
-        if rain_24h is not None:
-            result["rain_24h"] = rain_24h
-    except Exception as e:
-        logger.error(f"Rain 24h calculation error: {e}")
-
-    # Promedio de viento de 10 min, calculado desde las muestras guardadas: la
-    # estación no manda ninguno (ver get_wind_avg10m). Si algún día un dispositivo
-    # SÍ reporta `windspdmph_avg10m`, ese valor ya viene en `data` y manda sobre el
-    # calculado, que es lo que comprueba el `is None`.
-    try:
-        if result.get("wind_speed_avg10m") is None:
-            wind_avg = await storage.get_wind_avg10m(station=station)
-            if wind_avg is not None:
-                result["wind_speed_avg10m"] = wind_avg
-    except Exception as e:
-        logger.error(f"Wind 10-min average error: {e}")
-
-    # Igual que arriba, pero para la dirección -- Ecowitt tampoco manda un
-    # promedio de rumbo, y el promedio circular (get_wind_dir_avg10m) no es
-    # algo que el llamador pueda derivar de `wind_direction` por su cuenta.
-    try:
-        wind_dir_avg = await storage.get_wind_dir_avg10m(station=station)
-        if wind_dir_avg is not None:
-            result["wind_direction_avg10m"] = wind_dir_avg
-    except Exception as e:
-        logger.error(f"Wind direction 10-min average error: {e}")
-
+    extras = await _current_extras(station)
+    # Acumulados semanal/mensual/anual: sólo si la estación no los manda.
+    for k in ("rain_weekly", "rain_monthly", "rain_yearly"):
+        if result.get(k) is None and extras.get(k) is not None:
+            result[k] = extras[k]
+    # Lluvia acumulada en ventana móvil, desde el contador exacto: la tarjeta del
+    # tablero usa 2 h y la consola 24 h (24 h móviles NO es `rain_daily`, que se
+    # reinicia a medianoche).
+    for k in ("rain_2h", "rain_24h"):
+        if extras.get(k) is not None:
+            result[k] = extras[k]
+    # Promedios de viento de 10 min: la estación no manda ninguno (ver
+    # storage.get_wind_avg10m). Si algún día un dispositivo SÍ reporta
+    # `windspdmph_avg10m`, ese valor ya viene en `data` y manda sobre el calculado.
+    if result.get("wind_speed_avg10m") is None and extras.get("wind_speed_avg10m") is not None:
+        result["wind_speed_avg10m"] = extras["wind_speed_avg10m"]
+    if extras.get("wind_direction_avg10m") is not None:
+        result["wind_direction_avg10m"] = extras["wind_direction_avg10m"]
     return result
+
+
+_HISTORY_MAX_DAYS = 31
 
 
 @app.get("/api/history")
@@ -777,6 +781,12 @@ async def get_history(
         secsvc.validate_station(station)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    # Datos CRUDOS pivotados (una fila por lectura, ~16 s): antes no había tope y un
+    # `start=-3650d` cargaba años en memoria. Lo más largo que pide el sitio son 30 d.
+    span = secsvc.flux_span_days(start, stop)
+    if span is not None and span > _HISTORY_MAX_DAYS:
+        raise HTTPException(status_code=400,
+                            detail=f"Rango máximo de {_HISTORY_MAX_DAYS} días; para más, usa /api/summaries/daily")
     try:
         data = await storage.query(
             start=start, stop=stop, measurement=measurement, station=station

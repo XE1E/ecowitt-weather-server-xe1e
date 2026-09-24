@@ -522,6 +522,11 @@ async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional
     now = datetime.utcnow()
     tareas: Dict[str, Any] = {}  # nombre de red -> coroutine sin arrancar
 
+    # Sin ninguna red HTTP activa no se abre cliente (antes se creaba uno, con su
+    # contexto TLS, en cada envío de la estación aunque no se publicara nada).
+    if not any(getattr(settings, f, False) for f in _HTTP_NETWORK_FLAGS):
+        return await _publish_cwop(data, settings, now, {})
+
     async with httpx.AsyncClient() as client:
         if (getattr(settings, "wu_enabled", False) and settings.wu_station_id and settings.wu_station_key
                 and _due("wunderground", getattr(settings, "wu_interval", 1), now)):
@@ -567,6 +572,14 @@ async def publish_all(data: Dict[str, Any], settings, awekas_condition: Optional
             resueltas = await asyncio.gather(*tareas.values())
             results = dict(zip(tareas.keys(), resueltas))
 
+    return await _publish_cwop(data, settings, now, results)
+
+
+_HTTP_NETWORK_FLAGS = ("wu_enabled", "pws_enabled", "wow_be_enabled", "weathercloud_enabled",
+                       "windy_enabled", "owm_enabled", "awekas_enabled", "opensensemap_enabled")
+
+
+async def _publish_cwop(data, settings, now, results: Dict[str, bool]) -> Dict[str, bool]:
     # CWOP usa un socket TCP propio (APRS-IS), no el cliente httpx de arriba;
     # se queda fuera del gather pero ya no se suma en secuencia a las demás.
     if (getattr(settings, "cwop_enabled", False) and settings.cwop_callsign

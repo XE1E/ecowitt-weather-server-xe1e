@@ -75,6 +75,7 @@ def api(monkeypatch, tmp_path):
     fake = FakeStorage()
     monkeypatch.setattr(m, "storage", fake)
     monkeypatch.setattr(m, "latest_by_station", {})
+    monkeypatch.setattr(m, "_current_extras_cache", {})
     # Nada sale a internet: la condición de AWEKAS y las redes públicas se registran.
     published = []
 
@@ -276,3 +277,30 @@ def test_kiosk_local_ignores_impossible_values_and_honours_optional_token(api, m
     monkeypatch.setattr(m.settings, "kiosk_local_token", "abc")
     assert api.post("/api/kiosk/local", json={"temperature": 20}).status_code == 401
     assert api.post("/api/kiosk/local", json={"temperature": 20}, headers={"X-Kiosk-Token": "abc"}).status_code == 200
+
+
+def test_history_rejects_huge_ranges(api):
+    async def fake_query(**kw):
+        return []
+    api.fake_storage.query = fake_query
+    assert api.get("/api/history", params={"start": "-30d"}).status_code == 200
+    assert api.get("/api/history", params={"start": "-3650d"}).status_code == 400
+    assert api.get("/api/history", params={"start": "2026-01-01T00:00:00Z",
+                                           "stop": "2026-06-01T00:00:00Z"}).status_code == 400
+    assert api.get("/api/history", params={"start": "2026-09-01T06:00:00Z",
+                                           "stop": "2026-09-02T06:00:00Z"}).status_code == 200
+
+
+def test_current_adds_influx_extras_and_caches_them(api):
+    calls = []
+
+    async def rain_hours(hours=2, station=None):
+        calls.append(hours)
+        return 1.2 if hours == 2 else 4.5
+
+    api.fake_storage.get_rain_hours = rain_hours
+    api.post("/data/report/", data=WS2910)
+    cur = api.get("/api/current").json()
+    assert (cur["rain_2h"], cur["rain_24h"]) == (1.2, 4.5)
+    api.get("/api/current")
+    assert sorted(calls) == [2, 24]          # la segunda vez sale de la caché de 30 s
