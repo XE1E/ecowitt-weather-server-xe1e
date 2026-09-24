@@ -253,11 +253,6 @@ DEFAULT_STATION_CONFIG = {
     "watchdog_enabled": True,
     "watchdog_minutes": 15,
     "alerts_enabled": False,
-    "publish_enabled": False,
-    "mqtt_enabled": False,
-    # Secundaria con el sensor integrado a la intemperie: trata su lectura
-    # "interior" (tempinf/humidityin) como EXTERIOR en todo el sistema.
-    "treat_indoor_as_outdoor": False,
     # Altitud (m) de esta estación. Si >0, el servidor calcula la presión
     # relativa desde la absoluta (fórmula ISA), ignorando la de la consola.
     # 0 = usar la relativa que envía la estación.
@@ -272,6 +267,17 @@ DEFAULT_STATION_CONFIG = {
     # Lista de claves (temp_high, humidity_low, pressure_drop…). Vacío = todas activas.
     "disabled_rules": [],
 }
+
+
+# Claves que llegó a tener la config por estación y ya no significan nada: nadie
+# leía `publish_enabled`/`mqtt_enabled` por estación (la publicación y MQTT son sólo
+# de la principal), y `treat_indoor_as_outdoor` fue una prueba del GW1100 ya retirada
+# (2026-09-24). Se quitan al leer y al guardar para que no reaparezcan en la UI.
+RETIRED_STATION_KEYS = ("publish_enabled", "mqtt_enabled", "treat_indoor_as_outdoor")
+
+
+def _without_retired(config: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in config.items() if k not in RETIRED_STATION_KEYS}
 
 
 def load_overrides(path: str) -> Dict[str, Any]:
@@ -325,7 +331,7 @@ def get_station_config(path: str, name: str) -> Dict[str, Any]:
     """Obtiene la configuración de una estación específica."""
     stations = get_stations_config(path)
     config = stations.get(name, {})
-    return {**DEFAULT_STATION_CONFIG, **config}
+    return {**DEFAULT_STATION_CONFIG, **_without_retired(config)}
 
 
 def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
@@ -339,7 +345,7 @@ def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
     data = load_all_settings(path)
     if "stations" not in data:
         data["stations"] = {}
-    existing = data["stations"].get(name, {})
+    existing = _without_retired(data["stations"].get(name, {}))
     incoming = {k: v for k, v in config.items() if k in DEFAULT_STATION_CONFIG}
     data["stations"][name] = {**existing, **incoming}
     save_all_settings(path, data)

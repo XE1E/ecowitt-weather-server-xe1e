@@ -581,16 +581,6 @@ async def receive_ecowitt_data(request: Request, background_tasks: BackgroundTas
         station_cfg = (settings_store.get_station_config(settings.settings_file, station)
                        if station is not None else {})
 
-        # Secundaria "a la intemperie" (p. ej. un GW1100 con su sensor integrado
-        # puesto afuera): reporta como INTERIOR, pero físicamente es EXTERIOR. Se
-        # promueve interior→exterior para que TODO (calibración exterior, derivados,
-        # almacenamiento, publicación a redes y la web) lo trate como exterior.
-        if station is not None and station_cfg.get("treat_indoor_as_outdoor"):
-            for src, dst in (("temperature_indoor", "temperature_outdoor"),
-                             ("humidity_indoor", "humidity_outdoor")):
-                if parsed_data.get(src) is not None:
-                    parsed_data[dst] = parsed_data.pop(src)
-
         # Pipeline estilo WeeWX: calibrar -> QC rangos -> QC picos -> derivar.
         # El filtro de picos compara contra la lectura PREVIA de ESA estación
         # (no una global) para no generar falsos picos al mezclar estaciones.
@@ -1407,18 +1397,24 @@ async def admin_set_primary_passkey(body: dict, authorization: Optional[str] = H
 
 @app.post("/api/admin/registry/secondary")
 async def admin_add_secondary(body: dict, authorization: Optional[str] = Header(default=None)):
-    """Agrega una estación secundaria desde su MAC (deriva el passkey)."""
+    """Cambia la MAC (y con ella el passkey) de una secundaria YA dada de alta.
+
+    El alta es sólo `POST /api/admin/stations` (crea también su config y valida
+    duplicados); antes esto también daba de alta, sin config y con otras reglas."""
     _require_admin(authorization)
     name = (body.get("name") or "").strip()
     mac = (body.get("mac") or "").strip()
-    if not _valid_station_name(name):
-        raise HTTPException(status_code=400, detail="Nombre inválido (letras, números, - o _)")
-    if name.lower() in ("principal", "primary"):
-        raise HTTPException(status_code=400, detail="Nombre reservado")
+    if name not in settings.secondary_station_map.values():
+        raise HTTPException(status_code=404, detail=f"Estación '{name}' no encontrada; dala de alta en Estaciones")
     try:
         pk = settings_store.passkey_from_mac(mac)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    if pk == (getattr(settings, "primary_passkey", "") or ""):
+        raise HTTPException(status_code=400, detail="Ese equipo es la estación principal")
+    other = settings.secondary_station_map.get(pk)
+    if other and other != name:
+        raise HTTPException(status_code=400, detail=f"Ese equipo ya está registrado como '{other}'")
     smap = {p: n for p, n in settings.secondary_station_map.items() if n != name}
     smap[pk] = name
     _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
@@ -1754,11 +1750,6 @@ async def list_stations():
         "model": principal_data.get("model"),
         "config": {
             "alerts_enabled": settings.alerts_enabled,
-            "publish_enabled": any([
-                settings.wu_enabled, settings.pws_enabled,
-                settings.windy_enabled, settings.owm_enabled, settings.cwop_enabled
-            ]),
-            "mqtt_enabled": settings.mqtt_enabled,
             "watchdog_enabled": True,
             "watchdog_minutes": principal_timeout,
         }
@@ -1889,8 +1880,6 @@ async def create_station(body: dict = Body(...), authorization: Optional[str] = 
         "watchdog_enabled": True,
         "watchdog_minutes": 15,
         "alerts_enabled": False,
-        "publish_enabled": False,
-        "mqtt_enabled": False,
     })
     smap = {**smap, pk: name}
     _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))

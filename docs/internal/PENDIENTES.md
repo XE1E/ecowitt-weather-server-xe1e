@@ -676,7 +676,7 @@ Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`** (reescrito el 2026-09-24: se desc
 "una página por estación"; casi todo es global y el GW1100 sólo tiene propios umbrales,
 calibración y su ficha). La depuración del registro del plan viejo ya estaba hecha.
 
-- [ ] Etapa 1 — limpieza: bugs del asistente (SMTP y nombre), casillas que no hacen
+- [x] Etapa 1 — limpieza (HECHA 2026-09-24): bugs del asistente (SMTP y nombre), casillas que no hacen
       nada, quitar `treat_indoor_as_outdoor`, borrar `AdminPage.tsx`, un solo alta.
 - [ ] Etapa 2 — un solo lugar por ajuste ("sin datos", coordenadas, altitud).
 - [ ] Etapa 3 — pestañas por estación en Alertas y Calibración + ficha con accesos.

@@ -804,13 +804,15 @@ export function AdminWizard() {
       }
       if (data.email_enabled) {
         settings.email_enabled = true
-        settings.email_smtp_host = data.email_smtp_host
-        settings.email_smtp_port = data.email_smtp_port
-        settings.email_smtp_user = data.email_smtp_user
-        if (data.email_smtp_password) settings.email_smtp_password = data.email_smtp_password
+        // Claves de EDITABLE_KEYS (settings_store.py): las que no están ahí, el
+        // backend las descarta sin avisar -- así se perdía el SMTP del asistente.
+        settings.smtp_host = data.email_smtp_host
+        settings.smtp_port = data.email_smtp_port
+        settings.smtp_user = data.email_smtp_user
+        if (data.email_smtp_password) settings.smtp_password = data.email_smtp_password
         settings.email_from = data.email_from
         settings.email_to = data.email_to
-        settings.email_starttls = data.email_starttls
+        settings.smtp_tls = data.email_starttls
       }
 
       await fetchWithAuth('/api/admin/settings', {
@@ -820,10 +822,10 @@ export function AdminWizard() {
       })
 
       if (data.station_label) {
-        await fetchWithAuth('/api/admin/stations/_principal', {
+        await fetchWithAuth('/api/stations/_principal', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ label: data.station_label }),
+          body: JSON.stringify({ config: { label: data.station_label } }),
         })
       }
 

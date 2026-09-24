@@ -29,9 +29,6 @@ interface StationConfig {
   watchdog_enabled: boolean
   watchdog_minutes: number
   alerts_enabled: boolean
-  publish_enabled: boolean
-  mqtt_enabled: boolean
-  treat_indoor_as_outdoor?: boolean
   altitude_m?: number
 }
 
@@ -58,9 +55,6 @@ export function AdminEstacionConfig() {
   const [watchdogEnabled, setWatchdogEnabled] = useState(true)
   const [watchdogMinutes, setWatchdogMinutes] = useState(15)
   const [alertsEnabled, setAlertsEnabled] = useState(false)
-  const [publishEnabled, setPublishEnabled] = useState(false)
-  const [mqttEnabled, setMqttEnabled] = useState(false)
-  const [treatOutdoor, setTreatOutdoor] = useState(false)
   const [altitudeM, setAltitudeM] = useState(0)
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
 
@@ -138,9 +132,6 @@ export function AdminEstacionConfig() {
         setWatchdogEnabled(data.config?.watchdog_enabled ?? true)
         setWatchdogMinutes(data.config?.watchdog_minutes ?? 15)
         setAlertsEnabled(data.config?.alerts_enabled ?? false)
-        setPublishEnabled(data.config?.publish_enabled ?? false)
-        setMqttEnabled(data.config?.mqtt_enabled ?? false)
-        setTreatOutdoor(data.config?.treat_indoor_as_outdoor ?? false)
         setAltitudeM(data.config?.altitude_m ?? 0)
         setSensorLabels(data.sensor_labels || {})
       })
@@ -156,16 +147,17 @@ export function AdminEstacionConfig() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          config: {
-            label: stationLabel,
-            watchdog_enabled: watchdogEnabled,
-            watchdog_minutes: watchdogMinutes,
-            alerts_enabled: alertsEnabled,
-            publish_enabled: publishEnabled,
-            mqtt_enabled: mqttEnabled,
-            treat_indoor_as_outdoor: treatOutdoor,
-            altitude_m: altitudeM,
-          },
+          // En la principal sólo cuentan nombre y minutos de "sin datos": sus
+          // alertas y su watchdog los manda la configuración global.
+          config: station?.name === null
+            ? { label: stationLabel, watchdog_minutes: watchdogMinutes }
+            : {
+                label: stationLabel,
+                watchdog_enabled: watchdogEnabled,
+                watchdog_minutes: watchdogMinutes,
+                alerts_enabled: alertsEnabled,
+                altitude_m: altitudeM,
+              },
           sensor_labels: sensorLabels,
         }),
       })
@@ -240,11 +232,13 @@ export function AdminEstacionConfig() {
               className="w-full rounded bg-slate-900/50 border border-white/10 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
             />
           </div>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={watchdogEnabled} onChange={e => setWatchdogEnabled(e.target.checked)} className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500" />
-            <span className="text-sm">Watchdog</span>
-          </label>
-          {watchdogEnabled && (
+          {!isPrincipal && (
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={watchdogEnabled} onChange={e => setWatchdogEnabled(e.target.checked)} className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500" />
+              <span className="text-sm">Watchdog</span>
+            </label>
+          )}
+          {(isPrincipal || watchdogEnabled) && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Timeout:</span>
               <input
@@ -329,10 +323,11 @@ export function AdminEstacionConfig() {
         )}
       </div>
 
-      {/* Servicios por estación */}
-      <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-3">Servicios para esta estación</h2>
-        <div className="flex flex-wrap gap-6">
+      {/* Alertas y altitud (solo secundarias: en la principal los manda la
+          configuración global -- Alertas y Calibración). */}
+      {!isPrincipal && (
+        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+          <h2 className="font-medium mb-3">Alertas y altitud</h2>
           <label className="inline-flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -340,54 +335,11 @@ export function AdminEstacionConfig() {
               onChange={e => setAlertsEnabled(e.target.checked)}
               className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
             />
-            <span className="text-sm">🔔 Alertas</span>
-            <span className="text-xs text-slate-500">(usa umbrales globales)</span>
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={publishEnabled}
-              onChange={e => setPublishEnabled(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
-            />
-            <span className="text-sm">📤 Publicación</span>
-            <span className="text-xs text-slate-500">(redes públicas)</span>
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={mqttEnabled}
-              onChange={e => setMqttEnabled(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
-            />
-            <span className="text-sm">🏠 MQTT</span>
-            <span className="text-xs text-slate-500">(Home Assistant)</span>
-          </label>
-        </div>
-        <p className="text-xs text-slate-500 mt-3">
-          {isPrincipal
-            ? 'La estación principal siempre procesa alertas y publica si está habilitado globalmente.'
-            : 'Por defecto las estaciones secundarias solo almacenan datos. Activa estos servicios para incluirla.'}
-        </p>
-      </div>
-
-      {/* Sensor integrado a la intemperie (solo secundarias) */}
-      {!isPrincipal && (
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <h2 className="font-medium mb-3">Sensor integrado</h2>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={treatOutdoor}
-              onChange={e => setTreatOutdoor(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-slate-900/50 text-sky-500"
-            />
-            <span className="text-sm">🌡️ Está a la intemperie (tratar como exterior)</span>
+            <span className="text-sm">🔔 Alertas para esta estación</span>
           </label>
           <p className="text-xs text-slate-500 mt-2">
-            El sensor integrado (temp/humedad) reporta como «interior». Si el gateway está
-            afuera, actívalo para que su lectura se trate como <span className="text-slate-400">exterior</span> en
-            toda la app (página remota, calibración, estadísticas y publicación). La presión no cambia.
+            Sus umbrales se ajustan en <Link to="/admin/alertas" className="text-sky-400 hover:underline">Alertas</Link>.
+            La publicación a redes y MQTT son sólo de la estación principal.
           </p>
           <div className="mt-4 pt-4 border-t border-white/10">
             <div className="flex items-center gap-2">
@@ -404,7 +356,6 @@ export function AdminEstacionConfig() {
             </div>
             <p className="text-xs text-slate-500 mt-2">
               Si &gt;0, el servidor calcula la presión relativa (nivel del mar) desde la absoluta.
-              Útil si la consola no tiene ajuste de altitud (p. ej. WS2910).
             </p>
           </div>
         </div>

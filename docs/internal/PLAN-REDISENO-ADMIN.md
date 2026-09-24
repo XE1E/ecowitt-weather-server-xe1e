@@ -45,20 +45,24 @@ Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
 ## 3. Etapas
 
 ### Etapa 1 — limpieza sin mover nada de lugar
-- [ ] **Asistente (bugs reales):** manda el SMTP con claves que no existen
+- [x] **Asistente (bugs reales):** manda el SMTP con claves que no existen
       (`email_smtp_host`… en vez de `smtp_host`…, las descarta `/api/admin/settings`
       en silencio) y el nombre a `PUT /api/admin/stations/_principal`, que no existe
       (es `PUT /api/stations/_principal` con `{config:{label}}`).
-- [ ] **Quitar casillas que no hacen nada** de "Servicios para esta estación":
+- [x] **Quitar casillas que no hacen nada** de "Servicios para esta estación":
       `publish_enabled` y `mqtt_enabled` por estación (nadie los lee); en la principal,
       `alerts_enabled` y `watchdog_enabled` (se ignoran, manda el global).
-- [ ] **Quitar `treat_indoor_as_outdoor`** (fue una prueba; apagado en las dos
+- [x] **Quitar `treat_indoor_as_outdoor`** (fue una prueba; apagado en las dos
       estaciones al 2026-09-24): toggle de la ficha, lectura en Calibración, rama en
       `main.py` al ingerir, default en `settings_store.py`, y la clave guardada.
-- [ ] **Borrar `pages/AdminPage.tsx`** (panel viejo, sin ruta ni import).
-- [ ] **Un solo camino de alta:** la tarjeta Registro de la ficha usa
+- [x] **Borrar `pages/AdminPage.tsx`** (panel viejo, sin ruta ni import).
+- [x] **Un solo camino de alta:** la tarjeta Registro de la ficha usa
       `POST /api/admin/registry/secondary` (no crea config, reglas distintas) y el
-      modal usa `POST /api/admin/stations`. Dejar uno.
+      modal usa `POST /api/admin/stations`. Dejar uno. **Hecho 2026-09-24:** el alta es
+      sólo `POST /api/admin/stations`; `registry/secondary` quedó para CAMBIAR la MAC de
+      una secundaria existente (404 si no existe; rechaza la MAC de la principal o de
+      otra estación). Las claves retiradas se filtran al leer/guardar
+      (`settings_store.RETIRED_STATION_KEYS`).
 
 ### Etapa 2 — un solo lugar por ajuste
 - [ ] "Sin datos": hoy en Alertas (`alert_station_offline_minutes`), Sistema y la ficha

@@ -73,7 +73,6 @@ export function AdminCalibracion() {
   const [chLabels, setChLabels] = useState<Record<number, string>>({})
   const [secondaries, setSecondaries] = useState<StationOpt[]>([])
   const [selected, setSelected] = useState<string | null>(null)  // null = principal (global)
-  const [treatOutdoor, setTreatOutdoor] = useState(false)  // secundaria a la intemperie
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
@@ -89,7 +88,6 @@ export function AdminCalibracion() {
           .then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
         fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ])
-      setTreatOutdoor(station?.config?.treat_indoor_as_outdoor ?? false)
       const altitudeM = station?.config?.altitude_m ?? 0
       setSettings({ ...emptyCal(), ...partial, station_altitude_m: altitudeM })
     }
@@ -173,13 +171,10 @@ export function AdminCalibracion() {
 
   const on = settings.cal_enabled
   const isPrincipal = selected === null
-  // Secundaria (GW1100): un solo sensor integrado. Si está a la intemperie se
-  // calibra como exterior (cal_*_outdoor); si no, como interior (cal_*_indoor).
-  const fixedRows = isPrincipal ? FIXED_ROWS : (
-    treatOutdoor
-      ? [{ label: 'Exterior (sensor integrado)', t: 'cal_temp_outdoor' as keyof CalSettings, h: 'cal_hum_outdoor' as keyof CalSettings }]
-      : [{ label: 'Interior (sensor integrado)', t: 'cal_temp_indoor' as keyof CalSettings, h: 'cal_hum_indoor' as keyof CalSettings }]
-  )
+  // Secundaria (GW1100): un solo sensor integrado, que reporta como interior.
+  const fixedRows = isPrincipal ? FIXED_ROWS : [
+    { label: 'Interior (sensor integrado)', t: 'cal_temp_indoor' as keyof CalSettings, h: 'cal_hum_indoor' as keyof CalSettings },
+  ]
 
   return (
     <div className="space-y-4">
