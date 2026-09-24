@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pause, Play, Radar } from 'lucide-react'
+import { LOCATION } from '../../config'
 
 /**
  * Radar meteorológico del SACMEX (Gobierno de la CDMX): animación de los últimos
@@ -25,6 +26,26 @@ const hora = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-MX', {
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Mexico_City',
   })
+
+// Dónde cae la estación en la imagen del radar (702x512). La imagen trae la
+// posición del radar (19°20'33.5"N, 99°05'22.1"W) pero no su escala en pixeles:
+// se calibró el 2026-09-23 con 4 poblados rotulados en el propio mapa
+// (Chimalhuacán, Xico, Cuernavaca, Cuautla), que ubican el centro del radar en
+// (254, 252) px con 1-2 px de diferencia entre sí, a ~3.3 px/km. Si SACMEX
+// cambia el encuadre de su imagen, hay que recalibrar estos números.
+const IMG_W = 702
+const IMG_H = 512
+const RADAR = { lat: 19.342639, lon: -99.089472, px: 254, py: 252 }
+const PX_PER_KM = 3.3
+
+function stationPos() {
+  const kmX = (LOCATION.longitude - RADAR.lon) * 111.32 * Math.cos((RADAR.lat * Math.PI) / 180)
+  const kmY = (LOCATION.latitude - RADAR.lat) * 110.57
+  return {
+    left: `${((RADAR.px + kmX * PX_PER_KM) / IMG_W) * 100}%`,
+    top: `${((RADAR.py - kmY * PX_PER_KM) / IMG_H) * 100}%`,
+  }
+}
 
 // Escala sencilla de reflectividad: cuanto más alto el dBZ, más agua (o hielo)
 // devuelve el eco del radar. Rangos redondeados de la interpretación habitual.
@@ -112,9 +133,16 @@ export function SacmexRadarCard() {
       {/* Ancho tope: a ancho completo en escritorio la imagen salía más alta que la
           pantalla y había que hacer scroll para ver el deslizador. */}
       <div className="max-w-3xl mx-auto">
-      <div className="rounded-xl overflow-hidden bg-white" style={{ aspectRatio: '702 / 512' }}>
+      <div className="relative rounded-xl overflow-hidden bg-white" style={{ aspectRatio: `${IMG_W} / ${IMG_H}` }}>
         <img src={urls[Math.min(idx, urls.length - 1)]} alt={`Radar SACMEX, ${hora(actual.time)}`}
           className="w-full h-full object-contain" />
+        {/* Punto de la estación: en % para que siga a la imagen a cualquier ancho. */}
+        <span
+          className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-red-600 ring-2 ring-white shadow pointer-events-none"
+          style={stationPos()}
+          title="Estación XE1E"
+          aria-label="Ubicación de la estación"
+        />
       </div>
 
       <div className="flex items-center gap-3 mt-2">
@@ -138,7 +166,7 @@ export function SacmexRadarCard() {
         <p className="mb-1">
           <span className="font-semibold text-slate-300">¿Qué son los dBZ?</span> Es la fuerza del eco que vuelve al
           radar: cuanto más alto, más agua (o granizo) hay en esa zona. Los colores de la imagen siguen la escala
-          de la derecha. Como guía sencilla:
+          de la derecha; el <span className="text-red-500 font-semibold">punto rojo</span> es la estación. Como guía sencilla:
         </p>
         <ul className="space-y-0.5">
           {ESCALA.map((e) => (
