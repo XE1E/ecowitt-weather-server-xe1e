@@ -44,13 +44,17 @@ function AddStationModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
       setError('El nombre es requerido')
       return
     }
+    if (!passkey.trim()) {
+      setError('Hace falta la MAC o el passkey de la estación')
+      return
+    }
     setSaving(true)
     setError('')
     try {
       const res = await fetchWithAuth('/api/admin/stations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), passkey: passkey.trim() || null }),
+        body: JSON.stringify({ name: name.trim(), mac: passkey.trim() }),
       })
       if (res.ok) {
         onAdded()
@@ -83,15 +87,18 @@ function AddStationModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
             <p className="text-xs text-slate-500 mt-1">Nombre único sin espacios (se usa en la URL)</p>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Passkey (opcional)</label>
+            <label className="block text-sm text-slate-400 mb-1">MAC o passkey *</label>
             <input
               type="text"
               value={passkey}
               onChange={e => setPasskey(e.target.value)}
-              placeholder="Se detecta automáticamente si no se especifica"
+              placeholder="ej: 8C:4F:00:4F:8B:63"
               className="w-full rounded bg-slate-900/50 border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-500/50"
             />
-            <p className="text-xs text-slate-500 mt-1">Si lo dejas vacío, el servidor lo detectará cuando la estación envíe datos</p>
+            <p className="text-xs text-slate-500 mt-1">
+              La MAC viene en la etiqueta del equipo y en la app WS View Plus; el passkey se calcula de ella.
+              Sin esto la estación no podría enviar datos: el servidor rechaza equipos que no estén registrados.
+            </p>
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">

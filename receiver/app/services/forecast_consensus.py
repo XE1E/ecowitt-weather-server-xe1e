@@ -78,28 +78,20 @@ def pressure_forecast(
     pressure_1h_ago: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
-    Pronóstico de corto plazo basado en tendencia de presión.
+    Tendencia de presión de corto plazo, como DATO -- ya no como aviso de lluvia.
 
-    Una caída rápida de presión casi siempre indica lluvia inminente.
-    Esto lo detecta ANTES que cualquier modelo externo.
+    Hasta 2026-09-23 una caída de presión marcaba `storm_likely` y ponía
+    "Lluvia probable en Nh" en la condición actual del consenso. Verificado
+    contra el pluviómetro (`/api/forecast/verification`, 30 días), "presión
+    bajando" acertaba 13% de las lluvias a 3 h con 83% de falsas alarmas: la
+    marea atmosférica la baja casi todas las tardes, llueva o no, y en las
+    tormentas convectivas de CDMX la presión no las anticipa (mismo criterio
+    que `forecaster.own_forecast`). `storm_likely`/`hours_to_rain` se conservan
+    en la respuesta por compatibilidad, pero ya siempre son False/None.
 
-    La clasificación de tendencia usa `forecaster.classify_trend` -- la misma que
-    expone `/api/forecast/local`, con test propio y calibrada para CDMX (ver
-    `forecaster.py` y `test_weewx_features.py::test_trend_classification`). Antes
-    este módulo tenía SU PROPIO juego de umbrales (-3/-5/-7 hPa/3h, el doble de
-    laxo), así que el mismo `delta_3h` podía salir "estable" aquí y "subiendo" en
-    el barómetro local -- confirmado en vivo el 2026-08-20 con delta_3h=2.2 hPa.
-    Se mantienen aquí sólo los cortes MÁS FINOS (-5, -7) para graduar
-    `hours_to_rain` dentro de "falling_fast", no para decidir el trend.
-
-    Retorna:
-    - trend: 'falling_fast', 'falling', 'steady', 'rising', 'rising_fast'
-    - delta_3h: cambio en hPa en las últimas 3 horas
-    - delta_1h: cambio en hPa en la última hora (si disponible)
-    - storm_likely: True si la caída sugiere tormenta inminente
-    - hours_to_rain: estimación de horas hasta la lluvia (0-3, None si no aplica)
-    - confidence: 'high', 'medium', 'low'
-    - message: descripción en español
+    La clasificación usa `forecaster.classify_trend`, la misma que
+    `/api/forecast/local` (antes este módulo tenía sus propios umbrales y el
+    mismo delta podía salir distinto aquí y en el barómetro local).
     """
     result: Dict[str, Any] = {
         "trend": "unknown",
@@ -122,41 +114,14 @@ def pressure_forecast(
 
     trend_code = forecaster.classify_trend(delta_3h)["code"]
     result["trend"] = trend_code
-
-    if trend_code == "falling_fast":
-        result["storm_likely"] = True
-        result["confidence"] = "high"
-        if delta_3h <= -7:
-            result["hours_to_rain"] = 0.5
-            result["message"] = "Caída muy rápida de presión. Tormenta inminente (0-1h)."
-        elif delta_3h <= -5:
-            result["hours_to_rain"] = 1.5
-            result["message"] = "Caída rápida de presión. Lluvia probable en 1-2 horas."
-        else:
-            result["hours_to_rain"] = 2.5
-            result["message"] = "Caída rápida de presión. Posible lluvia en pocas horas."
-    elif trend_code == "falling":
-        result["storm_likely"] = True
-        result["hours_to_rain"] = 3
-        result["confidence"] = "medium"
-        result["message"] = "Presión bajando. Posible lluvia en 2-4 horas."
-    elif trend_code == "steady":
-        result["confidence"] = "medium"
-        result["message"] = "Presión estable. Sin cambios significativos esperados."
-    elif trend_code == "rising":
-        result["confidence"] = "medium"
-        result["message"] = "Presión subiendo. Tiempo mejorando."
-    else:  # rising_fast
-        result["confidence"] = "high"
-        result["message"] = "Presión subiendo rápido. Cielos despejando."
-
-    # Si además la presión de 1h muestra aceleración, aumentar confianza
-    if result["storm_likely"] and result["delta_1h"] is not None and result["delta_1h"] < -1.5:
-        result["confidence"] = "high"
-        if result["hours_to_rain"] is not None:
-            result["hours_to_rain"] = max(0.5, result["hours_to_rain"] - 0.5)
-        result["message"] += " La caída se acelera."
-
+    result["confidence"] = "medium"
+    result["message"] = {
+        "falling_fast": "Presión cayendo rápido.",
+        "falling": "Presión bajando.",
+        "steady": "Presión estable.",
+        "rising": "Presión subiendo.",
+        "rising_fast": "Presión subiendo rápido.",
+    }.get(trend_code, result["message"])
     return result
 
 
@@ -177,7 +142,7 @@ async def get_consensus_forecast(
     Returns:
         Pronóstico combinado con:
         - current: condición actual (de la estación si hay lluvia, si no del consenso)
-        - pressure: pronóstico por tendencia de presión
+        - pressure: tendencia de presión (dato, ya no aviso de lluvia)
         - hourly: pronóstico horario combinado
         - daily: pronóstico diario combinado
         - alerts: alertas activas
@@ -424,8 +389,9 @@ def _determine_current(
     Prioridad:
     1. Si la estación detecta lluvia -> "Lloviendo" (dato real)
     2. Radiación solar de día -> nubosidad real (índice de claridad)
-    3. Si la presión indica tormenta inminente -> "Tormenta cercana"
-    4. Si no, usar el pronóstico de la hora actual
+    3. Si no, usar el pronóstico de la hora actual
+    (La presión ya no entra aquí: ver `pressure_forecast`. `storm_approaching`
+    se conserva en la respuesta por compatibilidad y queda en False.)
     """
     result: Dict[str, Any] = {
         "code": 0,
@@ -474,33 +440,19 @@ def _determine_current(
                 result["source"] = "station"
                 result["clearness_index"] = round(kt, 2)
 
-    # 3. ¿La presión indica tormenta inminente?
-    if pressure and pressure.get("storm_likely"):
-        result["storm_approaching"] = True
-        hours = pressure.get("hours_to_rain", 3)
-        # Solo actualizar label con alerta, no sobrescribir la nubosidad real
-        if not station_has_cloudiness:
-            if hours <= 1:
-                result["label"] = f"Tormenta inminente (~{int(hours*60)} min)"
-            else:
-                result["label"] = f"Lluvia probable en {hours:.0f}h"
-            result["source"] = "pressure"
-            result["code"] = 80
-
-    # 4. Usar pronóstico SOLO si no tenemos dato real de la estación
+    # 3. Usar pronóstico SOLO si no tenemos dato real de la estación
     if not station_has_cloudiness and forecast_now and len(forecast_now) > 0:
         fc = forecast_now[0]
-        if not result["storm_approaching"]:
-            fc_code = fc["code"]
-            # Si la estación dice rain_rate=0, no mostrar precipitación del pronóstico
-            # El pluviómetro es dato real; el pronóstico puede equivocarse
-            station_says_no_rain = station and station.get("rain_rate", 0) == 0
-            if station_says_no_rain and _precip_likely(fc_code):
-                # Degradar a "Nublado" - el pronóstico esperaba lluvia pero no hay
-                fc_code = 3
-            result["code"] = fc_code
-            result["source"] = "forecast" if fc_code == fc["code"] else "station+forecast"
-            result["label"] = _code_to_label(fc_code)
+        fc_code = fc["code"]
+        # Si la estación dice rain_rate=0, no mostrar precipitación del pronóstico
+        # El pluviómetro es dato real; el pronóstico puede equivocarse
+        station_says_no_rain = station and station.get("rain_rate", 0) == 0
+        if station_says_no_rain and _precip_likely(fc_code):
+            # Degradar a "Nublado" - el pronóstico esperaba lluvia pero no hay
+            fc_code = 3
+        result["code"] = fc_code
+        result["source"] = "forecast" if fc_code == fc["code"] else "station+forecast"
+        result["label"] = _code_to_label(fc_code)
 
     return result
 
@@ -543,17 +495,6 @@ def _code_to_label(code: int) -> str:
 def _generate_alerts(result: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Genera alertas basadas en el pronóstico combinado."""
     alerts: List[Dict[str, Any]] = []
-
-    # Alerta por presión
-    pressure = result.get("pressure")
-    if pressure and pressure.get("storm_likely"):
-        alerts.append({
-            "type": "pressure",
-            "severity": "warning" if pressure.get("confidence") == "high" else "info",
-            "title": "Tormenta acercándose",
-            "message": pressure.get("message", ""),
-            "hours": pressure.get("hours_to_rain"),
-        })
 
     # Alerta por pronóstico de lluvia fuerte en las próximas horas
     for h in result.get("hourly", [])[:6]:

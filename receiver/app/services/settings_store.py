@@ -29,6 +29,19 @@ def passkey_from_mac(mac: str) -> str:
     return hashlib.md5(colon.encode()).hexdigest().upper()
 
 
+def passkey_from_identifier(value: str) -> str:
+    """PASSKEY a partir de lo que el usuario tenga a mano: la MAC (12 dígitos
+    hex, con o sin separadores) o el PASSKEY ya calculado (32 hex, MD5). Lanza
+    ValueError si no es ninguno de los dos."""
+    raw = (value or "").strip()
+    compact = re.sub(r"[\s:\-]", "", raw)
+    if re.fullmatch(r"[0-9A-Fa-f]{32}", compact):
+        return compact.upper()
+    if re.fullmatch(r"[0-9A-Fa-f]{12}", compact):
+        return passkey_from_mac(compact)
+    raise ValueError("Escribe la MAC (p. ej. 8C:4F:00:4F:8B:63) o el passkey de 32 caracteres")
+
+
 def _write_json_secure(path: str, data: Dict[str, Any]) -> None:
     """Escribe JSON y restringe permisos a 600 (el archivo guarda secretos:
     tokens de Telegram/SMTP/WAQI, claves de redes, etc.)."""

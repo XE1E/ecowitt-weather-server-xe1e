@@ -225,7 +225,7 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/forecast?lat=&lon=` | Pronóstico Open-Meteo con caché en el servidor. Si el origen falla sirve la última copia buena, marcada con `stale` y `age_minutes` |
 | `GET /api/forecast/local` | Pronóstico local por tendencia barométrica (dato propio) |
 | `GET /api/forecast/own` | "Nuestro pronóstico": pluviómetro + cámara + estaciones vecinas, en ese orden de autoridad (`forecaster.own_forecast`). No depende de Open-Meteo/WeatherAPI y, desde 2026-09-23, **ya no usa la presión** (verificada contra el pluviómetro no anticipaba las tormentas). Sin nada que decir devuelve `source: "none"` |
-| `GET /api/forecast/consensus` | Pronóstico combinado: estación + tendencia de presión + Open-Meteo + WeatherAPI |
+| `GET /api/forecast/consensus` | Pronóstico combinado: estación + Open-Meteo + WeatherAPI. La tendencia de presión va sólo como dato (`pressure`): desde 2026-09-23 ya no genera avisos de lluvia |
 | `GET /api/smn?ides=9&idmun=14&hourly=1` | Pronóstico oficial del SMN (CONAGUA) por municipio (por defecto Benito Juárez, CDMX). `hourly=0` omite el horario |
 | `GET /api/smn/municipios` | Lista de municipios del SMN (para búsqueda/autocompletar) |
 | `GET /api/nearby-stations?lat=&lon=` | Estaciones vecinas (Xweather + Netatmo) con `incoming_rain`. Sin ninguna red configurada devuelve la lista vacía, no error |

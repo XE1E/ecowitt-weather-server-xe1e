@@ -1846,27 +1846,40 @@ async def update_station(name: str, body: dict = Body(...),
 
 @app.post("/api/admin/stations")
 async def create_station(body: dict = Body(...), authorization: Optional[str] = Header(default=None)):
-    """Crea una nueva estación secundaria."""
+    """Crea una estación secundaria y la da de alta en el registro de passkeys.
+
+    Hace falta la MAC o el passkey (`mac` o `passkey`, cualquiera de los dos
+    acepta ambos formatos, ver `settings_store.passkey_from_identifier`): sin
+    él la estación no podría recibir datos -- con la whitelist activa un
+    passkey desconocido se rechaza con 403, y sin whitelist sus pushes caerían
+    en la principal. Antes esto escribía en `settings.secondary_station_map`
+    (una property que se recalcula en cada lectura, así que el cambio se
+    perdía) y en `station_passkeys` (una clave que nadie lee): la estación
+    "creada" nunca quedaba registrada. Ahora usa `_persist_registry`, el mismo
+    camino que Admin → Estaciones → Registro.
+    """
     _require_admin(authorization)
-    name = body.get("name", "").strip().lower()
-    passkey = body.get("passkey", "").strip() or None
+    name = (body.get("name") or "").strip().lower()
+    ident = (body.get("mac") or body.get("passkey") or "").strip()
 
-    if not name:
-        raise HTTPException(status_code=400, detail="El nombre es requerido")
-    if not name.replace("_", "").replace("-", "").isalnum():
-        raise HTTPException(status_code=400, detail="El nombre solo puede contener letras, números, guiones y guiones bajos")
-    if name in ("principal", "_principal"):
+    if not _valid_station_name(name):
+        raise HTTPException(status_code=400, detail="Nombre inválido (letras, números, - o _; máx. 32)")
+    if name in ("principal", "_principal", "primary"):
         raise HTTPException(status_code=400, detail="Nombre reservado")
-    if name in settings.secondary_station_map.values():
+    smap = settings.secondary_station_map
+    if name in smap.values():
         raise HTTPException(status_code=400, detail=f"Ya existe una estación con nombre '{name}'")
+    if not ident:
+        raise HTTPException(status_code=400, detail="Hace falta la MAC o el passkey de la estación")
+    try:
+        pk = settings_store.passkey_from_identifier(ident)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if pk in smap:
+        raise HTTPException(status_code=400, detail=f"Ese equipo ya está registrado como '{smap[pk]}'")
+    if pk == (getattr(settings, "primary_passkey", "") or ""):
+        raise HTTPException(status_code=400, detail="Ese equipo es la estación principal")
 
-    # Register passkey mapping if provided
-    if passkey:
-        if passkey in settings.secondary_station_map:
-            raise HTTPException(status_code=400, detail="Este passkey ya está asignado a otra estación")
-        settings.secondary_station_map[passkey] = name
-
-    # Create default config
     settings_store.save_station_config(settings.settings_file, name, {
         "label": name.title(),
         "watchdog_enabled": True,
@@ -1875,52 +1888,42 @@ async def create_station(body: dict = Body(...), authorization: Optional[str] = 
         "publish_enabled": False,
         "mqtt_enabled": False,
     })
-
-    # Save passkey mapping to settings file
-    all_settings = settings_store.load_all_settings(settings.settings_file)
-    if "station_passkeys" not in all_settings:
-        all_settings["station_passkeys"] = {}
-    if passkey:
-        all_settings["station_passkeys"][passkey] = name
-    settings_store.save_all_settings(settings.settings_file, all_settings)
-
-    return {"ok": True, "name": name, "message": f"Estación '{name}' creada"}
+    smap = {**smap, pk: name}
+    _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
+    return {"ok": True, "name": name, "passkey_masked": _mask_pk(pk),
+            "message": f"Estación '{name}' creada"}
 
 
 @app.delete("/api/admin/stations/{name}")
 async def delete_station(name: str, authorization: Optional[str] = Header(default=None)):
-    """Elimina una estación secundaria (no elimina datos históricos)."""
+    """Elimina una estación secundaria (no elimina datos históricos).
+
+    La quita del registro de passkeys (deja de aceptar sus pushes EN VIVO, vía
+    `_persist_registry`) y borra su configuración. Antes sólo la borraba de una
+    copia temporal del mapa, así que la estación "eliminada" se seguía
+    aceptando.
+    """
     _require_admin(authorization)
 
     if name in ("principal", "_principal"):
         raise HTTPException(status_code=400, detail="No se puede eliminar la estación principal")
 
-    if name not in settings.secondary_station_map.values():
+    all_settings = settings_store.load_all_settings(settings.settings_file)
+    has_config = name in (all_settings.get("stations") or {})
+    if name not in settings.secondary_station_map.values() and not has_config:
         raise HTTPException(status_code=404, detail=f"Estación '{name}' no encontrada")
 
-    # Remove from passkey map
-    passkey_to_remove = None
-    for pk, n in settings.secondary_station_map.items():
-        if n == name:
-            passkey_to_remove = pk
-            break
-    if passkey_to_remove:
-        del settings.secondary_station_map[passkey_to_remove]
+    smap = {p: n for p, n in settings.secondary_station_map.items() if n != name}
+    _persist_registry(secondary_str=",".join(f"{p}:{n}" for p, n in smap.items()))
 
-    # Remove from settings file
+    # Recargar: _persist_registry acaba de escribir settings.json.
     all_settings = settings_store.load_all_settings(settings.settings_file)
-    if "station_passkeys" in all_settings:
-        all_settings["station_passkeys"] = {
-            pk: n for pk, n in all_settings.get("station_passkeys", {}).items()
-            if n != name
-        }
-    if "stations" in all_settings and name in all_settings["stations"]:
+    if name in (all_settings.get("stations") or {}):
         del all_settings["stations"][name]
+    all_settings.pop("station_passkeys", None)  # residuo de la versión anterior, nadie lo lee
     settings_store.save_all_settings(settings.settings_file, all_settings)
 
-    # Remove from latest cache
     latest_by_station.pop(name, None)
-
     return {"ok": True, "message": f"Estación '{name}' eliminada"}
 
 
@@ -3682,11 +3685,12 @@ async def netatmo_oauth_callback(code: Optional[str] = None, state: Optional[str
 @app.get("/api/forecast/consensus")
 async def get_consensus_forecast_endpoint():
     """
-    Pronóstico combinado: estación local + presión + Open-Meteo + WeatherAPI.
+    Pronóstico combinado: estación local + Open-Meteo + WeatherAPI.
 
     Combina múltiples fuentes para mayor precisión:
     - Prioriza datos reales de la estación si está lloviendo
-    - Usa tendencia de presión para alertas de corto plazo (0-3h)
+    - Tendencia de presión sólo como dato (`pressure`); ya no genera avisos de
+      lluvia -- ver forecast_consensus.pressure_forecast
     - Compara Open-Meteo vs WeatherAPI y muestra el más conservador
     """
     try:

@@ -1178,7 +1178,7 @@ El wizard puede saltarse y reaccederse más tarde si es necesario.
 | Página | Qué configura |
 |--------|---------------|
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
-| **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias (nombre + passkey opcional que se autodetecta). Las secundarias pueden **eliminarse** (con confirmación). Cada fila enlaza a su configuración individual |
+| **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias: nombre + **MAC o passkey** (obligatorio; con la MAC se calcula el passkey) y queda dada de alta en el registro al instante. Las secundarias pueden **eliminarse** (con confirmación), lo que también las quita del registro: el servidor deja de aceptar sus datos. Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Nombre/etiqueta, **watchdog** (activar/desactivar y timeout en minutos). **Servicios individuales**: activar alertas, publicación a redes y MQTT **por estación** (secundarias por defecto solo almacenan datos). **Sensores WN31** con nombres personalizados (ej. «Sala», «Recámara»). En secundarias, opción **«a la intemperie»**: trata el sensor integrado (que reporta como *interior*) como **exterior** en todo el sistema (alertas, calibración, página remota, publicación) |
 | **Alertas** | Toggle global y por tipo. Umbrales configurables **por estación** con selector. En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), más batería baja, sensor perdido, **sensor atascado**, estación offline y calidad del aire (AQI/IMECA). En **secundarias (GW1100)** aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
 | **Calibración** | Toggle global y **por estación** con selector. Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, etiquetado *Exterior* o *Interior* según el «a la intemperie») + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
@@ -1337,7 +1337,7 @@ modelo externo.
 | Fuente | Qué aporta | Archivo |
 |--------|------------|---------|
 | **Estación local** | Condición REAL ahora (lluvia, radiación solar → nubosidad) | — |
-| **Tendencia de presión** | Alerta de tormenta inminente (0-3h) **en el consenso**, método Zambretti | `forecaster.py` · `forecast_consensus.py` |
+| **Tendencia de presión** | Sólo **dato** (tendencia y texto del barómetro); desde 2026-09-23 ya no avisa lluvia en ningún pronóstico — ver abajo | `forecaster.py` · `forecast_consensus.py` |
 | **Cámara del cielo** | Precipitación visible y tendencia de nubes (usadas por "nuestro pronóstico") | `sky_analyzer.py` · `camera.py` |
 | **Estaciones vecinas** (Xweather + Netatmo) | Dato **informativo** para comparar; en "nuestro pronóstico" sólo cuenta una vecina que reporta lluvia en la dirección de donde sopla el viento | `xweather.py` · `netatmo.py` |
 | **Open-Meteo** | Pronóstico horario gratuito (1-7 días), códigos WMO | `openmeteo.py` |
@@ -1351,14 +1351,13 @@ El sistema de **consenso** combina todas las fuentes con esta lógica de priorid
 ```
 1. ¿Está lloviendo según la estación? → "Lloviendo" (dato REAL, no pronóstico)
 2. ¿Hay radiación solar? → Nubosidad REAL por índice de claridad
-3. ¿La presión indica tormenta inminente? → "Tormenta cercana"
-4. Si no hay dato local → Usar pronóstico promediado
+3. Si no hay dato local → Usar pronóstico promediado
 ```
 
 **Principios clave:**
 - La estación local tiene **prioridad absoluta** si hay precipitación (el pluviómetro es dato real)
 - El **índice de claridad** (radiación medida ÷ teórica) determina nubosidad real de día
-- La **tendencia de presión** detecta tormentas ANTES de que lleguen (caída de presión)
+- La **tendencia de presión** ya no genera avisos: `pressure.storm_likely`/`hours_to_rain` y `current.storm_approaching` se conservan en la respuesta por compatibilidad, pero siempre valen `false`/`null` (verificado: 13 % de acierto a 3 h en CDMX)
 - Cuando Open-Meteo y WeatherAPI difieren, se usa el **promedio de severidad** (no el peor caso)
 
 ### "Nuestro pronóstico" (`forecaster.own_forecast`)
@@ -1377,24 +1376,23 @@ Si ninguna dice nada, `source: "none"`. **La presión propia ya no dispara lluvi
 (2026-09-23): verificada contra el pluviómetro con `/api/forecast/verification`, "presión
 bajando" acertaba 13 % de las lluvias a 3 h con 83 % de falsas alarmas (la marea
 atmosférica la baja casi todas las tardes). Su tendencia se sigue mostrando como dato en
-`/api/forecast/local`.
+`/api/forecast/local`. Lo mismo aplica al consenso (`/api/forecast/consensus`): ya no pone
+"Lluvia probable en Nh" ni la alerta "Tormenta acercándose" por la presión.
 
 ### Pronóstico local por presión (`forecaster.py`)
 
 Método clásico del barómetro (base Zambretti): la presión a nivel del mar y su **tendencia
-en las últimas 3 horas**. La tendencia la clasifica `classify_trend` (`forecaster.py`); los
-mensajes de lluvia son los de `pressure_forecast` (`forecast_consensus.py`), que sólo usa el
-consenso:
+en las últimas 3 horas**. La tendencia la clasifica `classify_trend` (`forecaster.py`); en el
+consenso, `pressure_forecast` (`forecast_consensus.py`) sólo describe esa tendencia, sin
+prometer lluvia:
 
-| Cambio 3h (hPa) | Tendencia | Pronóstico (consenso) |
+| Cambio 3h (hPa) | Tendencia | Mensaje (consenso) |
 |-----------------|-----------|------------|
-| ≤ -7 | Cayendo rápido | Tormenta inminente (0-1h) |
-| -7 a -5 | Cayendo rápido | Lluvia probable en 1-2h |
-| -5 a -3.5 | Cayendo rápido | Posible lluvia en pocas horas |
-| -3.5 a -1 | Bajando | Posible lluvia en 2-4h |
-| -1 a +1 | Estable | Sin cambios esperados |
-| +1 a +3.5 | Subiendo | Tiempo mejorando |
-| ≥ +3.5 | Subiendo rápido | Cielos despejando |
+| ≤ -3.5 | Cayendo rápido | Presión cayendo rápido. |
+| -3.5 a -1 | Bajando | Presión bajando. |
+| -1 a +1 | Estable | Presión estable. |
+| +1 a +3.5 | Subiendo | Presión subiendo. |
+| ≥ +3.5 | Subiendo rápido | Presión subiendo rápido. |
 
 #### Umbrales de presión calibrados para CDMX
 
@@ -1541,7 +1539,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/compare` | 24 h vs 24 h previas ("vs ayer") |
 | `GET /api/forecast/local` | pronóstico por tendencia barométrica |
 | `GET /api/forecast/own` | "nuestro pronóstico" de lluvia: pluviómetro → cámara → vecinas, sin modelos (ver §11½) |
-| `GET /api/forecast/consensus` | consenso estación + presión + Open-Meteo + WeatherAPI (ver §11½) |
+| `GET /api/forecast/consensus` | consenso estación + Open-Meteo + WeatherAPI; presión sólo como dato (ver §11½) |
 | `GET /api/forecast/verification?days=30` | acierto de cada fuente de pronóstico contra el pluviómetro/cámara (ver §7) |
 | `GET /api/nearby-stations` | estaciones vecinas (Xweather + Netatmo), con `incoming_rain` |
 | `GET /api/forecast` | pronóstico Open-Meteo con caché |
