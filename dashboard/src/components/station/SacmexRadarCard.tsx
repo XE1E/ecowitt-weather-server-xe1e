@@ -19,7 +19,7 @@ interface SacmexData {
 }
 
 const FRAME_MS = 700      // cada cuadro de la animación
-const HOLD_LAST_MS = 2000 // pausa en el más reciente antes de volver a empezar
+const HOLD_LAST_MS = 5000 // pausa en el más reciente antes de volver a empezar (era 2 s: se iba demasiado rápido)
 const REFRESH_MS = 5 * 60 * 1000
 
 const hora = (iso: string) =>
