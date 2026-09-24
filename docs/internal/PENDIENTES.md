@@ -671,14 +671,30 @@ en `tests/test_sky_analyzer.py`, anclados a los datos reales medidos ese día.
 Documentado en `docs/guias/analisis-cielo.md`. Pendiente real: la curva es de UN solo
 día calibrado -- revisar si con más mañanas despejadas el umbral sigue separando limpio.
 
-## 3. Rediseño de Admin + depuración de código — plan escrito
-Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`**. Consolidar toda la config por estación
-dentro de "Estaciones" (publicación, alertas) y limpiar código muerto:
+## 3. Rediseño de Admin — por categorías, con la estación adentro (aprobado 2026-09-24)
+Ver **`docs/internal/PLAN-REDISENO-ADMIN.md`** (reescrito el 2026-09-24: se descartó
+"una página por estación"; casi todo es global y el GW1100 sólo tiene propios umbrales,
+calibración y su ficha). La depuración del registro del plan viejo ya estaba hecha.
 
-- [ ] `station_passkeys` muerto.
-- [ ] Bug no-op de `create_station`.
-- [ ] Unificar el registro por MAC.
-- [ ] Etapas 1‑5 del plan.
+- [ ] Etapa 1 — limpieza: bugs del asistente (SMTP y nombre), casillas que no hacen
+      nada, quitar `treat_indoor_as_outdoor`, borrar `AdminPage.tsx`, un solo alta.
+- [ ] Etapa 2 — un solo lugar por ajuste ("sin datos", coordenadas, altitud).
+- [ ] Etapa 3 — pestañas por estación en Alertas y Calibración + ficha con accesos.
+- [ ] Etapa 4 — menú agrupado y documentación.
+
+## 3b. Revisión general del código (depurar, optimizar, mejorar) — PLAN PARA DESPUÉS (anotado 2026-09-24)
+Pedido del usuario: una pasada completa por todo el código, cuando termine el Admin.
+Ideas de alcance (a precisar al arrancar):
+- `receiver/app/main.py` tiene ~3,900 líneas: partir en routers de FastAPI por área
+  (admin, radar, cámara, pronóstico, estaciones) sin cambiar URLs.
+- Código muerto y claves de configuración que nadie lee (el inventario del Admin ya
+  encontró varias: `publish_enabled`/`mqtt_enabled` por estación, `AdminPage.tsx`).
+- Páginas grandes del dashboard (AdminWizard 900 líneas, AdminAlertas 770) en
+  componentes; tipos compartidos en vez de interfaces repetidas.
+- Rendimiento: consultas a InfluxDB repetidas, cachés sin límite, trabajo pesado en
+  el camino de `/data/report`.
+- Pruebas donde falten (endpoints admin, alta/baja de estaciones) y `ruff`/`tsc` sin
+  avisos. Hacerlo por módulos, con deploy y verificación en cada uno.
 
 ## 4. Seguridad — residuales (auditoría docs/SEGURIDAD.md)
 - [ ] Cerrar el puerto `:8080` (DIFERIDO: IP dinámica; se compensa con la whitelist de passkey).

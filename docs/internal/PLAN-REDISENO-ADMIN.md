@@ -1,141 +1,85 @@
-# Plan: rediseño del panel Admin (config por estación) + depuración
+# Plan: rediseño del panel Admin — por categorías, con la estación adentro
 
-> Estado: **propuesta** (2026-07-24). Ejecutar por etapas, con deploy y verificación
-> en cada una. Es un sistema en producción con estaciones reales — cambios
-> incrementales, sin romper la resolución de estaciones ni el whitelist.
+> Estado: **aprobado 2026-09-24, en ejecución por etapas** (deploy y verificación en
+> cada una). Sustituye la propuesta del 2026-07-24 ("una página por estación con todas
+> sus tarjetas"), que se descartó: ver §1.
 
-## 1. Objetivo / visión
+## 1. Por qué por categorías y no por estación
 
-Consolidar **todo lo relativo a cada estación en su propia página de configuración**
-(Estaciones → eliges una → una sola página con todas sus tarjetas), en vez de tener
-el ajuste de una misma estación repartido en varias páginas con selector
-(Alertas, Calibración, Publicación…). Objetivo: "todo lo de la estación, junto".
+Inventario del 2026-09-24 (12 páginas + backend):
 
-Lo verdaderamente **global** (no por estación) se queda en su propia página.
+- **Casi todo es del sistema, no de una estación.** Publicación (credenciales una por
+  red), MQTT/Home Assistant, cámara, notificaciones, respaldos, sismos y calidad del
+  aire sólo existen para la principal o son globales (`main.py`: la publicación y MQTT
+  corren sólo si `station is None`). El GW1100 sólo tiene ajustes propios en tres
+  cosas: **umbrales de alertas, calibración y la ficha** (nombre, altitud, "sin datos").
+- Una página por estación dejaría la del GW1100 casi vacía y las páginas de categoría
+  seguirían existiendo para lo global: dos lugares para lo mismo.
+- La **Etapa 1 del plan viejo ya estaba hecha** (commit `f27f5b6`): `station_passkeys`
+  retirado, no-op de `create_station` arreglado, alta por MAC, baja, `passkey_hint`.
 
-## 2. Estado actual (as-is)
+## 2. Diseño objetivo
 
-**Páginas admin (nav):** Dashboard · Estaciones · Alertas · Calibración · Publicación
-· Notificaciones · Integraciones · Sistema · Actualizaciones.
+**Patrón único en las páginas de categoría:** arriba lo GLOBAL (aplica a todo); abajo
+**pestañas por estación** (Principal · GW1100) con lo propio de cada una. La pestaña va
+en la URL (`/admin/alertas?estacion=gw1100`) para enlazarla directo. Sin secundarias,
+no hay pestañas.
 
-**Con selector por-estación (principal/secundaria):** `AdminAlertas`,
-`AdminCalibracion`, `AdminEstacionConfig`, `AdminNotificaciones`.
+- **Alertas.** Global: interruptor maestro, estado de Telegram/correo, batería, sensor
+  perdido/atorado, persistencia, calidad del aire, sismos, cámara, respaldos, redes
+  públicas, ventanas de tendencia. Por estación: umbrales + reglas desactivadas + el
+  aviso de **"sin datos" (minutos) — sólo aquí**.
+- **Calibración.** Por estación: habilitada, offsets por sensor, presión y la
+  **altitud — sólo aquí** (de ella depende la presión a nivel del mar).
+- **Estación (ficha).** Nombre, registro (MAC), nombres de sensores y un **resumen con
+  accesos directos** en vez de casillas: "Alertas: umbrales propios → editar",
+  "Calibración: presión +0.8 hPa → editar". Así se conserva "todo lo de la estación a
+  la vista" sin duplicar ningún ajuste.
+- **Sistema.** Ubicación única (lat/lon/zona horaria) que usan CWOP y AWEKAS (hoy
+  AWEKAS tiene coordenadas propias: confirmar al migrar que no difieran a propósito).
 
-**`AdminEstacionConfig`** (por estación, `isPrincipal = station.name === null`) ya
-tiene tarjetas: General (nombre, watchdog), **Registro** (recién integrado), Servicios
-(alertas/publicación/MQTT on-off), Sensor integrado (altitud, "a la intemperie"),
-Sensores WN31, Otros sensores.
+**Menú agrupado** (hoy 10 entradas sueltas):
+Estado (Dashboard, Estaciones) · Datos (Calibración, Alertas) · Salidas (Publicación,
+Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
 
-**Modelo de datos: YA es por-estación** (en `settings.json`, `stations.<nombre>`):
-`label`, `watchdog_*`, `alerts_enabled`, `publish_enabled`, `mqtt_enabled`,
-`treat_indoor_as_outdoor`, `altitude_m`, `calibration` (dict cal_*),
-`alert_thresholds` (dict alert_*). El registro (passkey→nombre) vive en
-`secondary_stations` (string) + `primary_passkey`. La principal usa los globales de
-`settings` (calibración/alertas/altitud globales).
+## 3. Etapas
 
-→ El rediseño es sobre todo **consolidación de UI/IA**, no reescritura del backend.
+### Etapa 1 — limpieza sin mover nada de lugar
+- [ ] **Asistente (bugs reales):** manda el SMTP con claves que no existen
+      (`email_smtp_host`… en vez de `smtp_host`…, las descarta `/api/admin/settings`
+      en silencio) y el nombre a `PUT /api/admin/stations/_principal`, que no existe
+      (es `PUT /api/stations/_principal` con `{config:{label}}`).
+- [ ] **Quitar casillas que no hacen nada** de "Servicios para esta estación":
+      `publish_enabled` y `mqtt_enabled` por estación (nadie los lee); en la principal,
+      `alerts_enabled` y `watchdog_enabled` (se ignoran, manda el global).
+- [ ] **Quitar `treat_indoor_as_outdoor`** (fue una prueba; apagado en las dos
+      estaciones al 2026-09-24): toggle de la ficha, lectura en Calibración, rama en
+      `main.py` al ingerir, default en `settings_store.py`, y la clave guardada.
+- [ ] **Borrar `pages/AdminPage.tsx`** (panel viejo, sin ruta ni import).
+- [ ] **Un solo camino de alta:** la tarjeta Registro de la ficha usa
+      `POST /api/admin/registry/secondary` (no crea config, reglas distintas) y el
+      modal usa `POST /api/admin/stations`. Dejar uno.
 
-## 3. Deuda técnica a depurar
+### Etapa 2 — un solo lugar por ajuste
+- [ ] "Sin datos": hoy en Alertas (`alert_station_offline_minutes`), Sistema y la ficha
+      (`stations._principal.watchdog_minutes`, que **le gana en silencio** al global).
+      Queda en Alertas, por estación.
+- [ ] Coordenadas: Publicación (CWOP), Sistema y asistente → Sistema.
+- [ ] Altitud del GW1100: Calibración y ficha → Calibración.
+- [ ] `/api/stations` arma `publish_enabled` de la principal con sólo 5 de las 9 redes:
+      corregir o quitar (tras quitar la casilla, probablemente quitar).
 
-1. **Dos mecanismos de passkey de secundarias:**
-   - `secondary_stations` (string "passkey:nombre,…") → parseado por la @property
-     `settings.secondary_station_map` → **es el que USA `resolve_station`** (el real).
-   - `station_passkeys` (dict en `settings.json`) → lo escribe `create_station` /
-     `delete_station`, pero **NUNCA se lee para resolver** → **código muerto**.
-   - **Acción:** eliminar `station_passkeys`; que `create_station`/`delete_station`
-     operen sobre `secondary_stations` (usar los helpers del registro).
-2. **Bug no-op en `create_station`:** `settings.secondary_station_map[pk] = name`
-   modifica el dict TEMPORAL que devuelve la @property → se descarta. Quitar.
-3. **Caminos de alta duplicados:** el alta vieja (`AdminEstaciones` → `create_station`,
-   con passkey manual, roto) y los endpoints nuevos `/api/admin/registry` (por MAC,
-   funcionan). **Unificar** el alta para que pase por el registro (por MAC).
-4. **`passkey_hint`** en `/api/stations` sale de `station_passkeys` (muerto) →
-   alinear a `secondary_stations` (o a `/api/admin/registry`).
-5. **Fuente canónica de `secondary_stations`:** hoy puede estar en `.env` Y en
-   `settings.json` (ahora editable). Definir: `settings.json` = fuente en runtime;
-   `.env` = solo semilla inicial. Documentarlo.
-6. **Consistencia nombre↔config↔registro:** el registro se indexa por passkey→nombre;
-   la config por nombre. Garantizar que dar de alta cree ambos y que borrar limpie
-   ambos (registro + `stations.<nombre>` opcional, conservando histórico).
+### Etapa 3 — pestañas por estación + ficha
+- [ ] Componente común de pestañas con `?estacion=` para Alertas y Calibración.
+- [ ] Ficha de la estación con el resumen y accesos directos.
 
-## 4. Diseño objetivo (to-be)
+### Etapa 4 — menú y documentación
+- [ ] Menú agrupado; `docs/GUIA.md` / `docs/api-reference.md` al día.
 
-**`AdminEstacionConfig` = hub único por estación.** Tarjetas:
+## 4. Cuidados (producción en vivo)
 
-| Tarjeta | Contenido | De dónde se mueve |
-|---|---|---|
-| General | nombre/label, watchdog | ya está |
-| **Registro** | MAC→passkey; whitelist (principal) | ya integrado |
-| Servicios | on/off de alertas, publicación, MQTT | ya está |
-| Alertas | umbrales por estación (temp/presión/…) | de `AdminAlertas` (parte por-estación) |
-| Publicación | a qué redes publica esta estación | de `AdminPublicacion` (parte por-estación) |
-| Calibración | offsets + altitud | de `AdminCalibracion` (parte por-estación) |
-| Sensores | WN31 / otros (nombres, señal) | ya está |
-
-**`AdminEstaciones` (lista):** lista + "Agregar estación" **por MAC** (crea config +
-registra en un paso), unificado con el registro.
-
-**Páginas globales que se quedan** (lo que NO es por-estación): credenciales globales
-de publicación (cuentas WU/PWS/…), Notificaciones (Telegram/correo global),
-Integraciones, Sistema, Actualizaciones, Dashboard.
-
-**Se retiran / simplifican:** `AdminRegistro` (ya retirada). `AdminAlertas`,
-`AdminCalibracion`, `AdminPublicacion`: quitan su selector por-estación (esa función
-pasa a la config); quedan solo con lo global/principal, o se integran del todo.
-Decidir por página en su etapa.
-
-## 5. Cambios backend (depuración)
-
-- Eliminar `station_passkeys` (escritura + `passkey_hint`); leer/escribir todo desde
-  `secondary_stations`.
-- `create_station`: aceptar **MAC** (derivar con `passkey_from_mac`), registrar en
-  `secondary_stations` (vía los helpers de `/api/admin/registry`), crear la config
-  por defecto, y quitar el no-op. Alternativa: que el alta del frontend llame a
-  `POST /api/admin/registry/secondary` + crear config.
-- `delete_station`: quitar de `secondary_stations` (ya hay `DELETE
-  /api/admin/registry/secondary/{name}`), opcional borrar la config.
-- Migración: al arrancar, si existe `station_passkeys` con entradas y no están en
-  `secondary_stations`, fusionarlas una vez y luego ignorar/eliminar la clave.
-- Semilla: si `settings.json` no trae `secondary_stations`, usar el `.env` (ya pasa
-  por el orden de overrides).
-
-## 6. Cambios frontend
-
-- Mover las secciones por-estación de `AdminCalibracion` / `AdminAlertas` /
-  `AdminPublicacion` a tarjetas dentro de `AdminEstacionConfig` (reusar sus endpoints
-  por-estación: `/api/admin/stations/{name}/calibration`, `/alerts`, y el toggle de
-  publicación de la config).
-- Simplificar las páginas origen (dejar solo lo global) o retirarlas del nav.
-- Alta por MAC en `AdminEstaciones`.
-- Limpiar nav/rutas y `docs/GUIA.md` / `docs/api.md` según lo que cambie.
-
-## 7. Migración / compatibilidad
-
-- Respaldar `settings.json` antes de tocar backend (`cp .env`/`settings.json`).
-- No perder histórico de InfluxDB (el registro/config no toca datos).
-- Preservar el **whitelist**: no romper `resolve_station`; probar que WS2910 +
-  GW1100 siguen entrando y que un passkey desconocido se rechaza tras cada cambio.
-
-## 8. Plan por etapas (incremental, con deploy + verificación en cada una)
-
-- **Etapa 0 (HECHA):** whitelist de passkey; registro por MAC (`/api/admin/registry`);
-  tarjeta Registro integrada en la config; página `/admin/registro` retirada.
-- **Etapa 1 — depuración backend del registro:** eliminar `station_passkeys`, arreglar
-  `create_station` (por MAC → `secondary_stations`), unificar alta/baja, `passkey_hint`.
-  Verificar resolución + alta/baja end-to-end.
-- **Etapa 2 — Alertas a la config:** mover umbrales por-estación a la tarjeta Alertas
-  de la config; `AdminAlertas` queda global (toggle global, Telegram/correo).
-- **Etapa 3 — Publicación a la config:** tarjeta de publicación por-estación; dejar
-  credenciales globales en `AdminPublicacion`.
-- **Etapa 4 — Calibración a la config:** tarjeta de calibración + altitud por-estación;
-  `AdminCalibracion` global/principal o retirada.
-- **Etapa 5 — limpieza:** retirar selectores/páginas redundantes, ajustar nav, docs.
-
-## 9. Riesgos
-
-- Producción en vivo (WS2910 + GW1100 empujando). Cambios chicos, deploy por etapa,
-  verificar tras cada uno.
-- No romper el whitelist (resolución) ni la config existente (el merge de
-  `save_station_config` ya conserva claves — mantener ese cuidado).
-- Frontend: `AdminEstacionConfig` crece; considerar dividir en subcomponentes por
-  tarjeta para que sea mantenible.
+- WS2910 + GW1100 empujando: no romper `resolve_station` ni el whitelist; tras cada
+  etapa, comprobar que las dos siguen entrando y que un passkey desconocido se rechaza.
+- Respaldar `/data/settings.json` antes de tocar claves guardadas.
+- El merge de `save_station_config` conserva claves: al retirar una, quitarla también
+  de lo guardado (o ignorarla) para que no reaparezca.
