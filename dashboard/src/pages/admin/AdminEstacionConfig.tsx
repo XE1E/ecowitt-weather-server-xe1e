@@ -26,10 +26,13 @@ interface SensorDetail {
 
 interface StationConfig {
   label?: string
-  watchdog_enabled: boolean
-  watchdog_minutes: number
-  alerts_enabled: boolean
+  alerts_enabled?: boolean
+  watchdog_enabled?: boolean
+  watchdog_minutes?: number
   altitude_m?: number
+  disabled_rules?: string[]
+  alert_thresholds?: Record<string, number>
+  calibration?: Record<string, number | boolean>
 }
 
 interface StationData {
@@ -53,6 +56,8 @@ export function AdminEstacionConfig() {
 
   const [stationLabel, setStationLabel] = useState('')
   const [sensorLabels, setSensorLabels] = useState<Record<string, string>>({})
+  // La principal guarda alertas/calibración en la configuración global.
+  const [globalCfg, setGlobalCfg] = useState<Record<string, unknown> | null>(null)
 
   // Registro (passkey por MAC)
   const [registry, setRegistry] = useState<Registry | null>(null)
@@ -119,6 +124,11 @@ export function AdminEstacionConfig() {
   }
 
   useEffect(() => {
+    if (name !== '_principal') return
+    fetchWithAuth('/api/admin/settings').then(r => r.json()).then(setGlobalCfg).catch(() => {})
+  }, [name, fetchWithAuth])
+
+  useEffect(() => {
     if (!name) return
     fetch(`/api/stations/${name}`)
       .then(r => r.json())
@@ -167,6 +177,28 @@ export function AdminEstacionConfig() {
   )
 
   const isPrincipal = station.name === null
+  const q = isPrincipal ? '?estacion=principal' : `?estacion=${name}`
+  // Resumen de lo que esta estación tiene en Alertas y Calibración (sólo lectura;
+  // se edita allá). Para la principal sale de la configuración global.
+  const g = globalCfg as Record<string, number | boolean> | null
+  const cfg = station.config
+  const signo = (v: number) => (v > 0 ? `+${v}` : `${v}`)
+  const resumenAlertas: string | null = isPrincipal
+    ? (g ? `${g.alerts_enabled ? 'activas' : 'apagadas (todas)'} · sin datos tras ${g.alert_station_offline_minutes} min` : null)
+    : [
+        cfg.alerts_enabled ? 'activas' : 'apagadas',
+        cfg.watchdog_enabled === false ? 'sin aviso de «sin datos»' : `sin datos tras ${cfg.watchdog_minutes ?? 15} min`,
+        (cfg.disabled_rules?.length ?? 0) > 0 ? `${cfg.disabled_rules!.length} regla(s) desactivada(s)` : null,
+      ].filter(Boolean).join(' · ')
+  const cal = isPrincipal ? g : (cfg.calibration ?? {})
+  const alt = isPrincipal ? (g?.station_altitude_m as number | undefined) : cfg.altitude_m
+  const resumenCal: string | null = cal
+    ? [
+        cal.cal_enabled ? 'habilitada' : 'deshabilitada',
+        `presión ${signo(Number(cal.cal_pressure_offset ?? 0))} hPa`,
+        alt ? `altitud ${alt} m` : 'altitud de la consola',
+      ].join(' · ')
+    : null
   const wn31Sensors = station.sensors_detail.filter(s => s.type === 'WN31')
   const otherSensors = station.sensors_detail.filter(s => s.type !== 'WN31')
 
@@ -292,14 +324,16 @@ export function AdminEstacionConfig() {
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <h2 className="font-medium mb-3">Ajustes de esta estación</h2>
         <div className="grid gap-2 sm:grid-cols-2">
-          <Link to={isPrincipal ? '/admin/alertas' : `/admin/alertas?estacion=${name}`}
+          <Link to={`/admin/alertas${q}`}
             className="rounded-lg bg-slate-900/50 border border-white/5 hover:border-sky-500/40 px-3 py-2 text-sm">
-            🔔 <span className="text-slate-200">Alertas</span>
+            🔔 <span className="text-slate-200">Alertas</span> <span className="text-sky-400 text-xs">editar →</span>
+            <span className="block text-xs text-slate-400 mt-0.5">{resumenAlertas ?? '…'}</span>
             <span className="block text-xs text-slate-500">umbrales y aviso de «sin datos»</span>
           </Link>
-          <Link to={isPrincipal ? '/admin/calibracion' : `/admin/calibracion?estacion=${name}`}
+          <Link to={`/admin/calibracion${q}`}
             className="rounded-lg bg-slate-900/50 border border-white/5 hover:border-sky-500/40 px-3 py-2 text-sm">
-            🔧 <span className="text-slate-200">Calibración</span>
+            🔧 <span className="text-slate-200">Calibración</span> <span className="text-sky-400 text-xs">editar →</span>
+            <span className="block text-xs text-slate-400 mt-0.5">{resumenCal ?? '…'}</span>
             <span className="block text-xs text-slate-500">offsets de sensores y altitud</span>
           </Link>
         </div>

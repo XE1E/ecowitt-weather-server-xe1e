@@ -33,3 +33,44 @@ export function BatteryIcon({ ok, size = 20 }: { ok: boolean; size?: number }) {
     </span>
   )
 }
+
+/**
+ * Pestañas de estación para las páginas de categoría del Admin (Alertas,
+ * Calibración): cada pestaña con lo propio de esa estación (`null` = la
+ * principal). `onGeneral` agrega primero una pestaña «General» para lo que
+ * aplica a todo el sistema (en Alertas: interruptor maestro, batería, sismos…).
+ * Sin secundarias no se muestra nada: no hay nada que elegir.
+ */
+export function StationTabs({ principalLabel, secondaries, selected, onSelect, general = false, onGeneral }: {
+  principalLabel: string
+  secondaries: { name: string; label: string }[]
+  selected: string | null
+  onSelect: (name: string | null) => void
+  general?: boolean
+  onGeneral?: () => void
+}) {
+  if (secondaries.length === 0) return null
+  const tabs: { key: string; icon: string; label: string; active: boolean; go: () => void }[] = []
+  if (onGeneral) tabs.push({ key: '_general', icon: '⚙️', label: 'General', active: general, go: onGeneral })
+  tabs.push({ key: '_principal', icon: '🏠', label: principalLabel, active: !general && selected === null, go: () => onSelect(null) })
+  for (const s of secondaries) {
+    tabs.push({ key: s.name, icon: '📡', label: s.label, active: !general && selected === s.name, go: () => onSelect(s.name) })
+  }
+  return (
+    <div role="tablist" aria-label="Estación" className="flex gap-1 border-b border-white/10 overflow-x-auto">
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          role="tab"
+          aria-selected={t.active}
+          onClick={() => { if (!t.active) t.go() }}
+          className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${
+            t.active ? 'border-sky-500 text-sky-400 font-medium' : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          {t.icon} {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}

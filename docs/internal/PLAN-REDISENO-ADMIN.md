@@ -79,14 +79,21 @@ Notificaciones, Integraciones) · Cámara · Sistema (Sistema, Actualizaciones).
 - [x] Adelanto de la etapa 3: la ficha trae accesos directos a Alertas/Calibración con
       `?estacion=<nombre>`, que ambas páginas ya entienden.
 
-### Etapa 3 — pestañas por estación + ficha
-- [ ] Componente común de pestañas con `?estacion=` para Alertas y Calibración.
-- [ ] Ficha de la estación con el resumen y accesos directos.
+### Etapa 3 — pestañas por estación + ficha — HECHA 2026-09-24
+- [x] `StationTabs` (components/admin-ui.tsx) en Alertas y Calibración, en lugar del
+      `<select>`. La pestaña va en la URL: `?estacion=gw1100` / `?estacion=principal`.
+- [x] Alertas con pestaña **General** primero (interruptor maestro, Telegram/correo,
+      batería, sensor perdido/atorado, persistencia, aire, sismos, cámara, respaldos,
+      redes) y luego Principal y cada secundaria con sus umbrales y su «sin datos».
+      Sin secundarias no hay pestañas y todo sale junto, como antes.
+- [x] Ficha: los accesos a Alertas y Calibración muestran un resumen de lo que tiene
+      esa estación (activas, «sin datos», reglas desactivadas; calibración, presión,
+      altitud). Para la principal sale de la configuración global.
 
 ### Etapa 4 — menú y documentación
 - [ ] Menú agrupado; `docs/GUIA.md` / `docs/api-reference.md` al día.
-- [ ] En celular el menú lateral arranca ABIERTO encima de la página
-      (`AdminLayout`: `sidebarOpen` empieza en `true`); que empiece cerrado en pantallas chicas.
+- [x] En celular el menú lateral arrancaba ABIERTO encima de la página: ahora empieza
+      cerrado bajo `lg` y se cierra al elegir una opción (adelantado en la etapa 3).
 
 ## 4. Cuidados (producción en vivo)
 

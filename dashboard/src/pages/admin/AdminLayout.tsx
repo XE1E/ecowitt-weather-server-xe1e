@@ -95,7 +95,9 @@ function LoginForm() {
 export function AdminLayout() {
   const { isAuthenticated, logout, fetchWithAuth } = useAdminAuth()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Abierto sólo en pantallas grandes (lg, donde además queda fijo); en celular
+  // arrancaba abierto tapando la página.
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1024)
   const [checkingSetup, setCheckingSetup] = useState(true)
 
   useEffect(() => {
@@ -174,6 +176,7 @@ export function AdminLayout() {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false) }}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive

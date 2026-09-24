@@ -679,7 +679,7 @@ calibración y su ficha). La depuración del registro del plan viejo ya estaba h
 - [x] Etapa 1 — limpieza (HECHA 2026-09-24): bugs del asistente (SMTP y nombre), casillas que no hacen
       nada, quitar `treat_indoor_as_outdoor`, borrar `AdminPage.tsx`, un solo alta.
 - [x] Etapa 2 (HECHA 2026-09-24) — un solo lugar por ajuste ("sin datos", coordenadas, altitud).
-- [ ] Etapa 3 — pestañas por estación en Alertas y Calibración + ficha con accesos.
+- [x] Etapa 3 (HECHA 2026-09-24) — pestañas por estación en Alertas y Calibración + ficha con accesos.
 - [ ] Etapa 4 — menú agrupado y documentación.
 
 ## 3b. Revisión general del código (depurar, optimizar, mejorar) — PLAN PARA DESPUÉS (anotado 2026-09-24)

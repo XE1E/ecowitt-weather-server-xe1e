@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import { StationTabs } from '../../components/admin-ui'
 
 interface AlertSettings {
   alerts_enabled: boolean
@@ -149,6 +150,9 @@ export function AdminAlertas() {
   const [secWatchdog, setSecWatchdog] = useState(true)
   const [secAlerts, setSecAlerts] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
+  // Pestaña «General» (lo del sistema: maestro, batería, sismos, cámara…). Sólo
+  // existe si hay secundarias; si no, todo va en una sola página como antes.
+  const [general, setGeneral] = useState(searchParams.get('estacion') === null)
   const [disabled, setDisabled] = useState<string[]>([])  // reglas apagadas
   // Reglas visuales apagadas (sky_storm/sky_precipitation/sky_visibility). Son
   // globales (no hay una por estación), así que solo se editan con isPrincipal.
@@ -181,6 +185,7 @@ export function AdminAlertas() {
   // ?estacion=<nombre> abre directo esa estación (enlaces desde su ficha).
   const wanted = searchParams.get('estacion')
   useEffect(() => {
+    if (wanted === 'principal') setGeneral(false)
     if (globalCache && wanted && selected === null && secondaries.some((x) => x.name === wanted)) {
       onSelectStation(wanted)
     }
@@ -188,8 +193,8 @@ export function AdminAlertas() {
   }, [globalCache, secondaries, wanted])
 
   const onSelectStation = async (sel: string | null) => {
-    setSelected(sel); setMessage(null); setLoading(true)
-    setSearchParams(sel ? { estacion: sel } : {}, { replace: true })
+    setSelected(sel); setGeneral(false); setMessage(null); setLoading(true)
+    setSearchParams({ estacion: sel ?? 'principal' }, { replace: true })
     try {
       if (sel === null) {
         const [s, cur] = await Promise.all([
@@ -310,6 +315,14 @@ export function AdminAlertas() {
       {!tiene(campo) && <span className="ml-1 text-xs font-normal text-amber-500/80">· sin lecturas</span>}
     </>
   )
+  const hasTabs = secondaries.length > 0
+  const showGeneral = isPrincipal && (!hasTabs || general)   // tarjetas del sistema
+  const showStation = !hasTabs || !general                   // umbrales de la estación elegida
+  const onGeneral = async () => {
+    if (selected !== null) await onSelectStation(null)
+    setGeneral(true)
+    setSearchParams({}, { replace: true })
+  }
   const selLabel = isPrincipal ? 'Principal (WS2910)' : (secondaries.find((s) => s.name === selected)?.label || selected)
 
   return (
@@ -318,20 +331,10 @@ export function AdminAlertas() {
         <div>
           <h1 className="text-xl font-bold">Alertas</h1>
           <p className="text-slate-400 text-sm">
-            {isPrincipal ? 'Umbrales de la estación principal · WS2910' : `Umbrales de ${selLabel}`}
+            {showGeneral && hasTabs ? 'Avisos del sistema y a dónde llegan' : isPrincipal ? 'Umbrales de la estación principal · WS2910' : `Umbrales de ${selLabel}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {secondaries.length > 0 && (
-            <select
-              value={selected ?? ''}
-              onChange={(e) => onSelectStation(e.target.value || null)}
-              className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
-            >
-              <option value="">Principal (WS2910)</option>
-              {secondaries.map((s) => (<option key={s.name} value={s.name}>{s.label}</option>))}
-            </select>
-          )}
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
           <button onClick={handleSave} disabled={saving} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium">
             {saving ? 'Guardando...' : 'Guardar'}
@@ -339,9 +342,13 @@ export function AdminAlertas() {
         </div>
       </div>
 
+      <StationTabs principalLabel="Principal" secondaries={secondaries} selected={selected}
+        onSelect={onSelectStation} general={general && isPrincipal} onGeneral={onGeneral} />
+
       {isPrincipal ? (
         <>
           {/* Master + Telegram */}
+          {showGeneral && (
           <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Toggle enabled={settings.alerts_enabled} onChange={(v) => update('alerts_enabled', v)} label="Alertas habilitadas" />
             <div className="h-4 w-px bg-white/10" />
@@ -353,9 +360,21 @@ export function AdminAlertas() {
             </span>
             <a href="/admin/notificaciones" className="text-sky-400 hover:text-sky-300 text-sm ml-auto">Configurar →</a>
           </div>
+          )}
+          {showStation && (
           <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
-            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS2910)</span>. Elige otra estación arriba para editar sus umbrales propios. <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla sin afectar las demás.</span>
+            ℹ️ Estos umbrales aplican a la <span className="text-slate-400">estación principal (WS2910)</span>.{hasTabs && <> El interruptor general y los avisos del sistema están en <span className="text-slate-400">General</span>.</>} <span className="text-slate-400">Desmarca la ☑ de una alarma para desactivarla sin afectar las demás.</span>
           </div>
+          )}
+          {showStation && (
+            <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">📡 Avisar si deja de enviar datos tras</span>
+                <NumField value={settings.alert_station_offline_minutes} onChange={(v) => update('alert_station_offline_minutes', v)} min={1} max={60} />
+                <span className="text-xs text-slate-500">min sin datos</span>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="bg-slate-800/30 rounded-xl border border-white/5 px-4 py-2 text-xs text-slate-500">
@@ -386,6 +405,7 @@ export function AdminAlertas() {
         </div>
       )}
 
+      {showStation && (<>
       {/* Umbrales en grid compacto */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -643,17 +663,13 @@ export function AdminAlertas() {
       </div>
 
 
-      {isPrincipal && (
+      </>)}
+
+      {showGeneral && (
         <>
           {/* Estacion, sensores */}
           <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">📡 Offline despues de</span>
-                <NumField value={settings.alert_station_offline_minutes} onChange={(v) => update('alert_station_offline_minutes', v)} min={1} max={60} />
-                <span className="text-xs text-slate-500">min</span>
-              </div>
-              <div className="h-4 w-px bg-white/10" />
               <Toggle enabled={settings.alert_battery_enabled} onChange={(v) => update('alert_battery_enabled', v)} label="🔋 Bateria baja" />
               <Toggle enabled={settings.alert_sensor_lost_enabled} onChange={(v) => update('alert_sensor_lost_enabled', v)} label="📡 Sensor perdido" />
               <Toggle enabled={settings.alert_stuck_sensor_enabled} onChange={(v) => update('alert_stuck_sensor_enabled', v)} label="🧊 Sensor atascado" />

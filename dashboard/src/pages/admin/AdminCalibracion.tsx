@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import { StationTabs } from '../../components/admin-ui'
 
 interface CalSettings {
   cal_enabled: boolean
@@ -194,24 +195,14 @@ export function AdminCalibracion() {
           <p className="text-slate-400 text-sm">Ajustes por sensor · cada estación tiene su propia calibración</p>
         </div>
         <div className="flex items-center gap-3">
-          {secondaries.length > 0 && (
-            <select
-              value={selected ?? ''}
-              onChange={(e) => onSelectStation(e.target.value || null)}
-              className="rounded bg-slate-900/50 border border-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50"
-            >
-              <option value="">Principal (WS69)</option>
-              {secondaries.map((s) => (
-                <option key={s.name} value={s.name}>{s.label}</option>
-              ))}
-            </select>
-          )}
           {message && <span className={`text-sm ${message.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{message.text}</span>}
           <button onClick={handleSave} disabled={saving} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium">
             {saving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
+
+      <StationTabs principalLabel="Principal" secondaries={secondaries} selected={selected} onSelect={onSelectStation} />
 
       {/* Master switch */}
       <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4 flex items-center gap-4">
