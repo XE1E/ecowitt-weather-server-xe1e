@@ -368,14 +368,26 @@ tocó el firmware** al final (se generalizó el mapeo de zonas táctiles, ver
 la cámara pasó de Wi-Fi a **ethernet**, sin tocar nada del pipeline (ver
 `docs/internal/router-ap-archer-c6` en memoria / commits de esa fecha).
 
-## 2.g Radar SACMEX: movimiento de nubes y cruce con la cámara — PARA REVISAR (anotado 2026-09-23)
+## 2.g Radar SACMEX — plan completo, en marcha (anotado 2026-09-23, actualizado 2026-09-24)
 
 Contexto: desde 2026-09-23 el radar del SACMEX se sirve por nuestro backend
 (`services/sacmex_radar.py`, últimos ~10 cuadros de reflectividad, uno cada ~5 min)
 y se ve en `/radar` con zoom a la CDMX, anillos cada 5 km y el punto de la estación
 (calibración de pixeles en `SacmexRadarCard.tsx`: centro (254, 252) px, ~3.3 px/km).
 
-Pedido del usuario, revisar si es posible y útil:
+### Plan por fases (orden acordado 2026-09-24)
+
+| Fase | Qué | Estado / cuándo |
+|---|---|---|
+| 0 | Proxy + tarjeta en `/radar` (09-23), historial de cuadros, decodificador de dBZ v1 y leyenda con colores plenos (09-24) | ✅ hecho y en producción |
+| 1 | **Medir qué tan fiable es el servicio del SACMEX** (cuadros recibidos vs ~288/día, huecos, si falla en tardes de tormenta) | acumulando desde 2026-09-24; revisar ~**2026-10-08 a 10-15**. Decide si el radar sirve para avisos o sólo como apoyo visual |
+| 2 | **Afinar el decodificador** con cuadros de una tarde de lluvia + casos de prueba reales | en paralelo a la fase 1, en cuanto el historial tenga una tarde de lluvia |
+| 3 | **Guardado compacto** (matriz de dBZ) para no depender de los 45 días de JPG | después de la fase 2 y **antes de ~2026-11-07**, cuando la retención empieza a borrar los primeros cuadros |
+| 4 | **Movimiento de ecos** (dirección, velocidad, extrapolación de llegada a la estación) | después de la fase 2 |
+| 5 | **Usos:** cruce cámara-radar, radar como fuente en la verificación (§2.f), Z-R vs pluviómetro; **aviso por Telegram sólo si la fase 1 sale bien** | después de las fases 2 y 4 |
+| 6 | **Estadística e historia** (hora típica de tormentas, mapa de frecuencia, de dónde vienen, eventos, timelapse del radar) | con semanas de historial ya decodificado (fase 3) |
+
+Detalle de cada punto:
 - [~] **Leer dBZ de los colores — PRIMERA VERSIÓN 2026-09-24** (`services/radar_decode.py`,
       revisar a ojo con `GET /api/radar/sacmex/decoded/<id>`). Los ecos van en color
       pleno y la leyenda al 40 % sobre blanco (de ahí sale la paleta); se resta un fondo
@@ -403,7 +415,7 @@ Pedido del usuario, revisar si es posible y útil:
       (a) validar/calibrar el análisis de la cámara con un dato físico y (b) confirmar
       cuando la cámara ve lluvia "en el horizonte" si de verdad hay ecos en esa dirección.
 
-Otras ideas propuestas (para decidir):
+Usos (fase 5):
 - [ ] **Radar como fuente en la verificación de pronósticos** (§2.f): dBZ en el pixel de
       la estación ≈ "llueve ahora"; eco acercándose ≈ "lloverá en <1 h". Se calificaría
       contra el pluviómetro igual que las demás fuentes -- así sabemos si el radar le
@@ -423,16 +435,16 @@ Otras ideas propuestas (para decidir):
       el decodificador de dBZ se puede guardar la matriz (mucho más chica) para lo viejo
       y bajar la retención de los JPG.
 - [ ] **¿Qué tan fiable es el servicio del SACMEX?** Primero medirlo antes de montar
-      nada encima (aviso, verificación). Ya el 24-09 dejó de publicar desde las 04:53
-      por horas. Con el historial sale sin pedir nada nuevo (la hora va en el nombre de
+      nada encima (aviso, verificación). Ya el 24-09 dejó de publicar de las 04:53 a
+      ~las 10:00 (unas 5 h, de madrugada). Con el historial sale sin pedir nada nuevo (la hora va en el nombre de
       cada cuadro): % de cuadros recibidos contra los esperados (~288/día), huecos más
       largos, a qué hora se cae, y si falla justo en tardes de tormenta (lo peor para
       nosotros). Se podría agregar a `GET /api/radar/sacmex/archive` y a la página de
       estado. Revisar con 2-3 semanas de datos; si es poco fiable, el radar queda como
       apoyo visual y no como fuente de avisos.
 
-Estadística / historia que se podría sacar del radar (cuando el decodificador esté
-afinado y haya algunas semanas de historial):
+Estadística / historia (fase 6; cuando el decodificador esté afinado y haya algunas
+semanas de historial):
 - [ ] **Hora típica de las tormentas:** % de cuadros con eco ≥ 20 / ≥ 35 dBZ sobre la
       estación (radio ~2 km) por hora del día y por mes. Es la "climatología de lluvia"
       con dato del radar, comparable con la del pluviómetro.
