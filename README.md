@@ -36,7 +36,7 @@ La app principal vive en la raíz del sitio, `/` (instalable como PWA); la vista
 | **Estadísticas** | Resumen del año, promedios mensuales, contadores de días, grados-día y récords históricos, **rosa de vientos apilada por bandas de velocidad**, y **humidex** (récord de bochorno y días con humidex ≥ 30) |
 | **Tablas** | Resumen tabular de todas las variables (actual, mín/máx del día), con selector entre **estación principal y remota** |
 | **Climatología** | Climograma, récords por mes, reporte estilo NOAA y "en este día", **exportable a CSV** |
-| **Radar y satélite** | Radar (Ventusky) e imagen satelital diaria (NASA GIBS) |
+| **Radar y satélite** | **Radar del SACMEX** (CDMX) animado con guía para leer los dBZ, mapa interactivo de Ventusky e imagen satelital diaria (NASA GIBS) |
 | **Cámara** | Vista del exterior de la estación hacia el sureste: foto periódica (ritmo y horario configurables desde el panel) empujada desde la red local (la cámara nunca se expone a internet), con aviso si la última captura envejece. **Timelapse diario** en MP4, montado en el servidor con ffmpeg y con selector de día. **Análisis del cielo con IA** (Gemini/Claude): tipo de nubes, cobertura, visibilidad, pronóstico visual, histórico diario y validación vs modelos. **Precisión del pronóstico**: califica cada fuente (cámara, Open-Meteo, WeatherAPI, SMN, pronóstico propio) contra lo que midió el pluviómetro, ahora y a 3 h, por hora del día y con tendencia |
 | **Astronomía** | Sol y luna con arcos, fases lunares y almanaque (pyephem) |
 | **Calidad del aire** | AQI (WAQI) e **Índice de Calidad del Aire de la CDMX** estimado — norma NADF-009-AIRE-2017, con promedios móviles reales por contaminante (24 h para SO₂/PM10/PM2.5, 8 h para CO); se le sigue diciendo **IMECA** por costumbre, aunque la norma vigente ya no usa ese nombre — con medidor y pronóstico |
@@ -136,7 +136,7 @@ WS69 (exterior)   WN31 (interior)          Cámara C325WB (casa)
 
 ## Fuentes de datos externas
 
-Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **WeatherAPI** (pronóstico de respaldo), **SMN / CONAGUA** (pronóstico oficial por municipio, cualquier municipio de México), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **Ventusky** (radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local), **Xweather** y **Netatmo** (estaciones vecinas) y **Gemini/Claude** (análisis de la foto del cielo).
+Todo lo medido es de la estación. Lo externo (referencia) es: **Open-Meteo** (pronóstico y astronomía base), **WeatherAPI** (pronóstico de respaldo), **SMN / CONAGUA** (pronóstico oficial por municipio, cualquier municipio de México), **WAQI** (AQI) y **Open-Meteo Air Quality** (IMECA estimado), **NASA GIBS** (satélite), **SACMEX** (radar de la CDMX), **Ventusky** (mapa de radar), **USGS/SSN** (sismos), **aviationweather.gov/NOAA** (METAR/TAF) y **pyephem** (almanaque, cálculo local), **Xweather** y **Netatmo** (estaciones vecinas) y **Gemini/Claude** (análisis de la foto del cielo).
 
 ---
 

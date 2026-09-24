@@ -243,6 +243,8 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/metar?station=MMMX` | METAR del aeropuerto (proxy a aviationweather.gov) |
 | `GET /api/taf?station=MMMX` | TAF (pronóstico de aeródromo) del aeropuerto |
 | `GET /api/satellite?layer=&date=&lat=&lon=` | Imagen satelital NASA GIBS (JPEG, proxy con caché en el servidor) |
+| `GET /api/radar/sacmex` | Últimos cuadros (~10, uno cada ~5 min) del radar del SACMEX con su hora UTC, `latest_age_minutes` y `stale`. Se lee su página cada 5 min (no se deja incrustar: `X-Frame-Options: SAMEORIGIN`) — ver `services/sacmex_radar.py` |
+| `GET /api/radar/sacmex/<id>` | Un cuadro del radar SACMEX (JPEG 702×512, servido desde la caché; el id se valida contra el patrón del nombre) |
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/airquality/imeca?lat=&lon=` | IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
