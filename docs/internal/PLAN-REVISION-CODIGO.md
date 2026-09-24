@@ -1,6 +1,6 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **propuesta** (2026-09-24). Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0 y 1 ✅ hechas y desplegadas el 2026-09-24; sigue la 2. Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -8,50 +8,56 @@ Métricas de partida: backend ~16,900 líneas (`main.py` 3,891 y 103 rutas); das
 ~26,800 (`ConsoleReplica.tsx` 2,605); ~380 pruebas de backend, **ninguna** de endpoints
 ni del dashboard; `tsc` limpio, 0 `any`, lint del dashboard 0 errores / 15 avisos.
 
-## Fase 0 — Red de seguridad (antes de tocar nada grande)
+## Fase 0 — Red de seguridad — ✅ HECHA 2026-09-24 (commit a3a9a65)
 
-- [ ] **CI honesto:** hoy `pytest … || echo "No tests found yet"` y `mypy … || true`
+- [x] **CI honesto:** hoy `pytest … || echo "No tests found yet"` y `mypy … || true`
       ocultan fallos: una prueba rota nunca pone el CI en rojo. Quitar el `|| echo`,
       fijar versiones de pytest/pytest-asyncio, agregar `npm run lint` y `npm ci`.
-- [ ] **Pruebas de humo de endpoints** con `TestClient` (Influx y red simulados): ingesta
+- [x] **Pruebas de humo de endpoints** con `TestClient` (Influx y red simulados): ingesta
       `/data/report` (principal, secundaria, passkey desconocido → 403), `/api/current`,
       `/api/stations`, login admin + un GET/POST de settings, alta/baja de estación.
       Son la condición para poder partir `main.py` sin miedo.
-- [ ] `conftest.py` con un `make_settings` común (hoy duplicado en test_alerts y test_mqtt).
+- [x] `conftest.py` (rutas /data a temporal). El `make_settings` de test_alerts y test_mqtt no
+      era un duplicado real: arman ajustes distintos, se dejan.
 
-## Fase 1 — Bugs y seguridad (confirmados)
+## Fase 1 — Bugs y seguridad — ✅ HECHA 2026-09-24 (commits 7e5a13f, 0cd9a1a, de8f832)
 
 Backend:
-- [ ] **Límite de intentos del login saltable** (verificado): `security.client_ip` confía
-      en `X-Real-IP`, que nginx NO fija en `/api` → el cliente la inventa. Fijarla en
-      nginx (`proxy_set_header X-Real-IP $remote_addr`) para `/api`.
-- [ ] **Estado de estación con 6 h de desfase** (verificado): `received_at` va en UTC sin
+- [x] **Límite de intentos del login saltable** (verificado): `security.client_ip` confía
+      en `X-Real-IP`, que nginx NO fija en `/api` → el cliente la inventa. Hecho: nginx la
+      pisa en el 80; Caddy entra por el 81 interno (único donde se cree la suya) y la toma
+      de CF-Connecting-IP sólo desde IPs de Cloudflare. Comprobado en producción por los
+      dos caminos. De paso: Caddy monta la carpeta `caddy/` (con el archivo suelto,
+      `git pull` dejaba al contenedor con el Caddyfile viejo).
+- [x] **Estado de estación con 6 h de desfase** (verificado): `received_at` va en UTC sin
       zona (`main.py:616`) y `_station_status` compara con la hora local (TZ del
       contenedor = America/Mexico_City) → una caída se ve "en línea" ~6 h.
-- [ ] **Tareas que sólo miran su interruptor al arrancar:** `station_watchdog` (si las
+- [x] **Tareas que sólo miran su interruptor al arrancar:** `station_watchdog` (si las
       alertas se prenden desde el panel no hay avisos de estación caída/cámara/respaldo
       hasta reiniciar), `stats_refresh_task`, `timelapse_task`. Patrón correcto: el de
       `email_digest_task` (revisa en cada vuelta).
-- [ ] **Sismos:** sólo se evalúan si alguien abre `/api/earthquakes`; `active` nunca
+- [x] **Sismos:** sólo se evalúan si alguien abre `/api/earthquakes`; `active` nunca
       se limpia (salen como activos para siempre) y el recorte del set de notificados
       puede re-avisar.
-- [ ] **`settings.json` sin escritura atómica:** un corte a media escritura + JSON
+- [x] **`settings.json` sin escritura atómica:** un corte a media escritura + JSON
       corrupto → se reescribe desde `{}` y se pierden estaciones, registro y secretos.
       (Netatmo lo reescribe seguido al rotar su token.)
-- [ ] CWOP: `readline()` del banner sin timeout (tarea colgada para siempre).
-- [ ] METAR: si falla, puede devolver la caché de OTRO aeropuerto; TAF con caché sin tope.
-- [ ] Cachés públicas sin tope: `satellite` (lat/lon/fecha del cliente, JPEG ~200 KB
+- [x] CWOP: `readline()` del banner sin timeout (tarea colgada para siempre).
+- [x] METAR: si falla, puede devolver la caché de OTRO aeropuerto; TAF con caché sin tope.
+- [x] Cachés públicas sin tope: `satellite` (lat/lon/fecha del cliente, JPEG ~200 KB
       cada uno → se puede llenar la memoria desde fuera), `RateLimiter`, sesiones admin.
-- [ ] `POST /api/kiosk/local` sin autenticación (escribe disco).
-- [ ] `get_station('_principal')` todavía usa `watchdog_minutes` retirado (15) mientras
+- [x] `POST /api/kiosk/local` sin autenticación: rangos físicos + límite por IP + token
+      OPCIONAL (`KIOSK_LOCAL_TOKEN`); exigirlo requiere actualizar el firmware del display
+      (otro repo), pendiente.
+- [x] `get_station('_principal')` todavía usa `watchdog_minutes` retirado (15) mientras
       `list_stations` usa el global → pueden diferir. `station_altitude_m` no se expone en
       `public_settings` → Calibración muestra vacía la altitud de la principal.
-- [ ] `detail=str(e)` en 9 endpoints públicos (filtra errores internos).
+- [x] `detail=str(e)` en 9 endpoints públicos (filtra errores internos).
 
 Dashboard:
-- [ ] **Mapa de código fuente público** (`sourcemap: true`, 5.8 MB): quitar en producción.
-- [ ] `/basica`: un fallo de una sola consulta tapa todo el tablero aunque ya haya datos.
-- [ ] Respuestas viejas que pisan a las nuevas al cambiar rápido de pestaña/periodo
+- [x] **Mapa de código fuente público** (`sourcemap: true`, 5.8 MB): quitar en producción.
+- [x] `/basica`: un fallo de una sola consulta tapa todo el tablero aunque ya haya datos.
+- [x] Respuestas viejas que pisan a las nuevas al cambiar rápido de pestaña/periodo
       (AdminAlertas, MultiVariableChart, ClimatePage, RemoteStationPage…).
 
 ## Fase 2 — Rendimiento
