@@ -100,3 +100,16 @@ def test_slow_influx_does_not_freeze_other_tasks():
     # Con la consulta en un hilo, el ticker avanza ~15 veces mientras tanto; con la
     # consulta síncrona de antes, la corrutina bloqueaba y el ticker no avanzaba nada.
     assert asyncio.run(main()) >= 5
+
+
+def test_history_query_aggregates_only_when_asked():
+    st = _storage([])
+    asyncio.run(st.query(start="-30d", fields=["temperature_outdoor", "humidity_outdoor"], every="1h"))
+    asyncio.run(st.query(start="-24h"))
+    agg, raw = st.query_api.queries
+    assert "aggregateWindow(every: 1h, fn: mean" in agg and 'r["_field"] == "humidity_outdoor"' in agg
+    assert "aggregateWindow" not in raw
+    import pytest
+    for kw in ({"every": "1h"}, {"every": "1d", "fields": ["x"]}, {"fields": ['x") or true or ("']}):
+        with pytest.raises(ValueError):
+            asyncio.run(st.query(start="-7d", **kw))

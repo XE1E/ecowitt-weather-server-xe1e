@@ -304,3 +304,17 @@ def test_current_adds_influx_extras_and_caches_them(api):
     assert (cur["rain_2h"], cur["rain_24h"]) == (1.2, 4.5)
     api.get("/api/current")
     assert sorted(calls) == [2, 24]          # la segunda vez sale de la caché de 30 s
+
+
+def test_history_every_needs_valid_fields(api):
+    seen = {}
+
+    async def fake_query(**kw):
+        seen.update(kw)
+        if kw.get("every") and not kw.get("fields"):
+            raise ValueError("every requiere fields")
+        return []
+    api.fake_storage.query = fake_query
+    r = api.get("/api/history", params={"start": "-7d", "every": "10m", "fields": "temperature_outdoor,humidity_outdoor"})
+    assert r.status_code == 200 and seen["fields"] == ["temperature_outdoor", "humidity_outdoor"]
+    assert api.get("/api/history", params={"start": "-7d", "every": "10m"}).status_code == 400

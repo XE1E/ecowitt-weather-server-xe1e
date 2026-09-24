@@ -760,7 +760,9 @@ async def get_history(
     stop: str = "now()",
     measurement: str = "weather",
     station: Optional[str] = None,
-    format: str = "json"
+    format: str = "json",
+    fields: Optional[str] = None,
+    every: Optional[str] = None,
 ):
     """
     Get historical weather data.
@@ -771,6 +773,9 @@ async def get_history(
         measurement: Measurement name
         station: None/omitido = principal; nombre = estación secundaria
         format: "json" (default) o "csv" para descargar el mismo rango como archivo
+        fields: campos separados por coma (opcional; por omisión, todos)
+        every: "10m", "1h"…: promedio por ventana (requiere fields). Para gráficas de
+            7-30 días; sin él llega cada lectura cruda.
     """
     if format not in ("json", "csv"):
         raise HTTPException(status_code=400, detail="format debe ser 'json' o 'csv'")
@@ -788,8 +793,10 @@ async def get_history(
         raise HTTPException(status_code=400,
                             detail=f"Rango máximo de {_HISTORY_MAX_DAYS} días; para más, usa /api/summaries/daily")
     try:
+        field_list = [f.strip() for f in fields.split(",") if f.strip()] if fields else None
         data = await storage.query(
-            start=start, stop=stop, measurement=measurement, station=station
+            start=start, stop=stop, measurement=measurement, station=station,
+            fields=field_list, every=every,
         )
         if format == "csv":
             fname = "_".join([
@@ -804,6 +811,8 @@ async def get_history(
                 headers={"Content-Disposition": f'attachment; filename="{fname}.csv"'},
             )
         return {"data": data}
+    except ValueError as e:  # every/fields inválidos (los valida storage.query)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error querying history: {e}")
         raise HTTPException(status_code=500, detail="Error interno")

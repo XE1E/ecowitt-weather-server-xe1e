@@ -159,7 +159,8 @@ class InfluxDBStorage:
         stop: str = "now()",
         measurement: str = "weather",
         fields: Optional[List[str]] = None,
-        station: Optional[str] = None
+        station: Optional[str] = None,
+        every: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Query weather data from InfluxDB.
@@ -177,6 +178,17 @@ class InfluxDBStorage:
         validate_measurement(measurement)
         validate_flux_time(start, "start")
         validate_flux_time(stop, "stop")
+        # `every` (p. ej. "10m", "1h"): promedio por ventana, para gráficas de 7-30 días
+        # que no necesitan cada lectura de ~16 s (30 días crudos de una estación
+        # tardaban ~11 s). Exige `fields`: mean() falla con los campos de texto.
+        if every is not None:
+            if not re.fullmatch(r"\d+[mh]", every):
+                raise ValueError(f"every no válido: {every}")
+            if not fields:
+                raise ValueError("every requiere fields")
+        for f in fields or []:
+            if not re.fullmatch(r"[a-z0-9_]+", f):
+                raise ValueError(f"campo no válido: {f}")
         try:
             # Build Flux query
             field_filter = ""
@@ -190,6 +202,7 @@ class InfluxDBStorage:
                 |> filter(fn: (r) => r["_measurement"] == "{measurement}")
                 {_station_filter(station)}
                 {field_filter}
+                {f"|> aggregateWindow(every: {every}, fn: mean, createEmpty: false)" if every else ""}
                 |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
                 |> sort(columns: ["_time"])
             '''
