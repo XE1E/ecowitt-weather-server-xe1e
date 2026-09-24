@@ -16,7 +16,7 @@ extraer información sobre el estado del cielo.
 - **Homepage:** tarjeta "Estado del cielo" con análisis actual + tendencia + validación
 - **Cámara:** histórico diario con gráfica de cobertura y estadísticas, más "Mejor foto
   del día" (mayor visibilidad reportada ese día, excluye la noche)
-- **METAR** (Homepage y `/pro/aeronautica`): junto a las capas de nubes del aeropuerto
+- **METAR** (Homepage y `/aeronautica`): junto a las capas de nubes del aeropuerto
   MMMX se muestra qué ve la cámara en ese momento, para comparar a ojo (sin puntaje:
   son dos sitios distintos)
 - **Astronomía:** tarjeta "¿Buena noche para observar?" cuando es de noche, cruzando la
@@ -28,7 +28,7 @@ símbolos (antes: `↑`/`↓`/`→` para la tendencia, `✓`/`≈`/`?`/`⚠` par
 Ej.: "Nublándose: la cobertura de nubes subió 18%" o "La cámara ve algo distinto al
 modelo: la cámara ve parcialmente nublado, el modelo predice cubierto".
 
-## Precisión del pronóstico (`/pro/camara`)
+## Precisión del pronóstico (`/camara`)
 Cada captura ahora guarda si coincidió con el pronóstico de ese momento
 (`match`: exact/close/differ/conflict) en el histórico diario -- antes esa
 validación se calculaba al vuelo y se descartaba. `GET

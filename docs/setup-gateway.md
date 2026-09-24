@@ -192,8 +192,8 @@ Para que el servidor identifique al GW1100 como estación secundaria, necesitas 
 
 ### Paso 6: Verificar en el Dashboard
 
-- Los datos del GW1100 aparecen en `/pro/remota`
-- La estación principal (`/pro`) **no se ve afectada**
+- Los datos del GW1100 aparecen en `/remota`
+- La estación principal (`/`) **no se ve afectada**
 - El GW1100 no dispara alertas ni publica a redes públicas (WU, etc.)
 
 ### Probar sin Hardware (Simulador)

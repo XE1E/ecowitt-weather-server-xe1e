@@ -25,7 +25,7 @@ Stack propio: **FastAPI + InfluxDB + React** (Vite · TypeScript · Tailwind). T
 
 ## El sitio
 
-La app principal vive en `/pro` (instalable como PWA) y tiene:
+La app principal vive en la raíz del sitio, `/` (instalable como PWA); la vista clásica, más simple, está en `/basica`. Las direcciones antiguas con `/pro` redirigen solas a la ruta nueva. La app tiene:
 
 | Página | Qué muestra |
 |--------|-------------|
