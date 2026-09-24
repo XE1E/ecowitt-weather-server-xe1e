@@ -63,6 +63,9 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Al cambiar de modo (día/48 h/semana) antes de que llegue la respuesta, la del
+    // modo anterior se descarta: si llegaba tarde, pintaba datos del modo equivocado.
+    let vivo = true
     setLoading(true)
     // Semana: los 7 días COMPLETOS anteriores a hoy, de medianoche a medianoche en
     // hora de la estación (CDMX, UTC-6 fijo -- mismo criterio que HistoryDayDetail).
@@ -77,6 +80,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
     fetch(`/api/history?${range}`)
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((json) => {
+        if (!vivo) return
         const raw = json.data || []
         const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 
@@ -114,9 +118,10 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
         setLoading(false)
         onLoaded?.()
       })
-      .catch(() => { setLoading(false); onLoaded?.() })
+      .catch(() => { if (vivo) { setLoading(false); onLoaded?.() } })
     // onLoaded queda fuera de las deps a proposito: si el padre la recrea en
     // cada render, incluirla dispararia un fetch en bucle.
+    return () => { vivo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   LineChart,
   Line,
@@ -68,6 +68,10 @@ export function RemoteStationPage() {
 
   const start = PERIODS.find((p) => p.key === period)!.start
 
+  // Periodo vigente: si se cambia mientras hay una carga en curso, esa respuesta
+  // (del periodo anterior) se descarta en vez de pisar la gráfica nueva.
+  const startRef = useRef(start)
+  startRef.current = start
   const load = useCallback(async () => {
     try {
       const [cur, st, hist] = await Promise.all([
@@ -75,6 +79,7 @@ export function RemoteStationPage() {
         fetch(`/api/stats/daily?station=${REMOTE_STATION}&start=${start}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`/api/history?start=${start}&station=${REMOTE_STATION}`).then((r) => (r.ok ? r.json() : { data: [] })),
       ])
+      if (startRef.current !== start) return
       if (cur.ok) {
         setData(await cur.json())
         setNotFound(false)
@@ -87,7 +92,7 @@ export function RemoteStationPage() {
     } catch {
       /* best-effort */
     } finally {
-      setLoading(false)
+      if (startRef.current === start) setLoading(false)
     }
   }, [start])
 

@@ -14,6 +14,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    // Sin mapas de código fuente en producción: nginx servía el .map (5.8 MB) y
+    // cualquiera podía leer el código original del sitio. En `npm run dev` Vite
+    // los genera igual, así que depurar en local no cambia.
+    sourcemap: false
   }
 })

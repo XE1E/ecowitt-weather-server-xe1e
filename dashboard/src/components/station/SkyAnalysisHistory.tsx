@@ -122,13 +122,15 @@ export function SkyAnalysisHistory({ selected, onSelect, onDaysChange }: SkyAnal
   // Cargar datos del día seleccionado
   useEffect(() => {
     if (!selected) return
+    let vivo = true  // al cambiar de día rápido, la respuesta del anterior se descarta
     setDayData(null)
     setCargandoDia(true)
     fetch(`/api/camera/analysis/history?date=${selected}`)
       .then(r => r.ok ? r.json() : null)
-      .then(setDayData)
-      .catch(() => setDayData(null))
-      .finally(() => setCargandoDia(false))
+      .then((j) => { if (vivo) setDayData(j) })
+      .catch(() => { if (vivo) setDayData(null) })
+      .finally(() => { if (vivo) setCargandoDia(false) })
+    return () => { vivo = false }
   }, [selected])
 
   if (loading) return null

@@ -84,9 +84,12 @@ export function ClimatePage() {
   const [otdPhotoDate, setOtdPhotoDate] = useState<string | null>(null)
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState<number | null>(null) // null = anual
-  const [noaa, setNoaa] = useState<Noaa | null>(null)
+  // El reporte anual y el climograma son la MISMA consulta (/api/climate/noaa?year=):
+  // antes se pedía dos veces. Sólo el mensual es aparte.
+  const [monthData, setMonthData] = useState<Noaa | null>(null)
   const [yearData, setYearData] = useState<Noaa | null>(null)
-  const [loadingNoaa, setLoadingNoaa] = useState(false)
+  const [loadingYear, setLoadingYear] = useState(false)
+  const [loadingMonth, setLoadingMonth] = useState(false)
 
   useEffect(() => {
     fetch('/api/climate/records').then((r) => (r.ok ? r.json() : null)).then(setRec).catch(() => {})
@@ -99,19 +102,32 @@ export function ClimatePage() {
   }, [otd])
 
   // Datos anuales para el climograma (siempre año completo, independiente del selector)
+  // `vivo`: si se cambia de año/mes antes de que llegue la respuesta, la vieja se
+  // descarta (antes podía llegar tarde y dejar en pantalla el reporte anterior).
   useEffect(() => {
-    fetch(`/api/climate/noaa?year=${year}`).then((r) => (r.ok ? r.json() : null)).then(setYearData).catch(() => {})
+    let vivo = true
+    setLoadingYear(true)
+    fetch(`/api/climate/noaa?year=${year}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (vivo) setYearData(j) })
+      .catch(() => { if (vivo) setYearData(null) })
+      .finally(() => { if (vivo) setLoadingYear(false) })
+    return () => { vivo = false }
   }, [year])
 
   useEffect(() => {
-    setLoadingNoaa(true)
-    const q = month ? `year=${year}&month=${month}` : `year=${year}`
-    fetch(`/api/climate/noaa?${q}`)
+    if (!month) return
+    let vivo = true
+    setLoadingMonth(true)
+    fetch(`/api/climate/noaa?year=${year}&month=${month}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => setNoaa(j))
-      .catch(() => setNoaa(null))
-      .finally(() => setLoadingNoaa(false))
+      .then((j) => { if (vivo) setMonthData(j) })
+      .catch(() => { if (vivo) setMonthData(null) })
+      .finally(() => { if (vivo) setLoadingMonth(false) })
+    return () => { vivo = false }
   }, [year, month])
+  const noaa = month ? monthData : yearData
+  const loadingNoaa = month ? loadingMonth : loadingYear
 
   const hasData = rec && rec.all_time && rec.all_time.days > 0
 

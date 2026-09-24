@@ -30,37 +30,26 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Las tres consultas van en paralelo (antes, en serie). Sólo `current` es
+  // obligatoria; stats e historial son de apoyo y si fallan no pasa nada.
   const fetchData = async () => {
-    try {
-      const response = await fetch(API_URL)
-      if (!response.ok) {
-        throw new Error('Error al obtener datos')
-      }
-      const json = await response.json()
-      setData(json)
+    const [cur, st, hist] = await Promise.allSettled([
+      fetch(API_URL).then((r) => {
+        if (!r.ok) throw new Error('Error al obtener datos')
+        return r.json()
+      }),
+      fetch(STATS_URL).then((r) => (r.ok ? r.json() : null)),
+      fetch(HISTORY_URL).then((r) => (r.ok ? r.json() : null)),
+    ])
+    if (cur.status === 'fulfilled') {
+      setData(cur.value)
       setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
-    } finally {
-      setLoading(false)
+    } else {
+      setError(cur.reason instanceof Error ? cur.reason.message : 'Error desconocido')
     }
-    // Daily stats are best-effort; don't fail the whole dashboard if unavailable
-    try {
-      const res = await fetch(STATS_URL)
-      if (res.ok) setStats(await res.json())
-    } catch {
-      /* ignore */
-    }
-    // History for trend indicators
-    try {
-      const res = await fetch(HISTORY_URL)
-      if (res.ok) {
-        const json = await res.json()
-        setHistory(json.data || [])
-      }
-    } catch {
-      /* ignore */
-    }
+    if (st.status === 'fulfilled' && st.value) setStats(st.value)
+    if (hist.status === 'fulfilled' && hist.value) setHistory(hist.value.data || [])
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -84,7 +73,10 @@ function App() {
     )
   }
 
-  if (error) {
+  // Pantalla de error sólo si NUNCA llegaron datos. Antes un solo fallo del sondeo
+  // de 60 s tapaba el tablero entero aunque ya hubiera lecturas; ahora se siguen
+  // mostrando las últimas y el aviso de "sin actualizar" (isStale) avisa si se atrasan.
+  if (error && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

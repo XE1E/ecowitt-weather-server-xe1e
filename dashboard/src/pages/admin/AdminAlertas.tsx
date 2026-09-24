@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { StationTabs } from '../../components/admin-ui'
@@ -192,15 +192,24 @@ export function AdminAlertas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalCache, secondaries, wanted])
 
+  // Cada cambio de pestaña numera su carga; si mientras tanto se eligió otra, la
+  // respuesta vieja se descarta (antes podía llegar tarde y pisar a la nueva, y
+  // guardar habría mandado los umbrales de una estación a otra).
+  const loadSeq = useRef(0)
   const onSelectStation = async (sel: string | null) => {
+    const seq = ++loadSeq.current
     setSelected(sel); setGeneral(false); setMessage(null); setLoading(true)
     setSearchParams({ estacion: sel ?? 'principal' }, { replace: true })
     try {
       if (sel === null) {
         const [s, cur] = await Promise.all([
-          fetchWithAuth('/api/admin/settings').then((r) => r.json()),
+          fetchWithAuth('/api/admin/settings').then((r) => {
+            if (!r.ok) throw new Error(`settings ${r.status}`)  // no meter un error como settings
+            return r.json()
+          }),
           fetch('/api/current').then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ])
+        if (seq !== loadSeq.current) return
         setCampos(camposDe(cur))
         setSettings(s); setGlobalCache(s)
         setDisabled(Array.isArray(s.alert_rules_disabled) ? s.alert_rules_disabled : [])
@@ -212,6 +221,7 @@ export function AdminAlertas() {
           fetch(`/api/stations/${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
           fetch(`/api/current?station=${sel}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ])
+        if (seq !== loadSeq.current) return
         setCampos(camposDe(cur))
         // Sembrar con los umbrales globales y sobreponer los propios de la estación.
         //
@@ -233,7 +243,9 @@ export function AdminAlertas() {
         setSecAlerts(station?.config?.alerts_enabled ?? false)
         setDisabled(Array.isArray(station?.config?.disabled_rules) ? station.config.disabled_rules : [])
       }
-    } finally { setLoading(false) }
+    } catch {
+      if (seq === loadSeq.current) setMessage({ type: 'error', text: 'No se pudo cargar' })
+    } finally { if (seq === loadSeq.current) setLoading(false) }
   }
 
   const handleSave = async () => {
