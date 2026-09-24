@@ -682,19 +682,13 @@ calibración y su ficha). La depuración del registro del plan viejo ya estaba h
 - [x] Etapa 3 (HECHA 2026-09-24) — pestañas por estación en Alertas y Calibración + ficha con accesos.
 - [x] Etapa 4 (HECHA 2026-09-24) — menú agrupado y documentación.
 
-## 3b. Revisión general del código (depurar, optimizar, mejorar) — PLAN PARA DESPUÉS (anotado 2026-09-24)
-Pedido del usuario: una pasada completa por todo el código, cuando termine el Admin.
-Ideas de alcance (a precisar al arrancar):
-- `receiver/app/main.py` tiene ~3,900 líneas: partir en routers de FastAPI por área
-  (admin, radar, cámara, pronóstico, estaciones) sin cambiar URLs.
-- Código muerto y claves de configuración que nadie lee (el inventario del Admin ya
-  encontró varias: `publish_enabled`/`mqtt_enabled` por estación, `AdminPage.tsx`).
-- Páginas grandes del dashboard (AdminWizard 900 líneas, AdminAlertas 770) en
-  componentes; tipos compartidos en vez de interfaces repetidas.
-- Rendimiento: consultas a InfluxDB repetidas, cachés sin límite, trabajo pesado en
-  el camino de `/data/report`.
-- Pruebas donde falten (endpoints admin, alta/baja de estaciones) y `ruff`/`tsc` sin
-  avisos. Hacerlo por módulos, con deploy y verificación en cada uno.
+## 3b. Revisión general del código (depurar, optimizar, mejorar) — plan escrito (2026-09-24)
+Pedido del usuario al terminar el Admin. Diagnóstico hecho y plan por fases en
+**`docs/internal/PLAN-REVISION-CODIGO.md`**: 0) red de seguridad (CI que hoy oculta
+pruebas rotas + pruebas de endpoints), 1) bugs y seguridad confirmados (límite del login
+saltable, estado de estación con 6 h de desfase, tareas que no ven el interruptor…),
+2) rendimiento (Influx bloquea el servidor, dashboard en un archivo de 1.87 MB),
+3) estructura (partir `main.py`), 4) limpieza.
 
 ## 4. Seguridad — residuales (auditoría docs/SEGURIDAD.md)
 - [ ] Cerrar el puerto `:8080` (DIFERIDO: IP dinámica; se compensa con la whitelist de passkey).
