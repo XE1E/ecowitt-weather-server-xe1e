@@ -64,8 +64,17 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
 
   useEffect(() => {
     setLoading(true)
-    const start = mode === 'day' ? '-24h' : mode === '2day' ? '-48h' : '-7d'
-    fetch(`/api/history?start=${start}`)
+    // Semana: los 7 días COMPLETOS anteriores a hoy, de medianoche a medianoche en
+    // hora de la estación (CDMX, UTC-6 fijo -- mismo criterio que HistoryDayDetail).
+    // Antes era "-7d" desde ahora: el primer día salía con sólo unas horas y hoy
+    // hasta la hora actual, así que sus promedios no eran comparables con el resto.
+    const range = mode === 'week'
+      ? (() => {
+          const hoy = cdmxDate(new Date())
+          return `start=${shiftIso(hoy, -7)}T06:00:00Z&stop=${hoy}T06:00:00Z`
+        })()
+      : `start=${mode === 'day' ? '-24h' : '-48h'}`
+    fetch(`/api/history?${range}`)
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((json) => {
         const raw = json.data || []
@@ -76,7 +85,10 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
           let label: string
           let key: string
           if (mode === 'week') {
-            label = `${d.getDate()} ${MES[d.getMonth()]}`
+            // Día de la ESTACIÓN, no del navegador: rain_daily se reinicia a la
+            // medianoche de CDMX, así que agrupar en otra zona mezclaría dos días.
+            const [, mm, dd] = cdmxDate(d).split('-').map(Number)
+            label = `${dd} ${MES[mm - 1]}`
             key = label
           } else {
             label = `${d.getHours().toString().padStart(2, '0')}:00`
@@ -220,16 +232,26 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
 
   // La serie de lluvia cambia de magnitud con el modo, asi que su nombre y su
   // unidad tambien: acumulado del dia en semana, intensidad en dia/48 h.
-  const rainName = mode === 'week' ? 'Precipitación' : 'Intensidad de lluvia'
-  const rainUnit = mode === 'week' ? u.rainU : u.rateU
+  const week = mode === 'week'
+  const rainName = week ? 'Precipitación del día' : 'Intensidad de lluvia'
+  const rainUnit = week ? u.rainU : u.rateU
+  // En semana cada punto es el PROMEDIO del día: el nombre lo dice, para que
+  // "24°" no se lea como la máxima. En día/48 h son promedios por hora, que ya
+  // se leen como "lo que había a esa hora".
+  const N = {
+    temp: week ? 'Temperatura promedio' : 'Temperatura',
+    press: week ? 'Presión promedio' : 'Presión atmosférica',
+    wind: week ? 'Viento promedio' : 'Velocidad del viento',
+    hum: week ? 'Humedad promedio' : 'Humedad',
+  }
   // Unidad por nombre de serie, para el tooltip. Sale del sistema activo, igual
   // que los datos y las etiquetas de los ejes: los tres tienen que coincidir.
   const UNITS: Record<string, string> = {
-    Temperatura: u.tempU,
-    'Presión atmosférica': u.pressU,
+    [N.temp]: u.tempU,
+    [N.press]: u.pressU,
     [rainName]: rainUnit,
-    'Velocidad del viento': u.windU,
-    Humedad: '%',
+    [N.wind]: u.windU,
+    [N.hum]: '%',
   }
 
   const tip = {
@@ -357,7 +379,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             yAxisId="temp"
             type="monotone"
             dataKey="temp"
-            name="Temperatura"
+            name={N.temp}
             stroke={COL.temp}
             strokeWidth={2.5}
             dot={false}
@@ -369,7 +391,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             yAxisId="press"
             type="monotone"
             dataKey="pressure"
-            name="Presión atmosférica"
+            name={N.press}
             stroke={COL.press}
             strokeWidth={2}
             dot={false}
@@ -381,7 +403,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             yAxisId="wind"
             type="monotone"
             dataKey="wind"
-            name="Velocidad del viento"
+            name={N.wind}
             stroke={COL.wind}
             strokeWidth={2}
             dot={false}
@@ -393,7 +415,7 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
             yAxisId="hum"
             type="monotone"
             dataKey="humidity"
-            name="Humedad"
+            name={N.hum}
             stroke={COL.hum}
             strokeWidth={2}
             dot={false}
@@ -412,11 +434,18 @@ export function MultiVariableChart({ mode, kiosk = false, height = 400, onLoaded
   }
 
   return (
-    <div className="h-96 md:h-80 overflow-x-auto chart-scroll">
-      <div style={{ minWidth: minW, height: '100%' }}>
-        <ResponsiveContainer width="100%" height="100%">{chart}</ResponsiveContainer>
+    <>
+      <div className="h-96 md:h-80 overflow-x-auto chart-scroll">
+        <div style={{ minWidth: minW, height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">{chart}</ResponsiveContainer>
+        </div>
       </div>
-    </div>
+      <p className="text-xs text-slate-500 mt-2">
+        {week
+          ? 'Cada punto es un día completo (00:00–24:00, hora de CDMX) de los 7 anteriores a hoy: temperatura, presión, viento y humedad son el promedio del día; la lluvia es lo acumulado ese día.'
+          : 'Cada punto es una hora: temperatura, presión, viento y humedad son el promedio de esa hora; la lluvia es la intensidad máxima de la hora.'}
+      </p>
+    </>
   )
 }
 
@@ -473,6 +502,17 @@ function groupByDay(points: DataPoint[]): DataPoint[] {
       humidity: avg(pts.map((p) => p.humidity)),
     }
   })
+}
+
+/** Fecha (YYYY-MM-DD) en hora de la estación: CDMX, UTC-6 fijo (sin horario de verano). */
+function cdmxDate(d: Date): string {
+  return new Date(d.getTime() - 6 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+function shiftIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
 }
 
 function avg(arr: (number | null | undefined)[]): number | null {
