@@ -381,8 +381,16 @@ Pedido del usuario, revisar si es posible y útil:
       pleno y la leyenda al 40 % sobre blanco (de ahí sale la paleta); se resta un fondo
       (mediana de cuadros repartidos en el historial) porque 35-45 dBZ tienen el color de
       las carreteras, y una apertura de 3 px quita el eco disperso. En la madrugada del
-      24 (sin lluvia, arcos de clutter) dejó 0-27 pixeles de ~2,600. **Falta: afinar
-      umbrales con los cuadros de una tarde de lluvia** (BG_DIFF, PAL_DIST, SPECKLE_PX).
+      24 (sin lluvia, arcos de clutter) dejó 0-27 pixeles de ~2,600. La leyenda de la
+      tarjeta ya usa los mismos colores plenos (commit 82f62ca).
+- [ ] **Afinar el decodificador con una tarde de lluvia** (en cuanto el historial tenga
+      una). Con la imagen original y `/decoded/<id>` encimados: que las celdas de lluvia
+      salgan completas y con su nivel, que no se cuelen carreteras amarillas/naranjas
+      (35-45 dBZ) ni texto del mapa, y que la apertura de 3 px no se coma el borde de
+      las tormentas ni las celdas chicas. Ajustar `BG_DIFF`, `PAL_DIST`, `SPECKLE_PX`
+      y guardar 2-3 cuadros de lluvia como caso de prueba real en `tests/`. Cruzar el
+      dBZ sobre la estación con el pluviómetro de esas mismas horas. El fondo sale de la
+      mediana del historial: revisar que una tarde entera de lluvia no se "pegue" al fondo.
 - [ ] **Movimiento de las nubes a partir del radar.** Estimar dirección y velocidad
       de los ecos comparando cuadros consecutivos (correlación de fase / flujo óptico
       sobre la máscara de dBZ ≥ ~20). Con eso se puede extrapolar: "hay lluvia de
@@ -414,6 +422,31 @@ Otras ideas propuestas (para decidir):
       cada pasada de JPEG corre los colores con que después se lee el dBZ. Cuando exista
       el decodificador de dBZ se puede guardar la matriz (mucho más chica) para lo viejo
       y bajar la retención de los JPG.
+- [ ] **¿Qué tan fiable es el servicio del SACMEX?** Primero medirlo antes de montar
+      nada encima (aviso, verificación). Ya el 24-09 dejó de publicar desde las 04:53
+      por horas. Con el historial sale sin pedir nada nuevo (la hora va en el nombre de
+      cada cuadro): % de cuadros recibidos contra los esperados (~288/día), huecos más
+      largos, a qué hora se cae, y si falla justo en tardes de tormenta (lo peor para
+      nosotros). Se podría agregar a `GET /api/radar/sacmex/archive` y a la página de
+      estado. Revisar con 2-3 semanas de datos; si es poco fiable, el radar queda como
+      apoyo visual y no como fuente de avisos.
+
+Estadística / historia que se podría sacar del radar (cuando el decodificador esté
+afinado y haya algunas semanas de historial):
+- [ ] **Hora típica de las tormentas:** % de cuadros con eco ≥ 20 / ≥ 35 dBZ sobre la
+      estación (radio ~2 km) por hora del día y por mes. Es la "climatología de lluvia"
+      con dato del radar, comparable con la del pluviómetro.
+- [ ] **Mapa de frecuencia:** en qué zonas se forman y pasan más tormentas (sierra del
+      Ajusco, oriente, etc.), acumulando por pixel cuántas veces hubo eco ≥ 35 dBZ.
+- [ ] **De dónde vienen:** dirección y velocidad típicas de las tormentas por mes (sale
+      del movimiento de ecos) y cuánto tardan en llegar a la estación desde que se forman.
+- [ ] **Eventos:** cada tormenta con inicio, fin, dBZ máximo sobre la estación y mm del
+      pluviómetro; lista de "tormentas notables" (≥ 50 dBZ) con fecha.
+- [ ] **Timelapse del radar por día** (como el de la cámara) y una vista de historia
+      para ver cualquier día guardado, lado a lado con la cámara de esa hora.
+- [ ] **Guardar compacto para lo viejo:** la matriz de dBZ del recorte de la CDMX (PNG de
+      un canal, casi todo ceros) para que la estadística no dependa de los 45 días de
+      JPG. Sin esto, la historia se borra sola.
 
 ## 2.f Verificación de pronósticos: ¿quién acierta? — en producción, acumulando (2026-09-23)
 
