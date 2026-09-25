@@ -9,7 +9,9 @@ from typing import Dict, Optional
 from .config import settings
 from .services.alerts import AlertService
 from .services.mqtt_publisher import MqttPublisher
+from .services.camera import CameraStore
 from .services.storage import InfluxDBStorage
+from .services.timelapse import TimelapseService
 
 storage = InfluxDBStorage(
     url=settings.influxdb_url,
@@ -28,6 +30,24 @@ alert_service = AlertService(settings)
 
 # MQTT publisher (with Home Assistant discovery)
 mqtt_publisher = MqttPublisher(settings)
+
+
+# Cámara del exterior: la foto la EMPUJA la Raspberry de casa (está detrás del NAT)
+# hacia el VPS. Ver docs/archivo/PLAN-CAMARA-EXTERIOR.md y services/camera.py.
+timelapse = TimelapseService(
+    base_dir=settings.camera_dir,
+    fps=settings.camera_timelapse_fps,
+    width=settings.camera_timelapse_width,
+    min_frames=settings.camera_timelapse_min_frames,
+    retention_days=settings.camera_timelapse_retention_days,
+)
+
+camera = CameraStore(
+    base_dir=settings.camera_dir,
+    retention_days=settings.camera_retention_days,
+    stale_seconds=settings.camera_stale_seconds,
+    analysis_retention_days=settings.camera_analysis_retention_days,
+)
 
 
 def station_pressure_hpa() -> Optional[float]:
