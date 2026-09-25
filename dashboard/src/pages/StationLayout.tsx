@@ -5,6 +5,7 @@ import { deriveCondition } from '../weather'
 import { useUnits } from '../units'
 import { useStationData } from '../station-data'
 import { LOCATION } from '../config'
+import { useCiclones, enTemporada } from '../components/station/cyclones'
 import logoDark from '../assets/logo-xe1e-dark.png'
 import logoLight from '../assets/logo-xe1e-light.png'
 
@@ -23,10 +24,35 @@ const NAV_ACTIVE = [
   { to: '/calidad-aire', label: 'Calidad del aire', end: false },
   { to: '/aeronautica', label: 'Aeronáutica', end: false },
   { to: '/remota', label: 'Estación remota', end: false },
-  { to: '/compartir', label: 'Widget', end: false },
   { to: '/consola', label: 'Consola', end: false },
   { to: '/instrumentos', label: 'Instrumentos', end: false },
 ]
+
+/**
+ * Pestaña de Ciclones (al final; Widget se quedó sólo en el pie de página). Casi
+ * todo el año no tiene nada, pero en temporada debe saltar a la vista: 🌀 en
+ * temporada, y con ciclones activos un contador del color de la amenaza
+ * (rojo = amenaza para México, ámbar = se acerca, azul = lejos).
+ */
+function CiclonesTab({ linkClass }: { linkClass: (a: { isActive: boolean }) => string }) {
+  const n = useCiclones()?.tormentas ?? []
+  const amenaza = n[0]?.nivel
+  const temporada = enTemporada('ep') || enTemporada('al')
+  const badge = amenaza === 'alta' ? 'bg-red-500 text-white' : amenaza === 'media' ? 'bg-amber-500 text-slate-900' : 'bg-sky-500/80 text-white'
+  return (
+    <NavLink to="/ciclones" className={(a) => `${linkClass(a)} flex items-center gap-1`}>
+      {(temporada || n.length > 0) && <span aria-hidden>🌀</span>}
+      Ciclones
+      {n.length > 0 && (
+        <span className={`relative ml-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] font-bold leading-[1.1rem] text-center ${badge}`}
+          title={`${n.length} ciclones activos`}>
+          {amenaza === 'alta' && <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-60" />}
+          <span className="relative">{n.length}</span>
+        </span>
+      )}
+    </NavLink>
+  )
+}
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -199,6 +225,7 @@ export function StationLayout() {
                 {n.label}
               </NavLink>
             ))}
+            <CiclonesTab linkClass={linkClass} />
           </nav>
 
           {/* Contenido de la página */}

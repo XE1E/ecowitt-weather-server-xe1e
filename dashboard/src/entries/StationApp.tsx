@@ -27,6 +27,7 @@ const TablesPage = lazyPage(() => import('../pages/TablesPage'), 'TablesPage')
 const ShareEmbedPage = lazyPage(() => import('../pages/ShareEmbedPage'), 'ShareEmbedPage')
 const ConsolePage = lazyPage(() => import('../pages/ConsolePage'), 'ConsolePage')
 const InstrumentosPage = lazyPage(() => import('../pages/InstrumentosPage'), 'InstrumentosPage')
+const CyclonesPage = lazyPage(() => import('../pages/CyclonesPage'), 'CyclonesPage')
 const DisclaimerPage = lazyPage(() => import('../pages/DisclaimerPage'), 'DisclaimerPage')
 
 // Dispara un $pageview en cada cambio de ruta (incluida la carga inicial) --
@@ -68,6 +69,7 @@ export default function StationApp() {
               <Route path="compartir" element={<ShareEmbedPage />} />
               <Route path="consola" element={<ConsolePage />} />
               <Route path="instrumentos" element={<InstrumentosPage />} />
+              <Route path="ciclones" element={<CyclonesPage />} />
               <Route path="disclaimer" element={<DisclaimerPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

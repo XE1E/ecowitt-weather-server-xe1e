@@ -691,6 +691,25 @@ saltable, estado de estación con 6 h de desfase, tareas que no ven el interrupt
 2) rendimiento (Influx bloquea el servidor, dashboard en un archivo de 1.87 MB),
 3) estructura (partir `main.py`), 4) limpieza.
 
+## 3c. ¿Repo privado + cambio de licencia? — por evaluar (anotado 2026-09-25)
+Idea del usuario: pasar `XE1E/ecowitt-weather-server-xe1e` a **privado** y dar acceso
+sólo a quien de verdad se interese; revisar la licencia. Hoy: repo **público**, README
+dice **MIT** pero **no hay archivo `LICENSE`** (GitHub lo muestra "sin licencia").
+Qué revisar antes de decidir:
+- **Lo ya publicado bajo MIT sigue siendo MIT** para quien lo haya clonado: el cambio
+  sólo aplica hacia adelante. Opciones: seguir MIT, "todos los derechos reservados",
+  o no comercial (PolyForm Noncommercial / CC BY-NC para docs).
+- **Cosas que dependen de que sea público** (se rompen al hacerlo privado):
+  - `git pull` en el VPS (remote HTTPS sin credenciales) → deploy key de sólo lectura.
+  - Admin → Actualizaciones: `api.github.com/repos/.../commits` sin token
+    (`receiver/app/routers/admin.py:382`) → token fine-grained de sólo lectura en el .env.
+  - Ligas públicas a GitHub en `StationLayout.tsx` (pie), `DisclaimerPage.tsx`,
+    `AdminSistema.tsx` y `docs/GUIA.md`/`README.md` (clonado).
+  - CI (GitHub Actions): en privado cuenta contra los 2,000 min/mes gratis.
+  - Repos hermanos (kiosco ESP32, Svitrix): decidir si también se cierran.
+- Dar acceso: colaboradores con rol *Read*, uno por uno (gratis en cuenta personal).
+- Antes de cerrar, pasar un escáner de secretos por el historial (lo público ya pudo copiarse).
+
 ## 4. Seguridad — residuales (auditoría docs/SEGURIDAD.md)
 - [ ] Cerrar el puerto `:8080` (DIFERIDO: IP dinámica; se compensa con la whitelist de passkey).
 - [ ] Token en el push (además de la whitelist por passkey).

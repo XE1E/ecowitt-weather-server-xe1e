@@ -1,5 +1,5 @@
 """Datos de fuentes externas servidos por el backend (con caché propia en cada
-servicio): METAR/TAF, satélite, calidad del aire, IMECA y sismos."""
+servicio): METAR/TAF, satélite, calidad del aire, IMECA, sismos y ciclones."""
 import asyncio
 import logging
 from typing import Optional
@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Response
 
 from .. import state
 from ..config import settings
-from ..services import imeca, satellite
+from ..services import imeca, nhc, satellite
 from ..services.air_quality import get_air_quality
 from ..services.earthquakes import get_earthquakes
 from ..services.metar import get_metar, get_taf
@@ -104,3 +104,27 @@ async def get_earthquakes_data():
     except Exception as e:
         logger.error(f"Error getting earthquakes: {e}")
         return {"quakes": []}
+
+
+@router.get("/api/ciclones")
+async def get_ciclones():
+    """Ciclones tropicales activos (Atlántico y Pacífico, NHC) con su cercanía a México."""
+    try:
+        return await nhc.get_ciclones(settings.cwop_latitude, settings.cwop_longitude)
+    except Exception as e:
+        logger.error(f"Error getting ciclones: {e}")
+        raise HTTPException(status_code=502, detail="El NHC no está disponible")
+
+
+@router.get("/api/ciclones/img/{atcf}/{tipo}")
+async def get_ciclon_img(atcf: str, tipo: str):
+    """Imagen del NHC (cono o key messages en español, o perspectiva a 7 días con
+    atcf=outlook y tipo=pacifico|atlantico). Sólo URLs de una lista blanca."""
+    url = nhc.img_url(atcf, tipo)
+    if not url:
+        raise HTTPException(status_code=404, detail="Imagen no reconocida")
+    img = await nhc.get_img(url)
+    if not img:
+        raise HTTPException(status_code=404, detail="Imagen no disponible")
+    data, ctype = img
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "public, max-age=600"})
