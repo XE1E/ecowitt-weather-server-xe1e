@@ -1,6 +1,7 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **en ejecución** — fases 0 y 1 ✅ hechas y desplegadas el 2026-09-24; sigue la 2. Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24 (de la 2 queda
+> sólo el reloj de 1 s de la consola); sigue la 3. Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -60,28 +61,32 @@ Dashboard:
 - [x] Respuestas viejas que pisan a las nuevas al cambiar rápido de pestaña/periodo
       (AdminAlertas, MultiVariableChart, ClimatePage, RemoteStationPage…).
 
-## Fase 2 — Rendimiento
+## Fase 2 — Rendimiento — ✅ HECHA 2026-09-24 (commits 6075e51, 7e1f92d y el de /api/history)
 
 Backend:
-- [ ] **Consultas a InfluxDB bloquean todo el servidor:** casi todos los métodos de
-      `storage.py` son `async` pero llaman a Influx de forma síncrona (timeout 30 s).
-      `/api/current` hace 7 por petición. Pasarlas a `asyncio.to_thread` (o al cliente
-      async). Es lo que más protege a `/data/report`.
-- [ ] Caché corta (30-60 s) de `/api/current` y límite al rango de `/api/history`.
-- [ ] Caché en memoria de `settings.json` (se relee del disco 2 veces por push de la
-      secundaria, 2+2N por `/api/stations`, 1+N por minuto en el watchdog).
-- [ ] `_awekas_condition_code` corre en cada push aunque AWEKAS esté apagado;
-      `publish_all` abre un cliente HTTP nuevo por push aunque no publique nada.
+- [x] **Consultas a InfluxDB fuera del event loop:** todo pasa por `storage._q`
+      (asyncio.to_thread); las independientes van en paralelo. Prueba que falla con el
+      código anterior (tests/test_storage.py).
+- [x] `/api/current`: extras en paralelo + caché de 30 s por estación → **0.31 s a 0.002 s**.
+      `/api/history`: tope de 31 días, y `fields` + `every` opcionales para promedios por
+      ventana → 30 días de la remota **13.9 s / 25.8 MB a 0.17 s / 324 KB**.
+- [x] Condición de AWEKAS sólo si AWEKAS está activo; `publish_all` sin cliente HTTP si no
+      hay redes HTTP activas.
+- [~] Caché de `settings.json` en memoria: **descartada** — ~9 KB que el sistema ya tiene en
+      caché de disco (<1 ms); no justifica el riesgo de servir ajustes viejos.
 
 Dashboard:
-- [ ] **Todo en un solo archivo de 1.87 MB**: cargar por sección (`React.lazy`); el
-      widget `/embed` hoy descarga también el Admin y las gráficas.
-- [ ] `/consola` monta a la vez la réplica y la imagen (sólo las esconde con CSS).
-- [ ] Peticiones duplicadas en la misma página (alertas ×2, IMECA ×2, NOAA ×2, forecast ×2,
-      camera/status en 5 componentes).
-- [ ] Un `usePolling` común: pausa con la pestaña oculta, cancela respuestas viejas.
-      Inicio hace ~11 consultas/min por pestaña, nunca se pausa.
-- [ ] Relojes de 1 s que redibujan componentes enormes (ConsoleReplica completa).
+- [x] Carga por vista y por página (`src/entries/*`, `lazyPage` con recarga única tras un
+      deploy); librerías en archivos propios. JS: widget 1834→345 KB, admin →180, kiosco
+      →576, consola →631, inicio ~725 antes de mostrarse (+304 de PostHog después).
+- [x] PostHog se carga aparte, tras mostrar la página y sólo en vistas públicas.
+- [x] `/consola` monta sólo la versión visible.
+- [x] `useSharedFetch` (una consulta por URL: alertas, IMECA) y el pronóstico de la consola
+      desde el proveedor.
+- [x] `pollWhileVisible`: 27 consultas periódicas se pausan con la pestaña oculta
+      (comprobado: 0 peticiones en 3 min oculta; al volver, refresca).
+- [ ] Relojes de 1 s que redibujan componentes enormes (ConsoleReplica completa): pasa a la
+      fase 3, junto con dividir ConsoleReplica (el reloj va en su propio componente).
 
 ## Fase 3 — Estructura
 
