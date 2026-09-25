@@ -50,6 +50,8 @@ docker-compose.override.yml
 
 # Data
 data/
+# Recortes de prueba del radar (sí van al repo)
+!receiver/tests/data/
 *.db
 *.sqlite
 *.sqlite3
