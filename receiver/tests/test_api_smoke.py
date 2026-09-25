@@ -102,7 +102,8 @@ def api(monkeypatch, tmp_path):
     monkeypatch.setattr(m.alert_service, "process", _fake_process)
     # Límites por IP limpios en cada prueba.
     monkeypatch.setattr(m, "_report_limiter", m.secsvc.RateLimiter())
-    monkeypatch.setattr(m, "_login_limiter", m.secsvc.RateLimiter())
+    from app.routers import admin as r_admin
+    monkeypatch.setattr(r_admin, "_login_limiter", m.secsvc.RateLimiter())
 
     client = TestClient(m.app)
     client.fake_storage = fake
