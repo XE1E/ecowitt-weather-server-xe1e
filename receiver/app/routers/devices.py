@@ -43,8 +43,8 @@ async def get_svitrix():
     # reinicios — peor que mostrar el último valor conocido.
     if not data or data.get("temperature_outdoor") is None:
         raise HTTPException(status_code=503, detail="Sin lectura de la estación todavía")
-    lat = getattr(settings, "cwop_latitude", 19.380359)
-    lon = getattr(settings, "cwop_longitude", -99.174564)
+    lat = settings.cwop_latitude
+    lon = settings.cwop_longitude
     aq = im = None
     try:
         aq = await get_air_quality(lat, lon, settings.waqi_token)
@@ -90,8 +90,8 @@ async def get_epaper_forecast():
     Por lo mismo, cada fuente externa se pide con tolerancia a fallos: que se caiga WAQI
     o el IMECA no puede costar la pantalla entera.
     """
-    lat = getattr(settings, "cwop_latitude", 19.380359)
-    lon = getattr(settings, "cwop_longitude", -99.174564)
+    lat = settings.cwop_latitude
+    lon = settings.cwop_longitude
     data = state.latest_by_station.get(None)
 
     async def _ok(coro, etiqueta):
@@ -140,8 +140,8 @@ async def get_bim32():
     `/api/epaper/forecast.json` — no se devuelve 503, para no dejar al firmware sin
     dato con el que refrescar su pantalla.
     """
-    lat = getattr(settings, "cwop_latitude", 19.380359)
-    lon = getattr(settings, "cwop_longitude", -99.174564)
+    lat = settings.cwop_latitude
+    lon = settings.cwop_longitude
     data = state.latest_by_station.get(None)
 
     sun_elev = None

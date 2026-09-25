@@ -264,8 +264,8 @@ async def air_quality_watchdog():
     while True:
         try:
             if settings.alerts_enabled and getattr(settings, "alert_air_enabled", False):
-                lat = getattr(settings, "cwop_latitude", 19.380359)
-                lon = getattr(settings, "cwop_longitude", -99.174564)
+                lat = settings.cwop_latitude
+                lon = settings.cwop_longitude
                 aqi = None
                 try:
                     aq = await get_air_quality(lat, lon, settings.waqi_token)

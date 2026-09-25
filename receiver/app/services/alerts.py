@@ -165,10 +165,9 @@ _SENSOR_PRESENCE = {
 class AlertService:
     def __init__(self, settings, notifier: Optional[Notifier] = None):
         self.enabled: bool = settings.alerts_enabled
-        self.temp_high: float = settings.alert_temp_high
-        self.temp_low: float = settings.alert_temp_low
-        self.wind_high: float = settings.alert_wind_high
-        self.rain_rate: float = settings.alert_rain_rate
+        # Los umbrales NO se copian aquí: evaluate() los lee de settings en cada
+        # lectura (antes se copiaban temp_high/temp_low/wind_high/rain_rate y nadie
+        # los leía).
 
         self._settings = settings
         # Si no inyectan notifier usamos el propio (Telegram + correo, con
@@ -701,10 +700,6 @@ class AlertService:
                 self.active.pop(key, None)
                 self._active_since.pop(key, None)
                 await self._safe_notify(f"✅ Normalizado — {message}", category="air")
-
-    async def send(self, text: str) -> None:
-        """Enviar una notificación suelta."""
-        await self._safe_notify(text)
 
     async def check_station(
         self,

@@ -49,11 +49,6 @@ def mph_to_kmh(mph: float) -> float:
     return mph * 1.60934
 
 
-def mph_to_ms(mph: float) -> float:
-    """Convert miles per hour to meters per second."""
-    return mph * 0.44704
-
-
 def convert_to_metric(data: Dict[str, Any], compute_derived: bool = True) -> Dict[str, Any]:
     """
     Convert all imperial units to metric.

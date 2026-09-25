@@ -27,8 +27,8 @@ _MX_TZ = ZoneInfo("America/Mexico_City")
 async def get_almanac_data():
     """Almanaque astronómico ampliado (sol, crepúsculos, luna y planetas)."""
     try:
-        lat = getattr(settings, "cwop_latitude", 19.380359)
-        lon = getattr(settings, "cwop_longitude", -99.174564)
+        lat = settings.cwop_latitude
+        lon = settings.cwop_longitude
         return get_almanac(lat, lon)
     except Exception as e:
         logger.error(f"Error getting almanac: {e}")
@@ -157,8 +157,8 @@ async def get_forecast(lat: Optional[float] = None, lon: Optional[float] = None)
     """
     try:
         forecast = await openmeteo.get_forecast(
-            lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359),
-            lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564),
+            lat if lat is not None else settings.cwop_latitude,
+            lon if lon is not None else settings.cwop_longitude,
         )
         current = state.latest_by_station.get(None, {})
         return _apply_temperature_bias(forecast, current.get("temperature_outdoor"), current.get("pressure_relative"))
@@ -194,8 +194,8 @@ async def get_own_forecast(lat: Optional[float] = None, lon: Optional[float] = N
     """
     own = state.latest_by_station.get(None) or {}
     camera_analysis = state.camera.get_analysis()
-    lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
-    lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
+    lat_ = lat if lat is not None else settings.cwop_latitude
+    lon_ = lon if lon is not None else settings.cwop_longitude
     merged = await _fetch_nearby_stations_merged(lat_, lon_)
     incoming_rain = forecaster.detect_incoming_rain(
         merged["stations"], own.get("wind_direction"), own.get("wind_speed"), own.get("rain_rate"),
@@ -370,8 +370,8 @@ async def get_nearby_stations_endpoint(lat: Optional[float] = None, lon: Optiona
     pinta, no la calcula (única fuente de verdad, la comparte con
     `get_own_forecast`).
     """
-    lat_ = lat if lat is not None else getattr(settings, "cwop_latitude", 19.380359)
-    lon_ = lon if lon is not None else getattr(settings, "cwop_longitude", -99.174564)
+    lat_ = lat if lat is not None else settings.cwop_latitude
+    lon_ = lon if lon is not None else settings.cwop_longitude
     merged = await _fetch_nearby_stations_merged(lat_, lon_)
     own = state.latest_by_station.get(None) or {}
     merged["incoming_rain"] = forecaster.detect_incoming_rain(
@@ -462,8 +462,8 @@ async def get_consensus_forecast_endpoint():
     - Compara Open-Meteo vs WeatherAPI y muestra el más conservador
     """
     try:
-        lat = getattr(settings, "cwop_latitude", 19.380359)
-        lon = getattr(settings, "cwop_longitude", -99.174564)
+        lat = settings.cwop_latitude
+        lon = settings.cwop_longitude
 
         # Datos actuales de la estación
         current_data = state.latest_by_station.get(None)

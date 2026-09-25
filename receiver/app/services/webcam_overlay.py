@@ -21,6 +21,8 @@ from typing import Any, Dict, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
+from . import compass
+
 logger = logging.getLogger(__name__)
 
 CANVAS_W = 800
@@ -40,7 +42,7 @@ SUB_COLOR = (125, 211, 252)    # sky-300
 # Mismo alfabeto de 8 puntos en español que weather.ts::cardinal() en el
 # dashboard (N/NE/E/SE/S/SO/O/NO) -- para que el rumbo se lea igual en todo
 # el sitio, no otro alfabeto distinto solo para esta imagen.
-_COMPASS_ES = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]
+_COMPASS_ES = compass.ES8
 
 # Candidatos de fuente TTF, en orden: la que instala el Dockerfile en
 # producción (fonts-dejavu-core) primero, con alternativas para poder
@@ -71,9 +73,7 @@ def _load_font(bold: bool, size: int) -> ImageFont.FreeTypeFont:
 
 
 def _compass_es(deg: Optional[float]) -> str:
-    if deg is None:
-        return "--"
-    return _COMPASS_ES[round((deg % 360) / 45) % 8]
+    return compass.point(deg, compass.ES8) or "--"
 
 
 def _fmt(value: Optional[float], template: str, none: str = "--") -> str:

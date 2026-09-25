@@ -196,8 +196,8 @@ async def _analyze_sky_background(image_data: bytes) -> None:
         # fotos reales) sin que sea nubosidad -- ver sky_analyzer.sun_glare_likely()
         # y docs/archivo/PLAN-HDR-CAMARA.md (por qué no se resuelve tocando la cámara).
         try:
-            lat = getattr(settings, "cwop_latitude", 19.380359)
-            lon = getattr(settings, "cwop_longitude", -99.174564)
+            lat = settings.cwop_latitude
+            lon = settings.cwop_longitude
             altitude = sun_altitude(lat, lon)
             station_data["sun_glare_likely"] = sky_analyzer.sun_glare_likely(
                 altitude, station_data.get("solar_radiation")

@@ -12,9 +12,10 @@ parte del esquema de WeatherAPI (`wind_kph`, `wind_degree`, `wind_dir`,
 import math
 from typing import Any, Dict, Optional
 
+from . import compass
+
 # WeatherAPI usa abreviaturas de rumbo en inglés.
-_CARD16 = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-           "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+_CARD16 = compass.EN16
 _POLL_KEY = {"PM2.5": "pm2_5", "PM10": "pm10", "O3": "o3",
              "NO2": "no2", "SO2": "so2", "CO": "co"}
 
@@ -24,9 +25,7 @@ def _num(v: Any) -> Optional[float]:
 
 
 def _cardinal(deg: Optional[float]) -> Optional[str]:
-    if deg is None:
-        return None
-    return _CARD16[round(deg / 22.5) % 16]
+    return compass.point(deg, compass.EN16)
 
 
 def _epa_index(us_aqi: Optional[float]) -> int:

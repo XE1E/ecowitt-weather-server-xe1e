@@ -146,14 +146,6 @@ export const PAGE_RE = new RegExp(
   + `|stats-(${STATS_KEYS.join('|')}))$`
 )
 
-/** Todos los slugs existentes. Lo usa el script de captura masiva y la validación. */
-export function allSlugs(): string[] {
-  const out = ['consola', 'menu', 'camara', '1', '2', '3', '4', '5']
-  for (const v of VAR_KEYS) for (const p of PERIOD_KEYS) out.push(detSlug(v, p))
-  for (const s of STATS_KEYS) out.push(statsSlug(s))
-  return out
-}
-
 export type Parsed =
   | { kind: 'consola' }
   | { kind: 'menu' }

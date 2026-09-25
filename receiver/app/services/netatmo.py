@@ -39,6 +39,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import httpx
 
+from . import compass
+
 from .forecaster import zone_trend as _zone_trend_helper
 
 logger = logging.getLogger(__name__)
@@ -147,7 +149,7 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-_COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+_COMPASS = compass.EN8
 
 
 def _bearing_compass(lat1: float, lon1: float, lat2: float, lon2: float) -> str:
@@ -157,7 +159,7 @@ def _bearing_compass(lat1: float, lon1: float, lat2: float, lon2: float) -> str:
     x = math.sin(dl) * math.cos(phi2)
     y = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dl)
     deg = (math.degrees(math.atan2(x, y)) + 360) % 360
-    return _COMPASS[round(deg / 45) % 8]
+    return compass.point(deg, compass.EN8)
 
 
 def _station_trend(station_id: Optional[str], now: float, pressure_mb: Optional[float]) -> Optional[float]:

@@ -78,21 +78,6 @@ CONDITION_ES = {
 }
 
 
-def _normalize_condition(cond: str) -> str:
-    """Normaliza condición a un conjunto reducido."""
-    if cond in ("clear", "night"):
-        return "clear"
-    if cond in ("partly_cloudy", "mostly_cloudy"):
-        return "cloudy"
-    if cond == "overcast":
-        return "overcast"
-    if cond in ("rainy", "stormy"):
-        return "precip"
-    if cond == "foggy":
-        return "foggy"
-    return "unknown"
-
-
 def compare_conditions(camera_cond: str, forecast_wmo: int) -> Tuple[str, str]:
     """
     Compara condición de cámara con código WMO del pronóstico.

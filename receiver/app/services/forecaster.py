@@ -14,12 +14,14 @@ recuadro tipo "estado del barómetro".
 """
 from typing import Any, Dict, List, Optional
 
+from . import compass
 
-_COMPASS_EN = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+_COMPASS_EN = compass.EN8
 
 
 def _compass_en(deg: float) -> str:
-    return _COMPASS_EN[round((deg % 360) / 45) % 8]
+    return compass.point(deg, compass.EN8)
 
 
 def _roughly_from(station_bearing: str, wind_from: str) -> bool:

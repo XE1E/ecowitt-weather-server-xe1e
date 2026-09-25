@@ -205,7 +205,7 @@ async def get_climate_records(start: str = "-3650d"):
     """Récords ampliados: de siempre, por mes calendario, este mes/año y ayer."""
     try:
         rows = await state.storage.query_daily_summaries(start=start)
-        return aggregator.build_records(rows, lat=getattr(settings, "cwop_latitude", 19.380359))
+        return aggregator.build_records(rows, lat=settings.cwop_latitude)
     except Exception as e:
         logger.error(f"Error getting climate records: {e}")
         raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
@@ -227,7 +227,7 @@ async def get_climate_noaa(year: int, month: Optional[int] = None):
     """Reporte climatológico estilo NOAA: mensual (con month) o anual (sin month)."""
     try:
         rows = await state.storage.query_daily_summaries(start="-3650d")
-        lat = getattr(settings, "cwop_latitude", 19.380359)
+        lat = settings.cwop_latitude
         if month:
             return aggregator.noaa_month(rows, year, month, lat)
         return aggregator.noaa_year(rows, year, lat)

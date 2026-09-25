@@ -392,16 +392,6 @@ def save_station_config(path: str, name: str, config: Dict[str, Any]) -> None:
     save_all_settings(path, data)
 
 
-def delete_station_config(path: str, name: str) -> bool:
-    """Elimina la configuración de una estación. Retorna True si existía."""
-    data = load_all_settings(path, strict=True)
-    if "stations" in data and name in data["stations"]:
-        del data["stations"][name]
-        save_all_settings(path, data)
-        return True
-    return False
-
-
 # ---------------------------------------------------------------------------
 # Setup wizard status
 # ---------------------------------------------------------------------------

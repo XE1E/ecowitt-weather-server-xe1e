@@ -60,13 +60,6 @@ def _severity(code: int) -> int:
     return _WMO_SEVERITY.get(code, 3)
 
 
-def _worst_code(codes: List[int]) -> int:
-    """El código más severo de una lista."""
-    if not codes:
-        return 0
-    return max(codes, key=_severity)
-
-
 def _precip_likely(code: int) -> bool:
     """¿El código indica precipitación probable?"""
     return _severity(code) >= 5

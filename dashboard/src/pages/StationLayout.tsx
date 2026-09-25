@@ -27,7 +27,6 @@ const NAV_ACTIVE = [
   { to: '/consola', label: 'Consola', end: false },
   { to: '/instrumentos', label: 'Instrumentos', end: false },
 ]
-const NAV_SOON: string[] = []
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -199,15 +198,6 @@ export function StationLayout() {
               <NavLink key={n.to} to={n.to} end={n.end} className={linkClass}>
                 {n.label}
               </NavLink>
-            ))}
-            {NAV_SOON.map((label) => (
-              <span
-                key={label}
-                title="Próximamente"
-                className="px-3 py-1.5 rounded-lg text-sm whitespace-nowrap text-slate-600 cursor-default"
-              >
-                {label}
-              </span>
             ))}
           </nav>
 

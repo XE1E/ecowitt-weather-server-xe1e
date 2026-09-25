@@ -2,6 +2,7 @@
 servicio): METAR/TAF, satélite, calidad del aire, IMECA y sismos."""
 import asyncio
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Response
 
@@ -38,9 +39,10 @@ async def get_taf_data(station: str = "MMMX"):
 
 @router.get("/api/satellite")
 async def get_satellite(layer: str = "VIIRS_SNPP_CorrectedReflectance_TrueColor",
-                        date: str = "", lat: float = 19.380359, lon: float = -99.174564):
+                        date: str = "", lat: Optional[float] = None, lon: Optional[float] = None):
     """Imagen satelital NASA GIBS (proxy servido desde el backend, con caché)."""
-    data = await satellite.get_snapshot(layer, date, lat, lon)
+    data = await satellite.get_snapshot(layer, date, settings.cwop_latitude if lat is None else lat,
+                                        settings.cwop_longitude if lon is None else lon)
     if not data:
         raise HTTPException(status_code=502, detail="Imagen satelital no disponible")
     return Response(content=data, media_type="image/jpeg",
@@ -48,10 +50,12 @@ async def get_satellite(layer: str = "VIIRS_SNPP_CorrectedReflectance_TrueColor"
 
 
 @router.get("/api/airquality")
-async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
-    """Air quality (WAQI) for a location; token from settings (WAQI_TOKEN)."""
+async def get_air_quality_data(lat: Optional[float] = None, lon: Optional[float] = None):
+    """Calidad del aire (WAQI). Sin lat/lon, la ubicación de la estación (antes el
+    valor por omisión era el Zócalo, distinto del de todo lo demás)."""
     try:
-        return await get_air_quality(lat, lon, settings.waqi_token)
+        return await get_air_quality(settings.cwop_latitude if lat is None else lat,
+                                     settings.cwop_longitude if lon is None else lon, settings.waqi_token)
     except Exception as e:
         logger.error(f"Error getting air quality: {e}")
         raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
@@ -59,10 +63,12 @@ async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
 
 
 @router.get("/api/airquality/imeca")
-async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
+async def get_imeca_data(lat: Optional[float] = None, lon: Optional[float] = None):
     """IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo."""
     try:
-        return await imeca.get_imeca(lat, lon, pressure_hpa=state.station_pressure_hpa())
+        return await imeca.get_imeca(settings.cwop_latitude if lat is None else lat,
+                                     settings.cwop_longitude if lon is None else lon,
+                                     pressure_hpa=state.station_pressure_hpa())
     except Exception as e:
         logger.error(f"Error getting IMECA: {e}")
         raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
@@ -90,8 +96,8 @@ async def earthquake_watch_task():
 async def get_earthquakes_data():
     """Sismos recientes cerca de la estación (SSN/USGS)."""
     try:
-        lat = getattr(settings, "cwop_latitude", 19.380359)
-        lon = getattr(settings, "cwop_longitude", -99.174564)
+        lat = settings.cwop_latitude
+        lon = settings.cwop_longitude
         # Las alertas ya NO se evalúan aquí (dependían de que alguien abriera la
         # página): las revisa earthquake_watch_task cada 10 min.
         return await get_earthquakes(lat, lon)

@@ -324,10 +324,6 @@ def apply_overrides(settings, alert_service, overrides: Dict[str, Any]) -> None:
     for key, val in overrides.items():
         if hasattr(settings, key):
             setattr(settings, key, val)
-    # Sincronizar el servicio de alertas (captura umbrales en atributos)
+    # Sincronizar el servicio de alertas (los umbrales los lee de settings en vivo)
     alert_service.enabled = settings.alerts_enabled
-    alert_service.temp_high = settings.alert_temp_high
-    alert_service.temp_low = settings.alert_temp_low
-    alert_service.wind_high = settings.alert_wind_high
-    alert_service.rain_rate = settings.alert_rain_rate
     # telegram_* y waqi_token se leen en vivo desde settings, no requieren sync
