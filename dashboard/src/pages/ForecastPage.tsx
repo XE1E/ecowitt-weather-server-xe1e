@@ -325,7 +325,7 @@ function SmnView({ smn, tab, u, T }: { smn: SmnData; tab: 'days' | 'hourly'; u: 
           <div className="grid grid-cols-4 gap-5 text-center shrink-0">
             <div><p className="text-sm text-slate-400 mb-0.5">Máx</p><p className="text-3xl font-bold text-orange-300 leading-none">{d0.tmax != null ? T(d0.tmax) : '--'}<span className="text-lg font-semibold text-slate-400">°</span></p></div>
             <div><p className="text-sm text-slate-400 mb-0.5">Mín</p><p className="text-3xl font-bold text-sky-300 leading-none">{d0.tmin != null ? T(d0.tmin) : '--'}<span className="text-lg font-semibold text-slate-400">°</span></p></div>
-            <div><p className="text-sm text-slate-400 mb-0.5">Lluvia</p><p className="text-3xl font-bold text-violet-300 leading-none">{d0.prob_precip != null ? Math.round(d0.prob_precip) : '--'}<span className="text-lg font-semibold text-slate-400">%</span></p></div>
+            <div><p className="text-sm text-slate-400 mb-0.5">Lluvia</p><p className="text-3xl font-bold text-violet-300 leading-none">{d0.prob_precip != null ? Math.round(d0.prob_precip) : '--'}<span className="text-lg font-semibold text-slate-400">%</span></p>{d0.precip != null && d0.precip > 0 && <p className="text-xs text-slate-400 mt-1">{u.rain(d0.precip)} {u.rainU}</p>}</div>
             <div><p className="text-sm text-slate-400 mb-0.5">Viento</p><p className="text-3xl font-bold text-emerald-300 leading-none">{d0.wind != null ? u.wind(d0.wind) : '--'}<span className="text-lg font-semibold text-slate-400"> {u.windU}</span></p></div>
           </div>
         </div>
@@ -346,7 +346,13 @@ function SmnView({ smn, tab, u, T }: { smn: SmnData; tab: 'days' | 'hourly'; u: 
                   <div className="text-right shrink-0 whitespace-nowrap">
                     <span className="font-bold text-lg">{d.tmax != null ? T(d.tmax) : '--'}°</span>
                     <span className="text-slate-500"> / {d.tmin != null ? T(d.tmin) : '--'}°</span>
-                    {d.prob_precip != null && d.prob_precip > 0 && <span className="text-sm text-sky-400 ml-2">💧 {Math.round(d.prob_precip)}%</span>}
+                    {/* El SMN a veces da 0% con varios mm esperados: se muestran ambos tal cual. */}
+                    {((d.prob_precip ?? 0) > 0 || (d.precip ?? 0) > 0) && (
+                      <span className="text-sm text-sky-400 ml-2">
+                        💧 {d.prob_precip != null ? Math.round(d.prob_precip) : '--'}%
+                        {d.precip != null && d.precip > 0 && <span className="text-sky-300/70"> · {u.rain(d.precip)} {u.rainU}</span>}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
@@ -373,6 +379,7 @@ function SmnView({ smn, tab, u, T }: { smn: SmnData; tab: 'days' | 'hourly'; u: 
                     <WeatherIcon name={skyIcon(h.sky, night)} size={34} alt="" />
                     <span className="text-sm font-bold">{h.temp != null ? T(h.temp) : '--'}°</span>
                     <span className={`text-[10px] ${h.prob_precip && h.prob_precip > 0 ? 'text-sky-400' : 'text-slate-600'}`}>{h.prob_precip != null ? Math.round(h.prob_precip) : 0}%</span>
+                    {h.precip != null && h.precip > 0 && <span className="text-[10px] text-sky-300/70">{u.rain(h.precip)} {u.rainU}</span>}
                   </div>
                 )
               })}
