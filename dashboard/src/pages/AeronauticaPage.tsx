@@ -166,7 +166,7 @@ export function AeronauticaPage() {
           {metar?.raw && (
             <div>
               <h3 className="text-lg font-semibold text-slate-300 mb-2">Perfil atmosférico en vivo · {icao}</h3>
-              <AtmosphericProfile m={metar} />
+              <AtmosphericProfile m={metar} city={icao === 'MMMX'} />
             </div>
           )}
 

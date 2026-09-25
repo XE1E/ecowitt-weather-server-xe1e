@@ -51,7 +51,9 @@ function windows(x: number, top: number, w: number, h: number, fill: string, nig
   return out
 }
 
-export function AtmosphericProfile({ m }: { m: Metar | null }) {
+/** `city`: dibuja el Valle de México (cordilleras, volcanes y silueta de la CDMX).
+ *  Sólo tiene sentido para MMMX; en otros aeropuertos el paisaje sería falso. */
+export function AtmosphericProfile({ m, city = false }: { m: Metar | null; city?: boolean }) {
   const [now, setNow] = useState(() => new Date())
   const [expanded, setExpanded] = useState(false)
 
@@ -105,7 +107,7 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
   const cloudFill = night ? '#cbd6e8' : '#ffffff'
 
   const profileContent = (isExpanded: boolean) => (
-    <div className={`rounded-2xl overflow-hidden border border-white/10 relative ${isExpanded ? '' : 'cursor-pointer'}`}
+    <div className={`on-dark rounded-2xl overflow-hidden border border-white/10 relative ${isExpanded ? '' : 'cursor-pointer'}`}
       style={{ aspectRatio: `${W} / ${H}` }}
       onClick={isExpanded ? undefined : () => setExpanded(true)}
     >
@@ -158,6 +160,8 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           )
         })}
 
+        {city && (
+        <>
         {/* Cordilleras (Valle de México) */}
         <path d={`M0 ${GROUND} L0 342 L110 316 L210 340 L320 310 L450 340 L560 318 L690 344 L810 320 L930 344 L1000 328 L1000 ${GROUND} Z`}
           fill={night ? '#16273f' : '#7f97ba'} opacity="0.45" />
@@ -253,6 +257,9 @@ export function AtmosphericProfile({ m }: { m: Metar | null }) {
           <polygon points={`397,${GROUND - 84} 390,${GROUND - 74} 397,${GROUND - 78}`} fill="#f5c451" />
           <polygon points={`397,${GROUND - 84} 404,${GROUND - 74} 397,${GROUND - 78}`} fill="#f5c451" />
         </g>
+
+        </>
+        )}
 
         {/* Lluvia (si el METAR reporta precipitación) */}
         {rain && Array.from({ length: 80 }, (_, i) => {

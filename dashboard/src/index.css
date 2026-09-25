@@ -127,6 +127,13 @@ body {
 :root[data-theme="light"] .text-slate-400 { color: #526475; }
 :root[data-theme="light"] .text-slate-500 { color: #6b7a8d; }
 :root[data-theme="light"] .text-slate-600 { color: #8394a5; }
+/* Excepcion: zonas que son oscuras en ambos temas (recuadros bg-black/45 sobre el
+   cielo del Perfil atmosferico). Ahi el texto debe seguir claro; si no, el override
+   de arriba lo dejaba oscuro sobre fondo oscuro e ilegible. */
+:root[data-theme="light"] .on-dark .text-white { color: #ffffff; }
+:root[data-theme="light"] .on-dark .text-slate-200 { color: #e2e8f0; }
+:root[data-theme="light"] .on-dark .text-slate-300 { color: #cbd5e1; }
+:root[data-theme="light"] .on-dark .text-slate-400 { color: #94a3b8; }
 
 /* Superficies y bordes translúcidos (más tono para separar del fondo/tarjeta).
    Subidas un poco de opacidad (antes 0.07/0.11/0.13) -- casillas como las de MiniStats
