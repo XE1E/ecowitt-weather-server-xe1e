@@ -1,7 +1,7 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fases 0–3 ✅ (2026-09-24); sigue la 4
-> (limpieza: código muerto, duplicación, dependencias, repo). Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fases 0–4 ✅ (2026-09-24). Quedan pendientes
+> menores y opcionales al final de la fase 4. Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -111,17 +111,29 @@ Dashboard:
       dividieron (comparten mucho estado; el riesgo para el display no lo vale).
       Cada movimiento se comparó palabra por palabra con el original.
 
-## Fase 4 — Limpieza
+## Fase 4 — Limpieza — ✅ HECHA en lo principal (2026-09-24)
 
-- [ ] Código muerto verificado (funciones sin llamadas, atributos que nadie lee,
-      `useIsMobile`, exports de `theme/constants`, `NAV_SOON`…).
-- [ ] Duplicación backend: 26 `getattr(settings, "cwop_latitude", …)`, patrón de caché
-      TTL repetido en ~13 servicios, xweather/netatmo copia uno del otro, brújula ×5,
-      SMTP/Telegram del asistente reimplementados.
-- [ ] Dependencias: `paho-mqtt` 1.6 → 2.x (cambia la API), eslint 8 (sin soporte),
-      lucide-react muy viejo; Node 22 en CI vs 20 en Docker.
-- [ ] Repo: capturas de `docs/` de hasta 7 MB (comprimir), Grafana monta una carpeta que
-      no existe, carpetas que parecen abandonadas (decidir con el usuario).
+- [x] Código muerto verificado con búsquedas antes de borrar (backend -90 líneas; dashboard:
+      `allSlugs`, `NAV_SOON`). Se conservan `theme/constants.ts` e `iconUv`: los cita
+      `docs/CONVENCIONES.md` como referencia de diseño.
+- [x] Ubicación de la estación: 24 copias de `getattr(settings, "cwop_latitude", …)` menos;
+      calidad del aire sin lat/lon usaba el Zócalo, ahora la estación.
+- [x] Brújula: `services/compass.py` (4 copias del redondeo; alfabetos EN8/ES8/EN16 a propósito).
+- [x] Asistente: pruebas de Telegram/correo con el mismo envío que las alertas (antes smtplib
+      directo en el event loop, sin SSL 465).
+- [x] Dependencias: paho-mqtt 2.1 (API VERSION2, probada contra un broker real), lucide-react
+      1.48, ESLint 10 con config flat (mismas reglas), Node 22 en el Dockerfile del dashboard;
+      fuera python-dateutil (no se importaba).
+- [x] Repo: capturas de docs 33 → 6.7 MB (1440 px + paleta de 256 colores, mismos nombres),
+      scripts de captura a 1x, `grafana/provisioning/` existe, `*.tsbuildinfo` ignorado.
+      Nota: el historial de git conserva las capturas viejas (no se reescribió la historia).
+
+Queda (menor, opcional):
+- [ ] Patrón de caché TTL repetido en ~13 servicios y helpers copiados entre xweather/netatmo:
+      un helper común; poco beneficio frente al riesgo de tocar 13 integraciones externas.
+- [ ] Dashboard: helpers de fecha repetidos (días/meses en ~12 lugares) y `#f97316` escrito a
+      mano en 19 archivos en vez de `theme/constants`.
+- [ ] Reglas nuevas de react-hooks v7 (React Compiler): revisarlas aparte.
 
 ## Cómo se trabaja
 
