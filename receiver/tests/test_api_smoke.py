@@ -79,7 +79,8 @@ def api(monkeypatch, tmp_path):
     for mod in (m, state):
         monkeypatch.setattr(mod, "storage", fake)
         monkeypatch.setattr(mod, "latest_by_station", latest)
-    monkeypatch.setattr(m, "_current_extras_cache", {})
+    from app.routers import data as r_data
+    monkeypatch.setattr(r_data, "_current_extras_cache", {})
     # Nada sale a internet: la condición de AWEKAS y las redes públicas se registran.
     published = []
 
