@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
-
-interface Station {
-  name: string | null
-  label: string
-  status: 'online' | 'offline' | 'unknown'
-  model: string | null
-  sensors_detail: { id: string; type: string; label: string; category: string }[]
-}
+import type { StationSummary as Station } from '../../api-types'
 
 interface WizardData {
   station_label: string

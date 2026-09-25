@@ -7,17 +7,13 @@ import { LOCATION } from '../../config'
 import { cardinal } from '../../weather'
 import { MeteoGlyph } from '../MeteoGlyph'
 import { glifoPresion, glifoRumbo, glifoTermometro, glifoViento } from '../../theme/icons'
+import type { Imeca as ImecaData } from '../../api-types'
 
 interface Props {
   data: WeatherData
   stats: DailyStats['stats'] | null
   forecast: ForecastResult | null
   compare: Comparison | null
-}
-
-interface ImecaData {
-  available: boolean
-  imeca?: number; dominant?: string; category?: string; color?: string
 }
 
 /**

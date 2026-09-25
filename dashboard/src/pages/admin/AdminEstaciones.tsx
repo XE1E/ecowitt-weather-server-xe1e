@@ -3,23 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { parseServerDate } from '../../weather'
 import { statusLabel, statusDot } from '../../components/admin-ui'
-
-interface SensorDetail {
-  id: string
-  type: string
-  label: string
-}
-
-interface Station {
-  name: string | null
-  label: string
-  last_received: string | null
-  status: 'online' | 'offline' | 'unknown'
-  sensors: string[]
-  sensors_detail?: SensorDetail[]
-  model: string | null
-  passkey_hint?: string
-}
+import type { StationSummary as Station } from '../../api-types'
 
 /** Extrae los tipos de sensores únicos (ej: "WN32", "WS69") para mostrar junto al modelo */
 function sensorTypes(s: Station): string {

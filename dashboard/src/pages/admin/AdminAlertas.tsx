@@ -4,6 +4,7 @@ import { useAdminAuth } from '../../admin-auth'
 import { StationTabs } from '../../components/admin-ui'
 import { Toggle, NumField as BaseNumField } from '../../components/admin-ui'
 import type { ComponentProps } from 'react'
+import type { StationOpt } from '../../api-types'
 
 // Aquí los campos numéricos son más angostos (van en rejilla).
 const NumField = (p: ComponentProps<typeof BaseNumField>) => <BaseNumField w="w-16" {...p} />
@@ -99,8 +100,6 @@ const THRESHOLD_KEYS = [
   // si algún día una secundaria trae esos sensores.
   'alert_uv_high', 'alert_solar_high',
 ] as const
-
-interface StationOpt { name: string; label: string }
 
 // Interruptor pequeño para habilitar/deshabilitar una alarma concreta.
 function RuleGate({ on, onToggle }: { on: boolean; onToggle: () => void }) {

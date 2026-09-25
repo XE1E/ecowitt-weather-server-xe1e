@@ -4,6 +4,7 @@ import { useAdminAuth } from '../../admin-auth'
 import { StationTabs } from '../../components/admin-ui'
 import { Toggle, NumField as BaseNumField } from '../../components/admin-ui'
 import type { ComponentProps } from 'react'
+import type { StationOpt } from '../../api-types'
 
 const NumField = ({ disabled, ...p }: Omit<ComponentProps<typeof BaseNumField>, 'off'> & { disabled?: boolean }) =>
   <BaseNumField off={disabled} {...p} />
@@ -33,8 +34,6 @@ const CH_ROWS = Array.from({ length: 8 }, (_, i) => ({
   h: `cal_hum_ch${i + 1}` as keyof CalSettings,
   channel: i + 1,
 }))
-
-interface StationOpt { name: string; label: string }
 
 // Calibración vacía (para estaciones secundarias que aún no tienen ajustes).
 function emptyCal(): CalSettings {

@@ -21,6 +21,7 @@ import { CONSOLE_CSS } from './console-css'
 import { CONSOLA_NAV } from '../../kiosk-nav'
 import { useNavZones, NavDebugOverlay } from '../../pages/kiosk/nav-zones'
 import { pollWhileVisible } from '../../poll'
+import type { Imeca as ImecaData } from '../../api-types'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -886,13 +887,6 @@ interface Props {
   mode?: 'kiosk' | 'page'
   /** Sólo en modo kiosco: valor que se publica en `data-kiosk-ready`. */
   ready?: boolean
-}
-
-interface ImecaData {
-  available: boolean
-  imeca?: number
-  category?: string
-  color?: string
 }
 
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {

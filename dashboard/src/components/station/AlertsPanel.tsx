@@ -4,11 +4,7 @@ import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAlerta } from '../../theme/icons'
 import { trackEvent } from '../../analytics'
 import { useSharedFetch } from '../../hooks/useSharedFetch'
-
-interface Alert {
-  key: string
-  message: string
-}
+import type { Alert } from '../../api-types'
 
 interface HistoryEntry {
   key: string

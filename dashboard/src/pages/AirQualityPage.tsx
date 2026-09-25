@@ -4,15 +4,7 @@ import { ImecaCard } from '../components/station/ImecaCard'
 import { PageInfo } from '../components/station/PageInfo'
 import { LOCATION } from '../config'
 import { pollWhileVisible } from '../poll'
-
-interface AQ {
-  aqi: number | null
-  dominant?: string
-  station?: string
-  time?: string
-  pollutants?: Record<string, number | null>
-  error?: string
-}
+import type { AirQuality as AQ } from '../api-types'
 
 function category(aqi: number): { label: string; color: string; advice: string } {
   if (aqi <= 50) return { label: 'Buena', color: '#22c55e', advice: 'Calidad del aire satisfactoria; riesgo bajo o nulo.' }

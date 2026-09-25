@@ -4,14 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { LOCATION } from '../../config'
-
-interface Sub { pollutant: string; conc: number; index: number }
-interface Fc { t: string; imeca: number; category: string }
-interface Imeca {
-  available: boolean
-  imeca?: number; dominant?: string; category?: string; color?: string
-  recommendation?: string; pollutants?: Sub[]; forecast?: Fc[]; time?: string; source?: string
-}
+import type { Imeca, ImecaForecastPoint as Fc } from '../../api-types'
 
 // Escala IMECA sobre 0–300 (los tramos miden 50,50,50,50,100)
 const SEG = [

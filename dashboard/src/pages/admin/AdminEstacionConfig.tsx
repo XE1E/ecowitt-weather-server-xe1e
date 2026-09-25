@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
+import type { SensorDetail } from '../../api-types'
 
 interface Registry {
   whitelist_active: boolean
@@ -10,19 +11,6 @@ interface Registry {
 }
 
 const MAC_HINT = 'MAC del equipo (etiqueta), p. ej. 8C:4F:00:4F:8B:63 — con o sin «:». El servidor deriva el passkey.'
-
-interface SensorDetail {
-  id: string
-  type: string
-  category: string
-  channel?: number
-  label: string
-  temperature?: number
-  humidity?: number
-  pressure?: number
-  battery_ok: boolean
-  active: boolean
-}
 
 interface StationConfig {
   label?: string

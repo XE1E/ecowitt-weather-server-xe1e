@@ -14,6 +14,7 @@ import { deriveCondition, relativeTime } from '../weather'
 import { LOCATION } from '../config'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { pollWhileVisible } from '../poll'
+import type { Imeca } from '../api-types'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -38,7 +39,6 @@ const TABS = [
   { Icon: Monitor, label: 'Consola' },
 ]
 
-interface Imeca { available: boolean; imeca?: number; category?: string; color?: string }
 interface Local {
   latest: { temperature?: number; humidity?: number; pressure?: number; received_at?: string } | null
   min: { temperature?: number; humidity?: number; pressure?: number }

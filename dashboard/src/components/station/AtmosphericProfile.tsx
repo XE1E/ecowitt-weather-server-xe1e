@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Maximize2, X } from 'lucide-react'
 import { parseServerDate } from '../../weather'
-
-interface Cloud { cover: string; base: number | null }
-interface Metar {
-  station?: string; observed?: string; flight_category?: string | null
-  wind_dir?: number | null; wind_speed_kt?: number | null; wind_gust_kt?: number | null
-  altimeter_hpa?: number | null; clouds?: Cloud[]; temp_c?: number | null; wx?: string | null
-}
+import type { Metar } from '../../api-types'
 
 const CAT: Record<string, string> = { VFR: '#34d399', MVFR: '#38bdf8', IFR: '#fb923c', LIFR: '#f87171' }
 const MARKS: [number, number][] = [

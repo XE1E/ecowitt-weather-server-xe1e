@@ -3,11 +3,7 @@ import { useSharedFetch } from '../../hooks/useSharedFetch'
 import { LOCATION } from '../../config'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAire } from '../../theme/icons'
-
-interface Imeca {
-  available: boolean
-  imeca?: number; dominant?: string; category?: string; color?: string
-}
+import type { Imeca } from '../../api-types'
 
 export function ImecaMiniCard() {
   // Misma URL que MiniStats: una sola consulta para las dos.

@@ -1,9 +1,5 @@
 import { useSharedFetch } from '../../hooks/useSharedFetch'
-
-interface Alert {
-  key: string
-  message: string
-}
+import type { Alert } from '../../api-types'
 
 // Nombre corto por categoría de la clave (namespaceada: "gw1100:temp_high" en
 // una secundaria). Mismo criterio que `_category_for` del backend

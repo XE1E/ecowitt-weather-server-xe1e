@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { Toggle, TextField } from '../../components/admin-ui'
@@ -99,6 +99,125 @@ function IntervalField({ value, onChange }: { value: number; onChange: (v: numbe
   )
 }
 
+type PubKey = keyof PubSettings
+
+interface NetField { key: PubKey; label: string; placeholder: string; secret?: boolean }
+interface Network {
+  name: string
+  enabled: PubKey
+  interval: PubKey
+  link: [href: string, text: string]
+  fields: NetField[]
+  labelW?: string
+  note?: ReactNode
+  footnote?: ReactNode
+}
+
+// Redes que se configuran igual: interruptor, ID y clave (la clave nunca vuelve del
+// servidor: se muestra enmascarada y vacío = conservarla) e intervalo. Antes eran 6
+// bloques copiados; AWEKAS, CWOP y openSenseMap tienen campos propios y van aparte.
+const NETWORKS: Network[] = [
+  {
+    name: 'Weather Underground', enabled: 'wu_enabled', interval: 'wu_interval',
+    link: ['https://www.wunderground.com/member/devices', 'Obtener ID →'],
+    fields: [
+      { key: 'wu_station_id', label: 'Station ID', placeholder: 'ICDMX123' },
+      { key: 'wu_station_key', label: 'Key', placeholder: 'API key', secret: true },
+    ],
+  },
+  {
+    name: 'PWSWeather', enabled: 'pws_enabled', interval: 'pws_interval',
+    link: ['https://www.pwsweather.com/register.php', 'Registrar →'],
+    note: <>PWSWeather renombró el campo "Password" a "Station Specific API Key" --
+      se genera en la página de tu estación en pwsweather.com (Edit Station,
+      al fondo). Va en el mismo campo de abajo, el protocolo no cambió.</>,
+    fields: [
+      { key: 'pws_station_id', label: 'Station ID', placeholder: 'STATIONID' },
+      { key: 'pws_password', label: 'API Key', placeholder: 'Station Specific API Key', secret: true },
+    ],
+  },
+  {
+    // Sucesor de Met Office WOW, retirado en 2026
+    name: 'WOW-BE', enabled: 'wow_be_enabled', interval: 'wow_be_interval',
+    link: ['https://wow.meteo.be/en/connect-your-station/', 'Registrar →'],
+    note: <>Sucesor de Met Office WOW (retirado en 2026) -- acepta estaciones de cualquier país.
+      Crea tu cuenta en wow.meteo.be y registra la estación para obtener el Site ID y la
+      Authentication Key.</>,
+    fields: [
+      { key: 'wow_be_site_id', label: 'Site ID', placeholder: 'UUID del sitio' },
+      { key: 'wow_be_auth_key', label: 'Auth Key', placeholder: 'Authentication Key', secret: true },
+    ],
+  },
+  {
+    name: 'Weathercloud', enabled: 'weathercloud_enabled', interval: 'weathercloud_interval',
+    link: ['https://weathercloud.net/en/register', 'Registrar →'],
+    fields: [
+      { key: 'weathercloud_id', label: 'Wid', placeholder: 'Weathercloud ID' },
+      { key: 'weathercloud_key', label: 'Key', placeholder: 'API key', secret: true },
+    ],
+    footnote: <>Plan gratis: mínimo 10 min entre envíos (1 min solo Pro/Premium).</>,
+  },
+  {
+    name: 'Windy.com', enabled: 'windy_enabled', interval: 'windy_interval', labelW: 'w-24',
+    link: ['https://stations.windy.com/stations', 'Mis estaciones →'],
+    note: <>API v2: entra a "Mis estaciones" en windy.com y copia el <code>Station ID</code> y la{' '}
+      <code>Station password</code> de tu estación (ya no se usa API key de cuenta).</>,
+    fields: [
+      { key: 'windy_station_id', label: 'Station ID', placeholder: 'Station ID' },
+      { key: 'windy_station_password', label: 'Password', placeholder: 'Station password', secret: true },
+    ],
+  },
+  {
+    name: 'OpenWeatherMap', enabled: 'owm_enabled', interval: 'owm_interval',
+    link: ['https://home.openweathermap.org/stations', 'Crear estacion →'],
+    fields: [
+      { key: 'owm_api_key', label: 'API Key', placeholder: 'API key', secret: true },
+      { key: 'owm_station_id', label: 'Station ID', placeholder: 'Station ID' },
+    ],
+  },
+]
+
+function NetworkCard({ net, settings, update }: {
+  net: Network
+  settings: PubSettings
+  update: <K extends PubKey>(key: K, value: PubSettings[K]) => void
+}) {
+  const val = settings as unknown as Record<string, unknown>
+  const on = !!val[net.enabled]
+  // Configurada si cada campo tiene valor; una clave guardada cuenta aunque no vuelva.
+  const ok = net.fields.every((f) => !!val[f.key] || (!!f.secret && !!val[`${f.key}_masked`]))
+  const w = net.labelW ?? 'w-16'
+  return (
+    <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+      <div className="flex items-center gap-3 mb-3">
+        <Toggle enabled={on} onChange={(v) => update(net.enabled, v as never)} />
+        <span className="text-sm font-medium">{net.name}</span>
+        {on && <CfgBadge ok={ok} />}
+        <a href={net.link[0]} target="_blank" rel="noopener noreferrer" className="text-sky-400 text-xs ml-auto">{net.link[1]}</a>
+      </div>
+      {on && (
+        <div className="grid gap-2">
+          {net.note && <p className="text-xs text-slate-500">{net.note}</p>}
+          {net.fields.map((f) => (
+            <div key={f.key} className="flex items-center gap-2">
+              <span className={`text-xs text-slate-400 ${w}`}>{f.label}</span>
+              <TextField
+                value={(val[f.key] as string | null) ?? null}
+                onChange={(v) => update(f.key, v as never)}
+                placeholder={f.placeholder}
+                type={f.secret ? 'password' : 'text'}
+                masked={f.secret ? (val[`${f.key}_masked`] as string | null | undefined) : undefined}
+              />
+            </div>
+          ))}
+          <IntervalField value={val[net.interval] as number} onChange={(v) => update(net.interval, v as never)} />
+          {net.footnote && <p className="text-xs text-slate-500">{net.footnote}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CfgBadge({ ok }: { ok: boolean }) {
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
@@ -172,158 +291,10 @@ export function AdminPublicacion() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Weather Underground */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.wu_enabled} onChange={(v) => update('wu_enabled', v)} />
-            <span className="text-sm font-medium">Weather Underground</span>
-            {settings.wu_enabled && <CfgBadge ok={!!settings.wu_station_id && (!!settings.wu_station_key || !!settings.wu_station_key_masked)} />}
-            <a href="https://www.wunderground.com/member/devices" target="_blank" className="text-sky-400 text-xs ml-auto">Obtener ID →</a>
-          </div>
-          {settings.wu_enabled && (
-            <div className="grid gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Station ID</span>
-                <TextField value={settings.wu_station_id} onChange={(v) => update('wu_station_id', v)} placeholder="ICDMX123" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Key</span>
-                <TextField value={settings.wu_station_key} onChange={(v) => update('wu_station_key', v)} placeholder="API key" type="password" masked={settings.wu_station_key_masked} />
-              </div>
-              <IntervalField value={settings.wu_interval} onChange={(v) => update('wu_interval', v)} />
-            </div>
-          )}
-        </div>
-
-        {/* PWSWeather */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.pws_enabled} onChange={(v) => update('pws_enabled', v)} />
-            <span className="text-sm font-medium">PWSWeather</span>
-            {settings.pws_enabled && <CfgBadge ok={!!settings.pws_station_id && (!!settings.pws_password || !!settings.pws_password_masked)} />}
-            <a href="https://www.pwsweather.com/register.php" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
-          </div>
-          {settings.pws_enabled && (
-            <div className="grid gap-2">
-              <p className="text-xs text-slate-500">
-                PWSWeather renombró el campo "Password" a "Station Specific API Key" --
-                se genera en la página de tu estación en pwsweather.com (Edit Station,
-                al fondo). Va en el mismo campo de abajo, el protocolo no cambió.
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Station ID</span>
-                <TextField value={settings.pws_station_id} onChange={(v) => update('pws_station_id', v)} placeholder="STATIONID" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">API Key</span>
-                <TextField value={settings.pws_password} onChange={(v) => update('pws_password', v)} placeholder="Station Specific API Key" type="password" masked={settings.pws_password_masked} />
-              </div>
-              <IntervalField value={settings.pws_interval} onChange={(v) => update('pws_interval', v)} />
-            </div>
-          )}
-        </div>
-
-        {/* WOW-BE (sucesor de Met Office WOW, retirado en 2026) */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.wow_be_enabled} onChange={(v) => update('wow_be_enabled', v)} />
-            <span className="text-sm font-medium">WOW-BE</span>
-            {settings.wow_be_enabled && <CfgBadge ok={!!settings.wow_be_site_id && (!!settings.wow_be_auth_key || !!settings.wow_be_auth_key_masked)} />}
-            <a href="https://wow.meteo.be/en/connect-your-station/" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
-          </div>
-          {settings.wow_be_enabled && (
-            <div className="grid gap-2">
-              <p className="text-xs text-slate-500">
-                Sucesor de Met Office WOW (retirado en 2026) -- acepta estaciones de cualquier país.
-                Crea tu cuenta en wow.meteo.be y registra la estación para obtener el Site ID y la
-                Authentication Key.
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Site ID</span>
-                <TextField value={settings.wow_be_site_id} onChange={(v) => update('wow_be_site_id', v)} placeholder="UUID del sitio" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Auth Key</span>
-                <TextField value={settings.wow_be_auth_key} onChange={(v) => update('wow_be_auth_key', v)} placeholder="Authentication Key" type="password" masked={settings.wow_be_auth_key_masked} />
-              </div>
-              <IntervalField value={settings.wow_be_interval} onChange={(v) => update('wow_be_interval', v)} />
-            </div>
-          )}
-        </div>
-
-        {/* Weathercloud */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.weathercloud_enabled} onChange={(v) => update('weathercloud_enabled', v)} />
-            <span className="text-sm font-medium">Weathercloud</span>
-            {settings.weathercloud_enabled && <CfgBadge ok={!!settings.weathercloud_id && (!!settings.weathercloud_key || !!settings.weathercloud_key_masked)} />}
-            <a href="https://weathercloud.net/en/register" target="_blank" className="text-sky-400 text-xs ml-auto">Registrar →</a>
-          </div>
-          {settings.weathercloud_enabled && (
-            <div className="grid gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Wid</span>
-                <TextField value={settings.weathercloud_id} onChange={(v) => update('weathercloud_id', v)} placeholder="Weathercloud ID" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Key</span>
-                <TextField value={settings.weathercloud_key} onChange={(v) => update('weathercloud_key', v)} placeholder="API key" type="password" masked={settings.weathercloud_key_masked} />
-              </div>
-              <IntervalField value={settings.weathercloud_interval} onChange={(v) => update('weathercloud_interval', v)} />
-              <p className="text-xs text-slate-500">Plan gratis: mínimo 10 min entre envíos (1 min solo Pro/Premium).</p>
-            </div>
-          )}
-        </div>
-
-        {/* Windy */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.windy_enabled} onChange={(v) => update('windy_enabled', v)} />
-            <span className="text-sm font-medium">Windy.com</span>
-            {settings.windy_enabled && <CfgBadge ok={!!settings.windy_station_id && (!!settings.windy_station_password || !!settings.windy_station_password_masked)} />}
-            <a href="https://stations.windy.com/stations" target="_blank" className="text-sky-400 text-xs ml-auto">Mis estaciones →</a>
-          </div>
-          {settings.windy_enabled && (
-            <div className="grid gap-2">
-              <p className="text-xs text-slate-500">
-                API v2: entra a "Mis estaciones" en windy.com y copia el <code>Station ID</code> y la{' '}
-                <code>Station password</code> de tu estación (ya no se usa API key de cuenta).
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-24">Station ID</span>
-                <TextField value={settings.windy_station_id} onChange={(v) => update('windy_station_id', v)} placeholder="Station ID" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-24">Password</span>
-                <TextField value={settings.windy_station_password} onChange={(v) => update('windy_station_password', v)} placeholder="Station password" type="password" masked={settings.windy_station_password_masked} />
-              </div>
-              <IntervalField value={settings.windy_interval} onChange={(v) => update('windy_interval', v)} />
-            </div>
-          )}
-        </div>
-
-        {/* OpenWeatherMap */}
-        <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Toggle enabled={settings.owm_enabled} onChange={(v) => update('owm_enabled', v)} />
-            <span className="text-sm font-medium">OpenWeatherMap</span>
-            {settings.owm_enabled && <CfgBadge ok={(!!settings.owm_api_key || !!settings.owm_api_key_masked) && !!settings.owm_station_id} />}
-            <a href="https://home.openweathermap.org/stations" target="_blank" className="text-sky-400 text-xs ml-auto">Crear estacion →</a>
-          </div>
-          {settings.owm_enabled && (
-            <div className="grid gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">API Key</span>
-                <TextField value={settings.owm_api_key} onChange={(v) => update('owm_api_key', v)} placeholder="API key" type="password" masked={settings.owm_api_key_masked} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 w-16">Station ID</span>
-                <TextField value={settings.owm_station_id} onChange={(v) => update('owm_station_id', v)} placeholder="Station ID" />
-              </div>
-              <IntervalField value={settings.owm_interval} onChange={(v) => update('owm_interval', v)} />
-            </div>
-          )}
-        </div>
+        {/* Las 6 redes con la misma forma (ID + clave + intervalo): ver NETWORKS. */}
+        {NETWORKS.map((net) => (
+          <NetworkCard key={net.enabled} net={net} settings={settings} update={update} />
+        ))}
 
         {/* AWEKAS */}
         <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">

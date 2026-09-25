@@ -3,24 +3,15 @@ import { Link } from 'react-router-dom'
 import { Plane } from 'lucide-react'
 import { useUnits } from '../../units'
 import { pollWhileVisible } from '../../poll'
+import type { Metar, CameraSkyBrief as CamaraCielo } from '../../api-types'
 
 const STATION = 'MMMX'   // Aeropuerto Internacional de la Ciudad de México
 const REFRESH = 600000   // 10 min (igual que la caché del servidor)
-
-interface Cloud { cover: string; base: number | null }
-interface Metar {
-  station?: string; name?: string; observed?: string | null
-  temp_c?: number | null; dewpoint_c?: number | null
-  wind_dir?: number | null; wind_speed_kt?: number | null; wind_gust_kt?: number | null
-  visibility?: number | string | null; altimeter_hpa?: number | null
-  flight_category?: string | null; clouds?: Cloud[]; wx?: string | null
-}
 
 /** Lo que ve la cámara del exterior AHORA MISMO, para poner junto al METAR --sin
  * puntaje de acierto: el aeropuerto está a varios km de la estación, así que es
  * una comparación a ojo, no una validación (ésa ya existe, y es contra el
  * pronóstico de modelo, que sí comparte la misma coordenada). */
-interface CamaraCielo { sky_condition?: string; cloud_coverage_pct?: number }
 const SKY_CONDITION_ES: Record<string, string> = {
   clear: 'Despejado', partly_cloudy: 'Parc. nublado', mostly_cloudy: 'May. nublado',
   overcast: 'Cubierto', foggy: 'Neblina', rainy: 'Lluvia', stormy: 'Tormenta', night: 'Noche',

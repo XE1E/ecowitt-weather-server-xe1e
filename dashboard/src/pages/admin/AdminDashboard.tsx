@@ -3,18 +3,7 @@ import { useAdminAuth } from '../../admin-auth'
 import { parseServerDate } from '../../weather'
 import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
 import { pollWhileVisible } from '../../poll'
-
-interface SensorDetail {
-  id: string; type: string; category: string; channel?: number; label: string
-  temperature?: number; humidity?: number; pressure?: number
-  wind_speed?: number; rain_daily?: number; uv_index?: number
-  battery_ok: boolean; active: boolean
-}
-
-interface Station {
-  name: string | null; label: string; last_received: string | null
-  status: 'online' | 'offline' | 'unknown'; sensors_detail: SensorDetail[]; model: string | null
-}
+import type { StationSummary as Station, SensorDetail } from '../../api-types'
 
 interface AlertHistoryItem {
   key: string

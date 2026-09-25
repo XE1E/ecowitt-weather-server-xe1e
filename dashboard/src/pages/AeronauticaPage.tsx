@@ -3,6 +3,7 @@ import { Plane, RefreshCw, Search } from 'lucide-react'
 import { AtmosphericProfile } from '../components/station/AtmosphericProfile'
 import { PageInfo } from '../components/station/PageInfo'
 import { pollWhileVisible } from '../poll'
+import type { Metar, MetarCloud as Cloud, CameraSkyBrief as CamaraCielo } from '../api-types'
 
 // Los 15 aeropuertos más importantes de México (ICAO · nombre)
 const AIRPORTS: [string, string][] = [
@@ -23,14 +24,6 @@ const AIRPORTS: [string, string][] = [
   ['MMQT', 'Querétaro'],
 ]
 
-interface Cloud { cover: string; base: number | null }
-interface Metar {
-  station?: string; name?: string; raw?: string; observed?: string
-  temp_c?: number | null; dewpoint_c?: number | null
-  wind_dir?: number | null; wind_speed_kt?: number | null; wind_gust_kt?: number | null
-  visibility?: number | string | null; altimeter_hpa?: number | null; slp_hpa?: number | null
-  flight_category?: string | null; clouds?: Cloud[]; wx?: string | null
-}
 interface TafPeriod {
   from: number; to: number; change: string | null; probability: number | null
   wind_dir: number | null; wind_speed_kt: number | null; wind_gust_kt: number | null
@@ -42,7 +35,6 @@ interface Taf { station?: string; raw?: string; issued?: string; valid_from?: nu
  * puntaje: el aeropuerto está a varios km de la estación, es comparar a ojo.
  * Sólo aplica al aeropuerto cercano (MMMX); buscar otro (p. ej. Cancún) no
  * tendría sentido cruzarlo con la cámara de casa. */
-interface CamaraCielo { sky_condition?: string; cloud_coverage_pct?: number }
 const SKY_CONDITION_ES: Record<string, string> = {
   clear: 'Despejado', partly_cloudy: 'Parcialmente nublado', mostly_cloudy: 'Mayormente nublado',
   overcast: 'Cubierto', foggy: 'Neblina', rainy: 'Lluvia', stormy: 'Tormenta', night: 'Noche',

@@ -3,12 +3,7 @@ import { Link } from 'react-router-dom'
 import { LOCATION } from '../../config'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAire } from '../../theme/icons'
-
-interface AQ {
-  aqi: number | null
-  dominant?: string
-  error?: string
-}
+import type { AirQuality as AQ } from '../../api-types'
 
 function category(aqi: number): { label: string; color: string } {
   if (aqi <= 50) return { label: 'Buena', color: '#22c55e' }
