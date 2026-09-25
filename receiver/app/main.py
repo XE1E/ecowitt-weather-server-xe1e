@@ -31,13 +31,8 @@ from .services.converter import convert_to_metric, calculate_derived_values, sea
 from .services.calibration import apply_calibration
 from .services.quality import quality_check, spike_check, stats_check
 from .services import stats_cache
-from .services.storage import InfluxDBStorage
-from .services.alerts import AlertService
-from .services.mqtt_publisher import MqttPublisher
-from .services.metar import get_metar, get_taf
 from .services.air_quality import get_air_quality
 from .services import imeca
-from .services.earthquakes import get_earthquakes
 from .services.publishers import publish_all
 from .services import forecaster
 from .services import aggregator
@@ -47,9 +42,6 @@ from .services import netatmo
 from .services import webcam_overlay
 from .services import forecast_consensus
 from .services.almanac import get_almanac, sun_altitude
-from .services import satellite
-from .services import sacmex_radar
-from .services import radar_decode
 from .services.windrose import compute_wind_rose
 from .services import sky_validation
 from .services import smn
@@ -207,9 +199,9 @@ async def lifespan(app: FastAPI):
     # Resumen semanal por correo (opt-in, ver email_digest_enabled)
     background_tasks.append(asyncio.create_task(email_digest_task()))
     # Historial del radar SACMEX: sólo expone ~10 cuadros, aquí se guardan todos
-    background_tasks.append(asyncio.create_task(radar_archive_task()))
+    background_tasks.append(asyncio.create_task(_r_radar.radar_archive_task()))
     # Alertas de sismos (antes sólo si alguien abría /api/earthquakes)
-    background_tasks.append(asyncio.create_task(earthquake_watch_task()))
+    background_tasks.append(asyncio.create_task(_r_external.earthquake_watch_task()))
 
     # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
     # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo
@@ -258,24 +250,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize storage
-storage = InfluxDBStorage(
-    url=settings.influxdb_url,
-    token=settings.influxdb_token,
-    org=settings.influxdb_org,
-    bucket=settings.influxdb_bucket
-)
-
-# Última lectura en memoria, por estación. Clave None = estación principal;
-# clave "nombre" = estación secundaria (p. ej. un GW1100). Acceso rápido para
-# /api/current y para pasar la lectura previa al filtro de picos por estación.
-latest_by_station: Dict[Optional[str], dict] = {}
-
-# Weather alerts (Telegram / log)
-alert_service = AlertService(settings)
-
-# MQTT publisher (with Home Assistant discovery)
-mqtt_publisher = MqttPublisher(settings)
+# Objetos compartidos con los routers (app/routers/*): viven en state.py para que
+# ningún router tenga que importar main.py.
+from .state import storage, latest_by_station, alert_service, mqtt_publisher  # noqa: E402
+from .state import station_pressure_hpa as _station_pressure_hpa  # noqa: E402
 
 # Limitadores de tasa (en memoria, por IP): login y endpoint de ingesta.
 _login_limiter = secsvc.RateLimiter()
@@ -3789,172 +3767,8 @@ async def get_alerts_history(hours: int = 24, limit: int = 50):
     return {"history": alert_service.get_history(limit=limit, hours=hours)}
 
 
-@app.get("/api/metar")
-async def get_metar_data(station: str = "MMMX"):
-    """Latest METAR for an airport (default MMMX / Ciudad de México)."""
-    try:
-        return await get_metar(station)
-    except Exception as e:
-        logger.error(f"Error getting METAR: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
+# --- Endpoints por área (fase 3 de docs/internal/PLAN-REVISION-CODIGO.md) ------
+from .routers import external as _r_external, radar as _r_radar  # noqa: E402
 
-
-@app.get("/api/taf")
-async def get_taf_data(station: str = "MMMX"):
-    """Latest TAF (forecast) for an airport (default MMMX)."""
-    try:
-        return await get_taf(station)
-    except Exception as e:
-        logger.error(f"Error getting TAF: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
-
-
-@app.get("/api/satellite")
-async def get_satellite(layer: str = "VIIRS_SNPP_CorrectedReflectance_TrueColor",
-                        date: str = "", lat: float = 19.380359, lon: float = -99.174564):
-    """Imagen satelital NASA GIBS (proxy servido desde el backend, con caché)."""
-    data = await satellite.get_snapshot(layer, date, lat, lon)
-    if not data:
-        raise HTTPException(status_code=502, detail="Imagen satelital no disponible")
-    return Response(content=data, media_type="image/jpeg",
-                    headers={"Cache-Control": "public, max-age=1800"})
-
-
-@app.get("/api/radar/sacmex")
-async def get_sacmex_radar():
-    """Últimos cuadros del radar del SACMEX (CDMX), ver services/sacmex_radar.py.
-    Cada cuadro se pide aparte a /api/radar/sacmex/<id>, servido desde caché."""
-    return await sacmex_radar.get_frames()
-
-
-@app.get("/api/radar/sacmex/archive")
-async def get_sacmex_radar_archive():
-    """Cuántos cuadros del radar lleva guardados el historial, por día."""
-    return {"enabled": settings.radar_archive_enabled,
-            "keep_days": settings.radar_archive_days,
-            **sacmex_radar.archive_summary(settings.radar_archive_dir)}
-
-
-_decoded_png: Dict[str, bytes] = {}
-
-
-def _render_decoded(data: bytes) -> Optional[bytes]:
-    bg = radar_decode.cached_background(settings.radar_archive_dir)
-    if bg is None:
-        return None
-    import io
-    buf = io.BytesIO()
-    radar_decode.render(radar_decode.decode(radar_decode.to_array(data), bg)).save(buf, "PNG", optimize=True)
-    return buf.getvalue()
-
-
-@app.get("/api/radar/sacmex/decoded/{frame_id}")
-async def get_sacmex_radar_decoded(frame_id: str):
-    """Los ecos que el decodificador (services/radar_decode.py) lee en un cuadro,
-    en PNG transparente del mismo tamaño, para revisarlo encima del original.
-    503 mientras el historial no tenga cuadros suficientes para sacar el fondo."""
-    data = sacmex_radar.get_image(frame_id)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Cuadro de radar no disponible")
-    png = _decoded_png.get(frame_id)
-    if png is None:
-        png = await asyncio.to_thread(_render_decoded, data)
-        if png is None:
-            raise HTTPException(status_code=503, detail="Aún no hay historial suficiente para el fondo")
-        if len(_decoded_png) >= 24:
-            _decoded_png.pop(next(iter(_decoded_png)))
-        _decoded_png[frame_id] = png
-    return Response(content=png, media_type="image/png",
-                    headers={"Cache-Control": "public, max-age=3600"})
-
-
-async def radar_archive_task():
-    """Cada 5 min (el ritmo del radar) baja los cuadros nuevos y los guarda en el
-    historial. Aquí, y no en el endpoint, porque de noche o en días sin visitas
-    nadie pide /api/radar/sacmex y se perderían cuadros: SACMEX sólo guarda ~50 min."""
-    if not settings.radar_archive_enabled:
-        return
-    await asyncio.sleep(120)  # gracia inicial
-    while True:
-        try:
-            await sacmex_radar.refresh()
-            n = sacmex_radar.archive_new(settings.radar_archive_dir)
-            if n:
-                logger.info(f"Radar SACMEX: {n} cuadro(s) nuevo(s) al historial")
-            sacmex_radar.prune_archive(settings.radar_archive_dir, settings.radar_archive_days,
-                                       datetime.now(_MX_TZ).date().isoformat())
-        except Exception as e:
-            logger.error(f"Historial del radar SACMEX falló: {e}")
-        await asyncio.sleep(300)
-
-
-@app.get("/api/radar/sacmex/{frame_id}")
-async def get_sacmex_radar_frame(frame_id: str):
-    """Un cuadro del radar SACMEX. El nombre es único por cuadro (lleva su hora),
-    así que se puede cachear mucho tiempo en el navegador."""
-    data = sacmex_radar.get_image(frame_id)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Cuadro de radar no disponible")
-    return Response(content=data, media_type="image/jpeg",
-                    headers={"Cache-Control": "public, max-age=86400, immutable"})
-
-
-@app.get("/api/airquality")
-async def get_air_quality_data(lat: float = 19.4326, lon: float = -99.1332):
-    """Air quality (WAQI) for a location; token from settings (WAQI_TOKEN)."""
-    try:
-        return await get_air_quality(lat, lon, settings.waqi_token)
-    except Exception as e:
-        logger.error(f"Error getting air quality: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
-
-
-def _station_pressure_hpa() -> Optional[float]:
-    """
-    Presión ABSOLUTA de la principal (hPa), para convertir µg/m³ → ppm en el IMECA
-    con el volumen molar del sitio. A 2240 m la diferencia contra 1 atm cambia el
-    índice de categoría (ver imeca.molar_volume). None => se supone nivel del mar.
-    """
-    return (latest_by_station.get(None) or {}).get("pressure_absolute")
-
-
-@app.get("/api/airquality/imeca")
-async def get_imeca_data(lat: float = 19.380359, lon: float = -99.174564):
-    """IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo."""
-    try:
-        return await imeca.get_imeca(lat, lon, pressure_hpa=_station_pressure_hpa())
-    except Exception as e:
-        logger.error(f"Error getting IMECA: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")  # el detalle, sólo al log
-
-
-async def earthquake_watch_task():
-    """Revisa los sismos cada 10 min (el ritmo de la caché de earthquakes.py) y
-    avisa de los que pasen el umbral. Antes sólo se evaluaban cuando alguien abría
-    /api/earthquakes, así que de noche un sismo grande podía no avisarse."""
-    await asyncio.sleep(120)  # gracia inicial
-    while True:
-        try:
-            if settings.alerts_enabled and getattr(settings, "alert_earthquake_enabled", True):
-                result = await get_earthquakes(settings.cwop_latitude, settings.cwop_longitude)
-                await alert_service.check_earthquake(result.get("quakes", []))
-            else:
-                # Igual se llama, para que expiren los sismos viejos en `active`.
-                await alert_service.check_earthquake([])
-        except Exception as e:
-            logger.error(f"Revisión de sismos falló: {e}")
-        await asyncio.sleep(600)
-
-
-@app.get("/api/earthquakes")
-async def get_earthquakes_data():
-    """Sismos recientes cerca de la estación (SSN/USGS)."""
-    try:
-        lat = getattr(settings, "cwop_latitude", 19.380359)
-        lon = getattr(settings, "cwop_longitude", -99.174564)
-        # Las alertas ya NO se evalúan aquí (dependían de que alguien abriera la
-        # página): las revisa earthquake_watch_task cada 10 min.
-        return await get_earthquakes(lat, lon)
-    except Exception as e:
-        logger.error(f"Error getting earthquakes: {e}")
-        return {"quakes": []}
+app.include_router(_r_radar.router)
+app.include_router(_r_external.router)

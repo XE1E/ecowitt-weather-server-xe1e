@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main as m
+from app import state
 from app.services import admin as adminsvc
 
 PRINCIPAL_PK = "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6"
@@ -73,8 +74,11 @@ def api(monkeypatch, tmp_path):
         monkeypatch.setattr(s, k, v)
 
     fake = FakeStorage()
-    monkeypatch.setattr(m, "storage", fake)
-    monkeypatch.setattr(m, "latest_by_station", {})
+    latest: dict = {}
+    # main.py y los routers (vía `state`) deben ver los MISMOS objetos.
+    for mod in (m, state):
+        monkeypatch.setattr(mod, "storage", fake)
+        monkeypatch.setattr(mod, "latest_by_station", latest)
     monkeypatch.setattr(m, "_current_extras_cache", {})
     # Nada sale a internet: la condición de AWEKAS y las redes públicas se registran.
     published = []
@@ -318,3 +322,23 @@ def test_history_every_needs_valid_fields(api):
     r = api.get("/api/history", params={"start": "-7d", "every": "10m", "fields": "temperature_outdoor,humidity_outdoor"})
     assert r.status_code == 200 and seen["fields"] == ["temperature_outdoor", "humidity_outdoor"]
     assert api.get("/api/history", params={"start": "-7d", "every": "10m"}).status_code == 400
+
+
+def test_routers_keep_their_urls(api, monkeypatch, tmp_path):
+    """Endpoints movidos a app/routers/: mismas URLs y mismo comportamiento."""
+    from app.routers import external
+    from app.services import imeca
+    monkeypatch.setattr(m.settings, "radar_archive_dir", str(tmp_path / "radar"))
+    r = api.get("/api/radar/sacmex/archive").json()
+    assert r["frames"] == 0 and "keep_days" in r
+    assert api.get("/api/radar/sacmex/no-es-un-cuadro.JPG").status_code == 404
+    seen = {}
+
+    async def fake_imeca(lat, lon, pressure_hpa=None):
+        seen["p"] = pressure_hpa
+        return {"imeca": 40}
+    monkeypatch.setattr(imeca, "get_imeca", fake_imeca)
+    api.post("/data/report/", data=WS2910)
+    assert api.get("/api/airquality/imeca").json() == {"imeca": 40}
+    assert seen["p"] == pytest.approx(22.85 * 33.8639, abs=0.5)  # presión de la principal
+    assert external.router is not None
