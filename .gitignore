@@ -77,3 +77,6 @@ temp/
 # Archivos de bloqueo que dejan Word/Excel al abrir un documento del repo
 ~$*
 .ssh/
+
+# TypeScript: caché de compilación incremental (tsc -b)
+*.tsbuildinfo

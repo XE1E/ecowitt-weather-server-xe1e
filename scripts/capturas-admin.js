@@ -43,7 +43,7 @@ const filtros = process.argv.slice(2);
 
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 2
+    deviceScaleFactor: 1  // 1x: a 2x cada captura pesaba hasta 7 MB en el repo
   });
 
   const page = await context.newPage();
