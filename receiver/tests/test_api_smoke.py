@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from app import main as m
 from app import state
+from app.routers import stations as r_stations
 from app.services import admin as adminsvc
 
 PRINCIPAL_PK = "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6"
@@ -235,9 +236,9 @@ def test_station_status_compares_utc_received_at_with_utc_now(monkeypatch):
         _time.tzset()
     hace_30 = (datetime.utcnow() - timedelta(minutes=30)).isoformat()
     hace_2 = (datetime.utcnow() - timedelta(minutes=2)).isoformat()
-    assert m._station_status(hace_30, 15) == "offline"
-    assert m._station_status(hace_2, 15) == "online"
-    assert m._station_status(hace_2 + "Z", 15) == "online"
+    assert r_stations._station_status(hace_30, 15) == "offline"
+    assert r_stations._station_status(hace_2, 15) == "online"
+    assert r_stations._station_status(hace_2 + "Z", 15) == "online"
 
 
 def test_admin_settings_exposes_principal_altitude(api):
@@ -275,7 +276,9 @@ def test_metar_rejects_bad_station_codes():
 
 
 def test_kiosk_local_ignores_impossible_values_and_honours_optional_token(api, monkeypatch):
-    monkeypatch.setattr(m, "_kiosk_limiter", m.secsvc.RateLimiter())
+    from app.routers import kiosk as r_kiosk
+    monkeypatch.setattr(r_kiosk, "_kiosk_limiter", m.secsvc.RateLimiter())
+    monkeypatch.setattr(r_kiosk, "_KIOSK_LOCAL_FILE", str(__import__("tempfile").mkdtemp()) + "/k.json")
     assert api.post("/api/kiosk/local", json={"temperature": 22.4, "humidity": 999, "pressure": 780.2}).status_code == 200
     latest = api.get("/api/kiosk/local").json()["latest"]
     assert latest["temperature"] == 22.4 and latest["pressure"] == 780.2 and "humidity" not in latest
