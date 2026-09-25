@@ -6,6 +6,7 @@ import os
 import platform
 import secrets
 import shutil
+import smtplib
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -20,6 +21,7 @@ from ..logs import memory_log_handler
 from ..services import admin as adminsvc
 from ..services import backup_status, digest, r2_quota, settings_store
 from ..services import security as secsvc
+from ..services.alerts import AlertService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -467,6 +469,15 @@ async def admin_setup_complete(authorization: Optional[str] = Header(default=Non
     return {"status": "ok"}
 
 
+def _alert_service_with(**overrides) -> AlertService:
+    """Servicio de alertas con los ajustes actuales + credenciales aún SIN guardar
+    (las que se están probando en el asistente). Así la prueba usa exactamente el
+    mismo código de envío que las alertas reales: correo en un hilo (smtplib es
+    bloqueante), SSL en el 465, corrección del remitente… Antes el asistente tenía
+    su propia copia, que bloqueaba el servidor mientras conectaba y no hacía SSL."""
+    return AlertService(settings.model_copy(update=overrides))
+
+
 @router.post("/api/admin/wizard/test-telegram")
 async def admin_wizard_test_telegram(
     body: dict,
@@ -478,21 +489,19 @@ async def admin_wizard_test_telegram(
     chat_id = body.get("chat_id")
     if not bot_token or not chat_id:
         raise HTTPException(status_code=400, detail="Faltan bot_token o chat_id")
+    svc = _alert_service_with(telegram_bot_token=bot_token, telegram_chat_id=chat_id)
     try:
-        import httpx
-        async with httpx.AsyncClient() as client:
-            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            r = await client.post(url, json={
-                "chat_id": chat_id,
-                "text": "🧪 Mensaje de prueba desde el wizard de Estacion Clima XE1E",
-            })
-            if r.status_code == 200:
-                return {"status": "ok", "message": "Mensaje enviado correctamente"}
-            else:
-                data = r.json()
-                return {"status": "error", "message": data.get("description", "Error desconocido")}
+        await svc.send_test_telegram()
+        return {"status": "ok", "message": "Mensaje enviado correctamente"}
+    except httpx.HTTPStatusError as e:
+        try:
+            desc = e.response.json().get("description")
+        except Exception:
+            desc = None
+        return {"status": "error", "message": desc or f"Telegram respondió {e.response.status_code}"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.warning("Prueba de Telegram del asistente falló: %s", e)
+        return {"status": "error", "message": "No se pudo contactar a Telegram"}
 
 
 @router.post("/api/admin/wizard/test-email")
@@ -503,39 +512,28 @@ async def admin_wizard_test_email(
     """Prueba credenciales de correo durante el wizard (sin guardarlas aún)."""
     require_admin(authorization)
     smtp_host = body.get("smtp_host")
-    smtp_port = body.get("smtp_port", 587)
-    smtp_user = body.get("smtp_user")
-    smtp_password = body.get("smtp_password")
-    from_address = body.get("from_address")
     to_addresses = body.get("to_addresses")
-    starttls = body.get("starttls", True)
-
     if not smtp_host or not to_addresses:
         raise HTTPException(status_code=400, detail="Faltan smtp_host o to_addresses")
-
+    svc = _alert_service_with(
+        smtp_host=smtp_host,
+        smtp_port=int(body.get("smtp_port") or 587),
+        smtp_user=body.get("smtp_user"),
+        smtp_password=body.get("smtp_password"),
+        email_from=body.get("from_address"),
+        email_to=to_addresses,
+        smtp_tls=bool(body.get("starttls", True)),
+    )
     try:
-        import smtplib
-        from email.mime.text import MIMEText
-
-        msg = MIMEText("🧪 Mensaje de prueba desde el wizard de Estación Clima XE1E")
-        msg["Subject"] = "Prueba de alertas - Estación Clima XE1E"
-        msg["From"] = from_address or smtp_user or "alertas@estacion.local"
-        msg["To"] = to_addresses
-
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            if starttls:
-                server.starttls()
-            if smtp_user and smtp_password:
-                server.login(smtp_user, smtp_password)
-            server.sendmail(msg["From"], to_addresses.split(","), msg.as_string())
-
+        await svc.send_test_email()
         return {"status": "ok", "message": "Correo enviado correctamente"}
     except smtplib.SMTPAuthenticationError:
         return {"status": "error", "message": "Error de autenticación SMTP"}
-    except smtplib.SMTPConnectError:
+    except (smtplib.SMTPConnectError, OSError):
         return {"status": "error", "message": "No se pudo conectar al servidor SMTP"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.warning("Prueba de correo del asistente falló: %s", e)
+        return {"status": "error", "message": f"El envío falló: {type(e).__name__}"}
 
 
 @router.get("/api/backup/r2-credentials")

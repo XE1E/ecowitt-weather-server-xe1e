@@ -347,3 +347,27 @@ def test_routers_keep_their_urls(api, monkeypatch, tmp_path):
     assert api.get("/api/airquality/imeca").json() == {"imeca": 40}
     assert seen["p"] == pytest.approx(22.85 * 33.8639, abs=0.5)  # presión de la principal
     assert external.router is not None
+
+
+def test_wizard_tests_reuse_the_alert_senders(api, monkeypatch):
+    """El asistente prueba con el MISMO código de envío que las alertas, usando las
+    credenciales tecleadas (sin guardarlas)."""
+    from app.services.alerts import AlertService
+    seen = {}
+
+    async def fake_tg(self, text):
+        seen["tg"] = (self._settings.telegram_bot_token, self._settings.telegram_chat_id)
+
+    def fake_mail(self, text, subject=None):
+        s = self._settings
+        seen["mail"] = (s.smtp_host, s.smtp_port, s.email_to, s.smtp_tls)
+
+    monkeypatch.setattr(AlertService, "_send_telegram", fake_tg)
+    monkeypatch.setattr(AlertService, "_send_email_sync", fake_mail)
+    h = _login(api)
+    r = api.post("/api/admin/wizard/test-telegram", headers=h, json={"bot_token": "123:abc", "chat_id": "42"})
+    assert r.json()["status"] == "ok" and seen["tg"] == ("123:abc", "42")
+    r = api.post("/api/admin/wizard/test-email", headers=h, json={
+        "smtp_host": "mail.x.net", "smtp_port": 465, "to_addresses": "a@x.net", "starttls": False})
+    assert r.json()["status"] == "ok" and seen["mail"] == ("mail.x.net", 465, "a@x.net", False)
+    assert m.settings.smtp_host != "mail.x.net"  # no se guardó nada
