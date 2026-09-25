@@ -1,7 +1,7 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fase 3 casi terminada
-> (backend dividido; en el dashboard faltan tipos compartidos y dividir componentes grandes). Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fases 0–3 ✅ (2026-09-24); sigue la 4
+> (limpieza: código muerto, duplicación, dependencias, repo). Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -87,7 +87,7 @@ Dashboard:
       (comprobado: 0 peticiones en 3 min oculta; al volver, refresca).
 - [x] Relojes de 1 s que redibujaban componentes enormes: resuelto en la fase 3.
 
-## Fase 3 — Estructura
+## Fase 3 — Estructura — ✅ HECHA 2026-09-24
 
 - [x] **Partir `main.py` en routers — HECHO (2026-09-24).** `app/state.py` (objetos compartidos),
       `app/deps.py` (require_admin), `app/logs.py` (búfer de logs) y 9 routers: `admin`,
@@ -103,9 +103,13 @@ Dashboard:
 - [x] Primitivas del Admin en `admin-ui.tsx` (Toggle, TextField, NumField) — 2026-09-24.
 - [x] Relojes: el del encabezado en su propio componente; consola y kiosco avanzan por
       minuto (antes redibujaban todo cada segundo) — 2026-09-24.
-- [ ] Dashboard: tipos compartidos (Station/SensorDetail/Imeca/Metar… repetidos),
-      helpers de fecha (días/meses en 12 lugares), dividir ConsoleReplica, AdminWizard,
-      AdminPublicacion (8 tarjetas casi iguales → una data-driven).
+- [x] Tipos de la API compartidos en `src/api-types.ts` (Alert, Imeca, AirQuality, Metar,
+      SensorDetail, StationSummary…; antes en 18 archivos) — 2026-09-24.
+- [x] Publicación: 6 redes iguales → lista `NETWORKS` + `NetworkCard` — 2026-09-24.
+- [x] Asistente: un archivo por paso (`pages/admin/wizard/`, 910 → 236 líneas) — 2026-09-24.
+- [x] ConsoleReplica: piezas a `console/parts.tsx` (2,600 → ~1,770). Las celdas NO se
+      dividieron (comparten mucho estado; el riesgo para el display no lo vale).
+      Cada movimiento se comparó palabra por palabra con el original.
 
 ## Fase 4 — Limpieza
 

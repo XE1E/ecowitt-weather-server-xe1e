@@ -682,9 +682,9 @@ calibración y su ficha). La depuración del registro del plan viejo ya estaba h
 - [x] Etapa 3 (HECHA 2026-09-24) — pestañas por estación en Alertas y Calibración + ficha con accesos.
 - [x] Etapa 4 (HECHA 2026-09-24) — menú agrupado y documentación.
 
-## 3b. Revisión general del código (depurar, optimizar, mejorar) — fases 0, 1 y 2 hechas (2026-09-24)
+## 3b. Revisión general del código (depurar, optimizar, mejorar) — fases 0 a 3 hechas (2026-09-24)
 Pedido del usuario al terminar el Admin. Diagnóstico hecho y plan por fases en
-**`docs/internal/PLAN-REVISION-CODIGO.md`** (fases 0, 1 y 2 ✅; sigue la 3): 0) red de seguridad (CI que hoy oculta
+**`docs/internal/PLAN-REVISION-CODIGO.md`** (fases 0 a 3 ✅; sigue la 4, limpieza): 0) red de seguridad (CI que hoy oculta
 pruebas rotas + pruebas de endpoints), 1) bugs y seguridad confirmados (límite del login
 saltable, estado de estación con 6 h de desfase, tareas que no ven el interruptor…),
 2) rendimiento (Influx bloquea el servidor, dashboard en un archivo de 1.87 MB),
