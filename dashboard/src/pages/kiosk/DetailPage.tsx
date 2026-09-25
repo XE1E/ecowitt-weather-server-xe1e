@@ -180,7 +180,7 @@ export function DetailPage({ v, p, slug, ready: readyProp }: {
   /** Puntos de la gráfica y extremos del periodo, en las unidades del usuario. */
   const { puntos, min, max, avg, total, diasCon } = useMemo(() => {
     const c = (x: number | undefined | null) => (x == null ? null : serie.conv(x, u, porDia))
-    let pts: Punto[] = []
+    let pts: Punto[]  // lo asignan las tres ramas de abajo
 
     if (!porDia) {
       // 24 h: se agrupa por hora para no dibujar 300 puntos en 1000 px.

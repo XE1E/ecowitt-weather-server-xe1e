@@ -94,14 +94,19 @@ class MqttPublisher:
             "last_error": self._last_error,
         }
 
+    @staticmethod
+    def _new_client():
+        """Cliente paho 2.x con la API de callbacks VERSION2 (la VERSION1 que usaba
+        paho 1.6 está obsoleta y paho 2 la marca con un DeprecationWarning)."""
+        import paho.mqtt.client as mqtt
+        return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
     def connect(self) -> bool:
         """Connect to MQTT broker. Returns True on success."""
         if not self.enabled:
             return False
         try:
-            import paho.mqtt.client as mqtt
-
-            client = mqtt.Client()
+            client = self._new_client()
             if self._settings.mqtt_username:
                 client.username_pw_set(
                     self._settings.mqtt_username, self._settings.mqtt_password
@@ -124,8 +129,9 @@ class MqttPublisher:
             self._connected = False
             return False
 
-    def _on_connect(self, client, userdata, flags, rc):
-        if rc == 0:
+    # Firmas de la API VERSION2 de paho: `reason_code` es un ReasonCode (compara con int).
+    def _on_connect(self, client, userdata, flags, rc, properties=None):
+        if not getattr(rc, "is_failure", rc != 0):
             self._connected = True
             self._last_error = None
             logger.info("MQTT connected successfully")
@@ -134,9 +140,9 @@ class MqttPublisher:
             self._last_error = f"Connection refused (code {rc})"
             logger.error(f"MQTT connection refused: {rc}")
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_disconnect(self, client, userdata, disconnect_flags, rc=0, properties=None):
         self._connected = False
-        if rc != 0:
+        if getattr(rc, "is_failure", rc != 0):
             self._last_error = f"Unexpected disconnect (code {rc})"
             logger.warning(f"MQTT unexpected disconnect: {rc}")
 
@@ -152,8 +158,7 @@ class MqttPublisher:
     def test_connection(self, broker: str, port: int, username: Optional[str], password: Optional[str]) -> Dict[str, Any]:
         """Test MQTT connection without affecting the main client."""
         try:
-            import paho.mqtt.client as mqtt
-            test_client = mqtt.Client()
+            test_client = self._new_client()
             if username:
                 test_client.username_pw_set(username, password)
             test_client.connect(broker, port, keepalive=5)

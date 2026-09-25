@@ -109,3 +109,22 @@ def test_battery_config_inverts_for_ha():
     assert cfg["device_class"] == "battery"
     # True (OK) -> OFF, False (low) -> ON
     assert cfg["value_template"] == "{{ 'OFF' if value_json.battery_ch1 else 'ON' }}"
+
+
+def test_paho2_client_and_callbacks():
+    """paho-mqtt 2.x: el cliente se crea con la API VERSION2 y los callbacks
+    aceptan sus firmas nuevas (reason_code es un objeto, no un int)."""
+    import paho.mqtt.client as mqtt
+    from paho.mqtt.reasoncodes import ReasonCode
+    from paho.mqtt.packettypes import PacketTypes
+    pub = MqttPublisher(make_settings(mqtt_enabled=True), client=FakeClient())
+    c = pub._new_client()
+    assert c._callback_api_version == mqtt.CallbackAPIVersion.VERSION2
+    ok = ReasonCode(PacketTypes.CONNACK, "Success")
+    bad = ReasonCode(PacketTypes.CONNACK, "Not authorized")
+    pub._on_connect(c, None, {}, ok, None)
+    assert pub._connected and pub._last_error is None
+    pub._on_connect(c, None, {}, bad, None)
+    assert not pub._connected and "refused" in pub._last_error
+    pub._on_disconnect(c, None, {}, ReasonCode(PacketTypes.DISCONNECT, "Unspecified error"), None)
+    assert not pub._connected and "disconnect" in pub._last_error.lower()
