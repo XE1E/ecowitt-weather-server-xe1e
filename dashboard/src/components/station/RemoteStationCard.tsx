@@ -5,6 +5,7 @@ import { useUnits } from '../../units'
 import { relativeTime, isStale, historicValue } from '../../weather'
 import { TrendArrow, getTrend } from '../TrendArrow'
 import { REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC } from '../../remote'
+import { pollWhileVisible } from '../../poll'
 
 const REFRESH = 60000 // 1 min
 
@@ -35,9 +36,7 @@ export function RemoteStationCard() {
         /* best-effort */
       }
     }
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, REFRESH)
   }, [])
 
   if (notFound) {

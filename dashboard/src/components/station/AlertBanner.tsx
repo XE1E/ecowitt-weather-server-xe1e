@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useSharedFetch } from '../../hooks/useSharedFetch'
 
 interface Alert {
   key: string
@@ -36,18 +36,8 @@ function categoryLabel(key: string): string {
  * en la columna derecha), este es el aviso de un vistazo.
  */
 export function AlertBanner() {
-  const [alerts, setAlerts] = useState<Alert[]>([])
-
-  useEffect(() => {
-    const load = () =>
-      fetch('/api/alerts')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => { if (j) setAlerts(j.active ?? []) })
-        .catch(() => {})
-    load()
-    const i = setInterval(load, 60000)
-    return () => clearInterval(i)
-  }, [])
+  // Compartida con AlertsPanel (misma URL, una sola consulta por minuto).
+  const alerts = useSharedFetch<{ active?: Alert[] }>('/api/alerts', 60000)?.active ?? []
 
   if (alerts.length === 0) return null
 

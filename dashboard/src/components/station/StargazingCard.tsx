@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Stars } from 'lucide-react'
+import { pollWhileVisible } from '../../poll'
 
 /**
  * ¿Vale la pena salir a ver el cielo esta noche? Cruza dos datos que ya existen
@@ -67,9 +68,8 @@ export function StargazingCard() {
         })
         .catch(() => { if (!cancel) { setIllumination(null); setSunAltitude(null) } })
     }
-    load()
-    const i = setInterval(load, 5 * 60 * 1000)
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, 5 * 60 * 1000)
+    return () => { cancel = true; stop() }
   }, [])
 
   const esDeNoche = sunAltitude != null && sunAltitude < 0

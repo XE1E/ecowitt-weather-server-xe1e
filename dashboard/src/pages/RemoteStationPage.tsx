@@ -19,14 +19,17 @@ import {
   REMOTE_STATION, REMOTE_LABEL, RemoteHistRow, dewPointC, trendOver,
   tempDeltaDisp, pressDeltaDisp,
 } from '../remote'
+import { pollWhileVisible } from '../poll'
 
 const REFRESH = 60000
 
 type Period = '24h' | '7d' | '30d'
-const PERIODS: { key: Period; label: string; start: string }[] = [
+// `every`: en 7 y 30 días se piden promedios por ventana (el backend agrega) en vez
+// de cada lectura de ~16 s: 30 días crudos de una estación tardaban ~11 s.
+const PERIODS: { key: Period; label: string; start: string; every?: string }[] = [
   { key: '24h', label: '24 h', start: '-24h' },
-  { key: '7d', label: '7 d', start: '-7d' },
-  { key: '30d', label: '30 d', start: '-30d' },
+  { key: '7d', label: '7 d', start: '-7d', every: '10m' },
+  { key: '30d', label: '30 d', start: '-30d', every: '1h' },
 ]
 
 type ChartMetric = 'outdoor' | 'indoor' | 'pressure'
@@ -67,6 +70,11 @@ export function RemoteStationPage() {
   const [notFound, setNotFound] = useState(false)
 
   const start = PERIODS.find((p) => p.key === period)!.start
+  const every = PERIODS.find((p) => p.key === period)!.every
+  // Sólo los campos que usa la gráfica y las tendencias de esta página.
+  const agg = every
+    ? `&every=${every}&fields=temperature_outdoor,humidity_outdoor,temperature_indoor,humidity_indoor,pressure_relative`
+    : ''
 
   // Periodo vigente: si se cambia mientras hay una carga en curso, esa respuesta
   // (del periodo anterior) se descarta en vez de pisar la gráfica nueva.
@@ -77,7 +85,7 @@ export function RemoteStationPage() {
       const [cur, st, hist] = await Promise.all([
         fetch(`/api/current?station=${REMOTE_STATION}`),
         fetch(`/api/stats/daily?station=${REMOTE_STATION}&start=${start}`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`/api/history?start=${start}&station=${REMOTE_STATION}`).then((r) => (r.ok ? r.json() : { data: [] })),
+        fetch(`/api/history?start=${start}&station=${REMOTE_STATION}${agg}`).then((r) => (r.ok ? r.json() : { data: [] })),
       ])
       if (startRef.current !== start) return
       if (cur.ok) {
@@ -94,13 +102,11 @@ export function RemoteStationPage() {
     } finally {
       if (startRef.current === start) setLoading(false)
     }
-  }, [start])
+  }, [start, agg])
 
   useEffect(() => {
     setLoading(true)
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, REFRESH)
   }, [load])
 
   const longRange = period !== '24h'

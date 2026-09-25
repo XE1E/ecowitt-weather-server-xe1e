@@ -1,4 +1,4 @@
-import posthog from 'posthog-js'
+import type { PostHog } from 'posthog-js'
 
 // Project key de PostHog: es pública por diseño (se embebe en el cliente,
 // igual que un ID de Google Analytics) -- no es un secreto de servidor, así
@@ -8,6 +8,11 @@ const POSTHOG_KEY = 'phc_twZYc4mKkWZYKjQqK7MbNnGEBicxQaod7im4aJEEk7GK'
 const POSTHOG_HOST = 'https://us.i.posthog.com'
 
 let initialized = false
+// PostHog (~300 KB) se descarga APARTE y después de que la página ya se ve: antes iba
+// en el paquete principal de todas las vistas (también embed/kiosko, vía units.tsx,
+// aunque ahí nunca se inicializa). Lo que se capture mientras llega, se encola.
+let ph: PostHog | null = null
+const pending: [string, Record<string, unknown> | undefined][] = []
 
 /**
  * Arranca PostHog. Se llama solo desde las vistas PÚBLICAS (clásica en
@@ -26,11 +31,22 @@ let initialized = false
 export function initAnalytics(): void {
   if (initialized) return
   initialized = true
-  posthog.init(POSTHOG_KEY, {
-    api_host: POSTHOG_HOST,
-    person_profiles: 'identified_only',
-    capture_pageview: false,
-  })
+  const start = () => {
+    import('posthog-js')
+      .then(({ default: posthog }) => {
+        posthog.init(POSTHOG_KEY, {
+          api_host: POSTHOG_HOST,
+          person_profiles: 'identified_only',
+          capture_pageview: false,
+        })
+        ph = posthog
+        for (const [name, props] of pending.splice(0)) posthog.capture(name, props)
+      })
+      .catch(() => { /* sin analítica: la app sigue igual */ })
+  }
+  // Tras la carga (o de inmediato si ya pasó): que no compita con lo que se ve.
+  if (document.readyState === 'complete') setTimeout(start, 0)
+  else window.addEventListener('load', () => setTimeout(start, 0), { once: true })
 }
 
 /**
@@ -48,10 +64,9 @@ export function initAnalytics(): void {
 export function trackEvent(name: string, props?: Record<string, unknown>): void {
   if (!initialized) return
   try {
-    posthog.capture(name, props)
+    if (ph) ph.capture(name, props)
+    else if (pending.length < 50) pending.push([name, props])
   } catch {
     // intencional: la analítica nunca debe romper la app
   }
 }
-
-export { posthog }

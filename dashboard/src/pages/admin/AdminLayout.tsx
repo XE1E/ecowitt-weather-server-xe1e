@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import logoDark from '../../assets/logo-xe1e-dark.png'
@@ -222,7 +222,9 @@ export function AdminLayout() {
       {/* Main content */}
       <main className="pt-14 lg:pl-56 min-h-screen">
         <div className="p-6">
-          <Outlet />
+          <Suspense fallback={<div className="text-slate-500 text-sm">Cargando…</div>}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
     </div>

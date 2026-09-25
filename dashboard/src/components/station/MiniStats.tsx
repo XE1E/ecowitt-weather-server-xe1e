@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
 import { WeatherData, DailyStats } from '../../types'
 import { ForecastResult } from '../../forecast'
 import { Comparison } from '../../station-data'
 import { useUnits } from '../../units'
+import { useSharedFetch } from '../../hooks/useSharedFetch'
 import { LOCATION } from '../../config'
 import { cardinal } from '../../weather'
 import { MeteoGlyph } from '../MeteoGlyph'
@@ -65,13 +65,8 @@ export function MiniStats({ data, stats, forecast, compare }: Props) {
   const today = forecast?.days?.[0]
   const uv = data.uv_index ?? 0
 
-  const [imeca, setImeca] = useState<ImecaData | null>(null)
-  useEffect(() => {
-    fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setImeca)
-      .catch(() => {})
-  }, [])
+  // Misma URL que ImecaMiniCard: una sola consulta para las dos.
+  const imeca = useSharedFetch<ImecaData>(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
 
   // Delta de temperatura vs 24h previas (conversión de diferencia: °F = °C*9/5)
   const dRaw = compare?.temperature_outdoor?.delta

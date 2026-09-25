@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
 import { parseServerDate } from '../../weather'
 import { BatteryIcon, statusLabel, statusDot } from '../../components/admin-ui'
+import { pollWhileVisible } from '../../poll'
 
 interface SensorDetail {
   id: string; type: string; category: string; channel?: number; label: string
@@ -269,9 +270,7 @@ export function AdminDashboard() {
   }, [fetchWithAuth])
 
   useEffect(() => {
-    load()
-    const i = setInterval(load, 10000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 10000)
   }, [load])
 
   const toggleAlerts = async () => {

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Plane } from 'lucide-react'
 import { useUnits } from '../../units'
+import { pollWhileVisible } from '../../poll'
 
 const STATION = 'MMMX'   // Aeropuerto Internacional de la Ciudad de México
 const REFRESH = 600000   // 10 min (igual que la caché del servidor)
@@ -78,9 +79,8 @@ export function MetarCard() {
         })
         .catch(() => !cancel && setState('empty'))
     }
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, REFRESH)
+    return () => { cancel = true; stop() }
   }, [])
 
   useEffect(() => {
@@ -95,9 +95,8 @@ export function MetarCard() {
         })
         .catch(() => !cancel && setCamara(null))
     }
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, REFRESH)
+    return () => { cancel = true; stop() }
   }, [])
 
   const header = (

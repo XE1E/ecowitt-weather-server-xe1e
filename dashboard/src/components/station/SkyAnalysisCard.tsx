@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Cloud, Eye, CloudRain, TrendingUp, Sparkles, CheckCircle2 } from 'lucide-react'
 import { relativeTime } from '../../weather'
+import { pollWhileVisible } from '../../poll'
 
 /**
  * Análisis del cielo con IA.
@@ -116,9 +117,7 @@ export function SkyAnalysisCard() {
   }, [])
 
   useEffect(() => {
-    fetch_()
-    const i = setInterval(fetch_, POLL_MS)
-    return () => clearInterval(i)
+    return pollWhileVisible(fetch_, POLL_MS)
   }, [fetch_])
 
   // No mostrar si está cargando, no hay análisis, o hubo error

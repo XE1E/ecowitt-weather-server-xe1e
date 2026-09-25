@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Activity } from 'lucide-react'
 import { Quake, magColor, timeAgo } from '../components/station/quakes'
 import { PageInfo } from '../components/station/PageInfo'
+import { pollWhileVisible } from '../poll'
 
 function fmtWhen(sec: number): string {
   const d = new Date(sec * 1000)
@@ -18,9 +19,7 @@ export function EarthquakesPage() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { setQuakes(d?.quakes ?? []); setSource(d?.source ?? null) })
         .catch(() => setQuakes([]))
-    load()
-    const i = setInterval(load, 600000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 600000)
   }, [])
 
   return (

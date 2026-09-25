@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useSharedFetch } from '../../hooks/useSharedFetch'
 import { LOCATION } from '../../config'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAire } from '../../theme/icons'
@@ -10,14 +10,8 @@ interface Imeca {
 }
 
 export function ImecaMiniCard() {
-  const [d, setD] = useState<Imeca | null>(null)
-
-  useEffect(() => {
-    fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setD)
-      .catch(() => {})
-  }, [])
+  // Misma URL que MiniStats: una sola consulta para las dos.
+  const d = useSharedFetch<Imeca>(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
 
   if (!d || !d.available || d.imeca == null) return null
 

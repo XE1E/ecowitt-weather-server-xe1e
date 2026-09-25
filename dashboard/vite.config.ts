@@ -17,6 +17,18 @@ export default defineConfig({
     // Sin mapas de código fuente en producción: nginx servía el .map (5.8 MB) y
     // cualquiera podía leer el código original del sitio. En `npm run dev` Vite
     // los genera igual, así que depurar en local no cambia.
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Librerías en archivos propios: cambian mucho menos que el código del sitio,
+        // así que tras cada deploy el navegador las sigue teniendo en caché y sólo
+        // baja lo nuevo.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          recharts: ['recharts'],
+          posthog: ['posthog-js'],
+        },
+      },
+    },
   }
 })

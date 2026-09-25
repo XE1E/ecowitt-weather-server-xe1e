@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plane, RefreshCw, Search } from 'lucide-react'
 import { AtmosphericProfile } from '../components/station/AtmosphericProfile'
 import { PageInfo } from '../components/station/PageInfo'
+import { pollWhileVisible } from '../poll'
 
 // Los 15 aeropuertos más importantes de México (ICAO · nombre)
 const AIRPORTS: [string, string][] = [
@@ -132,9 +133,8 @@ export function AeronauticaPage() {
         .then((j) => { const a = j?.analysis; if (!cancel) setCamara(a && !a.error ? a : null) })
         .catch(() => !cancel && setCamara(null))
     }
-    load()
-    const i = setInterval(load, 600000)
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, 600000)
+    return () => { cancel = true; stop() }
   }, [])
 
   const search = () => {

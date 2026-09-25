@@ -14,6 +14,7 @@ import { WeatherData, DailyStats, HistoryRow } from './types'
 import { deriveCondition, relativeTime, isStale } from './weather'
 import { fetchForecast, ForecastResult } from './forecast'
 import { useUnits } from './units'
+import { pollWhileVisible } from './poll'
 
 const API_URL = '/api/current'
 const STATS_URL = '/api/stats/daily'
@@ -60,9 +61,7 @@ function App() {
 
   useEffect(() => {
     const load = () => fetchForecast().then(setForecast).catch(() => {})
-    load()
-    const interval = setInterval(load, FORECAST_INTERVAL)
-    return () => clearInterval(interval)
+    return pollWhileVisible(load, FORECAST_INTERVAL)
   }, [])
 
   if (loading) {

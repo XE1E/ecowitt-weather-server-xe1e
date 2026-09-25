@@ -13,6 +13,7 @@ import { useUnits } from '../units'
 import { deriveCondition, relativeTime } from '../weather'
 import { LOCATION } from '../config'
 import { WeatherIcon } from '../components/WeatherIcon'
+import { pollWhileVisible } from '../poll'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -93,9 +94,7 @@ export function KioskPage() {
   useEffect(() => {
     const load = () => fetch('/api/kiosk/local').then((r) => (r.ok ? r.json() : null))
       .then((j) => { setLocal(j); setLocalFetched(true) }).catch(() => setLocalFetched(true))
-    load()
-    const i = setInterval(load, 30000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 30000)
   }, [])
   // Estación remota (GW1100): página de sensores. La página "consola" trae sus
   // propios datos remotos dentro de <ConsoleReplica>.
@@ -103,9 +102,7 @@ export function KioskPage() {
     if (page !== '3') return
     const load = () => fetch('/api/current?station=gw1100').then((r) => (r.ok ? r.json() : null))
       .then(setRemote).catch(() => {})
-    load()
-    const i = setInterval(load, 30000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 30000)
   }, [page])
 
   // Zonas de las páginas 1-5. Va aquí arriba y no junto a su `return` porque los

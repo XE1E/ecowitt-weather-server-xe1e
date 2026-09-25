@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { WeatherFX } from '../components/WeatherFX'
 import { deriveCondition } from '../weather'
@@ -191,7 +191,11 @@ export function StationLayout() {
           </nav>
 
           {/* Contenido de la página */}
-          <Outlet />
+          {/* Las páginas se descargan al entrar (entries/StationApp): mientras llega una,
+              encabezado y menú siguen en su sitio. */}
+          <Suspense fallback={<div className="py-16 text-center text-slate-500 text-sm">Cargando…</div>}>
+            <Outlet />
+          </Suspense>
 
           {/* Footer */}
           <footer className="mt-10 pt-6 border-t border-white/10 text-slate-400 text-xs">

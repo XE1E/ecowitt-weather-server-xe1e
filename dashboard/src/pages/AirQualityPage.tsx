@@ -3,6 +3,7 @@ import { RefreshCw, Wind } from 'lucide-react'
 import { ImecaCard } from '../components/station/ImecaCard'
 import { PageInfo } from '../components/station/PageInfo'
 import { LOCATION } from '../config'
+import { pollWhileVisible } from '../poll'
 
 interface AQ {
   aqi: number | null
@@ -41,9 +42,7 @@ export function AirQualityPage() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { setAq(d); setLoading(false) })
         .catch(() => setLoading(false))
-    load()
-    const i = setInterval(load, 10 * 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 10 * 60000)
   }, [])
 
   if (loading) {

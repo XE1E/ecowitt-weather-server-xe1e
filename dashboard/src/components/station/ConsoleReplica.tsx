@@ -12,7 +12,7 @@ import moonPhoto from '../../assets/moon.png'
 import type { RemoteHistRow } from '../../remote'
 // Amanecer/atardecer: no se calculan en local como la fase lunar, vienen del
 // pronóstico (Open-Meteo a través de nuestro backend, que además lo cachea).
-import { fetchForecast, type AstroData, type ForecastHour } from '../../forecast'
+import { type AstroData, type ForecastHour } from '../../forecast'
 import { LOCATION } from '../../config'
 // El CSS vive aparte desde que las páginas de detalle del kiosco --a las que se
 // llega tocando una celda de aquí-- comparten su estética.
@@ -20,6 +20,7 @@ import { CONSOLE_CSS } from './console-css'
 // Qué celda lleva a qué pantalla. Sólo las claves: los rectángulos se miden del DOM.
 import { CONSOLA_NAV } from '../../kiosk-nav'
 import { useNavZones, NavDebugOverlay } from '../../pages/kiosk/nav-zones'
+import { pollWhileVisible } from '../../poll'
 
 /**
  * Réplica de la consola física Ecowitt (rejilla 3×5, 1024×600).
@@ -895,7 +896,7 @@ interface ImecaData {
 }
 
 export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
-  const { data, history, stats, ownForecast, localForecast } = useStationData()
+  const { data, history, stats, ownForecast, localForecast, forecast, forecastTried } = useStationData()
   const u = useUnits()
   // Contenedor raíz: de él cuelgan las celdas con `data-nav` que se miden para el
   // mapa de zonas del display.
@@ -904,7 +905,9 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   const [imeca, setImeca] = useState<ImecaData | null>(null)
   const [remote, setRemote] = useState<Record<string, number> | null>(null)
   const [remoteHistory, setRemoteHistory] = useState<RemoteHistRow[]>([])
-  const [astro, setAstro] = useState<AstroData | null>(null)
+  // Astronomía y horas del pronóstico: del proveedor (station-data), que ya lo pide
+  // cada 30 min. Antes la consola lo pedía otra vez por su cuenta.
+  const astro: AstroData | null = forecast?.astro ?? null
   const [moon, setMoon] = useState<{ illumination?: number; waxing?: boolean } | null>(null)
   const [rain7, setRain7] = useState<DailyRain[]>([])
   const [alertas, setAlertas] = useState<AlertaViva[]>([])
@@ -925,7 +928,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
    * tanto si responde como si falla.
    */
   const [cargado, setCargado] = useState({ fc: false, luna: false, imeca: false })
-  const [horas, setHoras] = useState<ForecastHour[]>([])
+  const horas: ForecastHour[] = forecast?.hours ?? []
   // ¿La celda de sol y luna abre la cámara? Lo decide el toggle del admin
   // (kiosk_camera_enabled). Por defecto sí; si el fetch falla o tarda, se mantiene el
   // comportamiento normal --mostrar la cámara-- que es el caso común.
@@ -946,17 +949,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   useEffect(() => {
     const load = () => fetch('/api/current?station=gw1100').then((r) => (r.ok ? r.json() : null))
       .then(setRemote).catch(() => {})
-    load()
-    const i = setInterval(load, 30000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 30000)
   }, [])
   // …e histórico corto, para calcular sus tendencias.
   useEffect(() => {
     const load = () => fetch('/api/history?start=-4h&station=gw1100').then((r) => (r.ok ? r.json() : { data: [] }))
       .then((j) => setRemoteHistory(j.data || [])).catch(() => {})
-    load()
-    const i = setInterval(load, 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 60000)
   }, [])
 
   // Lluvia diaria de la semana, para el histograma. Cada 10 min: el único día que
@@ -964,22 +963,13 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
   useEffect(() => {
     const load = () => fetch('/api/rain/daily?days=7').then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (j?.data) setRain7(j.data) }).catch(() => {})
-    load()
-    const i = setInterval(load, 10 * 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 10 * 60000)
   }, [])
 
-  // Astronomía del pronóstico, sólo para el amanecer/atardecer de la celda de la
-  // luna. Cada 30 min: son dos horas fijas del día, no hace falta más.
+  // El pronóstico lo trae el proveedor; aquí sólo se marca que ya se intentó.
   useEffect(() => {
-    const load = () => fetchForecast()
-      .then((r) => { setAstro(r.astro); setHoras(r.hours) })
-      .catch(() => {})
-      .finally(() => setCargado((c) => (c.fc ? c : { ...c, fc: true })))
-    load()
-    const i = setInterval(load, 30 * 60000)
-    return () => clearInterval(i)
-  }, [])
+    if (forecastTried) setCargado((c) => (c.fc ? c : { ...c, fc: true }))
+  }, [forecastTried])
 
   // Fase lunar del ALMANAQUE del servidor (pyephem, para las coordenadas y la elevación del
   // sitio) en vez del cálculo del navegador, que es un mes sinódico constante desde una luna
@@ -995,9 +985,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .then((d) => setMoon(d?.available ? d.moon : null))
       .catch(() => {})
       .finally(() => setCargado((c) => (c.luna ? c : { ...c, luna: true })))
-    load()
-    const i = setInterval(load, 30 * 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 30 * 60000)
   }, [])
 
   // Alertas VIVAS. La consola tenía el motor de alertas al lado y no lo miraba: su único
@@ -1009,9 +997,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => setAlertas(Array.isArray(j?.active) ? j.active : []))
       .catch(() => {})
-    load()
-    const i = setInterval(load, 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 60000)
   }, [])
 
   // ICA (IMECA estimado). Se pide aparte porque no va en el contexto de la
@@ -1020,9 +1006,7 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
     const load = () => fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)
       .then((r) => (r.ok ? r.json() : null)).then(setImeca).catch(() => {})
       .finally(() => setCargado((c) => (c.imeca ? c : { ...c, imeca: true })))
-    load()
-    const i = setInterval(load, 30 * 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 30 * 60000)
   }, [])
 
   // Condición actual: SIEMPRE usar deriveCondition (basado en sensores).

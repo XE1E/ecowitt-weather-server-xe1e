@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { WeatherData, DailyStats, HistoryRow } from './types'
 import { fetchForecast, ForecastResult } from './forecast'
+import { pollWhileVisible } from './poll'
 
 export interface Comparison {
   [field: string]: { today: number | null; yesterday: number | null; delta: number | null }
@@ -76,6 +77,9 @@ interface StationData {
   // canal, que ExtraSensorsCard lee por nombre calculado.
   history: HistoryRow[]
   forecast: ForecastResult | null
+  /** Ya se intentó cargar el pronóstico (bien o mal): la consola lo usa para
+   *  saber cuándo terminó de cargar, también si Open-Meteo falla. */
+  forecastTried: boolean
   compare: Comparison | null
   localForecast: LocalForecast | null
   consensus: ConsensusForecast | null
@@ -96,6 +100,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<DailyStats['stats'] | null>(null)
   const [history, setHistory] = useState<HistoryRow[]>([])
   const [forecast, setForecast] = useState<ForecastResult | null>(null)
+  const [forecastTried, setForecastTried] = useState(false)
   const [compare, setCompare] = useState<Comparison | null>(null)
   const [localForecast, setLocalForecast] = useState<LocalForecast | null>(null)
   const [consensus, setConsensus] = useState<ConsensusForecast | null>(null)
@@ -123,16 +128,12 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     }
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, REFRESH)
   }, [])
 
   useEffect(() => {
-    const go = () => fetchForecast().then(setForecast).catch(() => {})
-    go()
-    const i = setInterval(go, FORECAST_REFRESH)
-    return () => clearInterval(i)
+    const go = () => fetchForecast().then(setForecast).catch(() => {}).finally(() => setForecastTried(true))
+    return pollWhileVisible(go, FORECAST_REFRESH)
   }, [])
 
   // Pronóstico de consenso (combina estación + presión + Open-Meteo + WeatherAPI)
@@ -142,9 +143,7 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
         .then((r) => (r.ok ? r.json() : null))
         .then(setConsensus)
         .catch(() => {})
-    load()
-    const i = setInterval(load, 5 * 60000) // Cada 5 min
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 5 * 60000) // Cada 5 min
   }, [])
 
   // "Nuestro pronóstico" -- estación + cámara + vecinas (ver
@@ -157,13 +156,11 @@ export function StationDataProvider({ children }: { children: ReactNode }) {
         .then((r) => (r.ok ? r.json() : null))
         .then(setOwnForecast)
         .catch(() => {})
-    load()
-    const i = setInterval(load, 5 * 60000) // Cada 5 min
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 5 * 60000) // Cada 5 min
   }, [])
 
   return (
-    <Ctx.Provider value={{ data, stats, history, forecast, compare, localForecast, consensus, ownForecast, loading }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ data, stats, history, forecast, forecastTried, compare, localForecast, consensus, ownForecast, loading }}>{children}</Ctx.Provider>
   )
 }
 

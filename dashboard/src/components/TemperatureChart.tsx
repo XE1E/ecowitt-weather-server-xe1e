@@ -17,10 +17,12 @@ const REFRESH_INTERVAL = 60000 // 60 seconds, matches the rest of the dashboard
 type Period = '24h' | '7d' | '30d'
 type MetricKey = 'temp' | 'pressure' | 'wind'
 
-const PERIODS: { key: Period; label: string; start: string }[] = [
+// `every`: en 7 y 30 días se piden promedios por ventana (el backend agrega) en vez
+// de cada lectura de ~16 s: 30 días crudos de una estación tardaban ~11 s.
+const PERIODS: { key: Period; label: string; start: string; every?: string }[] = [
   { key: '24h', label: '24 h', start: '-24h' },
-  { key: '7d', label: '7 d', start: '-7d' },
-  { key: '30d', label: '30 d', start: '-30d' },
+  { key: '7d', label: '7 d', start: '-7d', every: '10m' },
+  { key: '30d', label: '30 d', start: '-30d', every: '1h' },
 ]
 
 // Unidad y conversión salen del sistema activo, no de un literal: esta gráfica
@@ -57,7 +59,9 @@ export function TemperatureChart() {
 
     const fetchHistory = async () => {
       try {
-        const response = await fetch(`/api/history?start=${start}`)
+        const per = PERIODS.find((p) => p.key === period)!
+        const agg = per.every ? `&every=${per.every}&fields=${field},humidity_outdoor` : ''
+        const response = await fetch(`/api/history?start=${start}${agg}`)
         if (response.ok) {
           const json = await response.json()
           const longRange = period !== '24h'

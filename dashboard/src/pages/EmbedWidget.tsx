@@ -3,6 +3,7 @@ import { WeatherData } from '../types'
 import { deriveCondition, cardinal } from '../weather'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { LOCATION } from '../config'
+import { pollWhileVisible } from '../poll'
 
 // Widget compacto para incrustar en otros sitios vía <iframe>.
 // Parámetros de URL: ?units=metric|imperial  &theme=light|dark
@@ -28,9 +29,7 @@ export function EmbedWidget() {
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((d) => { setData(d); setErr(false) })
         .catch(() => setErr(true))
-    load()
-    const i = setInterval(load, 60000)
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 60000)
   }, [])
 
   const cond = data ? deriveCondition(data) : null

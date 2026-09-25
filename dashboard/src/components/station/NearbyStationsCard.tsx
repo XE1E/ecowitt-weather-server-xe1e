@@ -3,6 +3,7 @@ import { MapPin, ChevronDown } from 'lucide-react'
 import { useUnits } from '../../units'
 import type { WeatherData } from '../../types'
 import type { LocalForecast } from '../../station-data'
+import { pollWhileVisible } from '../../poll'
 
 const REFRESH = 600000 // 10 min (igual que la caché del servidor)
 
@@ -77,9 +78,8 @@ export function NearbyStationsCard({ data, lf }: { data: WeatherData; lf?: Local
         .then((j) => { if (!cancel && j) setResp(j) })
         .catch(() => { /* silencioso: tarjeta opcional */ })
     }
-    load()
-    const i = setInterval(load, REFRESH)
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, REFRESH)
+    return () => { cancel = true; stop() }
   }, [])
 
   const stations = resp?.stations ?? []

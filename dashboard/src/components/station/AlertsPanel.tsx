@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { WeatherIcon } from '../WeatherIcon'
 import { ICON, iconAlerta } from '../../theme/icons'
 import { trackEvent } from '../../analytics'
+import { useSharedFetch } from '../../hooks/useSharedFetch'
 
 interface Alert {
   key: string
@@ -69,26 +70,12 @@ function HistoryList({ entries }: { entries: HistoryEntry[] }) {
 }
 
 export function AlertsPanel() {
-  const [alerts, setAlerts] = useState<Alert[]>([])
-  const [enabled, setEnabled] = useState(true)
+  // Compartida con AlertBanner (misma URL, una sola consulta por minuto).
+  const resp = useSharedFetch<{ active?: Alert[]; enabled?: boolean }>('/api/alerts', 60000)
+  const alerts = resp?.active ?? []
+  const enabled = resp?.enabled ?? true
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
-
-  useEffect(() => {
-    const load = () =>
-      fetch('/api/alerts')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => {
-          if (j) {
-            setAlerts(j.active ?? [])
-            setEnabled(j.enabled)
-          }
-        })
-        .catch(() => {})
-    load()
-    const i = setInterval(load, 60000)
-    return () => clearInterval(i)
-  }, [])
 
   // El historial se carga solo al abrirlo (no en cada render de la página) y
   // se conserva mientras el panel siga montado -- no hace falta refrescarlo

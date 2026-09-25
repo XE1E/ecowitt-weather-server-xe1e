@@ -6,6 +6,7 @@ import { WeatherIcon } from '../components/WeatherIcon'
 import { describeDay, ForecastResult } from '../forecast'
 import { LOCATION } from '../config'
 import { trackEvent } from '../analytics'
+import { pollWhileVisible } from '../poll'
 
 function dayName(iso: string, i: number): string {
   if (i === 0) return 'Hoy'
@@ -108,9 +109,8 @@ export function ForecastPage() {
         if (!cancel) { setSmn(null); setSmnErr('caido') }
       }
     }
-    load()
-    const i = setInterval(load, 1800000) // 30 min
-    return () => { cancel = true; clearInterval(i) }
+    const stop = pollWhileVisible(load, 1800000) // 30 min
+    return () => { cancel = true; stop() }
   }, [source, sel])
 
   const T = (c: number) => Math.round(u.tempN(c))

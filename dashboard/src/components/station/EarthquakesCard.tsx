@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity } from 'lucide-react'
 import { Quake, magColor, timeAgo } from './quakes'
+import { pollWhileVisible } from '../../poll'
 
 export function EarthquakesCard() {
   const [quakes, setQuakes] = useState<Quake[] | null>(null)
@@ -12,9 +13,7 @@ export function EarthquakesCard() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => setQuakes(d?.quakes ?? []))
         .catch(() => {})
-    load()
-    const i = setInterval(load, 600000) // 10 min
-    return () => clearInterval(i)
+    return pollWhileVisible(load, 600000) // 10 min
   }, [])
 
   if (!quakes) return null
