@@ -138,6 +138,10 @@ body {
 :root[data-theme="light"] .border-white\/10 { border-color: rgba(15, 30, 50, 0.14); }
 :root[data-theme="light"] .bg-slate-700 { background-color: #e2e8f0; }
 :root[data-theme="light"] .border-slate-600 { border-color: #cbd5e1; }
+/* Lista de sugerencias del buscador de municipios (ForecastPage): opaca para que
+   no se transparente lo de abajo; en claro, blanca en vez de slate-900. */
+:root[data-theme="light"] .suggest-list { background-color: #ffffff; }
+:root[data-theme="light"] .suggest-list .suggest-hi { background-color: rgba(2, 132, 199, 0.14); color: #0c1a26; }
 
 /* Enlaces un poco más oscuros para contraste sobre claro */
 :root[data-theme="light"] .text-blue-400 { color: #2563a8; }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, CloudSun } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
@@ -144,7 +144,8 @@ export function ForecastPage() {
         !forecast ? (
           <div className="h-64 flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-blue-400" /></div>
         ) : (
-          <OpenMeteoView forecast={forecast} tab={tab} u={u} T={T} />
+          <OpenMeteoView forecast={forecast} tab={tab} u={u} T={T}
+            onSmn={() => { setSource('smn'); window.scrollTo({ top: 0, behavior: 'smooth' }); trackEvent('forecast_source_change', { source: 'smn', from: 'footer' }) }} />
         )
       ) : (
         <div className="space-y-4">
@@ -183,26 +184,84 @@ export function ForecastPage() {
   )
 }
 
-// Buscador de municipio (autocompletar nativo con datalist).
+// Buscador de municipio. Antes era un <datalist> nativo, pero en móvil (iOS Safari
+// sobre todo) casi no despliega sugerencias: aquí la lista se dibuja a mano.
+const MAX_SUG = 8
+const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
 function SmnSearch({ munis, current, onSelect }: { munis: Muni[]; current: Muni; onSelect: (m: Muni) => void }) {
-  const [q, setQ] = useState(`${current.nmun}, ${current.nes}`)
-  useEffect(() => { setQ(`${current.nmun}, ${current.nes}`) }, [current])
-  const pick = (val: string) => {
-    setQ(val)
-    const m = munis.find((x) => `${x.nmun}, ${x.nes}` === val)
-    if (m) onSelect(m)
+  const label = (m: Muni) => `${m.nmun}, ${m.nes}`
+  const [q, setQ] = useState(label(current))
+  const [open, setOpen] = useState(false)
+  const [hi, setHi] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { setQ(label(current)) }, [current])
+
+  // Sin acentos ni mayúsculas; primero los que EMPIEZAN con lo escrito.
+  const nq = norm(q)
+  const sugs = !open || nq.length < 2 ? [] : (() => {
+    const starts: Muni[] = [], has: Muni[] = []
+    for (const m of munis) {
+      const n = norm(label(m))
+      if (n.startsWith(nq)) starts.push(m)
+      else if (n.includes(nq)) has.push(m)
+      if (starts.length >= MAX_SUG) break
+    }
+    return [...starts, ...has].slice(0, MAX_SUG)
+  })()
+
+  const choose = (m: Muni) => {
+    setQ(label(m)); setOpen(false)
+    // Soltar el foco: cierra el teclado del móvil y hace que el siguiente toque
+    // vuelva a disparar onFocus (si no, lo nuevo se pega al nombre anterior).
+    inputRef.current?.blur()
+    onSelect(m)
+    trackEvent('smn_municipio', { municipio: label(m) })
   }
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!sugs.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => (h + 1) % sugs.length) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => (h - 1 + sugs.length) % sugs.length) }
+    else if (e.key === 'Enter') { e.preventDefault(); choose(sugs[hi] ?? sugs[0]) }
+    else if (e.key === 'Escape') setOpen(false)
+  }
+
   const isHome = current.ides === '9' && current.idmun === '14'
+  // overflow-visible: .card recorta (overflow-hidden) y la lista quedaba cortada.
+  // hover:transform-none: el translateY del hover la hacía brincar.
   return (
-    <div className="card">
+    <div className="card relative z-20 overflow-visible hover:transform-none">
       <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-sm text-slate-400 shrink-0">📍 Municipio</label>
-        <input list="smn-munis" value={q} onChange={(e) => pick(e.target.value)}
-          placeholder="Busca un municipio de México…"
-          className="flex-1 min-w-[200px] rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500/50" />
-        <datalist id="smn-munis">
-          {munis.map((m) => <option key={`${m.ides}:${m.idmun}`} value={`${m.nmun}, ${m.nes}`} />)}
-        </datalist>
+        <label htmlFor="smn-muni" className="text-sm text-slate-400 shrink-0">📍 Municipio</label>
+        <div className="relative flex-1 min-w-[200px]">
+          <input ref={inputRef} id="smn-muni" type="search" value={q} autoComplete="off" enterKeyHint="search"
+            role="combobox" aria-expanded={sugs.length > 0} aria-controls="smn-sugs" aria-autocomplete="list"
+            onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0) }}
+            // Al tocarlo se vacía para escribir directo (en móvil borrar el texto largo es tedioso).
+            onFocus={() => { setQ(''); setOpen(true); setHi(0) }}
+            // El retraso deja que el toque en una sugerencia llegue antes de cerrar.
+            onBlur={() => setTimeout(() => { setOpen(false); setQ((v) => (v.trim() ? v : label(current))) }, 150)}
+            onKeyDown={onKey}
+            placeholder="Escribe un municipio… (ej. Toluca)"
+            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:border-sky-500/50" />
+          {open && nq.length >= 2 && (
+            <ul id="smn-sugs" role="listbox"
+              className="absolute left-0 right-0 top-full mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-slate-900 shadow-xl suggest-list">
+              {!munis.length ? (
+                <li className="px-3 py-2.5 text-sm text-slate-400">Cargando municipios…</li>
+              ) : !sugs.length ? (
+                <li className="px-3 py-2.5 text-sm text-slate-400">Sin coincidencias</li>
+              ) : sugs.map((m, i) => (
+                <li key={`${m.ides}:${m.idmun}`} role="option" aria-selected={i === hi}
+                  onMouseDown={(e) => { e.preventDefault(); choose(m) }}
+                  onMouseEnter={() => setHi(i)}
+                  className={`px-3 py-2.5 text-sm cursor-pointer ${i === hi ? 'suggest-hi bg-sky-600/30 text-white' : 'text-slate-200'}`}>
+                  {m.nmun}<span className="text-slate-400">, {m.nes}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         {!isHome && (
           <button onClick={() => onSelect({ ides: '9', idmun: '14', nmun: 'Benito Juárez', nes: 'Ciudad de México' })}
             className="shrink-0 text-xs text-sky-400 hover:text-sky-300 whitespace-nowrap">★ Volver a Benito Juárez</button>
@@ -217,7 +276,7 @@ function SmnSearch({ munis, current, onSelect }: { munis: Muni[]; current: Muni;
 }
 
 // ------------------- Open-Meteo (contenido original) -------------------
-function OpenMeteoView({ forecast, tab, u, T }: { forecast: ForecastResult; tab: 'days' | 'hourly'; u: ReturnType<typeof useUnits>; T: (c: number) => number }) {
+function OpenMeteoView({ forecast, tab, u, T, onSmn }: { forecast: ForecastResult; tab: 'days' | 'hourly'; u: ReturnType<typeof useUnits>; T: (c: number) => number; onSmn: () => void }) {
   return (
     <>
       {forecast.days[0] && (
@@ -297,8 +356,12 @@ function OpenMeteoView({ forecast, tab, u, T }: { forecast: ForecastResult; tab:
             {' '}<span className="text-slate-400">no mediciones de la estación</span>. Usa el modo
             {' '}<span className="font-mono text-slate-200">best_match</span> (elige el mejor modelo global
             para la ubicación: ECMWF, GFS, ICON…). Refresca cada 30 min; los primeros 2-3 días son los más confiables.
-            Cambia a <span className="font-semibold text-sky-300">SMN oficial</span> arriba para ver el pronóstico del
-            Servicio Meteorológico Nacional.
+          </p>
+          <p>
+            ¿Quieres el pronóstico de otro lugar? En{' '}
+            <button onClick={onSmn} className="font-semibold text-sky-300 hover:text-sky-200 underline">SMN oficial</button>
+            {' '}puedes buscar el pronóstico oficial del Servicio Meteorológico Nacional para{' '}
+            <span className="font-semibold">cualquier municipio de México</span>: escribe su nombre en el buscador.
           </p>
         </div>
       </section>
