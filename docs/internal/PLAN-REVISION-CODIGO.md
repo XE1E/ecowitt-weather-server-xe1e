@@ -1,7 +1,7 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fase 3 en curso
-> (4 routers listos, ver abajo). Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fase 3 casi terminada
+> (backend dividido; en el dashboard faltan tipos compartidos y dividir componentes grandes). Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -85,27 +85,25 @@ Dashboard:
       desde el proveedor.
 - [x] `pollWhileVisible`: 27 consultas periódicas se pausan con la pestaña oculta
       (comprobado: 0 peticiones en 3 min oculta; al volver, refresca).
-- [ ] Relojes de 1 s que redibujan componentes enormes (ConsoleReplica completa): pasa a la
-      fase 3, junto con dividir ConsoleReplica (el reloj va en su propio componente).
+- [x] Relojes de 1 s que redibujaban componentes enormes: resuelto en la fase 3.
 
 ## Fase 3 — Estructura
 
-- [~] **Partir `main.py` en routers — EN CURSO (2026-09-24).** Hecho: `app/state.py` (storage,
-      latest_by_station, alert_service, mqtt_publisher, cámara, timelapse), `app/deps.py`
-      (require_admin) y routers `radar`, `external` (METAR/TAF/satélite/aire/IMECA/sismos),
-      `data` (actual/historial/stats/clima/viento/lluvia/alertas) y `forecast` (pronóstico,
-      vecinas, Netatmo, almanaque, bitácora). main.py 3,960 → 2,933 líneas; mismas 107 rutas
-      (comparadas antes/después en cada paso). Faltan: cámara (22), admin (~30),
-      estaciones, dispositivos (svitrix/epaper/bim32/smn), kiosco e ingesta.
-      Herramienta: el script que mueve funciones por nombre con el árbol de sintaxis
-      (decoradores y comentarios incluidos) y cambia `storage` → `state.storage`, etc.
+- [x] **Partir `main.py` en routers — HECHO (2026-09-24).** `app/state.py` (objetos compartidos),
+      `app/deps.py` (require_admin), `app/logs.py` (búfer de logs) y 9 routers: `admin`,
+      `camera`, `data`, `devices`, `external`, `forecast`, `kiosk`, `radar`, `stations`.
+      main.py 3,960 → 698 líneas (app, arranque, tareas de fondo, /health e ingesta).
+      Mismas 107 rutas, comparadas antes/después en cada paso, y endpoints probados en
+      producción tras cada deploy.
 - [ ] ~~**Partir `main.py` en routers**~~ (plan original:) por área (ingesta, admin, estaciones, cámara,
       pronóstico, radar, dispositivos…), sin cambiar URLs. Antes: `state.py` (estado
       compartido: `storage`, `latest_by_station`, `alert_service`, cachés), `deps.py`
       (`require_admin` como `Depends`, ubicación de la estación), `tasks.py`. Respetar el
       orden de rutas que importa (`/camera/best/{date}.jpg`, `/radar/sacmex/archive`…).
-- [ ] Dashboard: primitivas del Admin a `admin-ui.tsx` (Toggle ×7, TextField ×4,
-      NumField ×3), tipos compartidos (Station/SensorDetail/Imeca/Metar… repetidos),
+- [x] Primitivas del Admin en `admin-ui.tsx` (Toggle, TextField, NumField) — 2026-09-24.
+- [x] Relojes: el del encabezado en su propio componente; consola y kiosco avanzan por
+      minuto (antes redibujaban todo cada segundo) — 2026-09-24.
+- [ ] Dashboard: tipos compartidos (Station/SensorDetail/Imeca/Metar… repetidos),
       helpers de fecha (días/meses en 12 lugares), dividir ConsoleReplica, AdminWizard,
       AdminPublicacion (8 tarjetas casi iguales → una data-driven).
 
