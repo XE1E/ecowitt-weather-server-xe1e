@@ -61,24 +61,25 @@ const LOGO_ESCALA = 0.75
 const RING_KM = 5
 const RINGS = Array.from({ length: Math.floor(MEDIO / PX_PER_KM / RING_KM) }, (_, i) => (i + 1) * RING_KM)
 
-// Colores con que el radar pinta los ECOS. Su leyenda los muestra al 40 % sobre
-// blanco (pastel), así que muestrearla daba colores que no aparecen en el mapa; éstos
-// son los plenos, sacados invirtiendo esa mezcla (2026-09-24) -- los mismos que usa
-// el decodificador del backend (services/radar_decode.py, PALETTE).
+// Colores de la escala tal como se VEN en el mapa: SACMEX pinta los ecos al ~40 %
+// sobre el mapa, igual que su leyenda, así que sobre fondo claro se ven pastel. Se
+// muestrearon de su leyenda (2026-09-23). El 24-09 se cambiaron por los colores
+// "plenos" suponiendo ecos opacos; la tarde de lluvia de ese día mostró que no lo son
+// (ver services/radar_decode.py, LEGEND/ALPHA) y se regresaron a éstos.
 const DBZ_COLOR: [number, string][] = [
-  [5, '#0ae6e6'], [10, '#00a3fa'], [15, '#000078'], [20, '#82ff00'], [25, '#00ff00'],
-  [30, '#008000'], [35, '#ffff4b'], [40, '#f2aa00'], [45, '#ff7f00'], [50, '#fc000a'],
-  [55, '#cf0f00'], [60, '#7d007d'], [65, '#f700ff'], [70, '#a200f5'], [75, '#ffffff'],
+  [5, '#9cf7f8'], [10, '#9adafd'], [15, '#9a9acd'], [20, '#ceff9a'], [25, '#99ff99'],
+  [30, '#9bcd9b'], [35, '#ffffb7'], [40, '#fbde99'], [45, '#ffcd99'], [50, '#ff989f'],
+  [55, '#ee9f99'], [60, '#cd9ace'], [65, '#ff99ff'], [70, '#db9afb'], [75, '#ffffff'],
 ]
 
 // Escala sencilla de reflectividad: cuanto más alto el dBZ, más agua (o hielo)
 // devuelve el eco del radar. Rangos redondeados de la interpretación habitual.
 const ESCALA: { rango: string; que: string; color: string }[] = [
-  { rango: 'menos de 20', que: 'nubes o llovizna muy débil; a menudo no llega al suelo', color: '#00a3fa' },
-  { rango: '20 a 35', que: 'lluvia ligera a moderada', color: '#00ff00' },
-  { rango: '35 a 50', que: 'lluvia fuerte', color: '#f2aa00' },
-  { rango: '50 a 60', que: 'aguacero o tormenta intensa; puede traer granizo pequeño', color: '#fc000a' },
-  { rango: 'más de 60', que: 'tormenta muy fuerte, granizo probable', color: '#f700ff' },
+  { rango: 'menos de 20', que: 'nubes o llovizna muy débil; a menudo no llega al suelo', color: '#9adafd' },
+  { rango: '20 a 35', que: 'lluvia ligera a moderada', color: '#99ff99' },
+  { rango: '35 a 50', que: 'lluvia fuerte', color: '#fbde99' },
+  { rango: '50 a 60', que: 'aguacero o tormenta intensa; puede traer granizo pequeño', color: '#ee9f99' },
+  { rango: 'más de 60', que: 'tormenta muy fuerte, granizo probable', color: '#ff99ff' },
 ]
 
 export function SacmexRadarCard() {

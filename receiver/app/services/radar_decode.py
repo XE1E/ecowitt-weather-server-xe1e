@@ -3,19 +3,26 @@ Lee la reflectividad (dBZ) de los cuadros del radar SACMEX a partir de sus
 colores, para poder medir cosas (lluvia sobre la estación, movimiento de ecos)
 en vez de sólo mostrarlos. Ver PENDIENTES §2.g.
 
-Cómo se leen los colores (muestreado 2026-09-24):
-- La leyenda de la imagen está dibujada al 40 % sobre blanco; los ecos, con el
-  color pleno. Invirtiendo esa mezcla (pleno = 255 - (255 - leyenda) / 0.4) sale
-  la paleta de abajo, que es la que efectivamente aparece en los ecos.
-- Los amarillos y naranjas de 35-45 dBZ son casi los de las carreteras del mapa,
-  así que el color solo no basta: se compara cada cuadro contra el FONDO (la
-  mediana de muchos cuadros del historial, que deja el mapa y quita lo que cambia)
-  y sólo cuenta lo que difiere de él.
-- Queda mucho eco disperso de 1-3 px (clutter / aire claro: de madrugada, sin
-  lluvia, dibuja arcos alrededor del radar). Una apertura morfológica de 3 px lo
-  quita; la lluvia de verdad forma manchas más grandes.
-
-Umbrales pendientes de afinar con cuadros de una tarde de lluvia.
+Cómo se leen los colores (afinado con la tarde de lluvia del 2026-09-24):
+- Los ecos están pintados SEMITRANSPARENTES sobre el mapa, con la misma opacidad
+  que la leyenda (~40 %). Sobre blanco dan exactamente el color de la leyenda; sobre
+  el beige de la ciudad, un color más oscuro. El modelo: la leyenda es L = a·C +
+  (1-a)·255 y un eco sobre el fondo b es p = a·C + (1-a)·b, así que el color
+  esperado de cada nivel EN CADA PIXEL es  p = L − (1-a)·(255 − b).  Con el fondo
+  conocido no hace falta el color pleno C: basta la leyenda medida y a = 0.40
+  (ajustado: minimiza la distancia de los pixeles de eco a la escala).
+  La v1 (ese mismo día, con sólo cuadros de madrugada) suponía ecos en color pleno:
+  con lluvia real leía 35-45 dBZ donde el pluviómetro medía 1-3 mm/h (~25-30 dBZ).
+- El FONDO es la mediana de muchos cuadros del historial (deja el mapa, quita lo
+  que cambia); sólo cuenta como eco lo que difiere de él.
+- Limpieza, en este orden: (1) densidad local (ventana ~2 km): quita pixeles
+  sueltos; (2) densidad a mayor escala (~6 km): la lluvia llena áreas, el eco
+  disperso de madrugada (clutter, arcos alrededor del radar) deja huecos entre sus
+  rayas; (3) mediana 3x3 de los niveles: un pixel de otro color en el borde entre
+  dos colores (ruido del JPEG) toma el de sus vecinos.
+Resultado del 24-09: sobre la estación, 25-40 dBZ en la lluvia de 18:10-19:10
+(Marshall-Palmer: 30 dBZ = 2.7 mm/h; el pluviómetro midió 2.0-2.9 mm/h) y nada
+cerca de la estación en el clutter de madrugada.
 """
 import glob
 import os
@@ -24,15 +31,15 @@ from typing import List, Optional
 import numpy as np
 from PIL import Image, ImageFilter
 
-# Color pleno de cada nivel de la escala (0, 5, ..., 70 dBZ); 75 es blanco y se
-# omite a propósito: se confunde con el fondo del mapa y a esa intensidad no va a
-# ser lo único que haya alrededor.
-PALETTE = np.array([
-    (130, 255, 255), (10, 230, 230), (0, 163, 250), (0, 0, 120), (130, 255, 0),
-    (0, 255, 0), (0, 128, 0), (255, 255, 75), (242, 170, 0), (255, 127, 0),
-    (252, 0, 10), (207, 15, 0), (125, 0, 125), (247, 0, 255), (162, 0, 245),
-], dtype=np.int32)
-LEVELS = np.arange(0, 75, 5, dtype=np.int16)
+# Colores de la LEYENDA tal como se ven en la imagen (5, 10, ..., 70 dBZ), muestreados
+# de su barra. 0 y 75 dBZ se omiten: blanco/casi blanco, se confunden con el mapa.
+LEGEND = np.array([
+    (0x9c, 0xf7, 0xf8), (0x9a, 0xda, 0xfd), (0x9a, 0x9a, 0xcd), (0xce, 0xff, 0x9a), (0x99, 0xff, 0x99),
+    (0x9b, 0xcd, 0x9b), (0xff, 0xff, 0xb7), (0xfb, 0xde, 0x99), (0xff, 0xcd, 0x99), (0xff, 0x98, 0x9f),
+    (0xee, 0x9f, 0x99), (0xcd, 0x9a, 0xce), (0xff, 0x99, 0xff), (0xdb, 0x9a, 0xfb),
+], dtype=np.float32)
+LEVELS = np.arange(5, 75, 5, dtype=np.int16)
+ALPHA = 0.40     # opacidad de los ecos (la misma que la leyenda)
 NO_ECHO = -1
 
 IMG_W, IMG_H = 702, 512
@@ -45,9 +52,10 @@ RADAR_LAT, RADAR_LON = 19.342639, -99.089472
 RADAR_PX, RADAR_PY = 254, 252
 PX_PER_KM = 3.3
 
-BG_DIFF = 60     # suma |ΔRGB| mínima contra el fondo para que cuente como eco
-PAL_DIST = 80    # distancia RGB máxima al color de la escala más cercano
-SPECKLE_PX = 3   # ecos más angostos que esto se consideran ruido
+BG_DIFF = 45       # suma |dRGB| mínima contra el fondo para que cuente como eco
+MAX_DIST = 70      # distancia RGB máxima al color esperado del nivel más cercano
+DENS_NEAR = (7, 0.35)    # (ventana px, fracción mínima de eco) ~2 km: quita sueltos
+DENS_FAR = (21, 0.45)    # ~6 km: quita el clutter en rayas (a 0.55 ya se pierde lluvia)
 
 
 def to_array(data: bytes) -> np.ndarray:
@@ -72,23 +80,31 @@ def background(frames: List[np.ndarray]) -> np.ndarray:
     return out
 
 
-def despeckle(z: np.ndarray, size: int = SPECKLE_PX) -> np.ndarray:
-    mask = Image.fromarray(((z != NO_ECHO) * 255).astype(np.uint8))
-    mask = mask.filter(ImageFilter.MinFilter(size)).filter(ImageFilter.MaxFilter(size))
-    return np.where(np.asarray(mask) > 0, z, NO_ECHO).astype(np.int16)
+def _density(ok: np.ndarray, win: int) -> np.ndarray:
+    """Fracción de pixeles con eco en una ventana de win x win alrededor de cada pixel."""
+    m = Image.fromarray((ok * 255).astype(np.uint8)).filter(ImageFilter.BoxBlur(win // 2))
+    return np.asarray(m) / 255.0
 
 
 def decode(frame: np.ndarray, bg: np.ndarray, clean: bool = True) -> np.ndarray:
     """dBZ por pixel (NO_ECHO donde no hay eco), mismo tamaño que la imagen."""
-    diff = np.abs(frame - bg).sum(-1)
-    dist2 = ((frame[:, :, None, :] - PALETTE[None, None]) ** 2).sum(-1)
-    k = dist2.argmin(-1)
-    ok = (diff > BG_DIFF) & (dist2.min(-1) < PAL_DIST ** 2)
-    z = np.where(ok, LEVELS[k], NO_ECHO).astype(np.int16)
-    z[:, MAP_W:] = NO_ECHO
+    f, b = frame.astype(np.float32), bg.astype(np.float32)
+    expected = LEGEND[None, None] - (1 - ALPHA) * (255 - b[:, :, None, :])   # (h, w, niveles, 3)
+    d2 = ((f[:, :, None, :] - expected) ** 2).sum(-1)
+    k = d2.argmin(-1)
+    ok = (np.abs(f - b).sum(-1) > BG_DIFF) & (d2.min(-1) < MAX_DIST ** 2)
+    ok[:, MAP_W:] = False
     x0, y0, x1, y1 = _LOGO
-    z[y0:y1, x0:x1] = NO_ECHO
-    return despeckle(z) if clean else z
+    ok[y0:y1, x0:x1] = False
+    if clean:
+        ok &= _density(ok, DENS_NEAR[0]) >= DENS_NEAR[1]
+        ok &= _density(ok, DENS_FAR[0]) >= DENS_FAR[1]
+    z = np.where(ok, LEVELS[k], NO_ECHO).astype(np.int16)
+    if clean:
+        med = np.asarray(Image.fromarray((z + 1).astype(np.uint8)).filter(ImageFilter.MedianFilter(3)))
+        med = med.astype(np.int16) - 1
+        z = np.where(ok & (med != NO_ECHO), med, NO_ECHO).astype(np.int16)
+    return z
 
 
 def max_near(z: np.ndarray, lat: float, lon: float, radius_km: float = 1.0) -> Optional[int]:
@@ -105,7 +121,7 @@ def render(z: np.ndarray) -> Image.Image:
     """Ecos decodificados en PNG transparente, con los colores de la escala: para
     revisar a ojo que la lectura cuadre con la imagen original."""
     out = np.zeros((*z.shape, 4), dtype=np.uint8)
-    for lvl, color in zip(LEVELS, PALETTE):
+    for lvl, color in zip(LEVELS, LEGEND.astype(np.uint8)):
         sel = z == lvl
         out[sel, :3] = color
         out[sel, 3] = 255
