@@ -1,3 +1,5 @@
+import { useState, type ReactNode } from 'react'
+
 // Helpers de UI compartidos por las páginas de administración.
 
 /** Etiqueta legible (es-MX) para el estado de una estación. */
@@ -72,5 +74,78 @@ export function StationTabs({ principalLabel, secondaries, selected, onSelect, g
         </button>
       ))}
     </div>
+  )
+}
+
+// ── Controles comunes del Admin ─────────────────────────────────────────────
+// Antes cada página tenía su copia (Toggle ×7, TextField ×4, NumField ×3) con
+// diferencias mínimas; las que quedan son opciones aquí.
+
+/** Interruptor. Con `label`, va dentro de una etiqueta clicable. */
+export function Toggle({ enabled, onChange, label }: {
+  enabled: boolean; onChange: (v: boolean) => void; label?: ReactNode
+}) {
+  const sw = (
+    <div className="relative shrink-0">
+      <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
+      <div onClick={label === undefined ? () => onChange(!enabled) : undefined}
+        className={`w-8 h-5 rounded-full cursor-pointer transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`} />
+      <div className={`pointer-events-none absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
+    </div>
+  )
+  if (label === undefined) return sw
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+      {sw}
+      <span>{label}</span>
+    </label>
+  )
+}
+
+/**
+ * Campo de texto. `masked`: valor guardado que el servidor no devuelve (secretos):
+ * se muestra como placeholder y vacío = conservarlo. `type="password"` agrega el
+ * botón de mostrar/ocultar. `size`: 'sm' compacto, 'md' más holgado.
+ */
+export function TextField({ value, onChange, placeholder, type = 'text', masked, size = 'sm', className = 'flex-1 min-w-0' }: {
+  value: string | null; onChange: (v: string) => void; placeholder: string; type?: string
+  masked?: string | null; size?: 'sm' | 'md'; className?: string
+}) {
+  const [show, setShow] = useState(false)
+  const isPw = type === 'password'
+  const pad = size === 'md' ? 'px-3 py-1.5' : 'px-2 py-1'
+  return (
+    <div className={`relative ${className}`}>
+      <input
+        type={isPw && show ? 'text' : type}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={!value && masked ? `(${masked})` : placeholder}
+        className={`w-full rounded bg-slate-900/50 border border-white/10 ${pad} ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
+      />
+      {isPw && (
+        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
+          title={show ? 'Ocultar' : 'Mostrar'}
+          className={`absolute ${size === 'md' ? 'right-2' : 'right-1.5'} top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs`}>
+          {show ? '🙈' : '👁️'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Campo numérico. `off`: deshabilitado y atenuado. */
+export function NumField({ value, onChange, min, max, step = 1, w = 'w-20', off = false }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; w?: string; off?: boolean
+}) {
+  return (
+    <input
+      type="number"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      min={min} max={max} step={step}
+      disabled={off}
+      className={`${w} rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50 disabled:opacity-40`}
+    />
   )
 }

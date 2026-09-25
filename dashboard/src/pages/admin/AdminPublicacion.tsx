@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
+import { Toggle, TextField } from '../../components/admin-ui'
 
 interface PubSettings {
   wu_enabled: boolean
@@ -68,44 +69,6 @@ const OPENSENSEMAP_FIELDS: [string, string][] = [
   ['solar_radiation', 'Radiación solar'],
   ['uv_index', 'UV'],
 ]
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="relative">
-      <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-      <div onClick={() => onChange(!enabled)} className={`w-8 h-5 rounded-full cursor-pointer transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`}>
-        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
-      </div>
-    </div>
-  )
-}
-
-function TextField({ value, onChange, placeholder, type = 'text', masked }: {
-  value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null
-}) {
-  const [show, setShow] = useState(false)
-  const displayValue = value || ''
-  const showMasked = !value && masked
-  const isPw = type === 'password'
-  return (
-    <div className="relative flex-1 min-w-0">
-      <input
-        type={isPw && show ? 'text' : type}
-        value={displayValue}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={showMasked ? `(${masked})` : placeholder}
-        className={`w-full rounded bg-slate-900/50 border border-white/10 px-2 py-1 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
-      />
-      {isPw && (
-        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
-          title={show ? 'Ocultar' : 'Mostrar'}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
-          {show ? '🙈' : '👁️'}
-        </button>
-      )}
-    </div>
-  )
-}
 
 // Coordenadas de la estación: una sola, la de Sistema (antes CWOP y AWEKAS tenían
 // cada una sus propios campos). Aquí sólo se muestran.

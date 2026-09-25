@@ -940,9 +940,16 @@ export function ConsoleReplica({ mode = 'page', ready = true }: Props) {
       .catch(() => {})
   }, [])
 
+  // La consola muestra HH:MM (sin segundos): basta con avanzar al cambiar el minuto.
+  // Antes era cada segundo y redibujaba las ~2,600 líneas del componente 60 veces
+  // por minuto (también en el kiosco).
   useEffect(() => {
-    const i = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(i)
+    let t: ReturnType<typeof setTimeout>
+    const siguiente = () => {
+      t = setTimeout(() => { setNow(new Date()); siguiente() }, 60000 - (Date.now() % 60000) + 50)
+    }
+    siguiente()
+    return () => clearTimeout(t)
   }, [])
 
   // Estación remota (GW1100): valores actuales…

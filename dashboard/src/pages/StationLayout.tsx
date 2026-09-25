@@ -33,10 +33,42 @@ const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const pad = (n: number) => String(n).padStart(2, '0')
 
+/**
+ * Fecha y hora del encabezado, con su PROPIO estado: antes el reloj vivía en el
+ * layout y cada segundo redibujaba el layout y la página abierta completa.
+ * `segundos`: la versión de escritorio los muestra y avanza cada segundo; la de
+ * celular sólo avanza al cambiar el minuto.
+ */
+function HeaderClock({ segundos }: { segundos: boolean }) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    if (segundos) {
+      const i = setInterval(() => setNow(new Date()), 1000)
+      return () => clearInterval(i)
+    }
+    let t: ReturnType<typeof setTimeout>
+    const siguiente = () => {
+      t = setTimeout(() => { setNow(new Date()); siguiente() }, 60000 - (Date.now() % 60000) + 50)
+    }
+    siguiente()
+    return () => clearTimeout(t)
+  }, [segundos])
+  return segundos ? (
+    <div className="text-center leading-tight">
+      <p className="text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
+      <p className="font-mono text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
+    </div>
+  ) : (
+    <div className="text-center leading-tight">
+      <p className="text-xs font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} {MESES[now.getMonth()].slice(0, 3)}</p>
+      <p className="font-mono text-lg font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}</p>
+    </div>
+  )
+}
+
 export function StationLayout() {
   const { data, forecast, localForecast } = useStationData()
   const units = useUnits()
-  const [now, setNow] = useState(() => new Date())
   const [fxEnabled, setFxEnabled] = useState(() => localStorage.getItem('fx') !== 'off')
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     localStorage.getItem('theme') === 'light' ? 'light' : 'dark'
@@ -49,11 +81,6 @@ export function StationLayout() {
   }, [theme])
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
-
-  useEffect(() => {
-    const i = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(i)
-  }, [])
 
   const toggleFx = () =>
     setFxEnabled((prev) => {
@@ -92,10 +119,7 @@ export function StationLayout() {
                   <p className="text-base text-slate-300 truncate">{LOCATION.label}</p>
                 </div>
               </div>
-              <div className="text-center leading-tight">
-                <p className="text-sm font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} de {MESES[now.getMonth()]}</p>
-                <p className="font-mono text-2xl font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}</p>
-              </div>
+              <HeaderClock segundos />
               <div className="flex items-center gap-2 justify-end text-sm text-slate-300">
                 <button
                   onClick={units.toggle}
@@ -134,10 +158,7 @@ export function StationLayout() {
                   <img src={theme === 'dark' ? logoDark : logoLight} alt="" className="h-7 w-auto shrink-0" />
                   <h1 className="text-base font-bold truncate">Estación Clima XE1E</h1>
                 </div>
-                <div className="text-center leading-tight">
-                  <p className="text-xs font-semibold text-slate-200">{DIAS[now.getDay()]} {now.getDate()} {MESES[now.getMonth()].slice(0, 3)}</p>
-                  <p className="font-mono text-lg font-bold">{pad(now.getHours())}:{pad(now.getMinutes())}</p>
-                </div>
+                <HeaderClock segundos={false} />
               </div>
               <div className="flex items-center gap-2 flex-wrap justify-end text-sm text-slate-300">
               <button

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '../../admin-auth'
+import { Toggle, TextField as BaseTextField } from '../../components/admin-ui'
+import type { ComponentProps } from 'react'
+
+const TextField = (p: ComponentProps<typeof BaseTextField>) => <BaseTextField size="md" {...p} />
 
 interface NotifSettings {
   telegram_enabled: boolean
@@ -49,46 +53,6 @@ const CATEGORIES = [
 ] as const
 
 const ALL_KEYS = CATEGORIES.map((c) => c.key)
-
-function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-      <div className="relative">
-        <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-        <div className={`w-8 h-5 rounded-full transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`} />
-        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
-      </div>
-      <span>{label}</span>
-    </label>
-  )
-}
-
-function TextField({ value, onChange, placeholder, type = 'text', masked }: {
-  value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null
-}) {
-  const [show, setShow] = useState(false)
-  const displayValue = value || ''
-  const showMasked = !value && masked
-  const isPw = type === 'password'
-  return (
-    <div className="relative flex-1 min-w-0">
-      <input
-        type={isPw && show ? 'text' : type}
-        value={displayValue}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={showMasked ? `(${masked})` : placeholder}
-        className={`w-full rounded bg-slate-900/50 border border-white/10 px-3 py-1.5 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
-      />
-      {isPw && (
-        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
-          title={show ? 'Ocultar' : 'Mostrar'}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
-          {show ? '🙈' : '👁️'}
-        </button>
-      )}
-    </div>
-  )
-}
 
 // null = todas las categorías; array = solo esas; [] = ninguna
 function CategoryPicker({ selected, onChange }: { selected: string[] | null; onChange: (v: string[]) => void }) {

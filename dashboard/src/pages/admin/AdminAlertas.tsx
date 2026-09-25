@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { StationTabs } from '../../components/admin-ui'
+import { Toggle, NumField as BaseNumField } from '../../components/admin-ui'
+import type { ComponentProps } from 'react'
+
+// Aquí los campos numéricos son más angostos (van en rejilla).
+const NumField = (p: ComponentProps<typeof BaseNumField>) => <BaseNumField w="w-16" {...p} />
 
 interface AlertSettings {
   alerts_enabled: boolean
@@ -96,34 +101,6 @@ const THRESHOLD_KEYS = [
 ] as const
 
 interface StationOpt { name: string; label: string }
-
-function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-      <div className="relative">
-        <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-        <div className={`w-8 h-5 rounded-full transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`} />
-        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
-      </div>
-      <span>{label}</span>
-    </label>
-  )
-}
-
-function NumField({ value, onChange, min, max, step = 1, w = 'w-16', off = false }: {
-  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; w?: string; off?: boolean
-}) {
-  return (
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      min={min} max={max} step={step}
-      disabled={off}
-      className={`${w} rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50 ${off ? 'opacity-40' : ''}`}
-    />
-  )
-}
 
 // Interruptor pequeño para habilitar/deshabilitar una alarma concreta.
 function RuleGate({ on, onToggle }: { on: boolean; onToggle: () => void }) {

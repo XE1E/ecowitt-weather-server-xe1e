@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '../../admin-auth'
+import { Toggle, TextField as BaseTextField, NumField } from '../../components/admin-ui'
+import type { ComponentProps } from 'react'
+
+const TextField = (p: ComponentProps<typeof BaseTextField>) => <BaseTextField className="" {...p} />
 
 interface IntegSettings {
   mqtt_enabled: boolean
@@ -40,56 +44,6 @@ interface MqttStatus {
   topic: string | null
   hass_discovery: boolean
   last_error: string | null
-}
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="relative">
-      <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-      <div onClick={() => onChange(!enabled)} className={`w-8 h-5 rounded-full cursor-pointer transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`}>
-        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
-      </div>
-    </div>
-  )
-}
-
-function TextField({ value, onChange, placeholder, type = 'text', masked, className = '' }: {
-  value: string | null; onChange: (v: string) => void; placeholder: string; type?: string; masked?: string | null; className?: string
-}) {
-  const [show, setShow] = useState(false)
-  const displayValue = value || ''
-  const showMasked = !value && masked
-  const isPw = type === 'password'
-  return (
-    <div className={`relative ${className}`}>
-      <input
-        type={isPw && show ? 'text' : type}
-        value={displayValue}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={showMasked ? `(${masked})` : placeholder}
-        className={`w-full rounded bg-slate-900/50 border border-white/10 px-2 py-1 ${isPw ? 'pr-8' : ''} text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50`}
-      />
-      {isPw && (
-        <button type="button" onClick={() => setShow((s) => !s)} tabIndex={-1}
-          title={show ? 'Ocultar' : 'Mostrar'}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
-          {show ? '🙈' : '👁️'}
-        </button>
-      )}
-    </div>
-  )
-}
-
-function NumField({ value, onChange, min, max }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
-  return (
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      min={min} max={max}
-      className="w-20 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50"
-    />
-  )
 }
 
 function randToken(): string {

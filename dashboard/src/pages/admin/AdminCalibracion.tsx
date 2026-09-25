@@ -2,6 +2,11 @@ import { useState, useEffect, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
 import { StationTabs } from '../../components/admin-ui'
+import { Toggle, NumField as BaseNumField } from '../../components/admin-ui'
+import type { ComponentProps } from 'react'
+
+const NumField = ({ disabled, ...p }: Omit<ComponentProps<typeof BaseNumField>, 'off'> & { disabled?: boolean }) =>
+  <BaseNumField off={disabled} {...p} />
 
 interface CalSettings {
   cal_enabled: boolean
@@ -40,33 +45,6 @@ function emptyCal(): CalSettings {
   }
   for (let i = 1; i <= 8; i++) { c[`cal_temp_ch${i}`] = 0; c[`cal_hum_ch${i}`] = 0 }
   return c as CalSettings
-}
-
-function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-      <div className="relative">
-        <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-        <div className={`w-8 h-5 rounded-full transition-colors ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`} />
-        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-3' : ''}`} />
-      </div>
-      <span>{label}</span>
-    </label>
-  )
-}
-
-function NumField({ value, onChange, min, max, step = 1, disabled }: {
-  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; disabled?: boolean
-}) {
-  return (
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      min={min} max={max} step={step} disabled={disabled}
-      className="w-20 rounded bg-slate-900/50 border border-white/10 px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-sky-500/50 disabled:opacity-40"
-    />
-  )
 }
 
 export function AdminCalibracion() {

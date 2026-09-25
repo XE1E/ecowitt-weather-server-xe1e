@@ -84,8 +84,14 @@ export function KioskPage() {
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    const i = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(i)
+    // Muestra HH:MM: basta con avanzar al cambiar el minuto (antes, cada segundo
+    // redibujaba la página completa del kiosco).
+    let t: ReturnType<typeof setTimeout>
+    const siguiente = () => {
+      t = setTimeout(() => { setNow(new Date()); siguiente() }, 60000 - (Date.now() % 60000) + 50)
+    }
+    siguiente()
+    return () => clearTimeout(t)
   }, [])
   useEffect(() => {
     fetch(`/api/airquality/imeca?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '../../admin-auth'
+import { Toggle } from '../../components/admin-ui'
 
 /**
  * Panel de la cámara del exterior: control de la CAPTURA (la hace la Pi, que lee su
@@ -64,14 +65,6 @@ interface Form {
   camera_timelapse_retention_days: number
   gemini_api_key: string
   anthropic_api_key: string
-}
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div onClick={() => onChange(!enabled)} className={`w-9 h-5 rounded-full cursor-pointer transition-colors relative flex-shrink-0 ${enabled ? 'bg-sky-600' : 'bg-slate-600'}`}>
-      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-4' : ''}`} />
-    </div>
-  )
 }
 
 function Num({ value, onChange, min, max, suffix }: { value: number; onChange: (v: number) => void; min?: number; max?: number; suffix?: string }) {
