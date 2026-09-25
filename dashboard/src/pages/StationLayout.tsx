@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, Fragment } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { WeatherFX } from '../components/WeatherFX'
 import { deriveCondition } from '../weather'
@@ -44,10 +44,11 @@ function CiclonesTab({ linkClass }: { linkClass: (a: { isActive: boolean }) => s
       {(temporada || n.length > 0) && <span aria-hidden>🌀</span>}
       Ciclones
       {n.length > 0 && (
-        <span className={`relative ml-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] font-bold leading-[1.1rem] text-center ${badge}`}
+        <span className={`ml-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] font-bold leading-[1.1rem] text-center ${badge} ${amenaza === 'alta' ? 'animate-pulse' : ''}`}
           title={`${n.length} ciclones activos`}>
-          {amenaza === 'alta' && <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-60" />}
-          <span className="relative">{n.length}</span>
+          {/* animate-pulse (sólo opacidad) y no animate-ping: el ping crece al doble,
+              desborda el cintillo y hacía aparecer/desaparecer su scroll cada segundo. */}
+          {n.length}
         </span>
       )}
     </NavLink>
@@ -123,8 +124,13 @@ export function StationLayout() {
     pressureDelta3h: localForecast?.delta_3h,
   }) : { fx: 'none' as const, intensity: 0, icon: '', label: '' }
 
+  const nivelCiclon = useCiclones()?.tormentas?.[0]?.nivel
+  const ciclonAmenaza = nivelCiclon === 'alta' || nivelCiclon === 'media'
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `px-1.5 py-1.5 rounded-lg text-sm whitespace-nowrap transition ${
+    // px-[5px] y no px-1.5: con 🌀 y el contador de Ciclones, a 1280 px el cintillo
+    // se pasaba ~23 px y aparecía su scroll horizontal.
+    `px-[5px] py-1.5 rounded-lg text-sm whitespace-nowrap transition ${
       isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10'
     }`
 
@@ -220,12 +226,16 @@ export function StationLayout() {
 
           {/* Cintillo de navegación */}
           <nav className="flex items-center justify-between w-full overflow-x-auto mb-5 border-b border-white/10 pb-2">
-            {NAV_ACTIVE.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.end} className={linkClass}>
-                {n.label}
-              </NavLink>
+            {NAV_ACTIVE.map((n, i) => (
+              <Fragment key={n.to}>
+                <NavLink to={n.to} end={n.end} className={linkClass}>
+                  {n.label}
+                </NavLink>
+                {/* Con amenaza para México, Ciclones sube justo después de Inicio. */}
+                {i === 0 && ciclonAmenaza && <CiclonesTab linkClass={linkClass} />}
+              </Fragment>
             ))}
-            <CiclonesTab linkClass={linkClass} />
+            {!ciclonAmenaza && <CiclonesTab linkClass={linkClass} />}
           </nav>
 
           {/* Contenido de la página */}

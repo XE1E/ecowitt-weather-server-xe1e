@@ -53,7 +53,7 @@ export function AlertBanner() {
       <span className="font-medium truncate">
         {alerts.length} {alerts.length === 1 ? 'alerta activa' : 'alertas activas'}: {labels.join(', ')}
       </span>
-      <span className="ml-auto shrink-0 text-amber-300/80 whitespace-nowrap">Ver alertas →</span>
+      <span className="ml-auto shrink-0 text-amber-300 opacity-80 whitespace-nowrap">Ver alertas →</span>
     </a>
   )
 }
