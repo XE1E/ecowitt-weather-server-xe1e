@@ -381,7 +381,7 @@ y se ve en `/radar` con zoom a la CDMX, anillos cada 5 km y el punto de la estac
 |---|---|---|
 | 0 | Proxy + tarjeta en `/radar` (09-23), historial de cuadros, decodificador de dBZ v1 y leyenda con colores plenos (09-24) | ✅ hecho y en producción |
 | 1 | **Medir qué tan fiable es el servicio del SACMEX** (cuadros recibidos vs ~288/día, huecos, si falla en tardes de tormenta) | acumulando desde 2026-09-24; revisar ~**2026-10-08 a 10-15**. Decide si el radar sirve para avisos o sólo como apoyo visual |
-| 2 | **Afinar el decodificador** con cuadros de una tarde de lluvia + casos de prueba reales | en paralelo a la fase 1, en cuanto el historial tenga una tarde de lluvia |
+| 2 | **Afinar el decodificador** con cuadros de una tarde de lluvia + casos de prueba reales | ✅ **hecho 2026-09-24** con la lluvia de 18:10-19:10 (ver abajo) |
 | 3 | **Guardado compacto** (matriz de dBZ) para no depender de los 45 días de JPG | después de la fase 2 y **antes de ~2026-11-07**, cuando la retención empieza a borrar los primeros cuadros |
 | 4 | **Movimiento de ecos** (dirección, velocidad, extrapolación de llegada a la estación) | después de la fase 2 |
 | 5 | **Usos:** cruce cámara-radar, radar como fuente en la verificación (§2.f), Z-R vs pluviómetro; **aviso por Telegram sólo si la fase 1 sale bien** | después de las fases 2 y 4 |
@@ -395,14 +395,15 @@ Detalle de cada punto:
       las carreteras, y una apertura de 3 px quita el eco disperso. En la madrugada del
       24 (sin lluvia, arcos de clutter) dejó 0-27 pixeles de ~2,600. La leyenda de la
       tarjeta ya usa los mismos colores plenos (commit 82f62ca).
-- [ ] **Afinar el decodificador con una tarde de lluvia** (en cuanto el historial tenga
-      una). Con la imagen original y `/decoded/<id>` encimados: que las celdas de lluvia
-      salgan completas y con su nivel, que no se cuelen carreteras amarillas/naranjas
-      (35-45 dBZ) ni texto del mapa, y que la apertura de 3 px no se coma el borde de
-      las tormentas ni las celdas chicas. Ajustar `BG_DIFF`, `PAL_DIST`, `SPECKLE_PX`
-      y guardar 2-3 cuadros de lluvia como caso de prueba real en `tests/`. Cruzar el
-      dBZ sobre la estación con el pluviómetro de esas mismas horas. El fondo sale de la
-      mediana del historial: revisar que una tarde entera de lluvia no se "pegue" al fondo.
+- [x] **Afinar el decodificador con una tarde de lluvia — HECHO 2026-09-24** (lluvia ligera
+      18:10-19:10, 1.5 mm, pico 2.9 mm/h). La v1 partía de un error: los ecos NO van en color
+      pleno sino al ~40 % sobre el mapa, como la leyenda (sobre blanco coinciden con ella:
+      distancia 43 vs 105 contra la paleta "plena"). v2: color esperado por pixel =
+      leyenda − 0.6·(255 − fondo), alfa 0.40 ajustado; limpieza por densidad a ~2 y ~6 km
+      + mediana 3x3. Sobre la estación: 25-40 dBZ en la lluvia (30 dBZ ≈ 2.7 mm/h, el
+      pluviómetro midió 2.0-2.9) y nada en el clutter de madrugada. Pruebas con recortes
+      reales en `receiver/tests/data/radar`. La leyenda de `/radar` regresó a pastel.
+      Pendiente de validar con una tormenta FUERTE (≥ 45 dBZ sobre la estación).
 - [ ] **Movimiento de las nubes a partir del radar.** Estimar dirección y velocidad
       de los ecos comparando cuadros consecutivos (correlación de fase / flujo óptico
       sobre la máscara de dBZ ≥ ~20). Con eso se puede extrapolar: "hay lluvia de
