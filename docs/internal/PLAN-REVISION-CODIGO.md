@@ -1,7 +1,7 @@
 # Plan: revisión general del código (depurar, optimizar, mejorar)
 
-> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24 (de la 2 queda
-> sólo el reloj de 1 s de la consola); sigue la 3. Sale de un diagnóstico de solo lectura en tres
+> Estado: **en ejecución** — fases 0, 1 y 2 ✅ hechas y desplegadas el 2026-09-24; fase 3 en curso
+> (4 routers listos, ver abajo). Sale de un diagnóstico de solo lectura en tres
 > frentes (backend, dashboard, pruebas/infra). Se ejecuta por fases, con deploy y
 > verificación en cada una. Producción en vivo: WS2910 + GW1100 empujando cada ~16-60 s.
 
@@ -90,7 +90,16 @@ Dashboard:
 
 ## Fase 3 — Estructura
 
-- [ ] **Partir `main.py` en routers** por área (ingesta, admin, estaciones, cámara,
+- [~] **Partir `main.py` en routers — EN CURSO (2026-09-24).** Hecho: `app/state.py` (storage,
+      latest_by_station, alert_service, mqtt_publisher, cámara, timelapse), `app/deps.py`
+      (require_admin) y routers `radar`, `external` (METAR/TAF/satélite/aire/IMECA/sismos),
+      `data` (actual/historial/stats/clima/viento/lluvia/alertas) y `forecast` (pronóstico,
+      vecinas, Netatmo, almanaque, bitácora). main.py 3,960 → 2,933 líneas; mismas 107 rutas
+      (comparadas antes/después en cada paso). Faltan: cámara (22), admin (~30),
+      estaciones, dispositivos (svitrix/epaper/bim32/smn), kiosco e ingesta.
+      Herramienta: el script que mueve funciones por nombre con el árbol de sintaxis
+      (decoradores y comentarios incluidos) y cambia `storage` → `state.storage`, etc.
+- [ ] ~~**Partir `main.py` en routers**~~ (plan original:) por área (ingesta, admin, estaciones, cámara,
       pronóstico, radar, dispositivos…), sin cambiar URLs. Antes: `state.py` (estado
       compartido: `storage`, `latest_by_station`, `alert_service`, cachés), `deps.py`
       (`require_admin` como `Depends`, ubicación de la estación), `tasks.py`. Respetar el
