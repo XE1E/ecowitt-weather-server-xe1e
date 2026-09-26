@@ -53,6 +53,12 @@
     background: radial-gradient(120% 140% at 85% -20%, var(--accent-soft) 0%, transparent 55%), var(--surface);
   }
   .hero { padding: clamp(28px, 6vw, 56px) 0 clamp(24px, 4vw, 36px); }
+  /* logo-xe1e.svg: copia de src/assets/logo-xe1e-dark.svg (el del encabezado del sitio, sin fondo). */
+  .brand {
+    display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px;
+    text-decoration: none; color: var(--ink); font-weight: 700; font-size: 17px; letter-spacing: -.01em;
+  }
+  .brand img { width: auto; height: 56px; flex: none; }
   .eyebrow {
     font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
     color: var(--accent); margin: 0 0 12px;
@@ -188,6 +194,7 @@
 
 <header>
   <div class="wrap hero">
+    <a class="brand" href="/"><img src="/logo-xe1e.svg?v=1" alt="" width="52" height="56"><span>Estación Clima XE1E</span></a>
     <p class="eyebrow">Guía rápida · 2 minutos</p>
     <h1>El clima en Ciudad de México, medido aquí mismo</h1>
     <p class="lead">Esto no es un pronóstico copiado de internet: es una <strong>estación meteorológica real</strong> en Benito Juárez, Ciudad de México, que manda lo que mide cada minuto. Esto es lo que te conviene saber para sacarle jugo.</p>

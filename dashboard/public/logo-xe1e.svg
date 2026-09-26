@@ -1,79 +1,4 @@
-"""Genera el logo vectorial de la estación (redibujo del PNG original de 187x200).
-
-Uso (desde dashboard/):
-    pip install fonttools
-    curl -LO https://github.com/JulietaUla/Montserrat/raw/master/fonts/ttf/Montserrat-BlackItalic.ttf
-    python scripts/logo/gen_logo.py <carpeta_salida> Montserrat-BlackItalic.ttf
-Escribe logo-xe1e-dark.svg, -light.svg (letras azules sin contorno) y -light2.svg
-(igual al dark; es el que se usa como logo-xe1e-light.svg). Después copiar a
-src/assets/ (y el dark también como public/logo-xe1e.svg, que usa guia-rapida.html)
-y regenerar los íconos con scripts/logo/render-icons.mjs.
-La fuente (OFL) se convierte a trazos: el SVG no depende de ella.
-"""
-import math
-import sys
-
-OUT = sys.argv[1]
-
-# Letras: Montserrat Black Italic (OFL) convertida a trazos, repartidas en arco
-# por su ancho real para que el espaciado sea parejo.
-FUENTE = sys.argv[2] if len(sys.argv) > 2 else "Montserrat-BlackItalic.ttf"
-TEXTO = "XE1E"
-ALTO = 58                      # altura de mayúscula en px
-ARCO_C, ARCO_R = (188, 272), 208
-ESPACIO = 5                    # px extra entre letras
-
-
-def word_group():
-    from fontTools.ttLib import TTFont
-    from fontTools.pens.svgPathPen import SVGPathPen
-    from fontTools.pens.transformPen import TransformPen
-    f = TTFont(FUENTE)
-    gs, cmap = f.getGlyphSet(), f.getBestCmap()
-    cap = f["OS/2"].sCapHeight
-    k = ALTO / cap
-    anchos = [gs[cmap[ord(c)]].width * k for c in TEXTO]
-    total = sum(anchos) + ESPACIO * (len(TEXTO) - 1)
-    parts, x = [], -total / 2
-    for c, w in zip(TEXTO, anchos):
-        centro = x + w / 2
-        ang = centro / ARCO_R                         # radianes desde las 12
-        px = ARCO_C[0] + ARCO_R * math.sin(ang)
-        py = ARCO_C[1] - ARCO_R * math.cos(ang)
-        pen = SVGPathPen(gs)
-        # Origen del glifo a (-w/2, +ALTO/2) y eje y hacia abajo.
-        gs[cmap[ord(c)]].draw(TransformPen(pen, (k, 0, 0, -k, -w / 2, ALTO / 2)))
-        parts.append(f'<path transform="translate({px:.1f} {py:.1f}) rotate({math.degrees(ang):.1f})" d="{pen.getCommands()}"/>')
-        x += w + ESPACIO
-    return "".join(parts)
-
-
-def arc(r, a0, a1):
-    """Arco del anillo (ángulos en grados desde las 12, sentido horario)."""
-    cx, cy = 190, 214
-    p = lambda a: (cx + r * math.sin(math.radians(a)), cy - r * math.cos(math.radians(a)))
-    x0, y0 = p(a0)
-    x1, y1 = p(a1)
-    large = 1 if (a1 - a0) % 360 > 180 else 0
-    return f"M{x0:.1f} {y0:.1f} A{r} {r} 0 {large} 1 {x1:.1f} {y1:.1f}"
-
-
-def svg(tema):
-    oscuro = tema in ("dark", "light2")
-    claro = tema != "dark"
-    # Anillos: se abren arriba para dejar pasar el texto.
-    anillos = f'''
-  <g fill="none" stroke-linecap="round">
-    <path d="{arc(158, 44, 316)}" stroke="url(#azulAro)" stroke-width="6"/>
-    <path d="{arc(147, 47, 313)}" stroke="url(#naranja)" stroke-width="6"/>
-    <path d="{arc(140, 50, 310)}" stroke="#ffffff" stroke-width="2.5"/>
-  </g>'''
-    texto_contorno = (
-        '<use href="#palabra" fill="#0b1220" stroke="#0b1220" stroke-width="10" transform="translate(2.5 3)"/>'
-        '<use href="#palabra" fill="#ffffff" stroke="#ffffff" stroke-width="7"/>'
-    ) if oscuro else '<use href="#palabra" fill="#0b2a6b" stroke="#0b2a6b" stroke-width="3" opacity=".3" transform="translate(1.5 2.5)"/>'
-
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 374 400" width="374" height="400" role="img" aria-label="XE1E">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 374 400" width="374" height="400" role="img" aria-label="XE1E">
   <title>XE1E</title>
   <defs>
     <linearGradient id="azulTexto" x1="0" y1="0" x2="0" y2="1">
@@ -100,16 +25,21 @@ def svg(tema):
     <radialGradient id="mercurioBulbo" cx=".38" cy=".35" r=".75">
       <stop offset="0" stop-color="#ffc04d"/><stop offset="1" stop-color="#ff5500"/>
     </radialGradient>
-    <g id="palabra" stroke-linejoin="round">{word_group()}</g>
+    <g id="palabra" stroke-linejoin="round"><path transform="translate(109.4 79.4) rotate(-22.2)" d="M-36.87142857142857 29.0 -9.528571428571428 -0.9942857142857129 -24.194285714285712 -28.999999999999993H-3.3142857142857167L3.811428571428568 -14.5L16.24 -28.999999999999993H38.27999999999999L11.848571428571429 0.16571428571428726L27.42571428571428 29.0H6.297142857142855L-0.9114285714285728 14.085714285714287L-13.505714285714287 29.0Z"/><path transform="translate(171.9 64.6) rotate(-4.4)" d="M-5.592857142857142 14.251428571428573H23.49L20.507142857142856 29.0H-27.71571428571428L-16.115714285714283 -28.999999999999993H31.029999999999998L28.047142857142855 -14.25142857142857H0.12428571428571544L-1.2014285714285684 -7.4571428571428555H23.32428571428571L20.507142857142856 6.62857142857143H-4.1014285714285705Z"/><path transform="translate(221.9 66.8) rotate(9.4)" d="M-11.517142857142854 29.0 -2.8999999999999986 -14.25142857142857H-12.842857142857142L-9.86 -28.999999999999993H19.637142857142855L8.037142857142857 29.0Z"/><path transform="translate(270.0 80.8) rotate(23.2)" d="M-5.592857142857142 14.251428571428573H23.49L20.507142857142856 29.0H-27.71571428571428L-16.115714285714283 -28.999999999999993H31.029999999999998L28.047142857142855 -14.25142857142857H0.12428571428571544L-1.2014285714285684 -7.4571428571428555H23.32428571428571L20.507142857142856 6.62857142857143H-4.1014285714285705Z"/></g>
     <g id="nube">
       <circle cx="190" cy="181" r="40"/><circle cx="136" cy="199" r="27"/><circle cx="226" cy="205" r="22"/>
       <rect x="106" y="196" width="124" height="31" rx="15.5"/>
     </g>
   </defs>
-{anillos}
+
+  <g fill="none" stroke-linecap="round">
+    <path d="M299.8 100.3 A158 158 0 1 1 80.2 100.3" stroke="url(#azulAro)" stroke-width="6"/>
+    <path d="M297.5 113.7 A147 147 0 1 1 82.5 113.7" stroke="url(#naranja)" stroke-width="6"/>
+    <path d="M297.2 124.0 A140 140 0 1 1 82.8 124.0" stroke="#ffffff" stroke-width="2.5"/>
+  </g>
 
   <!-- XE1E -->
-  {texto_contorno}
+  <use href="#palabra" fill="#0b1220" stroke="#0b1220" stroke-width="10" transform="translate(2.5 3)"/><use href="#palabra" fill="#ffffff" stroke="#ffffff" stroke-width="7"/>
   <use href="#palabra" fill="url(#azulTexto)" stroke="url(#azulTexto)" stroke-width="2.5"/>
 
   <!-- Sol -->
@@ -149,9 +79,3 @@ def svg(tema):
     <path d="M148 330 H222 a10 10 0 1 1 -10 10"/>
   </g>
 </svg>
-'''
-
-
-for t in ("dark", "light", "light2"):
-    with open(f"{OUT}/logo-xe1e-{t}.svg", "w", encoding="utf-8") as f:
-        f.write(svg(t))
