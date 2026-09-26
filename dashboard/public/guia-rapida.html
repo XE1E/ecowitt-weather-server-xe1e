@@ -144,6 +144,8 @@
 
   /* ¿Sabías que…? */
     .fact {
+    display: flex; flex-direction: column; text-decoration: none; color: inherit;
+    transition: transform .15s, border-color .15s;
     border-radius: 14px; padding: 16px; border: 1px solid var(--line);
     background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%);
   }
@@ -153,6 +155,8 @@
   }
   .fact p { margin: 0; font-size: 14.5px; color: var(--muted); }
   .fact p strong { color: var(--ink); }
+  .fact .more { margin-top: auto; padding-top: 10px; color: var(--accent); font-size: 13.5px; font-weight: 600; }
+  .fact:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 
   /* Llévatela */
   .take { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
@@ -177,7 +181,7 @@
 
   footer { padding: 28px 0 48px; color: var(--faint); font-size: 13px; font-family: var(--mono); text-align: center; }
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-  @media (prefers-reduced-motion: reduce) { .card, .mx a { transition: none; } .card:hover, .mx a:hover { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .card, .mx a, .fact { transition: none; } .card:hover, .mx a:hover, .fact:hover { transform: none; } }
 </style>
 </head>
 <body>
@@ -273,10 +277,10 @@
   <section>
     <h2>🤓 ¿Sabías que…?</h2>
     <div class="facts">
-      <div class="fact"><span class="big">¼ menos aire</span><p>A esta altura la presión real ronda <strong>780 hPa</strong>, contra 1013 a la orilla del mar. Por eso la presión se muestra «corregida», para compararla con cualquier lugar.</p></div>
-      <div class="fact"><span class="big">UV «muy alto»</span><p>A 2250 m hay menos atmósfera que filtre el sol: el índice UV llega a niveles altos con facilidad, <strong>aunque esté nublado</strong>. Bloqueador, siempre.</p></div>
-      <div class="fact"><span class="big">¿Quién atina?</span><p>El sitio compara cada pronóstico (Open-Meteo, SMN, la cámara…) con la lluvia que de verdad cayó, y <strong>lleva la cuenta de quién acierta más</strong>. Está en la página de la Cámara.</p></div>
-      <div class="fact"><span class="big">¿Tu app dice otra cosa?</span><p>Normal. Tu app estima para toda la ciudad; esto es un termómetro en un punto. A cinco calles la temperatura puede cambiar <strong>2 o 3 °C</strong>.</p></div>
+      <a class="fact" href="/climatologia"><span class="big">¼ menos aire</span><p>A esta altura la presión real ronda <strong>780 hPa</strong>, contra 1013 a la orilla del mar. Por eso la presión se muestra «corregida», para compararla con cualquier lugar.</p><span class="more">Ver la climatología →</span></a>
+      <a class="fact" href="/calidad-aire"><span class="big">UV «muy alto»</span><p>A 2250 m hay menos atmósfera que filtre el sol: el índice UV llega a niveles altos con facilidad, <strong>aunque esté nublado</strong>. Bloqueador, siempre.</p><span class="more">Ver calidad del aire →</span></a>
+      <a class="fact" href="/camara"><span class="big">¿Quién atina?</span><p>El sitio compara cada pronóstico (Open-Meteo, SMN, la cámara…) con la lluvia que de verdad cayó, y <strong>lleva la cuenta de quién acierta más</strong>. Está en la página de la Cámara.</p><span class="more">Ver en la Cámara →</span></a>
+      <a class="fact" href="/basica"><span class="big">¿Tu app dice otra cosa?</span><p>Normal. Tu app estima para toda la ciudad; esto es un termómetro en un punto. A cinco calles la temperatura puede cambiar <strong>2 o 3 °C</strong>.</p><span class="more">Ver la vista clásica →</span></a>
     </div>
   </section>
 
