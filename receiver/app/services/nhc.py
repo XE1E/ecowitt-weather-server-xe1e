@@ -389,7 +389,18 @@ _MX_RE = re.compile(
     r"Mexico|Baja California|Sonora|Sinaloa|Nayarit|Jalisco|Colima|Michoac|Guerrero|Oaxaca|Chiapas|"
     r"Tehuantepec|Yucat|Quintana Roo|Campeche|Tabasco|Veracruz|Tamaulipas|Cabo San Lucas|Los Cabos|"
     r"Cozumel|Canc[uú]n|Chetumal|Tulum|Manzanillo|Acapulco|Mazatl|Puerto Vallarta|Loreto|Guaymas|"
-    r"Isla Socorro|Islas Mar[ií]as|Revillagigedo|Todos Santos|Punta Abreojos", re.I)
+    r"Isla Socorro|Islas Mar[ií]as|Revillagigedo|Todos Santos|Punta Abreojos|"
+    # Puntos de corte que el NHC usa en costas mexicanas. Se omiten los que
+    # también existen fuera (Cabo Corrientes y Santa Fe en Cuba, San Felipe…):
+    # basta con que el otro extremo de la zona esté en la lista.
+    r"Punta Eugenia|Bahia Tortugas|Puerto San Andresito|Cabo San Lazaro|Puerto San Carlos|"
+    r"San Jose del Cabo|Los Barriles|La Paz|San Evaristo|Mulege|Santa Rosalia|Bahia de los Angeles|"
+    r"Bahia San Juan Bautista|Puerto Penasco|Bahia Kino|Huatabampo|Topolobampo|Altata|Escuinapa|"
+    r"San Blas|Playa Perula|Punta Mita|Barra de Navidad|Punta San Telmo|Lazaro Cardenas|"
+    r"Tecpan de Galeana|Zihuatanejo|Punta Maldonado|Pinotepa|Puerto Escondido|Puerto Angel|Huatulco|"
+    r"Salina Cruz|Pijijiapan|Puerto Madero|Barra de Tonala|Barra (?:El|del) Mezquital|La Pesca|"
+    r"Rio San Fernando|Cabo Rojo|Tuxpan|Punta El Lagarto|Frontera|Celestun|Progreso|Cabo Catoche|"
+    r"Chiquila|Puerto Morelos|Punta Allen|Costa Maya|Isla Mujeres|Sabancuy|Ciudad del Carmen", re.I)
 _DIAS = {"Monday": "lunes", "Tuesday": "martes", "Wednesday": "miércoles", "Thursday": "jueves",
          "Friday": "viernes", "Saturday": "sábado", "Sunday": "domingo"}
 
@@ -456,6 +467,15 @@ def parse_avisos_tcp(txt: str) -> Dict[str, Any]:
             continue
         if not t:
             actual = None
+    # Respaldo por si una zona no trae ningún nombre conocido: "The government of
+    # Mexico has issued a Hurricane Watch from Punta Eugenia southward to Santa Fe."
+    # (sólo aparece en el aviso en que cambia; por eso la lista de arriba manda).
+    cuerpo_mx = " ".join(re.findall(r"[^.]*government of Mexico[^.]*\.", " ".join(txt[i:].split())))
+    for v in vigentes:
+        for z in v["zonas"]:
+            ini = re.split(r"\s+to\s+", z["zona_en"])[0].strip()
+            if not z["mexico"] and len(ini) > 3 and ini in cuerpo_mx:
+                z["mexico"] = True
     # Notas del tipo "Interests in Baja California Sur should closely monitor…"
     notas = []
     cuerpo = " ".join(sec.split())
@@ -546,6 +566,8 @@ async def get_ciclones(est_lat: float, est_lon: float) -> Dict[str, Any]:
             "actualizado": s.get("lastUpdate"),
             "aviso_num": adv.get("advNum"),
             "aviso_url": adv.get("url"),
+            "discusion_num": (s.get("forecastDiscussion") or {}).get("advNum"),
+            "discusion_url": (s.get("forecastDiscussion") or {}).get("url"),
             "graficas_url": (s.get("forecastGraphics") or {}).get("url"),
             "avisos_costeros": con_avisos,
             "avisos": avisos,

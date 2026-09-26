@@ -698,12 +698,15 @@ de temporada y alertas por Telegram/correo, categoría `cyclone`). Quedaron pend
 - [ ] **Kiosco ESP32 y Svitrix**: con amenaza para México (nivel media/alta), una
   pantalla/app con el ciclón (nombre, categoría, distancia, frase). El kiosco ya se
   arma en el servidor (`renderer`), así que sería otra página + zona táctil.
-- [ ] **Resumen en español de la discusión técnica** (`forecastDiscussion` del NHC,
-  en inglés) con la misma IA del análisis del cielo (Gemini). Una llamada por aviso
-  (cada 3-6 h, sólo tormentas cerca de México): costo bajo, pero decidir antes.
+- [x] **Resumen en español de la discusión técnica** — ✅ HECHO (2026-09-25):
+  `services/cyclone_summary.py`, Gemini con el modelo del análisis del cielo, sólo
+  nivel media/alta, una llamada por discusión (se guarda en `/data/ciclones/resumenes.json`).
+  Se apaga en Admin → Alertas → "Resumen IA en /ciclones".
 - Notas: la bitácora de temporada sólo cuenta desde el 2026-09-25. La traducción de
   zonas del aviso público cubre las fórmulas fijas del NHC; si aparece una rara se ve
   medio en inglés (revisar `traducir_zona` con casos reales cuando haya avisos en México).
+  Con Polo salió que "Punta Eugenia to Santa Fe" se marcaba fuera de México: se amplió
+  `_MX_RE` con los puntos de corte del NHC en México + respaldo por "government of Mexico".
 
 ## 3c. ¿Repo privado + cambio de licencia? — por evaluar (anotado 2026-09-25)
 Idea del usuario: pasar `XE1E/ecowitt-weather-server-xe1e` a **privado** y dar acceso

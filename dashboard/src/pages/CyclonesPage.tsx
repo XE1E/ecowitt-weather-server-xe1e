@@ -82,6 +82,25 @@ function AvisosCosta({ c }: { c: Ciclon }) {
   )
 }
 
+/** Resumen en español (IA) de la discusión técnica del NHC, que viene en inglés. */
+function ResumenIA({ c }: { c: Ciclon }) {
+  const r = c.resumen_ia
+  if (!r) return null
+  // Si el NHC ya sacó otra discusión y el resumen nuevo aún no está, se avisa.
+  const viejo = c.discusion_num != null && Number(c.discusion_num) > r.discusion_num
+  return (
+    <div className="rounded-lg bg-white/5 px-3 py-2.5 space-y-1.5">
+      <p className="text-sm font-semibold text-slate-200">Qué dicen los pronosticadores del NHC</p>
+      <p className="text-sm text-slate-300 leading-relaxed">{r.resumen}</p>
+      <p className="text-[11px] text-slate-500">
+        Resumen hecho con IA de la discusión técnica #{r.discusion_num} del NHC
+        {viejo ? ' (la anterior; la nueva se resume en unos minutos)' : ''}; puede tener errores.{' '}
+        {c.discusion_url && <a href={c.discusion_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">Original en inglés ↗</a>}
+      </p>
+    </div>
+  )
+}
+
 function Barra({ pct, color }: { pct: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
@@ -182,6 +201,7 @@ function TormentaCard({ c, v }: { c: Ciclon; v?: string }) {
           sub={`${Math.abs(c.lat).toFixed(1)}°${c.lat >= 0 ? 'N' : 'S'} ${Math.abs(c.lon).toFixed(1)}°${c.lon <= 0 ? 'O' : 'E'}`} />
       </div>
 
+      <ResumenIA c={c} />
       <AvisosCosta c={c} />
       <Probabilidades c={c} />
 

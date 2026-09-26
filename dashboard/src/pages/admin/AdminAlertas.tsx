@@ -51,6 +51,7 @@ interface AlertSettings {
   alert_imeca_threshold: number
   alert_earthquake_enabled: boolean
   alert_cyclone_enabled: boolean
+  cyclone_summary_enabled: boolean
   alert_earthquake_magnitude: number
   alert_visual_enabled: boolean
   alert_visual_rules_disabled: string[]
@@ -721,6 +722,13 @@ export function AdminAlertas() {
               <span className="text-xs text-slate-500">
                 Cuando un ciclón se acerca o amenaza a México, se intensifica, el pronóstico lo lleva a tocar tierra,
                 hay vigilancias/avisos nuevos en la costa mexicana o deja de amenazar. Los lejanos no avisan.
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-3 pt-3 border-t border-white/5">
+              <Toggle enabled={settings.cyclone_summary_enabled} onChange={(v) => update('cyclone_summary_enabled', v)} label="🤖 Resumen IA en /ciclones" />
+              <span className="text-xs text-slate-500">
+                Resume en español la discusión técnica del NHC con la IA del análisis del cielo (Gemini). Sólo ciclones
+                cerca de México y una llamada por discusión (cada 3-6 h).
               </span>
             </div>
           </div>

@@ -26,6 +26,9 @@ export interface Ciclon {
   imagenes: { cono: string | null; mensajes: string | null }
   avisos: CiclonAvisos
   probabilidades: CiclonProb[]
+  discusion_num?: string | null; discusion_url?: string | null
+  /** Resumen IA de la discusión técnica (sólo tormentas cerca de México). */
+  resumen_ia?: { discusion_num: number; resumen: string; generado: string; modelo: string } | null
 }
 
 export interface CiclonAvisos {

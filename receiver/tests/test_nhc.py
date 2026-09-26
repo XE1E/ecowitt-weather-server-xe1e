@@ -292,3 +292,95 @@ def test_estado_persistente(tmp_path):
     _, est = cyclone_alerts.eventos({}, [_t()])
     cyclone_alerts.guardar(p, est)
     assert cyclone_alerts.eventos(cyclone_alerts.cargar(p), [_t()])[0] == []   # tras reiniciar, no repite
+
+
+# ── Resumen IA de la discusión técnica (cyclone_summary) ─────────────────────
+TCD = """000
+WTPZ42 KNHC 260256
+TCDEP2
+
+Hurricane Polo Discussion Number  22
+NWS National Hurricane Center Miami FL       EP172026
+
+Polo will likely remain a dangerous major hurricane.
+
+$$
+Forecaster D. Zelinsky"""
+
+
+def _cs(tmp_path, monkeypatch, respuesta=None, error=None):
+    from app.services import cyclone_summary as cs
+    monkeypatch.setattr(cs, "_cache", None)
+    monkeypatch.setattr(cs, "_fallos", {})
+    llamadas = []
+
+    async def fake(texto, api_key, model):
+        llamadas.append(texto)
+        if error:
+            raise error
+        return respuesta
+    monkeypatch.setattr(cs, "generar", fake)
+    return cs, llamadas
+
+
+def _tc(sid="ep172026", nivel="alta", num="022"):
+    return {"id": sid, "nivel": nivel, "discusion_num": num, "discusion_url": f"https://nhc/{sid}"}
+
+
+async def _texto_fijo(url):
+    return TCD
+
+
+def test_resumen_solo_cercanas_y_una_vez_por_discusion(tmp_path, monkeypatch):
+    cs, llamadas = _cs(tmp_path, monkeypatch, respuesta="Polo sigue siendo huracán mayor.")
+    tormentas = [_tc(), _tc("al062026", nivel="baja")]
+    n = asyncio.run(cs.actualizar(str(tmp_path), tormentas, _texto_fijo, "k", "m"))
+    assert n == 1 and len(llamadas) == 1
+    assert "Forecaster" not in cs.limpiar(llamadas[0])   # la firma no va al modelo
+    assert cs.numero_discusion(llamadas[0]) == 22
+    assert cs.leer(str(tmp_path), "ep172026")["resumen"] == "Polo sigue siendo huracán mayor."
+    assert cs.leer(str(tmp_path), "al062026") is None
+    # Misma discusión: no se vuelve a llamar. Y persiste en disco (nuevo proceso).
+    asyncio.run(cs.actualizar(str(tmp_path), tormentas, _texto_fijo, "k", "m"))
+    assert len(llamadas) == 1
+    cs._cache = None
+    assert cs.leer(str(tmp_path), "ep172026")["discusion_num"] == 22
+
+
+def test_resumen_espera_si_la_pagina_trae_la_discusion_anterior(tmp_path, monkeypatch):
+    cs, llamadas = _cs(tmp_path, monkeypatch, respuesta="x")
+    n = asyncio.run(cs.actualizar(str(tmp_path), [_tc(num="023")], _texto_fijo, "k", "m"))
+    assert n == 0 and not llamadas
+
+
+def test_resumen_fallo_no_reintenta_en_cada_vuelta(tmp_path, monkeypatch):
+    cs, llamadas = _cs(tmp_path, monkeypatch, error=ValueError("429"))
+    for _ in range(3):
+        asyncio.run(cs.actualizar(str(tmp_path), [_tc()], _texto_fijo, "k", "m"))
+    assert len(llamadas) == 1
+    assert cs.leer(str(tmp_path), "ep172026") is None
+
+
+def test_zona_mexicana_sin_estado_en_el_nombre():
+    """Polo, aviso 22: 'Punta Eugenia to Santa Fe' no nombra estado ni país."""
+    txt = """WATCHES AND WARNINGS
+--------------------
+CHANGES WITH THIS ADVISORY:
+
+The government of Mexico has issued a Hurricane Watch from Punta
+Eugenia southward to Santa Fe.
+
+SUMMARY OF WATCHES AND WARNINGS IN EFFECT:
+
+A Hurricane Watch is in effect for...
+* Punta Eugenia to Santa Fe
+"""
+    a = nhc.parse_avisos_tcp(txt)
+    assert a["vigentes"][0]["zonas"][0]["mexico"] is True
+    assert a["mexico"] == "vigilancia"
+    # Sin la frase del gobierno (avisos siguientes) también: Punta Eugenia está en la lista.
+    a = nhc.parse_avisos_tcp(txt.replace("The government of Mexico has issued a Hurricane Watch from Punta\nEugenia southward to Santa Fe.", "None."))
+    assert a["mexico"] == "vigilancia"
+    # Respaldo por la frase del gobierno cuando ningún extremo está en la lista.
+    t2 = txt.replace("Punta\nEugenia", "Punta\nInventada").replace("* Punta Eugenia", "* Punta Inventada")
+    assert nhc.parse_avisos_tcp(t2)["mexico"] == "vigilancia"

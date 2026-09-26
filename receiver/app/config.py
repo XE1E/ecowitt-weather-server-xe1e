@@ -131,6 +131,9 @@ class Settings(BaseSettings):
     # Ciclones tropicales (NHC): avisa cuando uno se acerca/amenaza a México, se
     # intensifica, el pronóstico lo lleva a tierra o hay avisos costeros nuevos.
     alert_cyclone_enabled: bool = True
+    # Resumen en español de la discusión técnica del NHC con la IA del análisis
+    # del cielo (Gemini). Sólo tormentas cerca de México, una llamada por discusión.
+    cyclone_summary_enabled: bool = True
     # Avisos visuales (análisis del cielo con IA). Se evalúan con cada foto.
     # Reglas: sky_storm (cumulonimbus en desarrollo), sky_precipitation (lluvia
     # visible en horizonte), sky_visibility (visibilidad reducida).

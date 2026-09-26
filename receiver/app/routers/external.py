@@ -109,9 +109,10 @@ async def get_earthquakes_data():
 async def cyclone_watch_task():
     """Ciclones cerca de México cada 10 min (el ritmo de la caché de nhc.py): manda
     los cambios por Telegram/correo (ver services/cyclone_alerts.py) y anota cada
-    tormenta en la bitácora de la temporada."""
+    tormenta en la bitácora de la temporada. También genera el resumen IA de las
+    discusiones nuevas (services/cyclone_summary.py)."""
     import os
-    from ..services import cyclone_alerts
+    from ..services import cyclone_alerts, cyclone_summary
     await asyncio.sleep(150)  # gracia inicial
     path = os.path.join(settings.cyclone_dir, "alertas.json")
     while True:
@@ -130,6 +131,10 @@ async def cyclone_watch_task():
                 # El estado se guarda aunque las alertas estén apagadas: al
                 # encenderlas no debe llegar de golpe todo lo ya pasado.
                 cyclone_alerts.guardar(path, estado)
+                if settings.cyclone_summary_enabled and settings.gemini_api_key:
+                    await cyclone_summary.actualizar(
+                        settings.cyclone_dir, tormentas, nhc._texto,
+                        settings.gemini_api_key, settings.camera_analysis_model_gemini)
         except Exception as e:
             logger.error(f"Revisión de ciclones falló: {e}")
         await asyncio.sleep(600)
@@ -138,11 +143,17 @@ async def cyclone_watch_task():
 @router.get("/api/ciclones")
 async def get_ciclones():
     """Ciclones tropicales activos (Atlántico y Pacífico, NHC) con su cercanía a México."""
+    from ..services import cyclone_summary
     try:
-        return await nhc.get_ciclones(settings.cwop_latitude, settings.cwop_longitude)
+        data = await nhc.get_ciclones(settings.cwop_latitude, settings.cwop_longitude)
     except Exception as e:
         logger.error(f"Error getting ciclones: {e}")
         raise HTTPException(status_code=502, detail="El NHC no está disponible")
+    # Copia: `data` es la caché de nhc.py y no debe llevar el resumen pegado.
+    return {**data, "tormentas": [
+        {**t, "resumen_ia": cyclone_summary.leer(settings.cyclone_dir, t["id"])}
+        for t in data.get("tormentas", [])
+    ]}
 
 
 @router.get("/api/ciclones/mapa")
