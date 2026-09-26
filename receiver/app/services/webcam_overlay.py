@@ -113,7 +113,7 @@ def _draw_banner(draw: ImageDraw.ImageDraw, y0: int, width: int, banner_h: int,
     draw.rectangle([0, y0, width, y0 + header_h], fill=HEADER_BG)
     f_header = _load_font(bold=True, size=k(16))
     f_header_small = _load_font(bold=False, size=k(15))
-    draw.text((k(14), y0 + k(5)), "XE1E STATION · Mexico City", font=f_header, fill=HEADER_TEXT)
+    draw.text((k(14), y0 + k(5)), "Estación Clima XE1E · Ciudad de México", font=f_header, fill=HEADER_TEXT)
     draw.text((width - k(14), y0 + k(5)), "clima.xe1e.net", font=f_header_small,
               fill=HEADER_SUB_TEXT, anchor="ra")
 

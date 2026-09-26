@@ -709,7 +709,7 @@ class AlertService:
         now,
         threshold_s: float,
         station: Optional[str] = None,
-        label: str = "XE1E"
+        label: str = "Clima XE1E"
     ):
         """
         Evalúa si una estación está caída (sin datos) o se recuperó, y notifica

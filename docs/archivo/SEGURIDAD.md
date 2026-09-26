@@ -1,4 +1,4 @@
-# Auditoría de seguridad — Estación meteorológica XE1E
+# Auditoría de seguridad — Estación Clima XE1E
 
 > Revisión de postura de seguridad del sistema completo (código + infraestructura).
 > Fecha: **2026-07-22** · Alcance: receiver (FastAPI), dashboard (React/Nginx),

@@ -156,5 +156,5 @@ def build_weatherapi(data: Optional[Dict[str, Any]],
             "lat": lat, "lon": lon,
         },
         "current": current,
-        "source": "Estación XE1E (clima.xe1e.net)",
+        "source": "Estación Clima XE1E (clima.xe1e.net)",
     }

@@ -1,4 +1,4 @@
-// Service worker de la Estación XE1E — habilita instalación (PWA) y uso offline.
+// Service worker de la Estación Clima XE1E — habilita instalación (PWA) y uso offline.
 // Estrategia:
 //   - HTML / navegaciones: RED PRIMERO (siempre la última versión tras un deploy),
 //     con respaldo a caché si no hay conexión.

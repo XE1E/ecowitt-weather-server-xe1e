@@ -186,7 +186,7 @@ export function SacmexRadarCard() {
             <title>Imagen: SEGIAGUA / SACMEX, Gobierno de la Ciudad de México</title>
           </g>
           <circle cx={EST.x} cy={EST.y} r={3.2} fill="#dc2626" stroke="#ffffff" strokeWidth={1.3}>
-            <title>Estación XE1E</title>
+            <title>Estación Clima XE1E</title>
           </circle>
         </svg>
       </div>

@@ -2,7 +2,7 @@
 
 La referencia (meteouitgeest / WeatherNode) tiene un menú: Home, Forecast, History,
 Statistics, Radar, Satellite, Air & Pollen, Astronomy, Sky & Water, Fire Weather,
-Community Stations. Aquí decidimos **cuáles conviene** para la estación XE1E, con
+Community Stations. Aquí decidimos **cuáles conviene** para la Estación Clima XE1E, con
 qué datos, y cómo construirlas.
 
 ## Requisito previo (común a todas)

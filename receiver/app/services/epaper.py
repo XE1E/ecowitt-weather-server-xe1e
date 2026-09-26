@@ -407,5 +407,5 @@ def build_forecast_json(data: Optional[Dict[str, Any]],
         "current": current,
         "forecast": {"forecastday": forecastday},
         "xe1e": xe1e,
-        "source": "Estación XE1E (clima.xe1e.net)",
+        "source": "Estación Clima XE1E (clima.xe1e.net)",
     }

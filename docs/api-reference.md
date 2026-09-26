@@ -359,7 +359,7 @@ captura real: 540×404, centrando nuestra foto 16:9 con franjas negras arriba
 y abajo). En vez de dejarlas en negro, este endpoint compone un lienzo
 800×600 propio: la foto se reescala a 800 de ancho SIN recortar ni
 distorsionar (a 16:9 sobran exactamente 148 px) y ese espacio se llena con un
-cintillo — encabezado "XE1E STATION · Mexico City" + "clima.xe1e.net", y 6
+cintillo — encabezado "Estación Clima XE1E · Ciudad de México" + "clima.xe1e.net", y 6
 columnas de ancho variable, medido contra la fuente real para que ninguna
 quede apretada (temperatura, humedad, presión, lluvia 24h + tasa, viento +
 rumbo, radiación + UV), tomadas de `/api/current` en el momento de la

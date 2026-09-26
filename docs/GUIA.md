@@ -1,4 +1,4 @@
-# Guía completa — Estación meteorológica XE1E
+# Guía completa — Estación Clima XE1E
 
 > **Documentación técnica** del sistema: hardware, arquitectura, cómo se procesa
 > el dato, endpoints, administración, despliegue y operación.

@@ -90,7 +90,7 @@ export function CyclonesMap({ tormentas }: { tormentas: Ciclon[] }) {
     }
 
     L.circleMarker([LOCATION.latitude, LOCATION.longitude], { radius: 5, color: '#fff', weight: 2, fillColor: '#0ea5e9', fillOpacity: 1 })
-      .bindTooltip('Estación XE1E').addTo(g)
+      .bindTooltip('Estación Clima XE1E').addTo(g)
   }, [tormentas, mapa])
 
   return (
