@@ -30,9 +30,14 @@ _REDACT_ID_RE = re.compile(r"(?i)\b(id)=([^&\s;\"']+)")
 # AWEKAS no usa un parámetro con nombre: manda "val=usuario;hash;fecha;..." y el
 # segundo campo ES la credencial.
 _REDACT_AWEKAS_RE = re.compile(r"(?i)(val=[^;&\s]*;)([^;&\s]+)")
+# Telegram mete el token del bot EN LA RUTA (".../bot123456:ABC-xyz/sendMessage"),
+# no como parámetro: los patrones de arriba no lo veían y cada alerta enviada
+# dejaba el token completo en los logs (visto en producción el 2026-09-25).
+_REDACT_TELEGRAM_RE = re.compile(r"(/bot)(\d+:[A-Za-z0-9_-]+)")
 
 
 def redact(text: str) -> str:
+    text = _REDACT_TELEGRAM_RE.sub(r"\1<redacted>", text)
     text = _REDACT_AWEKAS_RE.sub(r"\1<redacted>", text)
     text = _REDACT_QUERY_RE.sub(r"\1=<redacted>", text)
     return _REDACT_ID_RE.sub(r"\1=<redacted>", text)

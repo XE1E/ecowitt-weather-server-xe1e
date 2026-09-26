@@ -52,3 +52,12 @@ def test_redacting_filter_rewrites_log_record_message():
     )
     assert RedactingFilter().filter(record) is True
     assert "secretkey123" not in record.getMessage()
+
+
+def test_redacta_token_de_telegram_en_la_ruta():
+    """El token del bot va en la RUTA, no como parámetro (se filtraba a los logs)."""
+    linea = ('HTTP Request: POST https://api.telegram.org/bot8878450717:AAGtYQUd-j4o_w/sendMessage '
+             '"HTTP/1.1 200 OK"')
+    out = redact(linea)
+    assert "8878450717" not in out and "AAGtYQUd" not in out
+    assert "https://api.telegram.org/bot<redacted>/sendMessage" in out
