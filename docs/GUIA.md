@@ -157,6 +157,12 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
 
 **Componentes** (contenedores Docker):
 - **receiver** (FastAPI, Python): recibe el push, procesa y guarda; expone la API.
+  `app/main.py` sólo arma la app, el arranque, las tareas de fondo, `/health` y la
+  ingesta; los endpoints viven en `app/routers/` por área (`data`, `forecast`,
+  `camera`, `radar`, `external` —ciclones, sismos, calidad del aire…—, `devices`,
+  `kiosk`, `stations`, `admin`), con el estado compartido en `app/state.py` y
+  `require_admin` en `app/deps.py`. Las consultas a InfluxDB corren fuera del event
+  loop (`storage._q`, en hilo) y `/api/current` tiene caché de 30 s por estación.
 - **influxdb** (InfluxDB 2.7): base de series temporales (histórico).
 - **dashboard** (React + Nginx): sirve la web y reenvía `/api/*` al receiver.
 - **renderer** (Chromium headless): fotografía las páginas del kiosco y las sirve
@@ -174,6 +180,7 @@ de ejemplo y verificación en **[ENDPOINT-ECOWITT.md](ENDPOINT-ECOWITT.md)** y
 | Historia (página) | 5 min |
 | "Nuestro pronóstico" (`/api/forecast/own`) y consenso | 5 min |
 | Pronóstico (Open-Meteo y SMN) y astronomía | 30 min |
+| Ciclones (`/api/ciclones`; el NHC se revisa cada 10 min en el servidor) | 10 min |
 | METAR, calidad del aire, almanaque (caché en el servidor) | 10 min |
 | Resumen diario (Dayfile) | al arrancar (90 días) + hoy/ayer cada hora |
 
@@ -253,7 +260,7 @@ caliente** desde el panel de administración, sin reiniciar (ver §9).
 ### Capturas de pantalla
 
 <details>
-<summary><strong>Ver las 15 páginas del sitio</strong></summary>
+<summary><strong>Ver las 15 páginas del sitio</strong> (falta captura de Ciclones)</summary>
 
 #### Inicio
 ![Inicio](capturas/01-inicio.png)
@@ -313,9 +320,14 @@ Lo que sí corresponde a este documento:
 - **Rutas.** La SPA sirve la vista moderna en `/` (layout `StationLayout`, 16
   pestañas: Inicio, Mi tablero, Pronóstico, Historia, Estadísticas, Tablas,
   Climatología, Radar, Cámara, Astronomía, Calidad del aire, Aeronáutica,
-  Estación remota, Widget, Consola e **Instrumentos**) y la clásica de una
-  sola página en `/basica`.
-  La lista viva es `NAV_ACTIVE` en `dashboard/src/pages/StationLayout.tsx`.
+  Estación remota, Consola, **Instrumentos** y **Ciclones**) y la clásica de una
+  sola página en `/basica`. **Widget** (`/compartir`) ya no es pestaña: se enlaza
+  desde el pie de página.
+  La lista viva es `NAV_ACTIVE` en `dashboard/src/pages/StationLayout.tsx`;
+  Ciclones va aparte (`CiclonesTab`): al final, con 🌀 en temporada y un contador
+  del color de la amenaza, y **sube justo después de Inicio** cuando alguna tormenta
+  tiene nivel `media`/`alta` para México. En Inicio, `CycloneBanner` pone el
+  cintillo correspondiente.
   **Consola** no tiene página propia: monta el mismo `ConsoleReplica` que pinta
   el kiosco (§7), así que lo que se ve en el navegador es lo que hay en la pared. El panel vive en `/admin`, el
   kiosco en `/kiosko?page=N` y el widget embebible en `/embed`.
@@ -323,7 +335,19 @@ Lo que sí corresponde a este documento:
   centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
   los refresca cada 60 s (el pronóstico cada 30 min; `forecast/consensus` y
   `forecast/own` cada 5 min). Las páginas consumen el
-  contexto en vez de pedir cada una lo suyo.
+  contexto en vez de pedir cada una lo suyo. Las consultas periódicas pasan por
+  `pollWhileVisible` (`dashboard/src/poll.ts`): **se pausan con la pestaña oculta**
+  y refrescan al volver; las que comparten URL (alertas, IMECA, ciclones) usan
+  `useSharedFetch` para pedirse una sola vez.
+- **Carga por partes.** Cada vista (`src/entries/*`: sitio, admin, kiosco, widget) y
+  cada página se descargan al entrar (`lazyPage`, con una recarga única si un deploy
+  dejó viejo el nombre del archivo). PostHog se carga aparte, después de mostrar la
+  página y sólo en las vistas públicas.
+- **Logo e íconos.** El logo vive en SVG (`src/assets/logo-xe1e-{dark,light}.svg`,
+  `public/favicon.svg`); los PNG/ICO (favicon, íconos de la PWA, apple-touch-icon y
+  `og-image.png`) se regeneran desde el vector con `dashboard/scripts/logo/`
+  (`gen_logo.py` + `render-icons.mjs`). Al cambiarlos, subir el `?v=` en
+  `index.html`, `guia.html`, `manifest.webmanifest` y `sw.js`.
 - **Unidades.** `useUnits()` (`dashboard/src/units.tsx`) convierte en la vista, no
   en el servidor: el backend siempre guarda y sirve métrico. La preferencia se
   persiste en `localStorage`.
@@ -1192,7 +1216,7 @@ dentro de su categoría (Alertas, Calibración), y su ficha en Estaciones enlaza
 | **Dashboard** | Vista general con **indicador en tiempo real**, **tiles de resumen** (última lectura, uptime, retención, versión), **historial de alertas** de 24 h, **resumen de batería** por estación y **tarjeta «Endpoint Ecowitt»** (URL de push con copiar). Botón **«Probar conexiones»** (Telegram, correo y MQTT de una). Estado de servicios agrupado en **Notificaciones** (InfluxDB, Telegram, Correo) e **Integraciones** (MQTT, WAQI, Seguridad endpoint), cada grupo con enlace «Configurar» |
 | **Estaciones** | Lista de estaciones detectadas con estado (online/offline), última lectura y sensores. **«+ Agregar estación»** crea estaciones secundarias: nombre + **MAC o passkey** (obligatorio; con la MAC se calcula el passkey) y queda dada de alta en el registro al instante. Las secundarias pueden **eliminarse** (con confirmación), lo que también las quita del registro: el servidor deja de aceptar sus datos. Cada fila enlaza a su configuración individual |
 | **Configuración por estación** | Ficha: nombre, **registro** (cambiar la MAC del equipo), **sensores WN31** con nombres personalizados (ej. «Sala», «Recámara») y **accesos directos** a sus Alertas (umbrales, on/off y aviso de «sin datos») y a su Calibración (offsets y altitud), ya con la estación elegida (`?estacion=`). Cada ajuste vive en un solo lugar; la ubicación (lat/lon) sólo en Sistema. La publicación a redes y MQTT son sólo de la estación principal |
-| **Alertas** | Pestañas: **General** (interruptor maestro, a dónde llegan, y los avisos del sistema: batería, sensor perdido/atascado, calidad del aire, sismos, cámara, respaldos y redes públicas) y **una por estación** con sus umbrales y su aviso de «sin datos». En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), y estación offline. En **secundarias (GW1100)**, además de encenderle o apagarle las alertas, aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
+| **Alertas** | Pestañas: **General** (interruptor maestro, a dónde llegan, y los avisos del sistema: batería, sensor perdido/atascado, calidad del aire, sismos, **ciclones tropicales** —con el interruptor del **resumen IA** en `/ciclones`—, cámara, respaldos y redes públicas) y **una por estación** con sus umbrales y su aviso de «sin datos». En la **principal (WS69)**: temp alta/baja, humedad alta/baja, viento/ráfaga, lluvia tasa/diaria, presión alta/baja, UV alto, radiación solar alta, punto de rocío alto/bajo, sensación térmica alta/baja, **tendencias** (temp y presión subiendo/bajando), y estación offline. En **secundarias (GW1100)**, además de encenderle o apagarle las alertas, aplican **temperatura**, **humedad**, **presión**, **punto de rocío**, **tendencias** y **«offline después de»** (watchdog propio); viento, lluvia, UV y radiación no aplican (son del WS69). Indica estado de **Telegram** y **Correo** |
 | **Calibración** | Toggle y ajustes **por estación**, con una pestaña por estación (Principal · secundarias). Offsets: temp (°C), humedad (%), presión (hPa); multiplicadores de viento, lluvia, solar y UV (factor). En **secundarias (GW1100)** solo aparece lo aplicable: **sensor integrado** (temp/humedad, que reporta como *interior*) + **presión** (sin viento/lluvia/solar/UV ni canales WN31) |
 | **Publicación** | Credenciales de redes públicas: Weather Underground, PWSWeather, Windy, OpenWeatherMap, CWOP/APRS, **AWEKAS** y **openSenseMap**. Cada red con **intervalo de envío** propio (min; CWOP 10–15; `0` = cada dato) y **badge de estado** (Configurado / Falta configurar) |
 | **Notificaciones** | Dos canales: **Telegram** (Bot Token + Chat ID) y **Correo (SMTP)** (servidor, puerto, usuario, contraseña, remitente, destinatarios, STARTTLS). **Selección por canal** de qué categorías de alerta recibe cada uno. Botón **«Enviar prueba»** por canal, validación de canal incompleto y ojo mostrar/ocultar en secretos. Dentro de Correo, **Resumen semanal** (opt-in aparte, mismo remitente/destinatarios): día y hora de envío, con récords de los últimos 7 días, comparación vs la semana anterior y la mejor foto de la semana (si hay) |
@@ -1241,6 +1265,7 @@ principal (WS69) y cada secundaria (que se activa de forma independiente, opt-in
 | **Calidad del aire** | el AQI o el IMECA superan su umbral (se revisa cada ~30 min) |
 | **Sismos** | magnitud ≥ umbral (default 6.0) dentro del radio de búsqueda (≤ 800 km), **o** uno local más chico (default M ≥ 4.0 a ≤ 150 km); fuente SSN/USGS |
 | **Visual (cielo)** | tormenta formándose / lluvia visible / visibilidad reducida — ver [Análisis del cielo con IA](#análisis-del-cielo-con-ia) |
+| **Ciclones tropicales** | avisa de **cambios**, no del estado (revisión cada 10 min): una tormenta empieza a acercarse o pasa a amenaza para México, se intensifica (huracán o sube de categoría), el pronóstico la lleva a tocar tierra, hay vigilancias/avisos nuevos en costa mexicana, o deja de amenazar. Nivel `media` = el centro pasa a < 500 km de la costa; `alta` = < 150 km o tocando tierra. Lo ya avisado se guarda en disco (`/data/ciclones/`) para que un deploy no repita mensajes — `services/cyclone_alerts.py` |
 | **Cámara sin señal** | deja de llegar una foto nueva por N minutos (default 30) |
 | **Análisis de cámara fallando** | el análisis IA (Gemini/Claude) lleva N intentos seguidos con error (default 3) |
 
@@ -1354,7 +1379,7 @@ modelo externo.
 | **Estaciones vecinas** (Xweather + Netatmo) | Dato **informativo** para comparar; en "nuestro pronóstico" sólo cuenta una vecina que reporta lluvia en la dirección de donde sopla el viento | `xweather.py` · `netatmo.py` |
 | **Open-Meteo** | Pronóstico horario gratuito (1-7 días), códigos WMO | `openmeteo.py` |
 | **WeatherAPI** | Más preciso para ciudades grandes (1-3 días), requiere API key | `weatherapi.py` |
-| **SMN (CONAGUA)** | Pronóstico oficial por municipio (4 días + 48h) | `smn.py` |
+| **SMN (CONAGUA)** | Pronóstico oficial por municipio (4 días + 48h). La página muestra la probabilidad de lluvia **junto con los mm esperados**: el SMN publica a menudo «0 % · 2.8 mm», y sólo el % daba a entender que no llovería | `smn.py` |
 
 ### Arquitectura del consenso (`forecast_consensus.py`)
 
@@ -1526,6 +1551,8 @@ El endpoint e-paper **nunca devuelve 503**: si falta dato cae al pronóstico y l
 | **Estación Ecowitt** (push) | todo el dato local (real) | ~16–60 s |
 | **Open-Meteo** | pronóstico horario/diario y astronomía base | 30 min |
 | **SMN / CONAGUA** | pronóstico **oficial por municipio** (4 días + 48 h), cualquier municipio de México | 30 min (SMN publica c/hora) |
+| **SACMEX** | radar meteorológico de la CDMX (cuadros cada ~5 min); historial propio de 45 días en `/data/radar_sacmex` y decodificador de dBZ por colores (`radar_decode.py`) | 5 min |
+| **NHC / NOAA** | ciclones tropicales (Atlántico y Pacífico): avisos, trayectoria/cono (KMZ), imágenes en español, discusión técnica (resumida con Gemini, una llamada por discusión) y satélite GOES de NOAA STAR | 10 min |
 | **Ventusky** | radar y mapas interactivos | en vivo (iframe) |
 | **NASA GIBS** | imagen satelital de color real | diaria |
 | **aviationweather.gov** (NOAA) | METAR y TAF (aeropuertos) | 10 min |
@@ -1545,7 +1572,7 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | Endpoint | Devuelve |
 |----------|----------|
 | `GET /api/current` | última lectura. Además de lo que manda la estación añade, calculados al servir: los acumulados de lluvia semanal/mensual/anual que falten y `wind_speed_avg10m`, el promedio de viento de 10 min (la estación no manda ninguno) |
-| `GET /api/history?start=-24h` | histórico crudo |
+| `GET /api/history?start=-24h` | histórico crudo (tope 31 días); con `fields=` + `every=` devuelve promedios por ventana |
 | `GET /api/stats/daily` | mín/máx/prom del día |
 | `GET /api/stats/records?start=-30d` | mín/máx/prom del rango |
 | `GET /api/compare` | 24 h vs 24 h previas ("vs ayer") |
@@ -1569,6 +1596,8 @@ Todos bajo el receiver, servidos vía `/api/*`:
 | `GET /api/satellite` | imagen satelital NASA GIBS (proxy) |
 | `GET /api/radar/sacmex` · `/api/radar/sacmex/<id>` | radar del SACMEX (CDMX): lista de cuadros y cada JPG, proxy con caché de 5 min |
 | `GET /api/radar/sacmex/archive` | historial propio de cuadros del radar SACMEX (por día; 45 días de retención) |
+| `GET /api/radar/sacmex/decoded/<id>` | ecos que lee el decodificador de dBZ en un cuadro (PNG transparente para superponer) |
+| `GET /api/ciclones` · `/mapa` · `/sat/<ATCF>` · `/temporada` · `/img/<ATCF>/<tipo>` | ciclones tropicales del NHC con amenaza para México y resumen IA; geometría del mapa, satélite GOES, bitácora de la temporada e imágenes del NHC (ver `api-reference.md`) |
 | `GET /api/earthquakes` | sismos recientes (USGS / SSN) |
 | `GET /api/svitrix` | datos para SVITRIX-XE1E (Ulanzi TC001), con forma WeatherAPI `current.json` |
 | `GET /api/epaper/forecast.json` | datos para el e-paper LilyGo, con forma WeatherAPI `forecast.json` (3 días × 24 h + bloque `xe1e`). **Nunca devuelve 503** |
@@ -1687,4 +1716,4 @@ Telegram, credenciales de las redes públicas).
 
 ---
 
-*Última actualización: 2026-09-23.*
+*Última actualización: 2026-09-26.*

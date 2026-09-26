@@ -118,6 +118,10 @@ GET /api/history
 | `measurement` | string | `weather` | Nombre del measurement en InfluxDB |
 | `station` | string | *(principal)* | Estación **secundaria** (p. ej. `gw1100`); omitir = principal |
 | `format` | string | `json` | `json` (default) o `csv` para descargar el mismo rango como archivo (`Content-Disposition: attachment`) |
+| `fields` | string | *(todos)* | Campos separados por coma, p. ej. `temperature_outdoor,humidity_outdoor` |
+| `every` | string | *(crudo)* | Ventana de promedio (`10m`, `1h`…); requiere `fields`. Sin él llega cada lectura cruda (~16 s) |
+
+El rango máximo es de **31 días** (400 si se pide más; para periodos largos, `/api/summaries/daily`). Para gráficas de 7–30 días conviene `fields` + `every`: 30 días de la remota pasan de ~26 MB a ~0.3 MB.
 
 **Examples:**
 
@@ -130,6 +134,9 @@ curl "http://localhost:8080/api/history?start=-7d"
 
 # Rango específico
 curl "http://localhost:8080/api/history?start=2024-01-01T00:00:00Z&stop=2024-01-02T00:00:00Z"
+
+# 30 días de temperatura, promedio por hora
+curl "http://localhost:8080/api/history?start=-30d&fields=temperature_outdoor&every=1h"
 
 # Descargar como CSV
 curl -OJ "http://localhost:8080/api/history?start=-7d&format=csv"

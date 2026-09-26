@@ -365,6 +365,7 @@
         <li><strong>Sol y luna.</strong> Amanecer, atardecer, horas de luz y fase lunar, con los eventos del cielo próximos.</li>
         <li><strong>METAR.</strong> El reporte del aeropuerto, ya traducido. Es la observación aeronáutica oficial más cercana y sirve de contraste independiente para tus propias lecturas.</li>
         <li><strong>Radar y sismos.</strong> Radar de lluvia de la región y últimos sismos relevantes cerca.</li>
+        <li><strong>Ciclones.</strong> Si un ciclón tropical amenaza o se acerca a México, aparece un cintillo rojo o ámbar hasta arriba; si los hay pero lejos, una línea discreta. Sin ciclones activos, no aparece nada.</li>
         <li><strong>Alertas.</strong> Si algún umbral está excedido en este momento, aparece aquí.</li>
       </ul>
     </section>
@@ -374,7 +375,7 @@
       <span class="sec-eyebrow">04 — Recorrido</span>
       <h2>Las demás páginas</h2>
 
-      <p>La barra superior tiene 16 pestañas. Una forma rápida de ubicarte: <strong>Inicio, Mi tablero, Tablas y Estación remota</strong> son el <em>ahora</em>; <strong>Historia, Estadísticas y Climatología</strong> son el <em>pasado</em>; <strong>Pronóstico</strong> es el <em>futuro</em>; y <strong>Radar, Cámara, Astronomía, Calidad del aire y Aeronáutica</strong> son el <em>entorno</em>. <strong>Widget</strong>, <strong>Consola</strong> e <strong>Instrumentos</strong> son herramientas/presentación.</p>
+      <p>La barra superior tiene 16 pestañas. Una forma rápida de ubicarte: <strong>Inicio, Mi tablero, Tablas y Estación remota</strong> son el <em>ahora</em>; <strong>Historia, Estadísticas y Climatología</strong> son el <em>pasado</em>; <strong>Pronóstico</strong> es el <em>futuro</em>; y <strong>Radar, Cámara, Astronomía, Calidad del aire y Aeronáutica</strong> son el <em>entorno</em>, igual que <strong>Ciclones</strong>. <strong>Consola</strong> e <strong>Instrumentos</strong> son presentación; el <strong>Widget</strong> se abre desde el pie de página.</p>
 
       <h3>Mi tablero</h3>
       <p>La misma información del Inicio, pero <strong>a tu medida</strong>. Pulsa <em>Personalizar</em> para mostrar u ocultar cada tarjeta, y con el modo activo puedes <strong>arrastrarlas</strong> para reordenarlas. La tarjeta de condiciones actuales queda fija arriba.</p>
@@ -384,7 +385,7 @@
       <p>Aquí no hay dato de la estación: es el futuro y sólo los modelos lo estiman. Verás <strong>dos fuentes</strong> por separado, y eso es intencional:</p>
       <ul>
         <li><strong>Open-Meteo</strong>, un modelo global, por hora y por día, con descripciones en lenguaje natural generadas automáticamente a partir de sus números.</li>
-        <li><strong>SMN / CONAGUA</strong>, el pronóstico <strong>oficial mexicano por municipio</strong>. Trae un buscador para consultar cualquier municipio del país, no sólo el de la estación.</li>
+        <li><strong>SMN / CONAGUA</strong>, el pronóstico <strong>oficial mexicano por municipio</strong>. Trae un buscador para consultar cualquier municipio del país, no sólo el de la estación. Junto a la probabilidad de lluvia verás los <strong>milímetros esperados</strong>, porque el SMN a veces publica cosas como «0 % · 2.8 mm»: lee los dos números, no sólo el porcentaje.</li>
       </ul>
       <div class="callout">
         <p><strong>Cómo usarlo bien:</strong> cuando las dos fuentes dicen lo mismo, puedes confiar. Cuando difieren, el mensaje real es «el día está incierto» —y eso también es información útil—.</p>
@@ -413,7 +414,7 @@
       </div>
 
       <h3>Radar y satélite</h3>
-      <p>Arriba va el <strong>radar del SACMEX</strong> (Sistema de Aguas de la Ciudad de México), un radar meteorológico real sobre la zona metropolitana: sus últimos cuadros, uno cada ~5 minutos, se animan para ver hacia dónde avanza la tormenta, y al pie se explica cómo leer su escala de <strong>dBZ</strong> (a más dBZ, más lluvia; de 50 en adelante, tormenta fuerte y posible granizo).</p>
+      <p>Arriba va el <strong>radar del SACMEX</strong> (Sistema de Aguas de la Ciudad de México), un radar meteorológico real sobre la zona metropolitana: sus últimos cuadros, uno cada ~5 minutos, se animan para ver hacia dónde avanza la tormenta (el más reciente se queda unos segundos más). El punto rojo es la estación y los anillos marcan distancias cada 5 km. Al pie se explica cómo leer su escala de <strong>dBZ</strong> (a más dBZ, más lluvia; de 50 en adelante, tormenta fuerte y posible granizo).</p>
       <p>El mapa de <strong>Ventusky</strong> muestra dónde está lloviendo ahora y con qué intensidad; anima la línea de tiempo para ver <strong>hacia dónde se mueve</strong> —que es la pregunta útil: no «¿está lloviendo?» sino «¿me va a llegar?»—. La <strong>imagen satelital</strong> (NASA GIBS) es la foto de color real del día y deja ver la nubosidad y los sistemas sobre la región.</p>
       <p>Son datos externos de referencia general: a diferencia del resto del sitio, no provienen de la estación.</p>
 
@@ -435,6 +436,19 @@
       <p>La tarjeta <strong>"Precisión del pronóstico"</strong> responde <em>quién acierta</em>: califica cada fuente (Open-Meteo, WeatherAPI, el SMN, la cámara, nuestro pronóstico…) contra lo que <strong>de verdad pasó</strong> —el pluviómetro para la lluvia, la cámara para las nubes—. Las ordena por <strong>acierto en lluvia</strong>, que no premia decir siempre «no llueve», y se puede ver para <em>ahora</em> o para <em>las próximas 3 horas</em>, en los últimos 7 o 30 días. Trae además una gráfica por hora del día, la tendencia de los últimos 7 días, cuánto se pasa o se queda corto Open-Meteo con las nubes, y una referencia <strong>«Solo por horario (14-20 h)»</strong>: avisar lluvia todas las tardes sin mirar nada. Una fuente que no le gana a esa referencia no está aportando mucho.</p>
       <p>Si activas las <strong>alertas visuales</strong>, recibes aviso por Telegram o correo cuando la IA detecta nubes de tormenta formándose, lluvia aproximándose o visibilidad reducida. Se activan (y cada una se puede apagar por separado) en Admin → Alertas, en la tarjeta "📷 Cámara"; el canal se elige en Admin → Notificaciones.</p>
       <p>Aparte de lo que <em>ve</em>, la cámara también avisa de sí misma: si <strong>deja de mandar fotos</strong> por un rato (no confunde "aún sin configurar" con "se cayó": no avisa hasta que llegó al menos una foto), o si el <strong>análisis de IA lleva varios intentos seguidos fallando</strong> —cuota agotada, timeout—. Se normaliza solo en cuanto vuelve una foto reciente o un análisis exitoso.</p>
+
+      <h3>Ciclones</h3>
+      <p>Los <strong>ciclones tropicales</strong> activos del Pacífico y el Atlántico, con la información del Centro Nacional de Huracanes de EE. UU. (NHC). Casi todo el año la pestaña está vacía; en temporada lleva 🌀, y si hay ciclones activos un número del color de la amenaza. Cuando uno amenaza a México, la pestaña se sube junto a Inicio.</p>
+      <p>Cada ciclón trae una etiqueta de <strong>amenaza para México</strong> que se calcula con la distancia de su centro a la costa, hoy y a lo largo de su trayectoria pronosticada:</p>
+      <ul>
+        <li><strong>Alta (rojo):</strong> está o pasará a menos de ~150 km de la costa, o el pronóstico lo lleva a tocar tierra.</li>
+        <li><strong>Se acerca (ámbar):</strong> su centro pasará a menos de ~500 km.</li>
+        <li><strong>Lejos (azul):</strong> no se prevé que se acerque.</li>
+      </ul>
+      <p>Además verás su intensidad y trayectoria, el <strong>mapa con el cono</strong>, las <strong>vigilancias y avisos en la costa</strong> ya en español, la <strong>probabilidad de vientos fuertes</strong> en localidades cercanas durante 5 días, imágenes de satélite centradas en la tormenta y un <strong>resumen en español</strong>, hecho con IA, de lo que escriben los pronosticadores del NHC (con enlace al original). Abajo, la perspectiva a 7 días —dónde podría formarse uno nuevo— y el resumen de la temporada.</p>
+      <div class="callout">
+        <p><strong>Esto es referencia, no aviso oficial.</strong> En México los avisos de ciclón los emite el <strong>SMN (CONAGUA)</strong>, y Protección Civil decide qué hacer; la página enlaza el aviso del SMN. La distancia «a la costa» es aproximada, útil para saber si preocuparse, no para ubicar un punto exacto.</p>
+      </div>
 
       <h3>Astronomía</h3>
       <p>Todo se calcula localmente para estas coordenadas, sin servicios externos. Del <strong>Sol</strong>: salida, ocaso, mediodía solar, duración del día y <strong>su cambio respecto a ayer</strong> (el detalle que te deja notar que los días ya se están acortando), más elevación y azimut actuales. De la <strong>Luna</strong>: salida y ocaso, fase, iluminación, edad, distancia y las próximas fases.</p>
@@ -722,6 +736,9 @@
         </table>
       </div>
 
+      <h3>Ciclones tropicales</h3>
+      <p>Funcionan distinto al resto: no avisan del estado, sino de los <strong>cambios</strong> en un ciclón que esté cerca de México. Llega un mensaje cuando empieza a acercarse o pasa a amenaza, cuando se intensifica (se vuelve huracán o sube de categoría), cuando el pronóstico empieza a llevarlo a tocar tierra, cuando hay vigilancias o avisos nuevos en la costa mexicana y cuando deja de amenazar. Así no recibes el mismo aviso cada diez minutos mientras la tormenta sigue ahí.</p>
+
       <h3>Infraestructura</h3>
       <p>Estas tres no son del clima: avisan si algo del <strong>servidor mismo</strong> se descompone, para enterarte sin tener que entrar a revisar a mano.</p>
       <div class="tablewrap">
@@ -736,7 +753,7 @@
       </div>
 
       <div class="callout">
-        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor, cámara (sin señal/análisis), aire, sismo e infraestructura— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
+        <p><strong>Puedes elegir qué llega por dónde.</strong> Las alertas se agrupan en categorías —temperatura (incluye rocío y sensación), humedad, viento, lluvia, presión, UV y solar, visual (lo que ve la cámara), estación, batería, sensor, cámara (sin señal/análisis), aire, sismo, ciclones e infraestructura— y cada canal recibe sólo las que elijas. Por ejemplo: todo por correo, y sólo lo urgente por Telegram.</p>
       </div>
     </section>
 
@@ -803,7 +820,7 @@
       <h2>Widget e instalar como app</h2>
 
       <h3>Poner el clima en tu propia página</h3>
-      <p>En la pestaña <strong>Widget</strong> eliges las opciones que quieres, copias el código que se genera y lo pegas en tu web o blog. Se <strong>actualiza solo cada minuto</strong>, sin que tengas que hacer nada más. Es la forma de llevar el dato de esta estación a otro sitio.</p>
+      <p>En <strong>Widget para tu sitio</strong> (enlace en el pie de cualquier página) eliges las opciones que quieres, copias el código que se genera y lo pegas en tu web o blog. Se <strong>actualiza solo cada minuto</strong>, sin que tengas que hacer nada más. Es la forma de llevar el dato de esta estación a otro sitio.</p>
 
       <h3>Instalarlo como aplicación</h3>
       <p>El sitio se puede instalar como app en el teléfono o la computadora: queda con su propio icono, abre a pantalla completa y sin barra de navegador. En el móvil suele estar en <em>Añadir a la pantalla de inicio</em>; en escritorio, en el icono de instalar de la barra de direcciones.</p>
@@ -826,7 +843,9 @@
             <tr><td><strong>Base de nubes</strong></td><td>Altura estimada a la que empiezan las nubes.</td></tr>
             <tr><td><strong>Beaufort</strong></td><td>Escala que traduce la velocidad del viento a efectos visibles.</td></tr>
             <tr><td><strong>Bulbo húmedo</strong></td><td>Temperatura mínima que se alcanza evaporando agua. El límite del enfriamiento por sudor.</td></tr>
+            <tr><td><strong>Cono de pronóstico</strong></td><td>La zona por donde probablemente pasará el <em>centro</em> de un ciclón. Los vientos y la lluvia llegan mucho más allá del cono.</td></tr>
             <tr><td><strong>Crepúsculo</strong></td><td>La penumbra antes del amanecer y después del ocaso. Tiene tres etapas: civil, náutico y astronómico.</td></tr>
+            <tr><td><strong>dBZ</strong></td><td>Qué tan fuerte rebota la señal del radar en la lluvia. A más dBZ, lluvia más intensa; de 50 en adelante, tormenta fuerte.</td></tr>
             <tr><td><strong>Evapotranspiración</strong></td><td>Agua que el suelo y las plantas pierden por evaporación. Dice cuánto hay que regar.</td></tr>
             <tr><td><strong>Grados-día</strong></td><td>Cuánto y por cuánto tiempo la temperatura se alejó de 18.3 °C. Se usa para energía y agricultura.</td></tr>
             <tr><td><strong>hPa</strong></td><td>Hectopascal, la unidad de presión. Equivale al milibar (mb).</td></tr>
@@ -847,12 +866,13 @@
             <tr><td><strong>UV (índice)</strong></td><td>Cuánto quema el sol, de 0 a 11+. No tiene que ver con el calor.</td></tr>
             <tr><td><strong>VFR / IFR</strong></td><td>Categorías de vuelo: VFR es buen tiempo, IFR y LIFR son las peores condiciones.</td></tr>
             <tr><td><strong>Viento sostenido</strong></td><td>Promedio del viento en un intervalo, sin los picos.</td></tr>
+            <tr><td><strong>Vigilancia / aviso (ciclones)</strong></td><td>Vigilancia: las condiciones de tormenta o huracán son <em>posibles</em> en esa costa. Aviso: son <em>esperadas</em>. El aviso es el más serio.</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-09-23 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
+    <footer>Manual de usuario · Estación XE1E · CDMX · Actualizado 2026-09-26 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
 
