@@ -45,6 +45,10 @@ export function HomePage() {
       <div className="mb-4">
         <MiniStats data={data} stats={stats} forecast={forecast} compare={compare} />
       </div>
+      <p className="-mt-2 mb-3 text-right text-sm text-slate-400">
+        ¿Primera vez aquí?{' '}
+        <a href="/guia-rapida.html" className="text-sky-400 hover:text-sky-300 whitespace-nowrap">⚡ Guía rápida de 2 minutos →</a>
+      </p>
 
       {/* Tres columnas principales */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

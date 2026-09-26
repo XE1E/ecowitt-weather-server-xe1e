@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, CloudSun } from 'lucide-react'
 import { useStationData } from '../station-data'
 import { useUnits } from '../units'
@@ -69,7 +70,9 @@ function skyIcon(sky: string | null, night = false): string {
 export function ForecastPage() {
   const { forecast } = useStationData()
   const u = useUnits()
-  const [source, setSource] = useState<'om' | 'smn'>('om')
+  // ?fuente=smn abre directo en el SMN (lo usa la guía rápida para quien no vive en la CDMX).
+  const [params] = useSearchParams()
+  const [source, setSource] = useState<'om' | 'smn'>(params.get('fuente') === 'smn' ? 'smn' : 'om')
   const [tab, setTab] = useState<'days' | 'hourly'>('days')
   const [smn, setSmn] = useState<SmnData | null>(null)
   // Se distingue POR QUÉ falló: el webservice de CONAGUA se cae seguido (responde

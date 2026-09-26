@@ -109,6 +109,23 @@
   .card b { display: block; font-size: 15.5px; margin-bottom: 2px; }
   .card div span { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
   
+  .away {
+    margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; font-size: 15px;
+    background: var(--surface); border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  }
+
+  /* No sólo es la Ciudad de México */
+  .mx { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  @media (min-width: 720px) { .mx { grid-template-columns: repeat(4, 1fr); } }
+  .mx a {
+    display: block; text-decoration: none; color: inherit; padding: 14px; border-radius: 14px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--good) 14%, var(--surface)), var(--surface) 75%);
+    border: 1px solid var(--line); box-shadow: var(--shadow); transition: transform .15s, border-color .15s;
+  }
+  .mx a:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
+  .mx b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .mx span { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+
   /* Lee los números — reglas cortas */
   .rules, .facts { display: grid; gap: 10px; grid-template-columns: 1fr; }
   @media (min-width: 640px) { .rules, .facts { grid-template-columns: 1fr 1fr; } }
@@ -159,7 +176,7 @@
 
   footer { padding: 28px 0 48px; color: var(--faint); font-size: 13px; font-family: var(--mono); text-align: center; }
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-  @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .card, .mx a { transition: none; } .card:hover, .mx a:hover { transform: none; } }
 </style>
 </head>
 <body>
@@ -167,8 +184,8 @@
 <header>
   <div class="wrap hero">
     <p class="eyebrow">Guía rápida · 2 minutos</p>
-    <h1>El clima de tu colonia, medido aquí mismo</h1>
-    <p class="lead">Esto no es un pronóstico copiado de internet: es una <strong>estación meteorológica real</strong> en Benito Juárez, CDMX, que manda lo que mide cada minuto. Esto es lo que te conviene saber para sacarle jugo.</p>
+    <h1>El clima en Ciudad de México, medido aquí mismo</h1>
+    <p class="lead">Esto no es un pronóstico copiado de internet: es una <strong>estación meteorológica real</strong> en Benito Juárez, Ciudad de México, que manda lo que mide cada minuto. Esto es lo que te conviene saber para sacarle jugo.</p>
     <ul class="chips">
       <li><b>1 min</b> entre lecturas</li>
       <li><b>2250 m</b> de altitud</li>
@@ -182,12 +199,13 @@
   <section>
     <h2>☔ ¿Va a llover? Revísalo en 3 pasos</h2>
     <p class="sub">La pregunta que todos hacemos. Así la contestas en menos de un minuto:</p>
+    <p class="away">📍 ¿No vives en la Ciudad de México? Consulta el <a href="/pronostico?fuente=smn">pronóstico oficial del SMN para tu municipio</a>, de cualquier parte del país.</p>
     <ol class="steps">
       <li><b>Mira «Nuestro pronóstico» en <a href="/">Inicio</a></b><span>En la tarjeta de precipitación. Lo dice la propia estación con lo que ve: el pluviómetro y la cámara, no un modelo de computadora.</span></li>
-      <li><b>Abre el <a href="/radar">Radar</a></b><span>Es el radar de la CDMX, cuadro a cuadro. El punto rojo es la estación: fíjate hacia dónde avanzan las manchas. A color más intenso, más fuerte llueve.</span></li>
+      <li><b>Abre el <a href="/radar">Radar</a></b><span>Es el radar de la Ciudad de México, cuadro a cuadro. El punto rojo es la estación: fíjate hacia dónde avanzan las manchas. A color más intenso, más fuerte llueve.</span></li>
       <li><b>Asómate a la <a href="/camara">Cámara</a></b><span>El cielo real hacia el sureste, ahora mismo. Si ves un muro gris acercándose, ya sabes.</span></li>
     </ol>
-    <p class="tip">💡 En temporada de lluvias las tormentas de la CDMX suelen llegar <strong>por la tarde</strong>. Si en la mañana está despejado, no te confíes: revisa otra vez a mediodía.</p>
+    <p class="tip">💡 En temporada de lluvias las tormentas de la Ciudad de México suelen llegar <strong>por la tarde</strong>. Si en la mañana está despejado, no te confíes: revisa otra vez a mediodía.</p>
   </section>
 
   <section>
@@ -195,13 +213,24 @@
     <p class="sub">Toca cualquiera para ir directo.</p>
     <div class="grid">
       <a class="card" href="/camara"><span class="ico">📷</span><div><b>Ver el cielo en vivo</b><span>Foto cada pocos minutos, el timelapse del día y una IA que te dice qué nubes hay.</span></div></a>
-      <a class="card" href="/pronostico"><span class="ico">📅</span><div><b>Pronóstico de tu municipio</b><span>El oficial del SMN para cualquier municipio de México, por hora y por día.</span></div></a>
+      <a class="card" href="/consola"><span class="ico">📟</span><div><b>Toda la estación, vista moderna</b><span>En «Consola», todas las lecturas actuales de la estación en una sola pantalla.</span></div></a>
       <a class="card" href="/estadisticas"><span class="ico">🏆</span><div><b>Récords de la estación</b><span>El día más caluroso, la noche más fría, la ráfaga más fuerte… con fecha.</span></div></a>
       <a class="card" href="/historia"><span class="ico">📈</span><div><b>¿Cómo estuvo ayer?</b><span>Cualquier día, mes o año en gráficas. Descargable en CSV.</span></div></a>
-      <a class="card" href="/calidad-aire"><span class="ico">😷</span><div><b>¿Salgo a correr?</b><span>Calidad del aire con el índice de la CDMX (IMECA) y su pronóstico.</span></div></a>
-      <a class="card" href="/ciclones"><span class="ico">🌀</span><div><b>Ciclones y huracanes</b><span>Los activos en el Pacífico y el Atlántico, y si amenazan a México.</span></div></a>
+      <a class="card" href="/calidad-aire"><span class="ico">😷</span><div><b>¿Salgo a correr?</b><span>Calidad del aire con el índice de la Ciudad de México (IMECA) y su pronóstico.</span></div></a>
+      <a class="card" href="/instrumentos"><span class="ico">⏱️</span><div><b>Toda la estación, vista antigua</b><span>En «Instrumentos», todas las lecturas actuales en 12 medidores de aguja, como de observatorio.</span></div></a>
       <a class="card" href="/astronomia"><span class="ico">🌙</span><div><b>Sol y luna</b><span>A qué hora sale y se mete el sol, fase lunar y qué hay en el cielo.</span></div></a>
       <a class="card" href="/tablero"><span class="ico">🧩</span><div><b>Arma tu pantalla</b><span>En «Mi tablero» eliges y acomodas sólo las tarjetas que te importan.</span></div></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>🗺️ No sólo es la Ciudad de México</h2>
+    <p class="sub">La estación mide aquí, pero el sitio también reúne información útil para todo el país:</p>
+    <div class="mx">
+      <a href="/pronostico?fuente=smn"><b>📅 Pronóstico oficial</b><span>Del SMN, para cualquier municipio de México.</span></a>
+      <a href="/ciclones"><b>🌀 Ciclones</b><span>Si alguno amenaza las costas del Pacífico, el Golfo o el Caribe.</span></a>
+      <a href="/sismos"><b>🌎 Sismos</b><span>Los recientes hasta a 800 km, con datos del Servicio Sismológico Nacional.</span></a>
+      <a href="/aeronautica"><b>✈️ Aeropuertos</b><span>El reporte del tiempo (METAR y TAF) de los aeropuertos de México.</span></a>
     </div>
   </section>
 
@@ -267,7 +296,7 @@
 
 </main>
 
-<footer>Estación XE1E · Benito Juárez, CDMX · <a href="https://clima.xe1e.net">clima.xe1e.net</a></footer>
+<footer>Estación XE1E · Benito Juárez, Ciudad de México · <a href="https://clima.xe1e.net">clima.xe1e.net</a></footer>
 
 </body>
 </html>
