@@ -260,13 +260,19 @@ export function StationLayout() {
                 <p className="font-semibold text-slate-300 mb-1">Datos</p>
                 <p>Estación vía protocolo Ecowitt</p>
                 <p>Pronóstico y Astronomía: Open-Meteo, Weather API, SMN y datos locales</p>
-                <p>Radar: Ventusky · Satélite: NASA GIBS</p>
+                <p>Radar: SACMEX y Ventusky · Satélite: NASA GIBS</p>
+                <p>Ciclones: NHC (NOAA)</p>
                 <p>Calidad del aire: WAQI · IMECA (Open-Meteo)</p>
                 <p>Sismos: USGS / SSN (México)</p>
                 <p>METAR / TAF: aviationweather.gov (NOAA)</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-300 mb-1">Proyecto</p>
+                <p>
+                  <a href="/guia-rapida.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                    ⚡ Guía rápida (2 minutos)
+                  </a>
+                </p>
                 <p>
                   <a href="/guia.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                     📖 Guía completa de la estación

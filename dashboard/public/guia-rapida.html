@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1120">
+<meta name="description" content="Guía rápida de la Estación XE1E: cómo saber si va a llover, qué puedes ver en el sitio y cómo leer los números en dos minutos.">
+<link rel="icon" href="/favicon.ico?v=5" sizes="any">
+<link rel="icon" href="/favicon.svg?v=5" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<title>Guía rápida — Estación XE1E</title>
+<style>
+  /* Mismos tokens que guia.html (manual completo), para que las dos se sientan del mismo sitio. */
+  :root {
+    --bg: #f4f7fa; --surface: #ffffff; --surface-2: #eef3f8;
+    --ink: #16232f; --muted: #5a6b7b; --faint: #8496a6; --line: #dde5ed;
+    --accent: #1f6fb2; --accent-soft: #e5f0f8; --warm: #c9741a; --good: #2e8b6f;
+    --temp: #ea7a1c; --rain: #0ea5e9; --dew: #10b981; --press: #8b5cf6;
+    --shadow: 0 1px 2px rgba(22,35,47,.05), 0 6px 22px rgba(22,35,47,.06);
+    --mono: "SFMono-Regular", "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1620; --surface: #141f2b; --surface-2: #182634;
+      --ink: #e6eef6; --muted: #9db0c1; --faint: #6b7f90; --line: #253442;
+      --accent: #5aa6e6; --accent-soft: #17303f; --warm: #e0954a; --good: #4fb494;
+      --temp: #f59e4b; --rain: #38bdf8; --dew: #34d399; --press: #a78bfa;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1620; --surface: #141f2b; --surface-2: #182634;
+    --ink: #e6eef6; --muted: #9db0c1; --faint: #6b7f90; --line: #253442;
+    --accent: #5aa6e6; --accent-soft: #17303f; --warm: #e0954a; --good: #4fb494;
+    --temp: #f59e4b; --rain: #38bdf8; --dew: #34d399; --press: #a78bfa;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 640px) { .wrap { padding: 0 28px; } }
+  a { color: var(--accent); }
+  strong { font-weight: 650; }
+
+  /* Portada */
+  header {
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(120% 140% at 85% -20%, var(--accent-soft) 0%, transparent 55%), var(--surface);
+  }
+  .hero { padding: clamp(28px, 6vw, 56px) 0 clamp(24px, 4vw, 36px); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 12px;
+  }
+  h1 {
+    font-size: clamp(30px, 6.4vw, 48px); line-height: 1.06; margin: 0 0 12px;
+    letter-spacing: -.025em; font-weight: 720; text-wrap: balance;
+  }
+  .lead { font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); margin: 0 0 22px; max-width: 56ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .chips li {
+    font-family: var(--mono); font-size: 12.5px; padding: 6px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .chips b { color: var(--accent); font-weight: 700; }
+
+  /* Secciones */
+  section { padding: clamp(28px, 5vw, 40px) 0 0; }
+  h2 {
+    font-size: clamp(22px, 3.6vw, 28px); line-height: 1.15; margin: 0 0 6px;
+    letter-spacing: -.015em; font-weight: 690; text-wrap: balance;
+  }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+
+  /* ¿Va a llover? — tres pasos */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+  .steps li {
+    counter-increment: s; position: relative;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px 14px 60px; box-shadow: var(--shadow);
+  }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 16px; top: 14px;
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--rain); color: #fff; font-weight: 700; font-size: 15px;
+  }
+  .steps b { display: block; font-size: 16.5px; margin-bottom: 2px; }
+  .steps span { color: var(--muted); font-size: 15px; }
+  .tip {
+    margin: 12px 0 0; padding: 12px 16px; border-radius: 12px; font-size: 15px;
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  }
+
+  /* Qué puedes hacer — tarjetas que llevan a cada página */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .card {
+    display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; box-shadow: var(--shadow); transition: transform .15s, border-color .15s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .card .ico { font-size: 24px; line-height: 1; flex: none; }
+  .card b { display: block; font-size: 15.5px; margin-bottom: 2px; }
+  .card div span { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+  
+  /* Lee los números — reglas cortas */
+  .rules, .facts { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .rules, .facts { grid-template-columns: 1fr 1fr; } }
+  .rule {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .rule h3 { font-size: 15.5px; margin: 0 0 4px; font-weight: 680; }
+  .rule p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 13.5px; }
+  .swatches i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .dew { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin-top: 8px; font-size: 13.5px; }
+  .dew dt { font-family: var(--mono); color: var(--dew); white-space: nowrap; }
+  .dew dd { margin: 0; color: var(--muted); }
+
+  /* ¿Sabías que…? */
+    .fact {
+    border-radius: 14px; padding: 16px; border: 1px solid var(--line);
+    background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%);
+  }
+  .fact .big {
+    display: block; font-size: clamp(22px, 4vw, 28px); font-weight: 750; letter-spacing: -.02em; line-height: 1.1;
+    color: var(--accent); margin-bottom: 6px;
+  }
+  .fact p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .fact p strong { color: var(--ink); }
+
+  /* Llévatela */
+  .take { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .take div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .take b { display: block; margin-bottom: 2px; }
+  .take p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  code {
+    font-family: var(--mono); font-size: .88em; background: var(--surface-2);
+    padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); white-space: nowrap;
+  }
+
+  .cta {
+    margin: clamp(28px, 5vw, 40px) 0 0; padding: 20px; border-radius: 16px; text-align: center;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .cta p { margin: 0 0 12px; color: var(--muted); }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 10px; font-weight: 650; text-decoration: none;
+    background: var(--accent); color: #fff; margin: 4px;
+  }
+  .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+  footer { padding: 28px 0 48px; color: var(--faint); font-size: 13px; font-family: var(--mono); text-align: center; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hero">
+    <p class="eyebrow">Guía rápida · 2 minutos</p>
+    <h1>El clima de tu colonia, medido aquí mismo</h1>
+    <p class="lead">Esto no es un pronóstico copiado de internet: es una <strong>estación meteorológica real</strong> en Benito Juárez, CDMX, que manda lo que mide cada minuto. Esto es lo que te conviene saber para sacarle jugo.</p>
+    <ul class="chips">
+      <li><b>1 min</b> entre lecturas</li>
+      <li><b>2250 m</b> de altitud</li>
+      <li><b>2</b> estaciones + cámara al cielo</li>
+    </ul>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>☔ ¿Va a llover? Revísalo en 3 pasos</h2>
+    <p class="sub">La pregunta que todos hacemos. Así la contestas en menos de un minuto:</p>
+    <ol class="steps">
+      <li><b>Mira «Nuestro pronóstico» en <a href="/">Inicio</a></b><span>En la tarjeta de precipitación. Lo dice la propia estación con lo que ve: el pluviómetro y la cámara, no un modelo de computadora.</span></li>
+      <li><b>Abre el <a href="/radar">Radar</a></b><span>Es el radar de la CDMX, cuadro a cuadro. El punto rojo es la estación: fíjate hacia dónde avanzan las manchas. A color más intenso, más fuerte llueve.</span></li>
+      <li><b>Asómate a la <a href="/camara">Cámara</a></b><span>El cielo real hacia el sureste, ahora mismo. Si ves un muro gris acercándose, ya sabes.</span></li>
+    </ol>
+    <p class="tip">💡 En temporada de lluvias las tormentas de la CDMX suelen llegar <strong>por la tarde</strong>. Si en la mañana está despejado, no te confíes: revisa otra vez a mediodía.</p>
+  </section>
+
+  <section>
+    <h2>🧭 Lo que puedes hacer aquí</h2>
+    <p class="sub">Toca cualquiera para ir directo.</p>
+    <div class="grid">
+      <a class="card" href="/camara"><span class="ico">📷</span><div><b>Ver el cielo en vivo</b><span>Foto cada pocos minutos, el timelapse del día y una IA que te dice qué nubes hay.</span></div></a>
+      <a class="card" href="/pronostico"><span class="ico">📅</span><div><b>Pronóstico de tu municipio</b><span>El oficial del SMN para cualquier municipio de México, por hora y por día.</span></div></a>
+      <a class="card" href="/estadisticas"><span class="ico">🏆</span><div><b>Récords de la estación</b><span>El día más caluroso, la noche más fría, la ráfaga más fuerte… con fecha.</span></div></a>
+      <a class="card" href="/historia"><span class="ico">📈</span><div><b>¿Cómo estuvo ayer?</b><span>Cualquier día, mes o año en gráficas. Descargable en CSV.</span></div></a>
+      <a class="card" href="/calidad-aire"><span class="ico">😷</span><div><b>¿Salgo a correr?</b><span>Calidad del aire con el índice de la CDMX (IMECA) y su pronóstico.</span></div></a>
+      <a class="card" href="/ciclones"><span class="ico">🌀</span><div><b>Ciclones y huracanes</b><span>Los activos en el Pacífico y el Atlántico, y si amenazan a México.</span></div></a>
+      <a class="card" href="/astronomia"><span class="ico">🌙</span><div><b>Sol y luna</b><span>A qué hora sale y se mete el sol, fase lunar y qué hay en el cielo.</span></div></a>
+      <a class="card" href="/tablero"><span class="ico">🧩</span><div><b>Arma tu pantalla</b><span>En «Mi tablero» eliges y acomodas sólo las tarjetas que te importan.</span></div></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>🔢 Lee los números como experto</h2>
+    <p class="sub">Cuatro reglas y todo el sitio se entiende de un vistazo.</p>
+    <div class="rules">
+      <div class="rule">
+        <h3>Cada dato tiene su color</h3>
+        <p>Siempre el mismo, en todas las páginas.</p>
+        <div class="swatches">
+          <span><i style="background:var(--temp)"></i>Temperatura</span>
+          <span><i style="background:var(--rain)"></i>Lluvia</span>
+          <span><i style="background:var(--press)"></i>Presión y UV</span>
+          <span><i style="background:var(--dew)"></i>Punto de rocío</span>
+        </div>
+      </div>
+      <div class="rule">
+        <h3>Las flechas dicen hacia dónde va</h3>
+        <p>▲ sube, ▼ baja, — estable, comparado con hace un rato. No significan «bueno» o «malo».</p>
+      </div>
+      <div class="rule">
+        <h3><code>--</code> no es cero</h3>
+        <p>Quiere decir «no hay dato». Un cero de verdad se muestra como 0.</p>
+      </div>
+      <div class="rule">
+        <h3>¿Hay bochorno? Mira el punto de rocío</h3>
+        <p>Dice mejor que la humedad cuánta agua trae el aire.</p>
+        <dl class="dew">
+          <dt>&lt; 10 °C</dt><dd>seco y agradable</dd>
+          <dt>10–16 °C</dt><dd>cómodo</dd>
+          <dt>&gt; 16 °C</dt><dd>pegajoso</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="tip">🟢 Arriba a la derecha, <strong>EN VIVO</strong> quiere decir que el último dato tiene menos de 5 minutos. Si ves <strong>SIN CONEXIÓN</strong>, los números son los últimos que llegaron.</p>
+  </section>
+
+  <section>
+    <h2>🤓 ¿Sabías que…?</h2>
+    <div class="facts">
+      <div class="fact"><span class="big">¼ menos aire</span><p>A esta altura la presión real ronda <strong>780 hPa</strong>, contra 1013 a la orilla del mar. Por eso la presión se muestra «corregida», para compararla con cualquier lugar.</p></div>
+      <div class="fact"><span class="big">UV «muy alto»</span><p>A 2250 m hay menos atmósfera que filtre el sol: el índice UV llega a niveles altos con facilidad, <strong>aunque esté nublado</strong>. Bloqueador, siempre.</p></div>
+      <div class="fact"><span class="big">¿Quién atina?</span><p>El sitio compara cada pronóstico (Open-Meteo, SMN, la cámara…) con la lluvia que de verdad cayó, y <strong>lleva la cuenta de quién acierta más</strong>. Está en la página de la Cámara.</p></div>
+      <div class="fact"><span class="big">¿Tu app dice otra cosa?</span><p>Normal. Tu app estima para toda la ciudad; esto es un termómetro en un punto. A cinco calles la temperatura puede cambiar <strong>2 o 3 °C</strong>.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📲 Llévatela contigo</h2>
+    <div class="take">
+      <div><b>Instálala como app</b><p>En el celular: menú del navegador → <em>Añadir a pantalla de inicio</em>. Abre a pantalla completa, como app.</p></div>
+      <div><b>A tu gusto</b><p>El botón <code>°C · km/h</code> cambia a °F y mph; la luna, a tema oscuro o claro.</p></div>
+      <div><b>En tu página web</b><p>El <a href="/compartir">widget</a> pone el clima de la estación en tu sitio, y se actualiza solo.</p></div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <p>¿Quieres saber qué significa cada número a fondo?</p>
+    <a class="btn" href="/">Ir al clima ahora</a>
+    <a class="btn ghost" href="/guia.html">Manual completo</a>
+  </div>
+
+</main>
+
+<footer>Estación XE1E · Benito Juárez, CDMX · <a href="https://clima.xe1e.net">clima.xe1e.net</a></footer>
+
+</body>
+</html>
