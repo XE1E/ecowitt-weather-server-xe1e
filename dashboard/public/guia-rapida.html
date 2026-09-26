@@ -135,6 +135,7 @@
   }
   .rule h3 { font-size: 15.5px; margin: 0 0 4px; font-weight: 680; }
   .rule p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .rule .tr { width: 18px; height: 18px; vertical-align: -4px; }
   .swatches { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 13.5px; }
   .swatches i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
   .dew { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin-top: 8px; font-size: 13.5px; }
@@ -202,7 +203,7 @@
     <p class="away">📍 ¿No vives en la Ciudad de México? Consulta el <a href="/pronostico?fuente=smn">pronóstico oficial del SMN para tu municipio</a>, de cualquier parte del país.</p>
     <ol class="steps">
       <li><b>Mira «Nuestro pronóstico» en <a href="/">Inicio</a></b><span>En la tarjeta de precipitación. Lo dice la propia estación con lo que ve: el pluviómetro y la cámara, no un modelo de computadora.</span></li>
-      <li><b>Abre el <a href="/radar">Radar</a></b><span>Es el radar de la Ciudad de México, cuadro a cuadro. El punto rojo es la estación: fíjate hacia dónde avanzan las manchas. A color más intenso, más fuerte llueve.</span></li>
+      <li><b>Abre el <a href="/radar">Radar</a></b><span>Es el radar de la Ciudad de México, cuadro a cuadro. El punto rojo es la estación: fíjate hacia dónde avanzan las manchas, son nubes de lluvia. A color más intenso, más fuerte llueve.</span></li>
       <li><b>Asómate a la <a href="/camara">Cámara</a></b><span>El cielo real hacia el sureste, ahora mismo. Si ves un muro gris acercándose, ya sabes.</span></li>
     </ol>
     <p class="tip">💡 En temporada de lluvias las tormentas de la Ciudad de México suelen llegar <strong>por la tarde</strong>. Si en la mañana está despejado, no te confíes: revisa otra vez a mediodía.</p>
@@ -250,7 +251,7 @@
       </div>
       <div class="rule">
         <h3>Las flechas dicen hacia dónde va</h3>
-        <p>▲ sube, ▼ baja, — estable, comparado con hace un rato. No significan «bueno» o «malo».</p>
+        <p><svg class="tr" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4L20 14H15V20H9V14H4L12 4Z" fill="#22c55e"/></svg> sube, <svg class="tr" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20L20 10H15V4H9V10H4L12 20Z" fill="#ef4444"/></svg> baja, <svg class="tr" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10H20V14H4V10Z" fill="#94a3b8"/></svg> estable, comparado con hace un rato. No significan «bueno» o «malo».</p>
       </div>
       <div class="rule">
         <h3><code>--</code> no es cero</h3>
