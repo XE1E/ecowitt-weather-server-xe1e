@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="dashboard/src/assets/logo-xe1e-dark.png">
-  <img src="dashboard/src/assets/logo-xe1e-light.png" alt="Logo XE1E" width="120" align="left">
+  <source media="(prefers-color-scheme: dark)" srcset="dashboard/src/assets/logo-xe1e-dark.svg">
+  <img src="dashboard/src/assets/logo-xe1e-light.svg" alt="Logo XE1E" width="120" align="left">
 </picture>
 
 # Estación Clima XE1E — Ciudad de México
