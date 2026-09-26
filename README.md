@@ -258,7 +258,7 @@ Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 ├── dashboard/                  # Frontend (React · Vite · TS · Tailwind)
 │   ├── src/pages/ · src/pages/kiosk/ · src/components/station/
 │   ├── src/kiosk-nav.ts        # Qué pantallas tiene el kiosco y cómo se navegan
-│   ├── public/                 # guía, manifiesto PWA, iconos, fuentes DSEG
+│   ├── public/                 # manual y guía rápida, manifiesto PWA, iconos, fuentes DSEG
 │   └── scripts/logo/           # Logo en SVG → íconos PNG/ICO y og-image
 ├── renderer/                   # Chromium headless → /api/display.jpg (kiosco)
 ├── homeassistant/              # Config para Home Assistant
@@ -272,7 +272,9 @@ Referencia completa: **[docs/api-reference.md](docs/api-reference.md)**.
 
 ## Documentación
 
-- **[Guía completa](docs/GUIA.md)** — manual de referencia (hardware, arquitectura, cada página, API, operación)
+- **[Guía rápida](https://clima.xe1e.net/guia-rapida.html)** ([`guia-rapida.html`](dashboard/public/guia-rapida.html)) — para visitantes: ¿va a llover?, qué hay en el sitio y cómo leer los números, en 2 minutos
+- **[Manual de usuario](https://clima.xe1e.net/guia.html)** ([`guia.html`](dashboard/public/guia.html)) — recorrido por cada página e interpretación de cada dato, sin tecnicismos
+- **[Guía completa](docs/GUIA.md)** — manual técnico de referencia (hardware, arquitectura, cada página, API, operación)
 - [Análisis del cielo con IA](docs/guias/analisis-cielo.md) — cómo funciona, nowcasting, alertas visuales
 - [Referencia de API](docs/api-reference.md)
 - [Despliegue en el VPS](docs/DEPLOY.md) · [Dominio + HTTPS](docs/DOMINIO-HTTPS.md) · [VPS Oracle](docs/oracle-vps-setup.md)

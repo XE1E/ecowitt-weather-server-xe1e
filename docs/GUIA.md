@@ -9,6 +9,9 @@
 > de cada número, sin tecnicismos. Los dos documentos son **complementarios y no
 > se repiten** — si algo cabe en los dos, va en el manual y aquí se enlaza.
 >
+> Para visitantes con prisa hay además una **[guía rápida](../dashboard/public/guia-rapida.html)**
+> (<https://clima.xe1e.net/guia-rapida.html>), enlazada desde Inicio y el pie de página.
+>
 > **Sitio público:** https://clima.xe1e.net
 > **Ubicación:** Benito Juárez, Ciudad de México, México · 19.380359, −99.174564 · ~2250 m
 > **Repositorio:** github.com/XE1E/ecowitt-weather-server-xe1e
@@ -330,7 +333,9 @@ Lo que sí corresponde a este documento:
   cintillo correspondiente.
   **Consola** no tiene página propia: monta el mismo `ConsoleReplica` que pinta
   el kiosco (§7), así que lo que se ve en el navegador es lo que hay en la pared. El panel vive en `/admin`, el
-  kiosco en `/kiosko?page=N` y el widget embebible en `/embed`.
+  kiosco en `/kiosko?page=N` y el widget embebible en `/embed`. `/pronostico?fuente=smn`
+  abre Pronóstico directo en el SMN. El manual (`guia.html`) y la guía rápida
+  (`guia-rapida.html`) son HTML estático en `dashboard/public/`, fuera de la SPA.
 - **Estado compartido.** `StationDataProvider` (`dashboard/src/station-data.tsx`)
   centraliza `current`, `stats/daily`, `history`, `compare` y `forecast/local`, y
   los refresca cada 60 s (el pronóstico cada 30 min; `forecast/consensus` y
@@ -347,7 +352,7 @@ Lo que sí corresponde a este documento:
   `public/favicon.svg`); los PNG/ICO (favicon, íconos de la PWA, apple-touch-icon y
   `og-image.png`) se regeneran desde el vector con `dashboard/scripts/logo/`
   (`gen_logo.py` + `render-icons.mjs`). Al cambiarlos, subir el `?v=` en
-  `index.html`, `guia.html`, `manifest.webmanifest` y `sw.js`.
+  `index.html`, `guia.html`, `guia-rapida.html`, `manifest.webmanifest` y `sw.js`.
 - **Unidades.** `useUnits()` (`dashboard/src/units.tsx`) convierte en la vista, no
   en el servidor: el backend siempre guarda y sirve métrico. La preferencia se
   persiste en `localStorage`.
