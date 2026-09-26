@@ -30,12 +30,16 @@ logger = logging.getLogger(__name__)
 _BASE = "https://www.nhc.noaa.gov"
 _UA = {"User-Agent": "clima-xe1e/1.0 (estacion meteorologica personal)"}
 _TTL = 600            # 10 min: el NHC publica cada 3-6 h, más seguido no aporta
-_IMG_TTL = 900
+# Imágenes: cada minuto como mucho se le PREGUNTA al NHC si cambió (If-Modified-
+# Since -> 304 sin cuerpo si no). Así el cono/mensajes nuevos aparecen a 1-2 min de
+# publicados sin volver a bajar 400 KB cada vez. (Antes: 15 min fijos; la imagen
+# podía ir un aviso detrás de los datos.)
+_IMG_TTL = 60
 _MAX_IMGS = 40
 
 _storms_cache: Dict[str, Any] = {"ts": 0.0, "data": None}
 _track_cache: Dict[str, Tuple[float, List[Dict[str, Any]]]] = {}   # kmz url -> (ts, puntos)
-_img_cache: Dict[str, Tuple[float, bytes, str]] = {}               # url -> (ts, bytes, content-type)
+_img_cache: Dict[str, Dict[str, Any]] = {}   # url -> {ts, data, ctype, last_modified}
 
 # ── Geometría aproximada de México (lat, lon, nombre del lugar costero o None) ──
 # Recorrido: frontera norte de oeste a este, costa del Golfo y Caribe, frontera
@@ -394,22 +398,32 @@ def img_url(atcf: str, tipo: str) -> Optional[str]:
     return f"{_BASE}/storm_graphics/{carpeta}/{atcf.upper()}_{archivo}"
 
 
-async def get_img(url: str) -> Optional[Tuple[bytes, str]]:
+async def get_img(url: str) -> Optional[Dict[str, Any]]:
+    """{data, ctype, last_modified} de una imagen del NHC, revalidada cada minuto."""
     now = time.time()
     c = _img_cache.get(url)
-    if c and now - c[0] < _IMG_TTL:
-        return c[1], c[2]
+    if c and now - c["ts"] < _IMG_TTL:
+        return c
+    headers = dict(_UA)
+    if c and c.get("last_modified"):
+        headers["If-Modified-Since"] = c["last_modified"]
     try:
-        r = await _get(url)
+        async with httpx.AsyncClient(timeout=30, headers=headers, follow_redirects=True) as cl:
+            r = await cl.get(url)
+        if r.status_code == 304 and c:
+            c["ts"] = now
+            return c
+        r.raise_for_status()
         ctype = r.headers.get("content-type", "image/png").split(";")[0]
         if not ctype.startswith("image/"):
             raise ValueError(f"no es imagen: {ctype}")
     except Exception as e:
         if c:
-            return c[1], c[2]
+            return c   # el NHC no responde: mejor la última buena
         logger.info("NHC imagen no disponible %s (%s)", url, e)
         return None
-    if len(_img_cache) >= _MAX_IMGS:
-        _img_cache.pop(min(_img_cache, key=lambda k: _img_cache[k][0]), None)
-    _img_cache[url] = (now, r.content, ctype)
-    return r.content, ctype
+    if url not in _img_cache and len(_img_cache) >= _MAX_IMGS:
+        _img_cache.pop(min(_img_cache, key=lambda k: _img_cache[k]["ts"]), None)
+    entry = {"ts": now, "data": r.content, "ctype": ctype, "last_modified": r.headers.get("last-modified")}
+    _img_cache[url] = entry
+    return entry

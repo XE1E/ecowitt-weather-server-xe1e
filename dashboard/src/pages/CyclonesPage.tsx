@@ -15,13 +15,18 @@ const NIVEL_CLS: Record<Nivel, string> = {
 
 // Imagen del NHC servida por nuestro proxy. Si no existe (p. ej. no todas las
 // tormentas tienen "Key Messages") se oculta sin dejar hueco.
-function NhcImg({ src, alt, caption }: { src: string | null; alt: string; caption?: string }) {
-  const [ok, setOk] = useState(true)
-  if (!src || !ok) return null
+// `v`: hora de los datos. Cambia en cada renovación (10 min), así el navegador
+// vuelve a pedir la imagen y el cono/mensajes nuevos no se quedan atrás.
+function NhcImg({ src: base, v, alt, caption }: { src: string | null; v?: string; alt: string; caption?: string }) {
+  // Se recuerda QUÉ src falló: con la siguiente versión se vuelve a intentar (los
+  // Key Messages pueden aparecer a media tormenta).
+  const [fallo, setFallo] = useState<string | null>(null)
+  const src = base && v ? `${base}?v=${encodeURIComponent(v)}` : base
+  if (!src || fallo === src) return null
   return (
     <figure>
       <a href={src} target="_blank" rel="noopener noreferrer" title="Abrir en grande">
-        <img src={src} alt={alt} loading="lazy" onError={() => setOk(false)}
+        <img src={src} alt={alt} loading="lazy" onError={() => setFallo(src)}
           className="w-full rounded-lg border border-white/10 bg-white" />
       </a>
       {caption && <figcaption className="text-[11px] text-slate-500 mt-1">{caption}</figcaption>}
@@ -39,7 +44,7 @@ function Dato({ label, value, sub }: { label: string; value: string; sub?: strin
   )
 }
 
-function TormentaCard({ c }: { c: Ciclon }) {
+function TormentaCard({ c, v }: { c: Ciclon; v?: string }) {
   const u = useUnits()
   const color = colorCiclon(c)
   const [verPron, setVerPron] = useState(false)
@@ -86,9 +91,9 @@ function TormentaCard({ c }: { c: Ciclon }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <NhcImg src={c.imagenes.cono} alt={`Cono de pronóstico de ${c.nombre}`}
+        <NhcImg src={c.imagenes.cono} v={v} alt={`Cono de pronóstico de ${c.nombre}`}
           caption="Cono de pronóstico a 5 días (NHC). El centro puede ir por cualquier parte del cono; los efectos llegan mucho más allá." />
-        <NhcImg src={c.imagenes.mensajes} alt={`Mensajes clave de ${c.nombre}`}
+        <NhcImg src={c.imagenes.mensajes} v={v} alt={`Mensajes clave de ${c.nombre}`}
           caption="Mensajes clave del NHC: los peligros más importantes de esta tormenta." />
       </div>
 
@@ -198,16 +203,16 @@ export function CyclonesPage() {
               </a>
             ))}
           </div>
-          {tormentas.map((t) => <TormentaCard key={t.id} c={t} />)}
+          {tormentas.map((t) => <TormentaCard key={t.id} c={t} v={data.actualizado} />)}
         </>
       )}
 
       <section>
         <h3 className="text-lg font-semibold text-slate-300 mb-2">Perspectiva a 7 días</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="card"><NhcImg src="/api/ciclones/img/outlook/pacifico" alt="Perspectiva del Pacífico a 7 días"
+          <div className="card"><NhcImg src="/api/ciclones/img/outlook/pacifico" v={data?.actualizado} alt="Perspectiva del Pacífico a 7 días"
             caption="Pacífico oriental. Las zonas marcadas son áreas donde podría formarse un ciclón (amarillo: baja, naranja: media, rojo: alta probabilidad)." /></div>
-          <div className="card"><NhcImg src="/api/ciclones/img/outlook/atlantico" alt="Perspectiva del Atlántico a 7 días"
+          <div className="card"><NhcImg src="/api/ciclones/img/outlook/atlantico" v={data?.actualizado} alt="Perspectiva del Atlántico a 7 días"
             caption="Atlántico, Golfo de México y Caribe. Mismo código de colores." /></div>
         </div>
       </section>

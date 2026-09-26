@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from .. import state
 from ..config import settings
@@ -117,14 +117,22 @@ async def get_ciclones():
 
 
 @router.get("/api/ciclones/img/{atcf}/{tipo}")
-async def get_ciclon_img(atcf: str, tipo: str):
+async def get_ciclon_img(atcf: str, tipo: str, request: Request):
     """Imagen del NHC (cono o key messages en español, o perspectiva a 7 días con
-    atcf=outlook y tipo=pacifico|atlantico). Sólo URLs de una lista blanca."""
+    atcf=outlook y tipo=pacifico|atlantico). Sólo URLs de una lista blanca.
+
+    La página le agrega ?v=<hora de los datos>, así que cada vez que se renuevan
+    los datos el navegador vuelve a preguntar; con Last-Modified, si la imagen no
+    cambió la respuesta es un 304 sin cuerpo."""
     url = nhc.img_url(atcf, tipo)
     if not url:
         raise HTTPException(status_code=404, detail="Imagen no reconocida")
     img = await nhc.get_img(url)
     if not img:
         raise HTTPException(status_code=404, detail="Imagen no disponible")
-    data, ctype = img
-    return Response(content=data, media_type=ctype, headers={"Cache-Control": "public, max-age=600"})
+    headers = {"Cache-Control": "public, max-age=60"}
+    if img.get("last_modified"):
+        headers["Last-Modified"] = img["last_modified"]
+        if request.headers.get("if-modified-since") == img["last_modified"]:
+            return Response(status_code=304, headers=headers)
+    return Response(content=img["data"], media_type=img["ctype"], headers=headers)

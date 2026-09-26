@@ -95,3 +95,49 @@ def test_get_ciclones_sirve_copia_si_el_nhc_cae(monkeypatch):
     d = asyncio.run(nhc.get_ciclones(19.38, -99.17))
     assert d["stale"] is True
     nhc._storms_cache.update(ts=0.0, data=None)
+
+
+class _Resp:
+    def __init__(self, status, content=b"", headers=None):
+        self.status_code, self.content, self.headers = status, content, headers or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+def test_get_img_revalida_con_if_modified_since(monkeypatch):
+    """Tras el TTL se pregunta al NHC con If-Modified-Since; un 304 conserva la
+    imagen y un 200 la reemplaza (el cono nuevo llega sin esperar 15 min)."""
+    nhc._img_cache.clear()
+    pedidos = []
+    respuestas = [
+        _Resp(200, b"v1", {"content-type": "image/png", "last-modified": "L1"}),
+        _Resp(304),
+        _Resp(200, b"v2", {"content-type": "image/png", "last-modified": "L2"}),
+    ]
+
+    class _Cliente:
+        def __init__(self, headers=None, **k):
+            self.h = headers or {}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url):
+            pedidos.append(self.h.get("If-Modified-Since"))
+            return respuestas.pop(0)
+
+    monkeypatch.setattr(nhc.httpx, "AsyncClient", _Cliente)
+    url = "https://www.nhc.noaa.gov/x.png"
+    assert asyncio.run(nhc.get_img(url))["data"] == b"v1"
+    assert asyncio.run(nhc.get_img(url))["data"] == b"v1"      # dentro del TTL: no pregunta
+    nhc._img_cache[url]["ts"] -= 120
+    assert asyncio.run(nhc.get_img(url))["data"] == b"v1"      # 304: se queda
+    nhc._img_cache[url]["ts"] -= 120
+    assert asyncio.run(nhc.get_img(url))["data"] == b"v2"      # 200: se reemplaza
+    assert pedidos == [None, "L1", "L1"]
+    nhc._img_cache.clear()
