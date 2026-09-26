@@ -128,6 +128,9 @@ class Settings(BaseSettings):
     alert_earthquake_magnitude: float = 6.0
     alert_earthquake_near_km: float = 150.0
     alert_earthquake_near_magnitude: float = 4.0
+    # Ciclones tropicales (NHC): avisa cuando uno se acerca/amenaza a México, se
+    # intensifica, el pronóstico lo lleva a tierra o hay avisos costeros nuevos.
+    alert_cyclone_enabled: bool = True
     # Avisos visuales (análisis del cielo con IA). Se evalúan con cada foto.
     # Reglas: sky_storm (cumulonimbus en desarrollo), sky_precipitation (lluvia
     # visible en horizonte), sky_visibility (visibilidad reducida).
@@ -198,6 +201,8 @@ class Settings(BaseSettings):
     # Bitácora de pronósticos (una foto cada 30 min de lo que dijo cada fuente) para
     # calificarlos contra el pluviómetro, ver services/forecast_verification.py.
     forecast_log_dir: str = "/data/forecast_log"
+    # Ciclones: estado de lo ya notificado y bitácora de la temporada
+    cyclone_dir: str = "/data/ciclones"
     # Historial de cuadros del radar SACMEX (ver services/sacmex_radar.py): ~220 KB
     # por cuadro, ~288 al día (~65 MB/día). 0 días = no borrar nunca.
     # Token para POST /api/kiosk/local (lecturas del BME280 del display ESP32). Vacío

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 Notifier = Callable[[str], Awaitable[None]]
 
 # Categorías de alerta que el usuario puede enrutar por canal (Telegram/correo).
-ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake", "backup", "publish"]
+ALERT_CATEGORIES = ["temp", "wind", "rain", "pressure", "humidity", "sun", "station", "battery", "sensor", "camera", "air", "visual", "earthquake", "cyclone", "backup", "publish"]
 
 # Etiquetas legibles por red (para el mensaje de alerta) -- claves iguales a
 # las que devuelve publishers.publish_all (nombre de red -> ok).
@@ -91,6 +91,8 @@ def _category_for(rule_key: str) -> str:
         return "backup"
     if rule_key.startswith("publish_"):
         return "publish"
+    if rule_key.startswith("cyclone_"):
+        return "cyclone"
     return "other"
 
 

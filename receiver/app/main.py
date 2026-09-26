@@ -148,6 +148,8 @@ async def lifespan(app: FastAPI):
     background_tasks.append(asyncio.create_task(_r_radar.radar_archive_task()))
     # Alertas de sismos (antes sólo si alguien abría /api/earthquakes)
     background_tasks.append(asyncio.create_task(_r_external.earthquake_watch_task()))
+    # Ciclones tropicales cerca de México (NHC): avisos de cambios + bitácora
+    background_tasks.append(asyncio.create_task(_r_external.cyclone_watch_task()))
 
     # El histórico de análisis del cielo se guardaba DENTRO de la carpeta del día, así
     # que la poda de fotos se lo llevaba a los 7 días. Ahora vive aparte; esto sube lo

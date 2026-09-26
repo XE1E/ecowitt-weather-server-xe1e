@@ -14,8 +14,11 @@ Los avisos OFICIALES para México los emite el SMN; esto es informativo. La
 geometría de México es aproximada (unos 100 vértices): sirve para "a unos 300 km
 de Manzanillo", no para decidir evacuaciones.
 """
+import html
 import io
+import json
 import math
+import os
 import re
 import time
 import logging
@@ -37,7 +40,7 @@ _TTL = 600            # 10 min: el NHC publica cada 3-6 h, más seguido no aport
 _IMG_TTL = 60
 _MAX_IMGS = 40
 
-_storms_cache: Dict[str, Any] = {"ts": 0.0, "data": None}
+_storms_cache: Dict[str, Any] = {"ts": 0.0, "data": None, "raw": None}
 _track_cache: Dict[str, Tuple[float, List[Dict[str, Any]]]] = {}   # kmz url -> (ts, puntos)
 _img_cache: Dict[str, Dict[str, Any]] = {}   # url -> {ts, data, ctype, last_modified}
 
@@ -299,6 +302,181 @@ def _imagenes(atcf: str, cuenca: str) -> Dict[str, Optional[str]]:
     return {"cono": f"{base}/cono", "mensajes": f"{base}/mensajes"}
 
 
+# ── Textos del NHC: probabilidades de viento (PWS) y avisos costeros (TCP) ──────
+_texto_cache: Dict[str, Tuple[float, str]] = {}   # url -> (ts, texto del <pre>)
+
+
+async def _texto(url: Optional[str]) -> Optional[str]:
+    """Contenido del <pre> de un producto de texto del NHC (caché 10 min)."""
+    if not url:
+        return None
+    now = time.time()
+    c = _texto_cache.get(url)
+    if c and now - c[0] < _TTL:
+        return c[1]
+    try:
+        r = await _get(url)
+        m = re.search(r"<pre[^>]*>(.*?)</pre>", r.text, re.S | re.I)
+        txt = html.unescape(m.group(1)) if m else r.text
+    except Exception as e:
+        logger.info("NHC texto no disponible %s (%s)", url, e)
+        return c[1] if c else None
+    if len(_texto_cache) > 40:
+        _texto_cache.clear()
+    _texto_cache[url] = (now, txt)
+    return txt
+
+
+# Localidades de México que usa el NHC en sus tablas (nombre abreviado en
+# mayúsculas -> nombre para mostrar). Las que no estén aquí se muestran aparte
+# como "otras" con el nombre tal cual (Hawái, EE. UU., Centroamérica…).
+_PWS_MX = {
+    "ISLA GUADALUPE": "Isla Guadalupe", "PUNTA EUGENIA": "Punta Eugenia", "P ABREOJOS": "Punta Abreojos",
+    "CABO SAN LUCAS": "Cabo San Lucas", "SAN JOSE CABO": "San José del Cabo", "LA PAZ": "La Paz",
+    "LORETO": "Loreto", "SANTA ROSALIA": "Santa Rosalía", "SAN FELIPE": "San Felipe",
+    "BAHIA KINO": "Bahía Kino", "GUAYMAS": "Guaymas", "HERMOSILLO": "Hermosillo",
+    "HUATABAMPO": "Huatabampo", "LOS MOCHIS": "Los Mochis", "CULIACAN": "Culiacán",
+    "MAZATLAN": "Mazatlán", "SAN BLAS": "San Blas", "TEPIC": "Tepic", "P VALLARTA": "Puerto Vallarta",
+    "BARRA NAVIDAD": "Barra de Navidad", "MANZANILLO": "Manzanillo", "L CARDENAS": "Lázaro Cárdenas",
+    "LAZARO CARDENAS": "Lázaro Cárdenas", "ZIHUATANEJO": "Zihuatanejo", "ACAPULCO": "Acapulco",
+    "P MALDONADO": "Punta Maldonado", "P ANGEL": "Puerto Ángel", "P ESCONDIDO": "Puerto Escondido",
+    "HUATULCO": "Huatulco", "SALINA CRUZ": "Salina Cruz", "TAPACHULA": "Tapachula",
+    "ISLA SOCORRO": "Isla Socorro", "ISLA CLARION": "Isla Clarión", "ISLAS MARIAS": "Islas Marías",
+    "GUADALAJARA": "Guadalajara", "NOGALES": "Nogales", "CIUDAD OBREGON": "Ciudad Obregón",
+    "MATAMOROS": "Matamoros", "SOTO LA MARINA": "Soto la Marina", "TAMPICO": "Tampico",
+    "TUXPAN": "Tuxpan", "VERACRUZ": "Veracruz", "COATZACOALCOS": "Coatzacoalcos",
+    "FRONTERA": "Frontera", "CD DEL CARMEN": "Ciudad del Carmen", "CAMPECHE": "Campeche",
+    "MERIDA": "Mérida", "PROGRESO": "Progreso", "CANCUN": "Cancún", "COZUMEL": "Cozumel",
+    "CHETUMAL": "Chetumal", "TULUM": "Tulum", "ISLA MUJERES": "Isla Mujeres",
+    "MONTERREY": "Monterrey", "LA PESCA": "La Pesca", "MX/GUAT BORDER": "Frontera México-Guatemala",
+}
+_PWS_LINEA = re.compile(r"^(?P<lugar>\S.*?)\s+(?P<kt>34|50|64)\s+(?P<resto>(?:X|\d+).*)$")
+
+
+def parse_pws(txt: str) -> List[Dict[str, Any]]:
+    """Probabilidad ACUMULADA a 5 días de vientos de 34/50/64 kt por localidad.
+
+    Cada renglón: 'LORETO         34  X   X( X) ... 33(71)   1(72)'; el último
+    número entre paréntesis es la acumulada al final del periodo (X = <1 %)."""
+    lugares: Dict[str, Dict[str, Any]] = {}
+    for linea in txt.splitlines():
+        m = _PWS_LINEA.match(linea.rstrip())
+        if not m:
+            continue
+        nombre = m.group("lugar").strip()
+        if re.match(r"^\d+N\s+\d+W$", nombre):   # puntos de mar ("20N 115W")
+            continue
+        acum = re.findall(r"\(\s*(X|\d+)\)", m.group("resto"))
+        val = acum[-1] if acum else m.group("resto").split()[0]
+        pct = 0 if val == "X" else int(val)
+        d = lugares.setdefault(nombre, {
+            "lugar": _PWS_MX.get(nombre, nombre.title()), "mexico": nombre in _PWS_MX,
+            "p34": 0, "p50": 0, "p64": 0,
+        })
+        d[f"p{m.group('kt')}"] = pct
+    return sorted(lugares.values(), key=lambda d: (-d["p64"], -d["p50"], -d["p34"]))
+
+
+_TIPOS_AVISO = {
+    "hurricane warning": ("Aviso de huracán", "aviso"),
+    "hurricane watch": ("Vigilancia de huracán", "vigilancia"),
+    "tropical storm warning": ("Aviso de tormenta tropical", "aviso"),
+    "tropical storm watch": ("Vigilancia de tormenta tropical", "vigilancia"),
+    "storm surge warning": ("Aviso de marea de tormenta", "aviso"),
+    "storm surge watch": ("Vigilancia de marea de tormenta", "vigilancia"),
+}
+_MX_RE = re.compile(
+    r"Mexico|Baja California|Sonora|Sinaloa|Nayarit|Jalisco|Colima|Michoac|Guerrero|Oaxaca|Chiapas|"
+    r"Tehuantepec|Yucat|Quintana Roo|Campeche|Tabasco|Veracruz|Tamaulipas|Cabo San Lucas|Los Cabos|"
+    r"Cozumel|Canc[uú]n|Chetumal|Tulum|Manzanillo|Acapulco|Mazatl|Puerto Vallarta|Loreto|Guaymas|"
+    r"Isla Socorro|Islas Mar[ií]as|Revillagigedo|Todos Santos|Punta Abreojos", re.I)
+_DIAS = {"Monday": "lunes", "Tuesday": "martes", "Wednesday": "miércoles", "Thursday": "jueves",
+         "Friday": "viernes", "Saturday": "sábado", "Sunday": "domingo"}
+
+
+def _cuando_es(t: str) -> str:
+    """'tonight or early Saturday' -> 'esta noche o temprano el sábado' (lo común)."""
+    t = t.strip().rstrip(".")
+    for en, es in _DIAS.items():
+        t = re.sub(rf"\bearly {en}\b", f"temprano el {es}", t)
+        t = re.sub(rf"\blate {en}\b", f"tarde el {es}", t)
+        t = re.sub(rf"\b{en} night\b", f"el {es} por la noche", t)
+        t = re.sub(rf"\bon {en}\b", f"el {es}", t)
+        t = re.sub(rf"\b{en}\b", f"el {es}", t)
+    for en, es in (("later today", "más tarde hoy"), ("tonight", "esta noche"), ("today", "hoy"),
+                   ("this morning", "esta mañana"), ("this afternoon", "esta tarde"),
+                   ("this evening", "esta noche"), (" or ", " o "), (" and ", " y ")):
+        t = t.replace(en, es)
+    return t
+
+
+def traducir_zona(z: str) -> str:
+    """Traducción de las fórmulas fijas del NHC para zonas costeras."""
+    z = z.strip()
+    lados = {"southern ": "sur ", "northern ": "norte ", "western ": "oeste ", "eastern ": "este "}
+    z = re.sub(r"^The (southern |northern |western |eastern )?coast of Mexico",
+               lambda m: "La costa " + lados.get(m.group(1) or "", "") + "de México", z)
+    z = re.sub(r"^The Cabo Verde Islands", "Islas de Cabo Verde", z)
+    z = re.sub(r"^The Yucatan Peninsula", "La península de Yucatán", z)
+    z = re.sub(r"\bnorthward to\b", "hacia el norte hasta", z)
+    z = re.sub(r"\bsouthward to\b", "hacia el sur hasta", z)
+    for en, es in (("north of", "al norte de"), ("south of", "al sur de"), ("east of", "al este de"),
+                   ("west of", "al oeste de"), ("including", "incluyendo")):
+        z = re.sub(rf"\b{en}\b", es, z)
+    z = re.sub(r"\bfrom\b", "de", z)
+    z = re.sub(r"\bto\b", "a", z)
+    z = re.sub(r"\band\b", "y", z)
+    return z
+
+
+def parse_avisos_tcp(txt: str) -> Dict[str, Any]:
+    """Vigilancias y avisos costeros vigentes del aviso público (TCP)."""
+    i = txt.find("WATCHES AND WARNINGS")
+    if i < 0:
+        return {"vigentes": [], "notas": [], "mexico": None}
+    sec = txt[i:]
+    fin = re.search(r"\n\s*\n[A-Z][A-Z /]+\n-{4,}", sec[30:])
+    if fin:
+        sec = sec[:30 + fin.start()]
+    vigentes: List[Dict[str, Any]] = []
+    actual: Optional[Dict[str, Any]] = None
+    for linea in sec.splitlines():
+        t = linea.strip()
+        m = re.match(r"^An? (.+?) (?:is|are) in effect for\.\.\.$", t)
+        if m:
+            tipo_en = m.group(1).strip()
+            tipo, grado = _TIPOS_AVISO.get(tipo_en.lower(), (tipo_en, "aviso" if "Warning" in tipo_en else "vigilancia"))
+            actual = {"tipo": tipo, "grado": grado, "tipo_en": tipo_en, "zonas": []}
+            vigentes.append(actual)
+            continue
+        if t.startswith("*") and actual is not None:
+            zona_en = t.lstrip("* ").strip()
+            actual["zonas"].append({"zona": traducir_zona(zona_en), "zona_en": zona_en,
+                                    "mexico": bool(_MX_RE.search(zona_en))})
+            continue
+        if not t:
+            actual = None
+    # Notas del tipo "Interests in Baja California Sur should closely monitor…"
+    notas = []
+    cuerpo = " ".join(sec.split())
+    for m in re.finditer(r"Interests (?:in|elsewhere in|along|elsewhere along) (.+?) should (?:closely )?"
+                         r"monitor the progress of (?:this system|[A-Z][a-z]+)\.", cuerpo):
+        lugar = m.group(1)
+        notas.append({"texto": f"En {traducir_zona(lugar)} deben seguir de cerca la evolución de este sistema.",
+                      "mexico": bool(_MX_RE.search(lugar))})
+    for m in re.finditer(r"(Watches or warnings|Additional watches|Additional warnings|Watches|Warnings) "
+                         r"(?:could|may|will likely|will probably) be required for (?:a )?portions? of "
+                         r"(?:the area|the coast|this area)(?: (.+?))?\.", cuerpo):
+        que = {"Watches": "vigilancias", "Warnings": "avisos", "Additional watches": "más vigilancias",
+               "Additional warnings": "más avisos", "Watches or warnings": "vigilancias o avisos"}[m.group(1)]
+        cuando = f" {_cuando_es(m.group(2))}" if m.group(2) else ""
+        notas.append({"texto": f"Podrían emitirse {que} para parte de esa zona{cuando}.", "mexico": None})
+    # Grado más alto que toca a México (para el nivel de amenaza y las alertas).
+    grados = [v["grado"] for v in vigentes if any(z["mexico"] for z in v["zonas"])]
+    mexico = "aviso" if "aviso" in grados else ("vigilancia" if grados else None)
+    return {"vigentes": vigentes, "notas": notas, "mexico": mexico}
+
+
 def _num(v: Any) -> Optional[float]:
     try:
         return float(v)
@@ -322,6 +500,7 @@ async def get_ciclones(est_lat: float, est_lon: float) -> Dict[str, Any]:
             return {**c["data"], "stale": True}
         raise
 
+    c["raw"] = raw.get("activeStorms") or []
     tormentas = []
     for s in raw.get("activeStorms") or []:
         atcf = str(s.get("id") or "").lower()          # "ep172026"
@@ -336,6 +515,16 @@ async def get_ciclones(est_lat: float, est_lon: float) -> Dict[str, Any]:
         pts = await _track((s.get("forecastTrack") or {}).get("kmzFile"))
         con_avisos = bool(s.get("windWatchesWarnings"))
         ev = evaluar(lat, lon, pts, con_avisos)
+        tcp = await _texto((s.get("publicAdvisory") or {}).get("url"))
+        avisos = parse_avisos_tcp(tcp) if tcp else {"vigentes": [], "notas": [], "mexico": None}
+        # Un aviso (warning) vigente en costa mexicana ES amenaza; una vigilancia
+        # (watch), al menos "se acerca" — aunque la geometría diga otra cosa.
+        if avisos["mexico"] == "aviso":
+            ev["nivel"] = "alta"
+        elif avisos["mexico"] == "vigilancia" and ev["nivel"] == "baja":
+            ev["nivel"] = "media"
+        pws = await _texto((s.get("windSpeedProbabilities") or {}).get("url"))
+        probs = parse_pws(pws) if pws else []
         adv = s.get("publicAdvisory") or {}
         tormentas.append({
             "id": atcf,
@@ -359,6 +548,8 @@ async def get_ciclones(est_lat: float, est_lon: float) -> Dict[str, Any]:
             "aviso_url": adv.get("url"),
             "graficas_url": (s.get("forecastGraphics") or {}).get("url"),
             "avisos_costeros": con_avisos,
+            "avisos": avisos,
+            "probabilidades": probs,
             "km_estacion": round(haversine_km(lat, lon, est_lat, est_lon)),
             "pronostico": pts,
             **ev,
@@ -376,6 +567,214 @@ async def get_ciclones(est_lat: float, est_lon: float) -> Dict[str, Any]:
     }
     c.update(ts=now, data=data)
     return data
+
+
+# ── Mapa: cono y líneas de avisos costeros (KMZ del NHC) ─────────────────────
+_kml_cache: Dict[str, Tuple[float, str]] = {}   # kmz url -> (ts, kml). La URL cambia con cada aviso.
+_WW_TIPO = {"HWR": "Aviso de huracán", "HWA": "Vigilancia de huracán",
+            "TWR": "Aviso de tormenta tropical", "TWA": "Vigilancia de tormenta tropical"}
+
+
+async def _kml(kmz_url: Optional[str]) -> Optional[str]:
+    if not kmz_url:
+        return None
+    now = time.time()
+    c = _kml_cache.get(kmz_url)
+    if c and now - c[0] < _TTL * 6:
+        return c[1]
+    try:
+        r = await _get(kmz_url)
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        kml = z.read(next(n for n in z.namelist() if n.lower().endswith(".kml"))).decode("utf-8", "replace")
+    except Exception as e:
+        logger.info("NHC KMZ no disponible %s (%s)", kmz_url, e)
+        return c[1] if c else None
+    if len(_kml_cache) > 40:
+        _kml_cache.clear()
+    _kml_cache[kmz_url] = (now, kml)
+    return kml
+
+
+def _coords(txt: str, paso: int = 1) -> List[List[float]]:
+    """'lon,lat,0 lon,lat,0 …' -> [[lat, lon], …] (cada `paso` puntos, sin perder el último)."""
+    pts = []
+    for par in txt.split():
+        p = par.split(",")
+        if len(p) >= 2:
+            try:
+                pts.append([round(float(p[1]), 3), round(float(p[0]), 3)])
+            except ValueError:
+                pass
+    if paso > 1 and len(pts) > 2:
+        pts = pts[::paso] + ([pts[-1]] if (len(pts) - 1) % paso else [])
+    return pts
+
+
+def parse_cono(kml: str) -> List[List[List[float]]]:
+    """Anillos exteriores del cono (el NHC a veces lo parte en varios polígonos)."""
+    anillos = []
+    for m in re.finditer(r"<outerBoundaryIs>.*?<coordinates>(.*?)</coordinates>", kml, re.S):
+        c = _coords(m.group(1), paso=3)   # ~1,000 puntos por cono: con 1 de cada 3 sobra
+        if len(c) >= 3:
+            anillos.append(c)
+    return anillos
+
+
+def parse_ww(kml: str) -> List[Dict[str, Any]]:
+    """Tramos de costa con vigilancia/aviso: [{tipo, clave, coords}]."""
+    out = []
+    for pm in kml.split("<Placemark")[1:]:
+        estilo = re.search(r"<styleUrl>#(\w+)</styleUrl>", pm)
+        coords = re.search(r"<LineString>\s*<coordinates>(.*?)</coordinates>", pm, re.S)
+        if not estilo or not coords:
+            continue
+        clave = estilo.group(1).upper()
+        out.append({"clave": clave, "tipo": _WW_TIPO.get(clave, clave), "coords": _coords(coords.group(1))})
+    return out
+
+
+async def get_mapa(raw_storms: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Geometría para el mapa de la página: cono y avisos por tormenta."""
+    if raw_storms is None:
+        # La lista cruda ya la guarda get_ciclones (misma caché de 10 min); sólo si
+        # aún no hay (recién arrancado) se baja aquí.
+        raw_storms = _storms_cache.get("raw")
+        if raw_storms is None:
+            try:
+                raw_storms = (await _get(f"{_BASE}/CurrentStorms.json")).json().get("activeStorms") or []
+            except Exception as e:
+                logger.info("NHC mapa: sin lista de tormentas (%s)", e)
+                raw_storms = []
+    out = []
+    for s in raw_storms:
+        atcf = str(s.get("id") or "").lower()
+        if atcf[:2] not in _CUENCA:
+            continue
+        cono = await _kml((s.get("trackCone") or {}).get("kmzFile"))
+        ww = await _kml((s.get("windWatchesWarnings") or {}).get("kmzFile"))
+        out.append({"id": atcf, "cono": parse_cono(cono) if cono else [], "avisos": parse_ww(ww) if ww else []})
+    return {"tormentas": out}
+
+
+# ── Satélite: cuadros GOES centrados en la tormenta (NOAA STAR "floaters") ───
+_SAT_BASE = "https://cdn.star.nesdis.noaa.gov/FLOATER/data"
+_sat_cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_SAT_RE = re.compile(r'href="((\d{4})(\d{3})(\d{2})(\d{2})_(GOES\d+)-ABI-FL-GEOCOLOR-([A-Z]{2}\d{6})-500x500\.jpg)"')
+
+
+async def get_satelite(atcf: str, cuadros: int = 12, cada_min: int = 30) -> Dict[str, Any]:
+    """Últimas ~6 h de imágenes GeoColor (un cuadro cada 30 min), más la más reciente.
+
+    Las URLs son directas a NOAA (dominio público): el navegador las baja sin pasar
+    por el VPS. Aquí sólo se lee el índice del directorio (caché 5 min)."""
+    atcf = atcf.upper()
+    if not re.match(r"^(AL|EP|CP)\d{6}$", atcf):
+        return {"cuadros": []}
+    now = time.time()
+    c = _sat_cache.get(atcf)
+    if c and now - c[0] < 300:
+        return c[1]
+    carpeta = f"{_SAT_BASE}/{atcf}/GEOCOLOR/"
+    try:
+        r = await _get(carpeta)
+        todos = []
+        for m in _SAT_RE.finditer(r.text):
+            nombre, anio, dia, hh, mm, sat, _ = m.groups()
+            dt = datetime(int(anio), 1, 1, int(hh), int(mm), tzinfo=timezone.utc) + timedelta(days=int(dia) - 1)
+            todos.append((dt, nombre, sat))
+        todos = sorted(set(todos))
+    except Exception as e:
+        logger.info("Satélite flotante no disponible %s (%s)", atcf, e)
+        return c[1] if c else {"cuadros": []}
+    elegidos: List[Tuple[datetime, str, str]] = []
+    for dt, nombre, sat in reversed(todos):          # del más nuevo hacia atrás
+        if not elegidos or (elegidos[-1][0] - dt) >= timedelta(minutes=cada_min - 2):
+            elegidos.append((dt, nombre, sat))
+        if len(elegidos) >= cuadros:
+            break
+    elegidos.reverse()
+    data = {
+        "cuadros": [{"hora": dt.strftime("%Y-%m-%dT%H:%M:%SZ"), "url": carpeta + nombre} for dt, nombre, _ in elegidos],
+        "grande": f"{carpeta}latest.jpg",
+        "satelite": elegidos[-1][2] if elegidos else None,
+        "pagina": f"https://www.star.nesdis.noaa.gov/goes/floater.php?stormid={atcf}",
+    }
+    if len(_sat_cache) > 20:
+        _sat_cache.clear()
+    _sat_cache[atcf] = (now, data)
+    return data
+
+
+# ── Bitácora de la temporada ──────────────────────────────────────────────────
+# El NHC no da un resumen de temporada en JSON: se arma aquí anotando cada
+# tormenta que aparece (cada 10 min, desde cyclone_watch_task). Sólo cuenta desde
+# que existe esta función (2026-09-25); lo anterior no está.
+_NIVEL_ORD = {"baja": 0, "media": 1, "alta": 2}
+
+
+def _ruta_temporada(directorio: str, anio: int) -> str:
+    return os.path.join(directorio, f"temporada-{anio}.json")
+
+
+def leer_temporada(directorio: str, anio: int) -> Dict[str, Any]:
+    try:
+        with open(_ruta_temporada(directorio, anio), encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        logger.warning("Bitácora de temporada %s ilegible: %s", anio, e)
+        return {}
+
+
+def registrar_temporada(directorio: str, tormentas: List[Dict[str, Any]]) -> None:
+    """Actualiza por tormenta: nombre, fechas, máximos de viento/categoría, mínimo
+    de presión y el nivel de amenaza más alto que alcanzó para México."""
+    por_anio: Dict[int, List[Dict[str, Any]]] = {}
+    for t in tormentas:
+        try:
+            por_anio.setdefault(int(t["id"][-4:]), []).append(t)
+        except (ValueError, KeyError):
+            continue
+    ahora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for anio, ts in por_anio.items():
+        log = leer_temporada(directorio, anio)
+        for t in ts:
+            e = log.setdefault(t["id"], {"id": t["id"], "cuenca": t["cuenca"], "primera": ahora})
+            e["nombre"] = t["nombre"]           # una depresión puede recibir nombre después
+            e["ultima"] = ahora
+            kt = t.get("viento_kt")
+            if kt is not None and kt >= (e.get("max_kt") or 0):
+                e.update(max_kt=kt, max_tipo=t["tipo"], max_categoria=t.get("categoria"))
+            if t.get("presion_mb") is not None and t["presion_mb"] < (e.get("min_mb") or 9999):
+                e["min_mb"] = t["presion_mb"]
+            if _NIVEL_ORD[t["nivel"]] >= _NIVEL_ORD.get(e.get("nivel_max", "baja"), 0):
+                e["nivel_max"] = t["nivel"]
+            if t.get("toca_tierra") and not e.get("toco_tierra"):
+                e["toco_tierra"] = t["toca_tierra"]["lugar"]   # pronosticado, no confirmado
+        try:
+            os.makedirs(directorio, exist_ok=True)
+            tmp = _ruta_temporada(directorio, anio) + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(log, f, ensure_ascii=False)
+            os.replace(tmp, _ruta_temporada(directorio, anio))
+        except OSError as ex:
+            logger.warning("No se pudo guardar la bitácora de temporada: %s", ex)
+
+
+def resumen_temporada(directorio: str, anio: int) -> Dict[str, Any]:
+    log = leer_temporada(directorio, anio)
+    ts = sorted(log.values(), key=lambda e: e.get("primera", ""))
+    def cuenta(cu: List[str]) -> Dict[str, int]:
+        sub = [e for e in ts if e.get("cuenca") in cu]
+        return {
+            "total": len(sub),
+            "tormentas": sum(1 for e in sub if (e.get("max_kt") or 0) >= 34),
+            "huracanes": sum(1 for e in sub if (e.get("max_kt") or 0) >= 64),
+            "mayores": sum(1 for e in sub if (e.get("max_kt") or 0) >= 96),
+        }
+    return {"anio": anio, "desde": ts[0]["primera"] if ts else None, "tormentas": ts,
+            "pacifico": cuenta(["ep", "cp"]), "atlantico": cuenta(["al"])}
 
 
 # ── Imágenes (proxy con caché: el navegador no depende de nhc.noaa.gov) ───────

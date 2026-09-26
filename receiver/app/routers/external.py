@@ -106,6 +106,35 @@ async def get_earthquakes_data():
         return {"quakes": []}
 
 
+async def cyclone_watch_task():
+    """Ciclones cerca de México cada 10 min (el ritmo de la caché de nhc.py): manda
+    los cambios por Telegram/correo (ver services/cyclone_alerts.py) y anota cada
+    tormenta en la bitácora de la temporada."""
+    import os
+    from ..services import cyclone_alerts
+    await asyncio.sleep(150)  # gracia inicial
+    path = os.path.join(settings.cyclone_dir, "alertas.json")
+    while True:
+        try:
+            data = await nhc.get_ciclones(settings.cwop_latitude, settings.cwop_longitude)
+            if not data.get("stale"):
+                tormentas = data.get("tormentas", [])
+                nhc.registrar_temporada(settings.cyclone_dir, tormentas)
+                msgs, estado = cyclone_alerts.eventos(cyclone_alerts.cargar(path), tormentas)
+                svc = state.alert_service
+                if msgs and settings.alerts_enabled and settings.alert_cyclone_enabled and svc.enabled:
+                    for m in msgs:
+                        svc._add_to_history("cyclone_nhc", m, resolved=False)
+                        await svc._safe_notify(m, category="cyclone")
+                    await svc._safe_notify("📍 Detalle: https://clima.xe1e.net/ciclones", category="cyclone")
+                # El estado se guarda aunque las alertas estén apagadas: al
+                # encenderlas no debe llegar de golpe todo lo ya pasado.
+                cyclone_alerts.guardar(path, estado)
+        except Exception as e:
+            logger.error(f"Revisión de ciclones falló: {e}")
+        await asyncio.sleep(600)
+
+
 @router.get("/api/ciclones")
 async def get_ciclones():
     """Ciclones tropicales activos (Atlántico y Pacífico, NHC) con su cercanía a México."""
@@ -114,6 +143,25 @@ async def get_ciclones():
     except Exception as e:
         logger.error(f"Error getting ciclones: {e}")
         raise HTTPException(status_code=502, detail="El NHC no está disponible")
+
+
+@router.get("/api/ciclones/mapa")
+async def get_ciclones_mapa():
+    """Cono y líneas de avisos costeros por tormenta, para el mapa de la página."""
+    return await nhc.get_mapa()
+
+
+@router.get("/api/ciclones/sat/{atcf}")
+async def get_ciclon_satelite(atcf: str):
+    """Cuadros GOES recientes de la tormenta (URLs directas a NOAA STAR)."""
+    return await nhc.get_satelite(atcf)
+
+
+@router.get("/api/ciclones/temporada")
+async def get_ciclones_temporada(anio: Optional[int] = None):
+    """Resumen de la temporada (bitácora propia: desde 2026-09-25)."""
+    from datetime import datetime
+    return nhc.resumen_temporada(settings.cyclone_dir, anio or datetime.now().year)
 
 
 @router.get("/api/ciclones/img/{atcf}/{tipo}")

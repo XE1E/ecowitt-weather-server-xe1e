@@ -141,3 +141,154 @@ def test_get_img_revalida_con_if_modified_since(monkeypatch):
     assert asyncio.run(nhc.get_img(url))["data"] == b"v2"      # 200: se reemplaza
     assert pedidos == [None, "L1", "L1"]
     nhc._img_cache.clear()
+
+
+# ── Textos: probabilidades (PWS) y avisos (TCP) ──────────────────────────────
+PWS = """
+LOCATION       KT
+
+PUNTA EUGENIA  34  X   X( X)   X( X)   X( X)   2( 2)   2( 4)   X( 4)
+
+LORETO         34  X   X( X)   X( X)   X( X)  38(38)  33(71)   1(72)
+LORETO         50  X   X( X)   X( X)   X( X)   9( 9)  25(34)   X(34)
+LORETO         64  X   X( X)   X( X)   X( X)   3( 3)  11(14)   X(14)
+
+ISLA SOCORRO   34 46  43(89)   1(90)   X(90)   X(90)   X(90)   X(90)
+20N 115W       34  X   X( X)  18(18)  14(32)   2(34)   X(34)   X(34)
+HILO           34  X   X( X)   5( 5)
+"""
+
+TCP = """WATCHES AND WARNINGS
+--------------------
+CHANGES WITH THIS ADVISORY:
+
+The government of Mexico has issued a Hurricane Warning.
+
+SUMMARY OF WATCHES AND WARNINGS IN EFFECT:
+
+A Hurricane Warning is in effect for...
+* The coast of Mexico from Cabo San Lucas to Santa Fe
+
+A Tropical Storm Watch is in effect for...
+* Baja California Sur from Punta Abreojos northward to Punta Eugenia
+* Hawaii County
+
+Interests in Sinaloa should closely monitor the progress of this system.
+Additional watches may be required for portions of the area tonight or early Saturday.
+
+
+DISCUSSION AND OUTLOOK
+----------------------
+At 200 PM MST...
+"""
+
+
+def test_parse_pws_acumulada_y_mexico():
+    p = {d["lugar"]: d for d in nhc.parse_pws(PWS)}
+    assert p["Loreto"] == {"lugar": "Loreto", "mexico": True, "p34": 72, "p50": 34, "p64": 14}
+    assert p["Punta Eugenia"]["p34"] == 4
+    assert p["Isla Socorro"]["p34"] == 90
+    assert "20N 115W" not in p and "20n 115w" not in {k.lower() for k in p}   # puntos de mar fuera
+    assert p["Hilo"]["mexico"] is False
+
+
+def test_parse_avisos_tcp():
+    a = nhc.parse_avisos_tcp(TCP)
+    assert a["mexico"] == "aviso"
+    tipos = [v["tipo"] for v in a["vigentes"]]
+    assert tipos == ["Aviso de huracán", "Vigilancia de tormenta tropical"]
+    z = a["vigentes"][0]["zonas"][0]
+    assert z["zona"] == "La costa de México de Cabo San Lucas a Santa Fe" and z["mexico"]
+    zs = a["vigentes"][1]["zonas"]
+    assert zs[0]["zona"] == "Baja California Sur de Punta Abreojos hacia el norte hasta Punta Eugenia"
+    assert zs[1]["mexico"] is False                          # Hawái no es México
+    textos = [n["texto"] for n in a["notas"]]
+    assert "En Sinaloa deben seguir de cerca la evolución de este sistema." in textos
+    assert any("esta noche o temprano el sábado" in t for t in textos)
+
+
+def test_parse_avisos_sin_avisos():
+    a = nhc.parse_avisos_tcp("WATCHES AND WARNINGS\n----\nThere are no coastal watches or warnings in effect.\n")
+    assert a == {"vigentes": [], "notas": [], "mexico": None}
+
+
+def test_parse_cono_y_ww():
+    kml_cono = "<Polygon><outerBoundaryIs><LinearRing><coordinates>" + " ".join(
+        f"{-110 + i * 0.1},{17 + i * 0.05},0" for i in range(10)) + "</coordinates></LinearRing></outerBoundaryIs></Polygon>"
+    anillos = nhc.parse_cono(kml_cono)
+    assert len(anillos) == 1 and anillos[0][0] == [17.0, -110.0]
+    assert anillos[0][-1] == [17.45, -109.1]                  # el último punto no se pierde al diezmar
+    ww = nhc.parse_ww("<Placemark><styleUrl>#HWR</styleUrl><LineString><coordinates>-109.9,22.9,0 -110.2,23.4,0"
+                      "</coordinates></LineString></Placemark>")
+    assert ww == [{"clave": "HWR", "tipo": "Aviso de huracán", "coords": [[22.9, -109.9], [23.4, -110.2]]}]
+
+
+# ── Bitácora de temporada ────────────────────────────────────────────────────
+def _t(**k):
+    base = {"id": "ep172026", "nombre": "Polo", "cuenca": "ep", "tipo": "Huracán", "clase": "HU",
+            "categoria": 3, "viento_kt": 100, "viento_kmh": 185, "presion_mb": 960, "nivel": "media",
+            "toca_tierra": None, "ahora": {"km_costa": 400, "lugar": "Manzanillo, Col.", "sobre_tierra": False},
+            "acercamiento": {"km_costa": 300, "lugar": "Manzanillo, Col.", "horas": 48, "hora": "2026-09-27T12:00:00Z"},
+            "avisos": {"vigentes": [], "notas": [], "mexico": None}}
+    base.update(k)
+    return base
+
+
+def test_registrar_temporada_guarda_maximos(tmp_path):
+    d = str(tmp_path)
+    nhc.registrar_temporada(d, [_t(viento_kt=100, presion_mb=960, nivel="media")])
+    nhc.registrar_temporada(d, [_t(viento_kt=140, categoria=5, presion_mb=920, nivel="alta")])
+    nhc.registrar_temporada(d, [_t(viento_kt=90, categoria=2, presion_mb=970, nivel="baja")])
+    r = nhc.resumen_temporada(d, 2026)
+    e = r["tormentas"][0]
+    assert (e["max_kt"], e["max_categoria"], e["min_mb"], e["nivel_max"]) == (140, 5, 920, "alta")
+    assert r["pacifico"] == {"total": 1, "tormentas": 1, "huracanes": 1, "mayores": 1}
+    assert r["atlantico"]["total"] == 0
+
+
+# ── Alertas de ciclones (cambios, no estado) ─────────────────────────────────
+from app.services import cyclone_alerts  # noqa: E402
+
+
+def test_alertas_solo_cambios():
+    msgs, est = cyclone_alerts.eventos({}, [_t()])
+    assert len(msgs) == 1 and "se acerca a México" in msgs[0]
+    assert cyclone_alerts.eventos(est, [_t()])[0] == []                     # sin cambios: nada
+
+    msgs, est = cyclone_alerts.eventos(est, [_t(categoria=4, viento_kt=120)])
+    assert len(msgs) == 1 and "se intensificó" in msgs[0] and "cat. 4" in msgs[0]
+
+    msgs, est = cyclone_alerts.eventos(est, [_t(categoria=4, viento_kt=120, nivel="alta",
+                                                 toca_tierra={"horas": 60, "lugar": "Manzanillo, Col.", "hora": None})])
+    assert len(msgs) == 1 and "AMENAZA A MÉXICO" in msgs[0] and "tocar tierra" in msgs[0]
+
+    aviso = {"vigentes": [{"tipo": "Aviso de huracán", "grado": "aviso", "zonas": [
+        {"zona": "La costa de México de Manzanillo a Cabo Corrientes", "mexico": True}]}], "notas": [], "mexico": "aviso"}
+    msgs, est = cyclone_alerts.eventos(est, [_t(categoria=4, viento_kt=120, nivel="alta", avisos=aviso,
+                                                 toca_tierra={"horas": 60, "lugar": "Manzanillo, Col.", "hora": None})])
+    assert len(msgs) == 1 and "Aviso de huracán" in msgs[0] and "Cabo Corrientes" in msgs[0]
+
+    msgs, est = cyclone_alerts.eventos(est, [_t(nivel="baja")])
+    assert len(msgs) == 1 and msgs[0].startswith("✅") and "ya no amenaza" in msgs[0]
+
+
+def test_alertas_lejanas_no_molestan():
+    lejos = _t(nivel="baja")
+    msgs, est = cyclone_alerts.eventos({}, [lejos])
+    assert msgs == []
+    assert cyclone_alerts.eventos(est, [_t(nivel="baja", categoria=5, viento_kt=150)])[0] == []
+
+
+def test_alerta_se_disipo():
+    _, est = cyclone_alerts.eventos({}, [_t()])
+    msgs, est = cyclone_alerts.eventos(est, [])
+    assert len(msgs) == 1 and "ya no está activo" in msgs[0]
+    assert est == {}
+
+
+def test_estado_persistente(tmp_path):
+    p = str(tmp_path / "ciclones" / "alertas.json")
+    assert cyclone_alerts.cargar(p) == {}
+    _, est = cyclone_alerts.eventos({}, [_t()])
+    cyclone_alerts.guardar(p, est)
+    assert cyclone_alerts.eventos(cyclone_alerts.cargar(p), [_t()])[0] == []   # tras reiniciar, no repite

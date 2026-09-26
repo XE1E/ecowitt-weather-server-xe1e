@@ -21,6 +21,7 @@ function categoryLabel(key: string): string {
   if (k === 'aqi_high' || k === 'imeca_high') return 'Aire'
   if (k.startsWith('sky_')) return 'Visual'
   if (k.startsWith('earthquake_')) return 'Sismo'
+  if (k.startsWith('cyclone_')) return 'Ciclón'
   return 'Alerta'
 }
 

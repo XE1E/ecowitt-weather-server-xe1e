@@ -172,6 +172,7 @@ def public_settings(settings) -> Dict[str, Any]:
         "alert_earthquake_magnitude": settings.alert_earthquake_magnitude,
         "alert_earthquake_near_km": settings.alert_earthquake_near_km,
         "alert_earthquake_near_magnitude": settings.alert_earthquake_near_magnitude,
+        "alert_cyclone_enabled": settings.alert_cyclone_enabled,
         # Cámara: visuales (análisis del cielo) y de equipo (sin señal / análisis fallando).
         # Faltaban las dos primeras aquí: existían en config.py y las usaba check_sky, pero
         # el panel no podía verlas ni editarlas porque este diccionario no las exponía.

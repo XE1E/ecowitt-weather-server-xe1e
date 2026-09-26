@@ -24,6 +24,41 @@ export interface Ciclon {
   toca_tierra: { horas: number; lugar: string; hora?: string | null } | null
   nivel: Nivel
   imagenes: { cono: string | null; mensajes: string | null }
+  avisos: CiclonAvisos
+  probabilidades: CiclonProb[]
+}
+
+export interface CiclonAvisos {
+  vigentes: { tipo: string; grado: 'aviso' | 'vigilancia'; tipo_en: string; zonas: { zona: string; zona_en: string; mexico: boolean }[] }[]
+  notas: { texto: string; mexico: boolean | null }[]
+  mexico: 'aviso' | 'vigilancia' | null
+}
+
+/** Probabilidad acumulada a 5 días de vientos ≥ 34/50/64 kt (63/93/119 km/h). */
+export interface CiclonProb { lugar: string; mexico: boolean; p34: number; p50: number; p64: number }
+
+export interface CiclonMapa {
+  tormentas: { id: string; cono: [number, number][][]; avisos: { clave: string; tipo: string; coords: [number, number][] }[] }[]
+}
+
+export interface CiclonSat {
+  cuadros: { hora: string; url: string }[]; grande?: string; satelite?: string | null; pagina?: string
+}
+
+export interface Temporada {
+  anio: number; desde: string | null
+  pacifico: { total: number; tormentas: number; huracanes: number; mayores: number }
+  atlantico: { total: number; tormentas: number; huracanes: number; mayores: number }
+  tormentas: {
+    id: string; nombre: string; cuenca: string; primera: string; ultima: string
+    max_kt?: number; max_tipo?: string; max_categoria?: number | null; min_mb?: number
+    nivel_max?: Nivel; toco_tierra?: string
+  }[]
+}
+
+/** Colores del NHC para vigilancias/avisos costeros. */
+export const COLOR_AVISO: Record<string, string> = {
+  HWR: '#ef4444', HWA: '#f472b6', TWR: '#3b82f6', TWA: '#facc15',
 }
 
 export interface CiclonesData {

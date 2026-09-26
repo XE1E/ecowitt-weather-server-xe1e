@@ -131,6 +131,8 @@ EDITABLE_KEYS = {
     # arriba para avisar (criterio independiente, ver check_earthquake)
     "alert_earthquake_near_km",
     "alert_earthquake_near_magnitude",
+    # Alertas de ciclones tropicales
+    "alert_cyclone_enabled",
     # Aviso de respaldo a R2 desactualizado
     "alert_backup_enabled",
     "alert_backup_stale_hours",

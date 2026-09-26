@@ -48,6 +48,7 @@ const CATEGORIES = [
   { key: 'air', icon: '🌫️', label: 'Calidad aire' },
   { key: 'visual', icon: '👁️', label: 'Visual (cielo)' },
   { key: 'earthquake', icon: '🌋', label: 'Sismos' },
+  { key: 'cyclone', icon: '🌀', label: 'Ciclones tropicales' },
   { key: 'backup', icon: '💾', label: 'Respaldo a R2' },
   { key: 'publish', icon: '🌐', label: 'Publicación (redes públicas)' },
 ] as const

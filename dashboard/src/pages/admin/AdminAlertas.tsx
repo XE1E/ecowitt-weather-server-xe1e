@@ -50,6 +50,7 @@ interface AlertSettings {
   alert_aqi_threshold: number
   alert_imeca_threshold: number
   alert_earthquake_enabled: boolean
+  alert_cyclone_enabled: boolean
   alert_earthquake_magnitude: number
   alert_visual_enabled: boolean
   alert_visual_rules_disabled: string[]
@@ -710,6 +711,17 @@ export function AdminAlertas() {
                   <span className="text-xs text-slate-500">Notifica sismos del SSN/USGS que superen esta magnitud</span>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Ciclones tropicales (NHC): avisa de CAMBIOS en tormentas cerca de México */}
+          <div className="bg-slate-800/50 rounded-xl border border-white/10 p-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Toggle enabled={settings.alert_cyclone_enabled} onChange={(v) => update('alert_cyclone_enabled', v)} label="🌀 Alertas ciclones" />
+              <span className="text-xs text-slate-500">
+                Cuando un ciclón se acerca o amenaza a México, se intensifica, el pronóstico lo lleva a tocar tierra,
+                hay vigilancias/avisos nuevos en la costa mexicana o deja de amenazar. Los lejanos no avisan.
+              </span>
             </div>
           </div>
 

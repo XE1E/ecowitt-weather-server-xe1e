@@ -691,6 +691,20 @@ saltable, estado de estación con 6 h de desfase, tareas que no ven el interrupt
 2) rendimiento (Influx bloquea el servidor, dashboard en un archivo de 1.87 MB),
 3) estructura (partir `main.py`), 4) limpieza.
 
+## 3d. Ciclones tropicales — ideas que quedaron fuera (anotado 2026-09-25)
+Tab `/ciclones` en producción (NHC: tormentas, cono/mensajes clave en español, mapa
+Leaflet, satélite GOES, probabilidades de viento, avisos costeros traducidos, bitácora
+de temporada y alertas por Telegram/correo, categoría `cyclone`). Quedaron pendientes:
+- [ ] **Kiosco ESP32 y Svitrix**: con amenaza para México (nivel media/alta), una
+  pantalla/app con el ciclón (nombre, categoría, distancia, frase). El kiosco ya se
+  arma en el servidor (`renderer`), así que sería otra página + zona táctil.
+- [ ] **Resumen en español de la discusión técnica** (`forecastDiscussion` del NHC,
+  en inglés) con la misma IA del análisis del cielo (Gemini). Una llamada por aviso
+  (cada 3-6 h, sólo tormentas cerca de México): costo bajo, pero decidir antes.
+- Notas: la bitácora de temporada sólo cuenta desde el 2026-09-25. La traducción de
+  zonas del aviso público cubre las fórmulas fijas del NHC; si aparece una rara se ve
+  medio en inglés (revisar `traducir_zona` con casos reales cuando haya avisos en México).
+
 ## 3c. ¿Repo privado + cambio de licencia? — por evaluar (anotado 2026-09-25)
 Idea del usuario: pasar `XE1E/ecowitt-weather-server-xe1e` a **privado** y dar acceso
 sólo a quien de verdad se interese; revisar la licencia. Hoy: repo **público**, README

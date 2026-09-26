@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { RefreshCw, Tornado } from 'lucide-react'
 import { PageInfo } from '../components/station/PageInfo'
+import { CyclonesMap } from '../components/station/CyclonesMap'
+import { CycloneSat } from '../components/station/CycloneSat'
+import { useSharedFetch } from '../hooks/useSharedFetch'
 import { useUnits } from '../units'
 import {
-  Ciclon, Nivel, useCiclones, colorCiclon, etiquetaCiclon, categoriaDeKt, fraseAmenaza,
+  Ciclon, Nivel, Temporada, useCiclones, colorCiclon, etiquetaCiclon, categoriaDeKt, fraseAmenaza,
   fmtHora, enTemporada, NIVEL_TXT, SMN_AVISO,
 } from '../components/station/cyclones'
 
@@ -40,6 +43,95 @@ function Dato({ label, value, sub }: { label: string; value: string; sub?: strin
       <p className="text-[11px] text-slate-400">{label}</p>
       <p className="text-base font-bold text-slate-100 leading-tight">{value}</p>
       {sub && <p className="text-[11px] text-slate-500 leading-tight">{sub}</p>}
+    </div>
+  )
+}
+
+const GRADO_CLS = {
+  aviso: 'border-red-500/50 bg-red-500/10 text-red-200',
+  vigilancia: 'border-amber-500/50 bg-amber-500/10 text-amber-200',
+}
+
+/** Vigilancias y avisos costeros vigentes (traducidos del aviso público del NHC). */
+function AvisosCosta({ c }: { c: Ciclon }) {
+  const { vigentes, notas } = c.avisos
+  const cerca = c.nivel !== 'baja'
+  // De tormentas lejanas sólo interesa si tocan México (casi nunca): se omite el resto.
+  const vs = cerca ? vigentes : vigentes.filter((v) => v.zonas.some((z) => z.mexico))
+  const ns = cerca ? notas : []
+  if (!vs.length && !ns.length) return null
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-slate-200">Vigilancias y avisos en la costa</p>
+      {vs.map((v, i) => (
+        <div key={i} className={`rounded-lg border px-3 py-2 text-sm ${GRADO_CLS[v.grado]}`}>
+          <p className="font-semibold">{v.tipo}</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {v.zonas.map((z, j) => (
+              <li key={j} className={z.mexico ? '' : 'opacity-70'}>• {z.zona}{z.mexico ? '' : ' (fuera de México)'}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {ns.map((n, i) => <p key={i} className="text-sm text-slate-300">ℹ️ {n.texto}</p>)}
+      <p className="text-[11px] text-slate-500">
+        <strong>Aviso</strong>: se esperan esas condiciones (en México, zona de prevención). <strong>Vigilancia</strong>: son
+        posibles (zona de vigilancia). Traducido del aviso del NHC; el oficial para México es el del SMN.
+      </p>
+    </div>
+  )
+}
+
+function Barra({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 w-16 sm:w-24 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, pct > 0 ? 3 : 0)}%`, backgroundColor: color }} />
+      </div>
+      <span className="tabular-nums w-9 text-right">{pct > 0 ? `${pct}%` : '<1%'}</span>
+    </div>
+  )
+}
+
+/** Probabilidad de vientos fuertes por localidad mexicana (tabla PWS del NHC). */
+function Probabilidades({ c }: { c: Ciclon }) {
+  const u = useUnits()
+  const [todas, setTodas] = useState(false)
+  const mx = c.probabilidades.filter((p) => p.mexico && p.p34 > 0)
+  if (!mx.length) return null
+  const lista = todas ? mx : mx.slice(0, 8)
+  const kmh = (kt: number) => `${u.wind(kt * 1.852, 0)} ${u.windU}`
+  return (
+    <div>
+      <p className="text-sm font-semibold text-slate-200">Probabilidad de vientos fuertes en los próximos 5 días</p>
+      <div className="overflow-x-auto mt-1">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] text-slate-400">
+              <th className="py-1 pr-3 font-medium">Lugar</th>
+              <th className="py-1 pr-3 font-medium">Tormenta tropical (≥ {kmh(34)})</th>
+              <th className="py-1 pr-3 font-medium">≥ {kmh(50)}</th>
+              <th className="py-1 font-medium">Huracán (≥ {kmh(64)})</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5 text-slate-300">
+            {lista.map((p) => (
+              <tr key={p.lugar}>
+                <td className="py-1 pr-3 whitespace-nowrap">{p.lugar}</td>
+                <td className="py-1 pr-3"><Barra pct={p.p34} color="#34d399" /></td>
+                <td className="py-1 pr-3"><Barra pct={p.p50} color="#fb923c" /></td>
+                <td className="py-1"><Barra pct={p.p64} color="#e11d48" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {mx.length > 8 && (
+        <button onClick={() => setTodas((t) => !t)} className="text-xs text-sky-400 hover:text-sky-300 mt-1">
+          {todas ? 'Ver menos' : `Ver las ${mx.length} localidades`}
+        </button>
+      )}
+      <p className="text-[11px] text-slate-500 mt-1">Probabilidad de que el viento sostenido llegue a ese nivel en algún momento de los próximos 5 días (NHC).</p>
     </div>
   )
 }
@@ -90,9 +182,13 @@ function TormentaCard({ c, v }: { c: Ciclon; v?: string }) {
           sub={`${Math.abs(c.lat).toFixed(1)}°${c.lat >= 0 ? 'N' : 'S'} ${Math.abs(c.lon).toFixed(1)}°${c.lon <= 0 ? 'O' : 'E'}`} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <AvisosCosta c={c} />
+      <Probabilidades c={c} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         <NhcImg src={c.imagenes.cono} v={v} alt={`Cono de pronóstico de ${c.nombre}`}
           caption="Cono de pronóstico a 5 días (NHC). El centro puede ir por cualquier parte del cono; los efectos llegan mucho más allá." />
+        <CycloneSat id={c.id} nombre={c.nombre} />
         <NhcImg src={c.imagenes.mensajes} v={v} alt={`Mensajes clave de ${c.nombre}`}
           caption="Mensajes clave del NHC: los peligros más importantes de esta tormenta." />
       </div>
@@ -203,9 +299,12 @@ export function CyclonesPage() {
               </a>
             ))}
           </div>
+          <CyclonesMap tormentas={tormentas} />
           {tormentas.map((t) => <TormentaCard key={t.id} c={t} v={data.actualizado} />)}
         </>
       )}
+
+      <TemporadaResumen />
 
       <section>
         <h3 className="text-lg font-semibold text-slate-300 mb-2">Perspectiva a 7 días</h3>
@@ -246,5 +345,84 @@ export function CyclonesPage() {
         </p>
       </PageInfo>
     </div>
+  )
+}
+
+function Cifra({ n, label }: { n: number; label: string }) {
+  return (
+    <div className="text-center">
+      <p className="text-2xl font-bold text-slate-100 leading-none">{n}</p>
+      <p className="text-[11px] text-slate-400">{label}</p>
+    </div>
+  )
+}
+
+function Oceano({ nombre, c }: { nombre: string; c: Temporada['pacifico'] }) {
+  return (
+    <div className="rounded-lg bg-white/5 px-3 py-2">
+      <p className="text-sm font-semibold text-slate-200 mb-2">{nombre}</p>
+      <div className="grid grid-cols-4 gap-2">
+        <Cifra n={c.total} label="ciclones" /><Cifra n={c.tormentas} label="con nombre" />
+        <Cifra n={c.huracanes} label="huracanes" /><Cifra n={c.mayores} label="mayores" />
+      </div>
+    </div>
+  )
+}
+
+const fDia = (iso: string) => new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+
+/** Resumen de la temporada (bitácora propia; empezó el 25 sep 2026). */
+function TemporadaResumen() {
+  const t = useSharedFetch<Temporada>('/api/ciclones/temporada', 600000)
+  const u = useUnits()
+  if (!t || !t.tormentas.length) return null
+  const desde = t.desde ? new Date(t.desde).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : ''
+  return (
+    <section>
+      <h3 className="text-lg font-semibold text-slate-300 mb-2">Temporada {t.anio}</h3>
+      <div className="card space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Oceano nombre="Pacífico" c={t.pacifico} />
+          <Oceano nombre="Atlántico" c={t.atlantico} />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] text-slate-400">
+                <th className="py-1 pr-3 font-medium">Ciclón</th>
+                <th className="py-1 pr-3 font-medium">Máxima intensidad</th>
+                <th className="py-1 pr-3 font-medium">Presión mín.</th>
+                <th className="py-1 pr-3 font-medium">Activo</th>
+                <th className="py-1 font-medium">Para México</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 text-slate-300">
+              {[...t.tormentas].reverse().map((e) => {
+                const col = colorCiclon({ clase: (e.max_kt ?? 0) >= 34 ? 'TS' : 'TD', categoria: e.max_categoria ?? null })
+                return (
+                  <tr key={e.id}>
+                    <td className="py-1 pr-3 whitespace-nowrap">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle" style={{ backgroundColor: col }} />
+                      {e.nombre} <span className="text-slate-500 text-xs">· {e.cuenca === 'al' ? 'Atl.' : 'Pac.'}</span>
+                    </td>
+                    <td className="py-1 pr-3 whitespace-nowrap">
+                      {e.max_categoria ? `Huracán cat. ${e.max_categoria}` : e.max_tipo ?? '--'}
+                      {e.max_kt != null && <span className="text-slate-500 text-xs"> · {u.wind(e.max_kt * 1.852, 0)} {u.windU}</span>}
+                    </td>
+                    <td className="py-1 pr-3 whitespace-nowrap tabular-nums">{e.min_mb != null ? `${e.min_mb} mb` : '--'}</td>
+                    <td className="py-1 pr-3 whitespace-nowrap">{fDia(e.primera)} – {fDia(e.ultima)}</td>
+                    <td className="py-1 whitespace-nowrap">
+                      {e.nivel_max === 'alta' ? '🔴 Amenazó' : e.nivel_max === 'media' ? '🟠 Se acercó' : '—'}
+                      {e.toco_tierra && <span className="text-slate-500 text-xs"> · pronóstico a tierra en {e.toco_tierra}</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-500">Bitácora de esta estación: cuenta los ciclones vistos desde el {desde} (antes no se registraba).</p>
+      </div>
+    </section>
   )
 }

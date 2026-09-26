@@ -250,6 +250,11 @@ Todos bajo la misma base. Devuelven JSON.
 | `GET /api/airquality?lat=&lon=` | Calidad del aire (WAQI); requiere `WAQI_TOKEN` |
 | `GET /api/airquality/imeca?lat=&lon=` | IMECA estimado (NADF-009-AIRE-2017) desde concentraciones de Open-Meteo |
 | `GET /api/earthquakes` | Sismos recientes (fuente híbrida SSN → USGS) |
+| `GET /api/ciclones` | Ciclones tropicales activos del Atlántico y Pacífico (NHC): intensidad, trayectoria, cercanía y nivel de amenaza para México, vigilancias/avisos costeros traducidos y probabilidad de vientos por localidad (caché 10 min; si el NHC cae, última copia con `stale`) |
+| `GET /api/ciclones/mapa` | Geometría para el mapa: cono y tramos de costa con vigilancia/aviso por tormenta (KMZ del NHC) |
+| `GET /api/ciclones/sat/<ATCF>` | Cuadros GOES recientes centrados en la tormenta (URLs directas a NOAA STAR, ~6 h, uno cada 30 min) |
+| `GET /api/ciclones/temporada?anio=` | Resumen de la temporada (bitácora propia en `/data/ciclones/`, desde 2026-09-25) |
+| `GET /api/ciclones/img/<ATCF>/{cono,mensajes}` · `/api/ciclones/img/outlook/{pacifico,atlantico}` | Imágenes del NHC en español (cono, key messages) y perspectiva a 7 días; lista blanca, revalidadas con `Last-Modified` cada minuto |
 | `GET /api/svitrix` | Dato actual con forma WeatherAPI `current.json` para el reloj SVITRIX (ver abajo) |
 | `GET /api/bim32` | JSON compacto para el firmware BIM32 (ESP32, ver abajo) |
 | `GET /api/bim32/history?period=30` | Historial exterior en baldes de `period` minutos, para BIM32 (ver abajo) |
