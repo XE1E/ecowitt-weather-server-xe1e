@@ -1,7 +1,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../admin-auth'
-import logoDark from '../../assets/logo-xe1e-dark.png'
+import logoDark from '../../assets/logo-xe1e-dark.svg'
 
 // Menú agrupado por lo que hace cada página (ver docs/internal/PLAN-REDISENO-ADMIN.md).
 // Un grupo de una sola página va sin encabezado: el título repetiría la opción.

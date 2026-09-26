@@ -6,8 +6,8 @@ import { useUnits } from '../units'
 import { useStationData } from '../station-data'
 import { LOCATION } from '../config'
 import { useCiclones, enTemporada } from '../components/station/cyclones'
-import logoDark from '../assets/logo-xe1e-dark.png'
-import logoLight from '../assets/logo-xe1e-light.png'
+import logoDark from '../assets/logo-xe1e-dark.svg'
+import logoLight from '../assets/logo-xe1e-light.svg'
 
 // Cintillo: páginas listas (link) + próximas (deshabilitadas)
 const NAV_ACTIVE = [
