@@ -199,11 +199,11 @@
   <div class="wrap plate-inner">
     <a class="brand" href="/"><img src="/logo-xe1e.svg?v=1" alt="" width="52" height="56"><span>Estación Clima XE1E</span></a>
     <p class="eyebrow">Manual de usuario</p>
-    <h1>Cómo leer la Estación Clima XE1E</h1>
+    <h1>Cómo leer la estación</h1>
     <p class="subtitle">Qué mide esta estación, qué hay en cada página y —sobre todo— <strong>qué te está diciendo cada número</strong>. No hace falta saber meteorología: cada dato viene con su interpretación.</p>
     <div class="readout">
       <div><span class="k">Sitio</span><span class="v"><a href="https://clima.xe1e.net">clima.xe1e.net</a></span></div>
-      <div><span class="k">Ubicación</span><span class="v">Benito Juárez, CDMX</span></div>
+      <div><span class="k">Ubicación</span><span class="v">Benito Juárez, Ciudad de México</span></div>
       <div><span class="k">Altitud</span><span class="v">~2250 m</span></div>
       <div><span class="k">¿Con prisa?</span><span class="v"><a href="/guia-rapida.html">Guía rápida</a></span></div>
       <div><span class="k">Ficha técnica</span><span class="v"><a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></span></div>
@@ -236,7 +236,7 @@
 
       <p>Lo que ves en <a href="https://clima.xe1e.net">clima.xe1e.net</a> no es un pronóstico de internet: son las <strong>condiciones reales medidas en un sitio de Benito Juárez</strong>, en la Ciudad de México, a unos 2250 metros de altitud. Los sensores están ahí y reportan cada minuto.</p>
 
-      <p>Esa diferencia importa más de lo que parece. Cuando una app del clima te dice «23 °C en CDMX», está interpolando un modelo para toda la ciudad. Aquí el número viene de un termómetro concreto, en un punto concreto, y por eso puede no coincidir con lo que dice tu teléfono. <strong>Ninguno de los dos está mal:</strong> miden cosas distintas.</p>
+      <p>Esa diferencia importa más de lo que parece. Cuando una app del clima te dice «23 °C en la Ciudad de México», está interpolando un modelo para toda la ciudad. Aquí el número viene de un termómetro concreto, en un punto concreto, y por eso puede no coincidir con lo que dice tu teléfono. <strong>Ninguno de los dos está mal:</strong> miden cosas distintas.</p>
 
       <h3>Cada cuánto se actualiza</h3>
       <p>La estación envía una lectura <strong>cada minuto</strong>. La página se refresca sola, así que no necesitas recargarla. En la <a href="/basica">vista clásica</a>, arriba, verás siempre si el dato es actual y hace cuánto llegó:</p>
@@ -344,7 +344,7 @@
       <p>Debajo, las <strong>condiciones actuales</strong>: la temperatura grande, el icono del cielo y tres derivados que vale la pena entender, porque no los mide ningún sensor —se calculan:</p>
       <ul>
         <li><strong>Sensación térmica.</strong> Lo que <em>sientes</em>, no lo que marca el termómetro. Con calor y humedad alta el cuerpo suda peor y la sensación sube; con frío y viento se pierde calor más rápido y baja. Si es igual a la temperatura, es que ni la humedad ni el viento están alterando nada.</li>
-        <li><strong>Punto de rocío.</strong> La temperatura a la que el aire se saturaría y empezaría a condensar. Es el mejor indicador de bochorno que existe, mejor que la humedad relativa: por debajo de 10 °C el aire se siente seco y agradable; de 16 °C ya se nota pegajoso; arriba de 20 °C es bochorno franco. Además, <strong>si la temperatura baja hasta el punto de rocío, se forma niebla o rocío</strong> —de ahí el nombre—. En CDMX suele quedar bastante abajo.</li>
+        <li><strong>Punto de rocío.</strong> La temperatura a la que el aire se saturaría y empezaría a condensar. Es el mejor indicador de bochorno que existe, mejor que la humedad relativa: por debajo de 10 °C el aire se siente seco y agradable; de 16 °C ya se nota pegajoso; arriba de 20 °C es bochorno franco. Además, <strong>si la temperatura baja hasta el punto de rocío, se forma niebla o rocío</strong> —de ahí el nombre—. En la Ciudad de México suele quedar bastante abajo.</li>
         <li><strong>Bulbo húmedo.</strong> La temperatura más baja que se puede alcanzar evaporando agua. Es la que manda para saber si el cuerpo puede enfriarse sudando.</li>
       </ul>
       <div class="callout">
@@ -364,13 +364,13 @@
       <ul>
         <li><strong>Pronóstico.</strong> Por hora y por día. Esto <strong>sí</strong> viene de modelos externos, no de la estación —un sensor mide el presente, no el futuro—.</li>
         <li><strong>Nuestro pronóstico.</strong> En la tarjeta de Precipitaciones, lo que la propia estación puede afirmar sobre lluvia ahora o en las próximas horas, sin modelos: manda primero el pluviómetro, luego si la cámara ve precipitación o nubes de lluvia formándose, y al final las estaciones vecinas. El porcentaje de Open-Meteo se muestra aparte, como referencia.</li>
-        <li><strong>Pronóstico local.</strong> Aplica la regla clásica del barómetro sobre la tendencia de presión medida aquí. Es tosco comparado con un modelo, y para las tormentas de tarde de CDMX casi no anticipa nada (ver <em>Presión</em> más abajo), así que tómalo como dato de la presión, no como aviso de lluvia.</li>
+        <li><strong>Pronóstico local.</strong> Aplica la regla clásica del barómetro sobre la tendencia de presión medida aquí. Es tosco comparado con un modelo, y para las tormentas de tarde de la Ciudad de México casi no anticipa nada (ver <em>Presión</em> más abajo), así que tómalo como dato de la presión, no como aviso de lluvia.</li>
         <li><strong>Comparativa de pronósticos.</strong> Pone lado a lado tres fuentes para el mismo día: Open-Meteo, WeatherAPI y el SMN oficial. Cuando coinciden, más confianza; cuando difieren, ya sabes que el día está incierto.</li>
       </ul>
 
       <h3>El entorno</h3>
       <ul>
-        <li><strong>Calidad del aire.</strong> Verás dos números que casi nunca coinciden y no es un error: el <strong>AQI</strong> es el índice internacional y el <strong>IMECA</strong> el oficial mexicano. Usan escalas y fórmulas distintas sobre los mismos contaminantes. Para CDMX el que manda oficialmente es el IMECA.</li>
+        <li><strong>Calidad del aire.</strong> Verás dos números que casi nunca coinciden y no es un error: el <strong>AQI</strong> es el índice internacional y el <strong>IMECA</strong> el oficial mexicano. Usan escalas y fórmulas distintas sobre los mismos contaminantes. Para la Ciudad de México el que manda oficialmente es el IMECA.</li>
         <li><strong>Sol y luna.</strong> Amanecer, atardecer, horas de luz y fase lunar, con los eventos del cielo próximos.</li>
         <li><strong>METAR.</strong> El reporte del aeropuerto, ya traducido. Es la observación aeronáutica oficial más cercana y sirve de contraste independiente para tus propias lecturas.</li>
         <li><strong>Radar y sismos.</strong> Radar de lluvia de la región y últimos sismos relevantes cerca.</li>
@@ -603,7 +603,7 @@
       <div class="callout">
         <p><strong>Lo que de verdad importa no es el valor, es el cambio.</strong> Un 1015 estable no dice nada; un 1015 que viene cayendo desde 1020 dice bastante.</p>
       </div>
-      <p>La regla clásica del barómetro, que es la que usa el «pronóstico local» del sitio. Vale sobre todo para frentes y sistemas grandes: en las tormentas de tarde de CDMX la presión baja casi todos los días por la marea atmosférica, llueva o no, y comparada contra el pluviómetro casi no anticipa la lluvia. Por eso ya no se usa para avisar lluvia en «Nuestro pronóstico».</p>
+      <p>La regla clásica del barómetro, que es la que usa el «pronóstico local» del sitio. Vale sobre todo para frentes y sistemas grandes: en las tormentas de tarde de la Ciudad de México la presión baja casi todos los días por la marea atmosférica, llueva o no, y comparada contra el pluviómetro casi no anticipa la lluvia. Por eso ya no se usa para avisar lluvia en «Nuestro pronóstico».</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>La presión…</th><th>Suele anunciar</th></tr></thead>
@@ -647,7 +647,7 @@
         </table>
       </div>
       <div class="callout">
-        <p><strong>A 2250 m el UV pega más fuerte.</strong> Hay menos atmósfera filtrando, así que con el mismo sol el índice sale más alto que a nivel del mar. En CDMX es normal ver valores «muy alto» o «extremo» en primavera, incluso con temperatura agradable —el UV no calienta, y esa es justo la trampa—.</p>
+        <p><strong>A 2250 m el UV pega más fuerte.</strong> Hay menos atmósfera filtrando, así que con el mismo sol el índice sale más alto que a nivel del mar. En la Ciudad de México es normal ver valores «muy alto» o «extremo» en primavera, incluso con temperatura agradable —el UV no calienta, y esa es justo la trampa—.</p>
       </div>
 
       <h3>Los derivados: sensación, bulbo húmedo, humidex</h3>
@@ -660,7 +660,7 @@
       </ul>
 
       <h3>AQI contra IMECA</h3>
-      <p>Miden lo mismo y dan números distintos porque son <strong>escalas distintas</strong>, no porque una esté mal. Cada índice toma la concentración de cada contaminante, la convierte a puntos con su propia tabla, y se queda con el peor. El AQI usa las tablas de la EPA estadounidense; el IMECA, la norma mexicana. En CDMX el oficial es el IMECA.</p>
+      <p>Miden lo mismo y dan números distintos porque son <strong>escalas distintas</strong>, no porque una esté mal. Cada índice toma la concentración de cada contaminante, la convierte a puntos con su propia tabla, y se queda con el peor. El AQI usa las tablas de la EPA estadounidense; el IMECA, la norma mexicana. En la Ciudad de México el oficial es el IMECA.</p>
       <p>Lo importante en ambos casos es el <strong>contaminante dominante</strong>: un índice alto por ozono es un problema de tarde soleada y afecta sobre todo al ejercicio al aire libre; uno alto por partículas es distinto y las mascarillas sí ayudan.</p>
     </section>
 
@@ -681,7 +681,7 @@
         <table>
           <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
           <tbody>
-            <tr><td>Temperatura alta / baja</td><td>≥ 35 °C · ≤ 0 °C</td><td>Calor o helada. Los defaults son conservadores para CDMX: si suenan, es de verdad excepcional</td></tr>
+            <tr><td>Temperatura alta / baja</td><td>≥ 35 °C · ≤ 0 °C</td><td>Calor o helada. Los defaults son conservadores para la Ciudad de México: si suenan, es de verdad excepcional</td></tr>
             <tr><td>Tendencia de temperatura</td><td>±3 °C (aviso) o ±5 °C (fuerte) en la ventana</td><td>Un cambio brusco. <strong>Una caída rápida suele ser la llegada de una tormenta</strong>: el aire frío del frente baja antes que la lluvia</td></tr>
             <tr><td>Humedad alta / baja</td><td>≥ 85 % · ≤ 25 %</td><td>Aire saturado (lluvia cerca, riesgo de moho) o muy seco</td></tr>
             <tr><td>Punto de rocío alto / bajo</td><td>≥ 20 °C · ≤ −5 °C</td><td>Bochorno franco, o aire tan seco que se siente en la piel y la garganta</td></tr>
@@ -709,7 +709,7 @@
           <thead><tr><th>Alerta</th><th>Se dispara</th><th>Qué significa</th></tr></thead>
           <tbody>
             <tr><td>Presión alta / baja</td><td>≥ 1035 · ≤ 1000 hPa</td><td>Valores extremos del barómetro</td></tr>
-            <tr><td>Presión cayendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible tormenta.</strong> Tómala como pista, no como certeza: en CDMX la presión baja casi todas las tardes, llueva o no</td></tr>
+            <tr><td>Presión cayendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible tormenta.</strong> Tómala como pista, no como certeza: en la Ciudad de México la presión baja casi todas las tardes, llueva o no</td></tr>
             <tr><td>Presión subiendo</td><td>1.5 hPa (aviso) o 3 hPa (fuerte) en la ventana</td><td><strong>Posible frente frío.</strong> Estabilización y entrada de aire más frío</td></tr>
           </tbody>
         </table>
@@ -881,7 +881,7 @@
       </div>
     </section>
 
-    <footer>Manual de usuario · Estación Clima XE1E · CDMX · Actualizado 2026-09-26 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
+    <footer>Manual de usuario · Estación Clima XE1E · Ciudad de México · Actualizado 2026-09-26 · Ficha técnica en <a href="https://github.com/XE1E/ecowitt-weather-server-xe1e/blob/main/docs/GUIA.md">GUIA.md</a></footer>
   </main>
 </div>
 
