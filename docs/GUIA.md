@@ -349,7 +349,7 @@ Lo que sí corresponde a este documento:
   dejó viejo el nombre del archivo). PostHog se carga aparte, después de mostrar la
   página y sólo en las vistas públicas.
 - **Logo e íconos.** El logo vive en SVG (`src/assets/logo-xe1e-{dark,light}.svg`,
-  `public/favicon.svg`, y `public/logo-xe1e.svg` para la guía rápida); los PNG/ICO (favicon, íconos de la PWA, apple-touch-icon y
+  `public/favicon.svg`, y `public/logo-xe1e.svg` para la portada del manual y de la guía rápida); los PNG/ICO (favicon, íconos de la PWA, apple-touch-icon y
   `og-image.png`) se regeneran desde el vector con `dashboard/scripts/logo/`
   (`gen_logo.py` + `render-icons.mjs`). Al cambiarlos, subir el `?v=` en
   `index.html`, `guia.html`, `guia-rapida.html`, `manifest.webmanifest` y `sw.js`.

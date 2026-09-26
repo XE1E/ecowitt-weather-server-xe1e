@@ -6,7 +6,7 @@ Uso (desde dashboard/):
     python scripts/logo/gen_logo.py <carpeta_salida> Montserrat-BlackItalic.ttf
 Escribe logo-xe1e-dark.svg, -light.svg (letras azules sin contorno) y -light2.svg
 (igual al dark; es el que se usa como logo-xe1e-light.svg). Después copiar a
-src/assets/ (y el dark también como public/logo-xe1e.svg, que usa guia-rapida.html)
+src/assets/ (y el dark también como public/logo-xe1e.svg, que usan guia.html y guia-rapida.html)
 y regenerar los íconos con scripts/logo/render-icons.mjs.
 La fuente (OFL) se convierte a trazos: el SVG no depende de ella.
 """
